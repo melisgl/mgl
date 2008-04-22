@@ -1,0 +1,20 @@
+# -*- mode: org -*-
+#+STARTUP: lognotestate
+#+SEQ_TODO: MAYBE(m) TODO(t) NEXT(n) STARTED(s) WAITING(w) | DONE(d) CANCELLED(c)
+#+STARTUP: hidestars
+* unroll only part of the network
+* example for unrolling with missing values
+* factored rbm
+* higher order rbm
+* SRBM
+* true batch training (for speed)
+* clarify conjugate gradient license
+* cg: make sbcl specific float code portable
+* bp: the structure is static so there is no point in ->+ (&REST ARGS)
+* faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
+Doesn't seem to speed up things.
+* cg: failed line searches can still change the weights
+document it or fix it
+* rbm: sparsity constraint
+* rbm: generic support for exponential family distributions
+http://www.ics.uci.edu/~michal/GenHarm3.pdf

@@ -1,0 +1,71 @@
+MGL
+
+Common Lisp machine learning library by Gabor Melis with some parts
+contributed by Ravenpack International. Implements:
+- Restricted Boltzmann Machines and Deep Belief Networks
+- Backprop networks
+- Unrolling DBN to backrop network
+- Gradient descent optimization
+- Conjugate gradient optimization
+
+It's under the MIT licence. See COPYING.
+
+* Tests
+
+Run the built in tests with:
+
+  (ASDF:OOS 'ASDF:TEST-OP '#:MGL)
+
+Note, that most of the tests are rather stochastic and can fail once
+in a while.
+
+* Matlisp BLAS
+
+It takes advantage of BLAS if it is available, patched and
+MGL-UTIL:*USE-BLAS* is not NIL. BLAS typically speeds things up by a
+factor of 2-4. Matlisp may be loaded at any time, before or after MGL.
+
+For example, on my Debian Etch desktop machine with sbcl I did this to
+get BLAS:
+
+First you need to install a Blas implementation. Don't bother with the
+fortran reference implementation, it's slower than the lisp code.
+Install the platform specific atlas or mkl (not free) package.
+Compiling atlas locally can be a big gain in some cases.
+
+Then install a fortran compiler (usually g77).
+
+Next get matlisp (for the BLAS wrapper):
+
+  cvs -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp login
+  cvs -z3 -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp \
+      co -P matlisp
+
+and apply matlisp.patch to add support for passing displaced arrays to
+Blas.
+
+Configure it like:
+
+  ./configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --prefix=`pwd`
+
+edit the generated lib/lazy-loader.lisp:
+
+  #+:sbcl
+  (defun load-blas-&-lapack-libraries ()
+    (sb-alien:load-shared-object "/usr/lib/sse2/libatlas.so.3")
+    (sb-alien:load-shared-object "/usr/lib/sse2/libcblas.so.3")
+    (sb-alien:load-shared-object "/usr/lib/sse2/libf77blas.so.3")
+    (sb-alien:load-shared-object "/usr/lib/sse2/liblapack_atlas.so.3")
+    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
+
+or if you have MKL:
+
+  (defun load-blas-&-lapack-libraries ()
+    (sb-alien:load-shared-object "/opt/intel/mkl/9.1.023/lib/32/libmkl.so")
+    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
+
+build it:
+
+  make
+
+finally load matlisp/start.lisp.
