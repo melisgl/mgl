@@ -17,28 +17,32 @@
 
 (defclass chunk ()
   ((name :initform (gensym) :initarg :name :reader name)
-   (samples
-    :type flt-vector :accessor samples
-    :documentation "A crisp value of each node sampled from the
-probability distribution of defined by the chunk it belongs to and its
-mean.")
-   (means
-    :type flt-vector :accessor means
-    :documentation "The expected value of each node. From MEANS it
-must be possible to randomly produce SAMPLES whose expected values are
-MEANS. For binary nodes it is the probability of firing, for gaussian
-nodes it is the value that is distorted by gaussian noise.")
+   (inputs
+    :type (or flt-vector null) :reader inputs
+    :documentation "This is where SET-INPUT shall store the input \(it
+may also set INDICES-PRESENT). It is NIL in CONSTANT-CHUNKS.")
+   (nodes
+    :type flt-vector :reader nodes
+    :documentation "A value for each node in the chunk. First
+activations are put here (inputs*weights) then the mean of the
+probability distribution is calculated from the activation and finally
+\(optionally) a sample is taken from the probability distribution. All
+these values are stored in this vector.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
-layer's MEANS and SAMPLES. Need not be ordered."))
+layer's NODES. Need not be ordered."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
 
+(declaim (inline chunk-size))
+(defun chunk-size (chunk)
+  (length (the flt-vector (nodes chunk))))
+
 (defmethod print-object ((chunk chunk) stream)
   (print-unreadable-object (chunk stream :type t :identity t)
-    (format stream "~S ~S" (name chunk) (length (samples chunk))))
+    (format stream "~S ~S" (name chunk) (chunk-size chunk)))
   chunk)
 
 (defun ->chunk (chunk-designator chunks)
@@ -46,10 +50,6 @@ of nodes of the same type."))
       chunk-designator
       (or (find chunk-designator chunks :key #'name :test #'equal)
           (error "Cannot find chunk ~S." chunk-designator))))
-
-(declaim (inline chunk-size))
-(defun chunk-size (chunk)
-  (length (the flt-vector (samples chunk))))
 
 (defmacro do-chunk ((var chunk) &body body)
   "Iterate over the indices of nodes of CHUNK skipping missing ones."
@@ -66,30 +66,30 @@ of nodes of the same type."))
                    do ,@body))))))
 
 (defclass conditioning-chunk (chunk) ()
-  (:documentation "Nodes never change their MEANS or SAMPLES \(that
-happen to be the same array object) so one of them is to be clamped.
-Including this chunk in the visible layer allows `conditional'
-RBMs."))
+  (:documentation "Nodes in CONDITIONING-CHUNK never change their
+values on their own so they are to be clamped. Including this chunk in
+the visible layer allows `conditional' RBMs."))
 
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
 
 (defmethod initialize-instance :after ((chunk chunk)
                                        &key (size 1) &allow-other-keys)
-  (setf (samples chunk) (make-flt-array size))
-  (setf (means chunk) (if (conditioning-chunk-p chunk)
-                          (samples chunk)
-                          (make-flt-array size))))
+  (setf (slot-value chunk 'nodes) (make-flt-array size))
+  (setf (slot-value chunk 'inputs)
+        (if (typep chunk 'constant-chunk)
+            nil
+            (make-flt-array size))))
 
 (defclass constant-chunk (conditioning-chunk)
   ((value :initform #.(flt 1) :initarg :value :type flt :reader value))
-  (:documentation "A special kind of CONDITIONING-CHUNK whose SAMPLES
-and MEANS are always VALUE. This conveniently allows biases in the
-opposing layer."))
+  (:documentation "A special kind of CONDITIONING-CHUNK whose NODES
+are always VALUE. This conveniently allows biases in the opposing
+layer."))
 
 (defmethod initialize-instance :after ((chunk constant-chunk)
                                        &key &allow-other-keys)
-  (fill (samples chunk) (value chunk)))
+  (fill (nodes chunk) (value chunk)))
 
 (defclass sigmoid-chunk (chunk) ()
   (:documentation "Nodes in a sigmoid chunk have two possible samples:
@@ -124,25 +124,25 @@ samples have exactly one 1 in each group of GROUP-SIZE."))
   (:documentation "Poisson units with normalized (EXP ACTIVATION) means."))
 
 (defgeneric set-chunk-mean (chunk)
-  (:documentation "Set MEANS in CHUNK. MEANS is hijacked and contains
-the activations when this is called.")
+  (:documentation "Set NODES of CHUNK to the means of the probability
+distribution. When called NODES contains the activations.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((means (means chunk)))
-      (declare (type flt-vector means))
+    (let ((nodes (nodes chunk)))
+      (declare (type flt-vector nodes))
       (do-chunk (i chunk)
-        (setf (aref means i)
-              (sigmoid (aref means i))))))
+        (setf (aref nodes i)
+              (sigmoid (aref nodes i))))))
   (:method ((chunk gaussian-chunk))
-    ;; nothing to do: MEANS already contains the activation
+    ;; nothing to do: NODES already contains the activation
     )
   (:method ((chunk normalized-group-chunk))
-    ;; MEANS is already set up, only normalization within groups of
+    ;; NODES is already set up, only normalization within groups of
     ;; GROUP-SIZE remains.
-    (let ((means (means chunk))
+    (let ((nodes (nodes chunk))
           (scale (scale chunk))
           (group-size (group-size chunk)))
-      (declare (type flt-vector means)
+      (declare (type flt-vector nodes)
                (type flt scale)
                (type index group-size))
       (assert (zerop (mod (chunk-size chunk) group-size)))
@@ -153,62 +153,59 @@ the activations when this is called.")
           (let ((sum #.(flt 0)))
             (declare (type flt sum) (optimize (speed 3)))
             (loop for j upfrom i below (+ i group-size)
-                  do (incf sum (aref means j)))
+                  do (incf sum (aref nodes j)))
             (setq sum (/ sum scale))
             (loop for j upfrom i below (+ i group-size)
-                  do (setf (aref means j)
-                           (/ (aref means j) sum))))))))
+                  do (setf (aref nodes j)
+                           (/ (aref nodes j) sum))))))))
   (:method ((chunk exp-normalized-group-chunk))
-    (let ((means (means chunk)))
-      (declare (type flt-vector means))
+    (let ((nodes (nodes chunk)))
+      (declare (type flt-vector nodes))
       (do-chunk (i chunk)
-        (setf (aref means i)
-              (exp (aref means i)))))
+        (setf (aref nodes i)
+              (exp (aref nodes i)))))
     (call-next-method)))
 
 (defgeneric sample-chunk (chunk)
-  (:documentation "Set SAMPLES based on MEANS for the nodes in CHUNK.")
+  (:documentation "Sample from the probability distribution of CHUNK
+whose means are in NODES.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((means (means chunk))
-          (samples (samples chunk)))
-      (declare (type flt-vector means samples))
+    (let ((nodes (nodes chunk)))
+      (declare (type flt-vector nodes))
       (do-chunk (i chunk)
-        (setf (aref samples i)
-              (binarize-randomly (aref means i))))))
+        (setf (aref nodes i)
+              (binarize-randomly (aref nodes i))))))
   (:method ((chunk gaussian-chunk))
-    (let ((means (means chunk))
-          (samples (samples chunk)))
-      (declare (type flt-vector means samples))
+    (let ((nodes (nodes chunk)))
+      (declare (type flt-vector nodes))
       (do-chunk (i chunk)
-        (setf (aref samples i)
-              (+ (aref means i)
+        (setf (aref nodes i)
+              (+ (aref nodes i)
                  (gaussian-random-1))))))
   (:method ((chunk softmax-chunk))
-    (let ((means (means chunk))
-          (samples (samples chunk))
+    (let ((nodes (nodes chunk))
           (group-size (group-size chunk)))
-      (declare (type flt-vector means samples)
+      (declare (type flt-vector nodes)
                (type index group-size)
                (optimize (speed 3)))
       (do-chunk (i chunk)
         (when (zerop (mod i group-size))
-          (fill samples #.(flt 0) :start i :end (+ i group-size))
           (let ((x (random #.(flt 1))))
             (declare (type flt x))
             (loop for j upfrom i below (+ i group-size) do
-                  (when (minusp (decf x (aref means j)))
-                    (setf (aref samples j) #.(flt 1))
+                  (when (minusp (decf x (aref nodes j)))
+                    (fill nodes #.(flt 0) :start i :end (+ i group-size))
+                    (setf (aref nodes j) #.(flt 1))
                     (return))))))))
   (:method ((chunk constrained-poisson-chunk))
     (error "Not implemented yet.")
     #+nil
-    (let ((means (means chunk))
-          (samples (samples chunk)))
-      (declare (type flt-vector means samples)
+    (let ((nodes (nodes chunk)))
+      (declare (type flt-vector nodes)
                (optimize (speed 3)))
       (do-chunk (i chunk)
-        (setf (aref samples i) (poisson (aref means i)))))))
+        (setf (aref nodes i) (poisson (aref nodes i)))))))
 
 
 ;;;; RBM
@@ -348,92 +345,87 @@ Names of chunks and clouds shall be unique by EQUAL."
         (->clouds visible-chunks hidden-chunks clouds))
   rbm)
 
-(defun samples/means (samples/means)
-  (ecase samples/means
-    ((:samples) #'samples)
-    ((:means) #'means)))
-
-(defun hijack-means-to-activation (rbm to-visible/hidden from-samples/means)
-  "Set MEANS of TO-VISIBLE/HIDDEN layer of RBM to the activations
-calculated from the other layer's means or samples according to
-FROM-SAMPLES/MEANS. Skip chunks that don't need activations."
-  (let ((what (samples/means from-samples/means)))
-    (declare (optimize (speed 3) #.*no-array-bounds-check*))
-    (cond ((eq :hidden to-visible/hidden)
-           (dolist (chunk (hidden-chunks rbm))
-             (unless (conditioning-chunk-p chunk)
-               (fill (the flt-vector (means chunk)) #.(flt 0))))
-           (do-clouds (cloud rbm)
-             (unless (conditioning-chunk-p (hidden-chunk cloud))
-               (let ((weights (weights cloud))
-                     (from (funcall what (visible-chunk cloud)))
-                     (to (means (hidden-chunk cloud))))
-                 (declare (type flt-vector weights from to))
-                 (if (and (use-blas-p (length weights))
-                          (null (indices-present (visible-chunk cloud))))
-                     (funcall (intern #.(symbol-name 'dgemv)
-                                      (find-package 'blas))
-                              "N" (length to) (length from)
-                              1d0 weights (length to)
-                              from 1
-                              1d0 to 1)
-                     (do-cloud/visible (i cloud)
-                       (let ((x (aref from i)))
-                         (unless (zerop x)
-                           (do-cloud/hidden (j weight-index)
-                             (incf (aref to j)
-                                   (* x (aref weights weight-index))))))))))))
-          (t
-           (dolist (chunk (visible-chunks rbm))
-             (unless (conditioning-chunk-p chunk)
-               (let ((means (the flt-vector (means chunk))))
-                 (if (indices-present chunk)
-                     (do-chunk (i chunk)
-                       (setf (aref means i) #.(flt 0)))
-                     (fill means #.(flt 0))))))
-           (do-clouds (cloud rbm)
-             (unless (conditioning-chunk-p (visible-chunk cloud))
-               (let ((weights (weights cloud))
-                     (from (funcall what (hidden-chunk cloud)))
-                     (to (means (visible-chunk cloud))))
-                 (declare (type flt-vector weights from to))
-                 (if (and (use-blas-p (length weights))
-                          (null (indices-present (visible-chunk cloud))))
-                     (funcall (intern #.(symbol-name 'dgemv)
-                                      (find-package 'blas))
-                              "T" (length from) (length to)
-                              1d0 weights (length from)
-                              from 1
-                              1d0 to 1)
-                     (do-cloud/visible (i cloud)
-                       (let ((sum #.(flt 0)))
-                         (declare (type flt sum))
+(defun hijack-means-to-activation (rbm to-visible/hidden)
+  "Set the chunks of TO-VISIBLE/HIDDEN layer of RBM to the activations
+calculated from the other layer's nodes. Skip chunks that don't need
+activations."
+  (declare (optimize (speed 3) #.*no-array-bounds-check*))
+  (cond ((eq :hidden to-visible/hidden)
+         (dolist (chunk (hidden-chunks rbm))
+           (unless (conditioning-chunk-p chunk)
+             (fill (the flt-vector (nodes chunk)) #.(flt 0))))
+         (do-clouds (cloud rbm)
+           (unless (conditioning-chunk-p (hidden-chunk cloud))
+             (let ((weights (weights cloud))
+                   (from (nodes (visible-chunk cloud)))
+                   (to (nodes (hidden-chunk cloud))))
+               (declare (type flt-vector weights from to))
+               (if (and (use-blas-p (length weights))
+                        (null (indices-present (visible-chunk cloud))))
+                   (funcall (intern #.(symbol-name 'dgemv)
+                                    (find-package 'blas))
+                            "N" (length to) (length from)
+                            1d0 weights (length to)
+                            from 1
+                            1d0 to 1)
+                   (do-cloud/visible (i cloud)
+                     (let ((x (aref from i)))
+                       (unless (zerop x)
                          (do-cloud/hidden (j weight-index)
-                           (incf sum (* (aref from j)
-                                        (aref weights weight-index))))
-                         (incf (aref to i) sum)))))))))))
+                           (incf (aref to j)
+                                 (* x (aref weights weight-index))))))))))))
+        (t
+         (dolist (chunk (visible-chunks rbm))
+           (unless (conditioning-chunk-p chunk)
+             (let ((nodes (the flt-vector (nodes chunk))))
+               (if (indices-present chunk)
+                   (do-chunk (i chunk)
+                     (setf (aref nodes i) #.(flt 0)))
+                   (fill nodes #.(flt 0))))))
+         (do-clouds (cloud rbm)
+           (unless (conditioning-chunk-p (visible-chunk cloud))
+             (let ((weights (weights cloud))
+                   (from (nodes (hidden-chunk cloud)))
+                   (to (nodes (visible-chunk cloud))))
+               (declare (type flt-vector weights from to))
+               (if (and (use-blas-p (length weights))
+                        (null (indices-present (visible-chunk cloud))))
+                   (funcall (intern #.(symbol-name 'dgemv)
+                                    (find-package 'blas))
+                            "T" (length from) (length to)
+                            1d0 weights (length from)
+                            from 1
+                            1d0 to 1)
+                   (do-cloud/visible (i cloud)
+                     (let ((sum #.(flt 0)))
+                       (declare (type flt sum))
+                       (do-cloud/hidden (j weight-index)
+                         (incf sum (* (aref from j)
+                                      (aref weights weight-index))))
+                       (incf (aref to i) sum))))))))))
 
-(defun set-visible-mean (rbm from-samples/means)
-  "Set the MEANS of the visible layer of RBM. Take the activation from
-SAMPLES or MEANS of the hidden layer according to FROM-SAMPLES/MEANS."
-  (hijack-means-to-activation rbm :visible from-samples/means)
+(defun set-visible-mean (rbm)
+  "Set NODES of the chunks in the visible layer to the means of their
+respective probability distribution assuming NODES contains the
+activations."
+  (hijack-means-to-activation rbm :visible)
   (map nil #'set-chunk-mean (visible-chunks rbm)))
 
-(defun set-hidden-mean (rbm from-samples/means)
-  "Set the MEANS of the hidden layer of RBM. Take the activation from
-SAMPLES or MEANS of the visible layer according to
-FROM-SAMPLES/MEANS."
-  (hijack-means-to-activation rbm :hidden from-samples/means)
+(defun set-hidden-mean (rbm)
+  "Set NODES of the chunks in the hidden layer to the means of their
+respective probability distribution assuming NODES contains the
+activations."
+  (hijack-means-to-activation rbm :hidden)
   (map nil #'set-chunk-mean (hidden-chunks rbm)))
 
 (defun sample-visible (rbm)
-  "Randomly generate the crisp node samples observing MEANS in the
-process."
+  "Generate samples from the probability distribution defined by the
+chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (visible-chunks rbm)))
 
 (defun sample-hidden (rbm)
-  "Randomly generate the crisp node samples observing MEANS in the
-process."
+  "Generate samples from the probability distribution defined by the
+chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (hidden-chunks rbm)))
 
 
@@ -474,20 +466,28 @@ the learning or the mean field is used instead.")
   (positive-phase trainer rbm)
   (negative-phase trainer rbm)
   (call-next-method))
+
+(defun copy-inputs-to-nodes (rbm)
+  (map nil (lambda (chunk)
+             (locally (declare (optimize (speed 3)))
+               (when (inputs chunk)
+                 (replace (the flt-vector (nodes chunk))
+                          (the flt-vector (inputs chunk))))))
+       (visible-chunks rbm)))
+
+(defmethod set-input :around (sample (rbm rbm))
+  (unwind-protect (call-next-method)
+    (copy-inputs-to-nodes rbm)))
 
 
 ;;;; Training implementation
 
-(defgeneric accumulate-positive-phase-statistics
-    (trainer rbm visible-samples/means hidden-samples/means)
-  (:method ((trainer rbm-trainer) rbm
-            visible-samples/means hidden-samples/means)
+(defgeneric accumulate-positive-phase-statistics (trainer rbm)
+  (:method ((trainer rbm-trainer) rbm)
     (declare (ignore rbm))
     (do-segment-gradient-accumulators ((cloud acc-start products) trainer)
-      (let ((v1 (funcall (samples/means visible-samples/means)
-                         (visible-chunk cloud)))
-            (v2 (funcall (samples/means hidden-samples/means)
-                         (hidden-chunk cloud))))
+      (let ((v1 (nodes (visible-chunk cloud)))
+            (v2 (nodes (hidden-chunk cloud))))
         (declare (type flt-vector v1 v2 products)
                  (optimize (speed 3) #.*no-array-bounds-check*))
         ;; We cloud use (BLAS:DGER (LENGTH V1) (LENGTH V2) -1D0 V1 1
@@ -504,24 +504,20 @@ the learning or the mean field is used instead.")
                                         index
                                         (+ acc-start weight-index)))
                         (* x (aref v2 j)))))))))))
-  (:documentation "Subtract the product of the visible samples and
-hidden means to PRODUCTS. This is the first term of contrastive
-divergence learning rule."))
+  (:documentation "Subtract the product of the nodes of the two layers
+of each cloud to the appropriate gradient accumlator. This is the
+first term of contrastive divergence learning rule."))
 
 ;;; Takes N-GIBBS as parameter because it may change between
 ;;; invocations. Currently it is always 1, though.
-(defgeneric accumulate-negative-phase-statistics
-    (trainer rbm n-gibbs visible-samples/means hidden-samples/means)
-  (:method ((trainer rbm-trainer) rbm n-gibbs
-            visible-samples/means hidden-samples/means)
+(defgeneric accumulate-negative-phase-statistics (trainer rbm n-gibbs)
+  (:method ((trainer rbm-trainer) rbm n-gibbs)
     (declare (ignore rbm)
              (type index n-gibbs))
     (do-segment-gradient-accumulators
         ((cloud acc-start accumulator1 accumulator2) trainer)
-      (let ((v1 (funcall (samples/means visible-samples/means)
-                         (visible-chunk cloud)))
-            (v2 (funcall (samples/means hidden-samples/means)
-                         (hidden-chunk cloud)))
+      (let ((v1 (nodes (visible-chunk cloud)))
+            (v2 (nodes (hidden-chunk cloud)))
             (products (or accumulator2 accumulator1)))
         (declare (type flt-vector v1 v2 products))
         (if (and (use-blas-p (length products))
@@ -552,23 +548,23 @@ divergence learning rule."))
                                              index
                                              (+ acc-start weight-index)))
                                       (* x (aref v2 j))))))))))))))))
-  (:documentation "Add the product of MEANS of the two layers of RBM
-times VALUE layers from PRODUCTS. This is the second term of
-contrastive divergence learning rule."))
+  (:documentation "Add the product of the nodes of the two layers of
+each cloud to the appropriate gradient accumlator. This is the second
+term of contrastive divergence learning rule."))
 
 (defgeneric positive-phase (trainer rbm)
   (:method (trainer rbm)
-    (set-hidden-mean rbm :samples)
+    (set-hidden-mean rbm)
+    (accumulate-positive-phase-statistics trainer rbm)
     (when (sample-hidden-p trainer)
-      (sample-hidden rbm))
-    (accumulate-positive-phase-statistics trainer rbm :samples :means)))
+      (sample-hidden rbm))))
 
 #+nil
 (defun print-nodes-by-chunk (network)
   (map nil (lambda (chunk)
              (unless (typep chunk 'mgl-rbm:conditioning-chunk)
                (format t "~S~%  " chunk)
-               (let ((array (mgl-rbm:means chunk))
+               (let ((array (mgl-rbm:nodes chunk))
                      (n 0))
                  (mgl-rbm::do-chunk (i chunk)
                    (format t "~S:~,5F " i (aref array i))
@@ -586,13 +582,13 @@ contrastive divergence learning rule."))
           (sample-hidden-p (sample-hidden-p trainer)))
       (assert (plusp n-gibbs))
       (loop for i below n-gibbs do
-            (set-visible-mean rbm (if sample-hidden-p :samples :means))
+            (set-visible-mean rbm)
             (when sample-visible-p
               (sample-visible rbm))
-            (set-hidden-mean rbm (if sample-visible-p :samples :means))
+            (set-hidden-mean rbm)
             (when (and sample-hidden-p (/= i (1- n-gibbs)))
               (sample-hidden rbm)))
-      (accumulate-negative-phase-statistics trainer rbm 1 :means :means))))
+      (accumulate-negative-phase-statistics trainer rbm 1))))
 
 
 ;;;; I/O
@@ -615,24 +611,24 @@ contrastive divergence learning rule."))
 ;;;; Convenience
 
 (defun layer-error (chunks)
-  "Return the squared norm of MEANS - SAMPLES."
+  "Return the squared norm of INPUTS - NODES."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n) (optimize (speed 3)))
     (dolist (chunk chunks)
       (unless (conditioning-chunk-p chunk)
-        (let ((means (means chunk))
-              (samples (samples chunk)))
-          (declare (type flt-vector means samples))
+        (let ((inputs (inputs chunk))
+              (nodes (nodes chunk)))
+          (declare (type flt-vector inputs nodes))
           (do-chunk (i chunk)
-            (let ((x (aref means i))
-                  (y (aref samples i)))
+            (let ((x (aref inputs i))
+                  (y (aref nodes i)))
               (incf sum (expt (- x y) 2))
               (incf n))))))
     (values sum n)))
 
 (defgeneric get-squared-error (rbm)
   (:method ((rbm rbm))
-    (set-hidden-mean rbm :samples)
-    (set-visible-mean rbm :means)
+    (set-hidden-mean rbm)
+    (set-visible-mean rbm)
     (layer-error (visible-chunks rbm))))

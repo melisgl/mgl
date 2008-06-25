@@ -20,6 +20,7 @@
            #:last1
            #:push-all
            #:name
+           #:nodes
            #:value
            #:group-size
            #:repeatedly
@@ -152,8 +153,8 @@ interface and simple gradient descent based trainers."))
            #:name
            #:chunk
            #:chunk-size
-           #:samples
-           #:means
+           #:inputs
+           #:nodes
            #:indices-present
            #:constant-chunk
            #:value
