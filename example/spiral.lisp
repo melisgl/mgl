@@ -17,7 +17,8 @@
 
 (defun clamp-rbm (sample dbn rbm)
   (let ((chunk (find 'inputs (visible-chunks (first (rbms dbn))) :key #'name)))
-    (clamp-array sample (samples chunk) 0)
+    (clamp-array sample (inputs chunk) 0)
+    (inputs->nodes (first (rbms dbn)))
     (up-mean-field dbn :to-rbm rbm :exclude-to t)))
 
 (defun clamp-bpn (sample bpn)
