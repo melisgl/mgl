@@ -467,7 +467,9 @@ the learning or the mean field is used instead.")
   (negative-phase trainer rbm)
   (call-next-method))
 
-(defun copy-inputs-to-nodes (rbm)
+(defun reset-inputs (rbm)
+  "Reuse the previously clamped inputs as if SET-INPUT were called
+with the same parameters."
   (map nil (lambda (chunk)
              (locally (declare (optimize (speed 3)))
                (when (inputs chunk)
@@ -477,7 +479,8 @@ the learning or the mean field is used instead.")
 
 (defmethod set-input :around (sample (rbm rbm))
   (unwind-protect (call-next-method)
-    (copy-inputs-to-nodes rbm)))
+    ;; copy the input to its proper place
+    (reset-inputs rbm)))
 
 
 ;;;; Training implementation

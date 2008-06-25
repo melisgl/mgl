@@ -177,6 +177,7 @@ interface and simple gradient descent based trainers."))
            #:reconstruct-mean-field
            #:dbn-rmse
            ;;
+           #:reset-inputs
            #:get-squared-error)
   (:documentation "Restricted Boltzmann Machines (RBM) and their
 stacks called Deep Belief Networks (DBN)."))

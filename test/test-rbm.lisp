@@ -21,7 +21,7 @@
 (defmethod train-one :around (sample (trainer test-trainer) rbm &key)
   (call-next-method)
   (let ((counter (counter trainer)))
-    (set-input sample rbm)
+    (mgl-rbm:reset-inputs rbm)
     (multiple-value-bind (e n) (get-squared-error rbm)
       (add-error counter e n))
     (let ((n-inputs (n-inputs trainer)))
