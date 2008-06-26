@@ -56,7 +56,7 @@
           (down-mean-field dbn :rbm rbm)
           (loop for i below n
                 for rbm in (rbms dbn) do
-                (multiple-value-bind (e n) (layer-error (visible-chunks rbm))
+                (multiple-value-bind (e n) (reconstruction-error rbm)
                   (incf (aref sum-errors i) e)
                   (incf (aref n-errors i) n))))
     (map 'vector
