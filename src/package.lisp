@@ -174,7 +174,6 @@ interface and simple gradient descent based trainers."))
            #:rbms
            #:up-mean-field
            #:down-mean-field
-           #:reconstruct-mean-field
            #:dbn-rmse
            ;;
            #:inputs->nodes

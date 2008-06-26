@@ -7,20 +7,15 @@
   (setf (slot-value dbn 'rbms)
         (append (rbms dbn) (list rbm))))
 
-(defun not-later (list obj &key excludep)
-  (subseq list 0 (+ (position obj list)
-                    (if excludep 0 1))))
-
 (defun up-mean-field (dbn &key (to-rbm (last1 (rbms dbn))) exclude-to)
   "Propagate the means upwards from the bottom rbm up to TO-RBM
 \(including it unless EXCLUDE-TO)."
-  (let ((rbms (not-later (rbms dbn) to-rbm :excludep exclude-to)))
-    (when rbms
-      (loop for rbm in rbms
-            for rbm-above in (rest (append rbms (list nil)))
-            do (set-hidden-mean rbm)
-            (when rbm-above
-              (nodes->inputs rbm-above))))))
+  (loop for (rbm next-rbm) on (rbms dbn)
+        while (or (not exclude-to) (not (eq rbm to-rbm)))
+        do (set-hidden-mean rbm)
+        (when next-rbm
+          (nodes->inputs next-rbm))
+        while (not (eq rbm to-rbm))))
 
 (defun not-before (list obj)
   (let ((pos (position obj list)))
@@ -33,11 +28,7 @@
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) from-rbm)))
 
-(defun reconstruct-mean-field (dbn &key to-rbm)
-  (up-mean-field dbn :to-rbm to-rbm)
-  (down-mean-field dbn :from-rbm to-rbm))
-
-(defun dbn-rmse (sampler dbn rbm)
+(defun dbn-rmse (sampler dbn &key (rbm (last1 (rbms dbn))))
   (let* ((n (1+ (position rbm (rbms dbn))))
          (sum-errors (make-array n :initial-element #.(flt 0)))
          (n-errors (make-array n :initial-element 0)))
