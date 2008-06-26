@@ -1,4 +1,4 @@
-;;;; Utilities
+;;;; BLAS support
 
 (in-package :mgl-util)
 
@@ -134,6 +134,9 @@ optimized."
   (if (listp seq)
       (first (last seq))
       (aref seq (1- (length seq)))))
+
+(defun append1 (list obj)
+  (append list (list obj)))
 
 (defmacro push-all (list place)
   (with-gensyms (e)

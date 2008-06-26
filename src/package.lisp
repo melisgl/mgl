@@ -18,6 +18,7 @@
            #:select-random-element
            #:split-plist
            #:last1
+           #:append1
            #:push-all
            #:name
            #:nodes
