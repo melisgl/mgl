@@ -18,8 +18,10 @@
            #:select-random-element
            #:split-plist
            #:last1
+           #:append1
            #:push-all
            #:name
+           #:nodes
            #:value
            #:group-size
            #:repeatedly
@@ -152,8 +154,8 @@ interface and simple gradient descent based trainers."))
            #:name
            #:chunk
            #:chunk-size
-           #:samples
-           #:means
+           #:inputs
+           #:nodes
            #:indices-present
            #:constant-chunk
            #:value
@@ -171,11 +173,12 @@ interface and simple gradient descent based trainers."))
            ;; DBN
            #:dbn
            #:rbms
-           #:up-mean-field
            #:down-mean-field
-           #:reconstruct-mean-field
            #:dbn-rmse
            ;;
+           #:inputs->nodes
+           #:nodes->inputs
+           #:reconstruction-error
            #:get-squared-error)
   (:documentation "Restricted Boltzmann Machines (RBM) and their
 stacks called Deep Belief Networks (DBN)."))

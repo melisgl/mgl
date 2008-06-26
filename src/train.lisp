@@ -31,7 +31,7 @@ are collected and passed to TRAIN-BATCH. For other trainers samples
 are passed one by one to TRAIN-ONE."))
 
 (defgeneric set-input (sample learner)
-  (:documentation "Set SAMPLE as INPUT in LEARNER."))
+  (:documentation "Set SAMPLE as input in LEARNER."))
 
 (defgeneric train-one (sample trainer learner &key &allow-other-keys)
   (:documentation "Train LEARNER by TRAINER on one SAMPLE. This method

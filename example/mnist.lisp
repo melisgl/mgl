@@ -135,20 +135,16 @@
                     :class 'mnist-rbm))))
 
 (defun make-mnist-dbn ()
-  (let ((dbn (make-instance 'mnist-dbn)))
-    (dolist (rbm (rbms dbn))
-      (setf (dbn rbm) dbn))
-    dbn))
+  (make-instance 'mnist-dbn))
 
-(defclass mnist-rbm (rbm)
-  ((dbn :initform nil :initarg :dbn :accessor dbn)))
+(defclass mnist-rbm (rbm) ())
 
 (defmethod mgl-train:set-input (sample (rbm mnist-rbm))
   (let* ((dbn (dbn rbm))
          (chunk (find 'inputs (visible-chunks (first (rbms dbn)))
                       :key #'name)))
-    (clamp-array sample (samples chunk) 0)
-    (up-mean-field dbn :to-rbm rbm :exclude-to t)))
+    (when chunk
+      (clamp-array sample (nodes chunk) 0))))
 
 (defclass mnist-rbm-trainer (rbm-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
@@ -156,7 +152,7 @@
 (defun report-dbn-rmse (rbm trainer)
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (coerce (dbn-rmse (make-sampler *test-images* :max-n 1000)
-                             (dbn rbm) rbm) 'list)
+                             (dbn rbm) :rbm rbm) 'list)
            (n-inputs trainer)))
 
 ;;; This prints the rmse of the the training examples after each 100
@@ -165,7 +161,7 @@
   (when (zerop (mod (n-inputs trainer) 10000))
     (report-dbn-rmse rbm trainer))
   (let ((counter (counter trainer)))
-    (multiple-value-bind (e n) (mgl-rbm:get-squared-error rbm)
+    (multiple-value-bind (e n) (mgl-rbm:reconstruction-error rbm)
       (add-error counter e n))
     (call-next-method)
     (let ((n-inputs (n-inputs trainer)))
