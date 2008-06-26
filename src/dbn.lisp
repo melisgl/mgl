@@ -1,21 +1,39 @@
 (in-package :mgl-rbm)
 
 (defclass dbn ()
-  ((rbms :type list :initarg :rbms :accessor rbms)))
+  ((rbms :type list :initarg :rbms :reader rbms))
+  (:documentation "Deep Belief Network: a stack of RBMs."))
+
+(defmethod initialize-instance :after ((dbn dbn) &key &allow-other-keys)
+  (dolist (rbm (rbms dbn))
+    (setf (slot-value rbm 'dbn) dbn)))
 
 (defun add-rbm (rbm dbn)
-  (setf (slot-value dbn 'rbms)
-        (append (rbms dbn) (list rbm))))
+  (setf (slot-value rbm 'dbn) dbn
+        (slot-value dbn 'rbms) (append1 (rbms dbn) rbm)))
 
-(defun up-mean-field (dbn &key (to-rbm (last1 (rbms dbn))) exclude-to)
-  "Propagate the means upwards from the bottom rbm up to TO-RBM
-\(including it unless EXCLUDE-TO)."
-  (loop for (rbm next-rbm) on (rbms dbn)
-        while (or (not exclude-to) (not (eq rbm to-rbm)))
-        do (set-hidden-mean rbm)
-        (when next-rbm
-          (nodes->inputs next-rbm))
-        while (not (eq rbm to-rbm))))
+(defun previous-rbm (dbn rbm)
+  (let ((pos (position rbm (rbms dbn))))
+    (if (and pos (plusp pos))
+        (elt (rbms dbn) (1- pos))
+        nil)))
+
+(defmethod set-input :around (sample (rbm rbm))
+  ;; Do SET-INPUT on the previous rbm (if any) and propagate its mean
+  ;; to this one.
+  (when (dbn rbm)
+    (let ((prev (previous-rbm (dbn rbm) rbm)))
+      (when prev
+        (set-input sample prev)
+        (set-hidden-mean prev))))
+  (unwind-protect
+       ;; Do any clamping specific to this RBM.
+       (call-next-method)
+    ;; Then remember the inputs.
+    (nodes->inputs rbm)))
+
+(defmethod set-input (sample (dbn dbn))
+  (set-input sample (last1 (rbms dbn))))
 
 (defun not-before (list obj)
   (let ((pos (position obj list)))
@@ -23,10 +41,10 @@
         (subseq list pos)
         list)))
 
-(defun down-mean-field (dbn &key from-rbm)
-  "Propagate the means down from the means of the top rbm or FROM-RBM."
+(defun down-mean-field (dbn &key (rbm (last1 (rbms dbn))))
+  "Propagate the means down from the means of RBM."
   (mapc #'set-visible-mean
-        (not-before (reverse (rbms dbn)) from-rbm)))
+        (not-before (reverse (rbms dbn)) rbm)))
 
 (defun dbn-rmse (sampler dbn &key (rbm (last1 (rbms dbn))))
   (let* ((n (1+ (position rbm (rbms dbn))))
@@ -35,7 +53,7 @@
     (loop until (finishedp sampler) do
           (set-input (sample sampler) rbm)
           (set-hidden-mean rbm)
-          (down-mean-field dbn :from-rbm rbm)
+          (down-mean-field dbn :rbm rbm)
           (loop for i below n
                 for rbm in (rbms dbn) do
                 (multiple-value-bind (e n) (layer-error (visible-chunks rbm))

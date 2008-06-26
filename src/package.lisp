@@ -173,7 +173,6 @@ interface and simple gradient descent based trainers."))
            ;; DBN
            #:dbn
            #:rbms
-           #:up-mean-field
            #:down-mean-field
            #:dbn-rmse
            ;;

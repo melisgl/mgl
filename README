@@ -44,7 +44,7 @@ Next get matlisp (for the BLAS wrapper):
 and apply matlisp.patch to add support for passing displaced arrays to
 Blas.
 
-Configure it like:
+Configure it as:
 
   ./configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --prefix=`pwd`
 

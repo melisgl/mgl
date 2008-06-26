@@ -15,22 +15,20 @@
         (aref array (+ start 1)) (sin x)
         (aref array (+ start 2)) (cos x)))
 
-(defun clamp-rbm (sample dbn rbm)
-  (let ((chunk (find 'inputs (visible-chunks (first (rbms dbn))) :key #'name)))
-    (clamp-array sample (inputs chunk) 0)
-    (inputs->nodes (first (rbms dbn)))
-    (up-mean-field dbn :to-rbm rbm :exclude-to t)))
+(defun clamp-rbm (sample rbm)
+  (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
+    (when chunk
+      (clamp-array sample (nodes chunk) 0))))
 
 (defun clamp-bpn (sample bpn)
   (multiple-value-bind (array start)
       (lump-node-array (find-lump '(inputs 0) bpn))
     (clamp-array sample array start)))
 
-(defclass spiral-rbm (rbm)
-  ((dbn :initform nil :initarg :dbn :accessor dbn)))
+(defclass spiral-rbm (rbm) ())
 
 (defmethod mgl-train:set-input (sample (rbm spiral-rbm))
-  (clamp-rbm sample (dbn rbm) rbm))
+  (clamp-rbm sample rbm))
 
 (defclass spiral-bpn (bpn) ())
 
@@ -48,7 +46,7 @@
 
 (defun report-dbn-rmse (rbm trainer)
   (format *trace-output* "DBN RMSE: ~{~,5F~^, ~} (~D)~%"
-          (coerce (dbn-rmse (make-sampler 1000) (dbn rbm) rbm) 'list)
+          (coerce (dbn-rmse (make-sampler 1000) (dbn rbm) :rbm rbm) 'list)
           (n-inputs trainer)))
 
 ;;; This prints the rmse of the the training examples after each 100
@@ -128,10 +126,7 @@
                :class 'spiral-rbm))))
 
 (defun make-spiral-dbn ()
-  (let ((dbn (make-instance 'spiral-dbn)))
-    (dolist (rbm (rbms dbn))
-      (setf (dbn rbm) dbn))
-    dbn))
+  (make-instance 'spiral-dbn))
 
 (defun train-spiral-dbn ()
   (let ((dbn (make-spiral-dbn)))
