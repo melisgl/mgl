@@ -19,20 +19,22 @@
   ((name :initform (gensym) :initarg :name :reader name)
    (inputs
     :type (or flt-vector null) :reader inputs
-    :documentation "This is where SET-INPUT shall store the input \(it
-may also set INDICES-PRESENT). It is NIL in CONSTANT-CHUNKS.")
+    :documentation "This is where SET-INPUT saves the input for later
+use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
+CONSTANT-CHUNKS.")
    (nodes
     :type flt-vector :reader nodes
     :documentation "A value for each node in the chunk. First
 activations are put here (inputs*weights) then the mean of the
 probability distribution is calculated from the activation and finally
 \(optionally) a sample is taken from the probability distribution. All
-these values are stored in this vector.")
+these values are stored in this vector. This is also where SET-INPUT
+is supposed to clamp the values.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
-layer's NODES. Need not be ordered."))
+layer's NODES. Need not be ordered. SET-INPUT sets it."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
 
