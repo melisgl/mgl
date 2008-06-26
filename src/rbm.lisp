@@ -214,7 +214,7 @@ whose means are in NODES.")
   ((visible-chunks :initarg :visible-chunks :type list :reader visible-chunks)
    (hidden-chunks :initarg :hidden-chunks :type list :reader hidden-chunks)
    (clouds :initarg :clouds :type list :reader clouds)
-   (dbn :type (or null dbn) :reader dbn))
+   (dbn :initform nil :type (or null dbn) :reader dbn))
   (:documentation "An RBM is a network of two layers of nodes. By
 convention one is called `visible' and the other `hidden'. Connections
 between nodes are symmetrical and there are no intralayer connections.

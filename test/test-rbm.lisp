@@ -52,7 +52,7 @@
                         (batch-size 50))
   (flet ((clamp (sample rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
-             (setf (aref (inputs chunk) 0) sample))))
+             (setf (aref (nodes chunk) 0) sample))))
     (let ((rbm (make-instance
                 'test-rbm
                 :visible-chunks `(,@(when hidden-bias-p
@@ -89,16 +89,16 @@
              (declare (ignore rbm))
              (if randomp
                  (if (try-chance 0.5)
-                     (setf (aref (inputs chunk) 0) (if (try-chance 0.7)
+                     (setf (aref (nodes chunk) 0) (if (try-chance 0.7)
                                                        x
                                                        (- 1 x))
-                           (aref (inputs chunk) 1) (- 1 x))
-                     (setf (aref (inputs chunk) 0) x
-                           (aref (inputs chunk) 1) (if (try-chance 0.7)
+                           (aref (nodes chunk) 1) (- 1 x))
+                     (setf (aref (nodes chunk) 0) x
+                           (aref (nodes chunk) 1) (if (try-chance 0.7)
                                                        (- 1 x)
                                                        x)))
-                 (setf (aref (inputs chunk) 0) x
-                       (aref (inputs chunk) 1) (- 1 x)))
+                 (setf (aref (nodes chunk) 0) x
+                       (aref (nodes chunk) 1) (- 1 x)))
              (when missingp
                (let ((vip (make-array 0 :adjustable t :fill-pointer t)))
                  (when (try-chance 0.5)
@@ -143,8 +143,8 @@
            (random 5))
          (clamp (sample rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
-             (fill (inputs chunk) (flt 0))
-             (setf (aref (inputs chunk) sample) #.(flt 1)))))
+             (fill (nodes chunk) (flt 0))
+             (setf (aref (nodes chunk) sample) #.(flt 1)))))
     (let ((rbm (make-instance
                 'test-rbm
                 :visible-chunks (list
@@ -181,10 +181,10 @@
          (clamp (x rbm)
            (let ((chunk (second (visible-chunks rbm))))
              (loop for i below 10
-                   do (setf (aref (inputs chunk) i) #.(flt 0)))
-             (setf (aref (inputs chunk) (rate-code x 0 (* 2 pi) 5))
+                   do (setf (aref (nodes chunk) i) #.(flt 0)))
+             (setf (aref (nodes chunk) (rate-code x 0 (* 2 pi) 5))
                    #.(flt 1))
-             (setf (aref (inputs chunk) (+ 5 (rate-code (sin x) -1 1 5)))
+             (setf (aref (nodes chunk) (+ 5 (rate-code (sin x) -1 1 5)))
                    #.(flt 1)))))
     (let ((rbm (make-instance
                 'test-rbm
