@@ -57,7 +57,7 @@ in the batch or the number of uses the weight in question have seen.")
    (weight-decay
     :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
     :documentation "WEIGHT-DECAY * WEIGHT is subtracted from the
-graident to penalize large weights."))
+gradient to penalize large weights."))
   (:documentation "This is the common base class of gradient descent
 based trainers with momentum and weight decay."))
 
