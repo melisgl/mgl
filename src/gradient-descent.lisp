@@ -56,8 +56,16 @@ in the batch or the number of uses the weight in question have seen.")
    (momentum :initform #.(flt 0.9) :initarg :momentum :accessor momentum)
    (weight-decay
     :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
-    :documentation "WEIGHT-DECAY * WEIGHT is subtracted from the
-gradient to penalize large weights."))
+    :documentation "WEIGHT-DECAY * WEIGHT is added to the gradient to
+penalize large weights. It's as if the function whose minima is sought
+had sum_i{0.5 * WEIGHT-DECAY * WEIGHT_i^2} added to it.")
+   (weight-penalty
+    :initform #.(flt 0) :initarg :weight-penalty :accessor weight-penalty
+    :documentation "WEIGHT-PENALTY is added to the gradient pushing
+the weight towards negative infinity. It's as if the function whose
+minima is sought had sum_i{WEIGHT-PENALTY*WEIGHT_i} adde to it.
+Putting it on feature biases consitutes a sparsity constraint on the
+features."))
   (:documentation "This is the common base class of gradient descent
 based trainers with momentum and weight decay."))
 
@@ -147,10 +155,12 @@ only missing values does not change anything."))
           (learning-rate (learning-rate trainer))
           (n-inputs (flt (n-inputs-in-batch trainer)))
           (momentum (momentum trainer))
-          (weight-decay (weight-decay trainer)))
+          (weight-decay (weight-decay trainer))
+          (weight-penalty (weight-penalty trainer)))
       (declare (type flt-vector accumulator1 weight-deltas)
                (type (or null flt-vector) accumulator2)
-               (type flt learning-rate n-inputs momentum weight-decay)
+               (type flt learning-rate n-inputs momentum
+                     weight-decay weight-penalty)
                (optimize (speed 3) #.*no-array-bounds-check*))
       (do-segment-set (segment :start-in-segment-set start-in-segment-set)
           (segment-set trainer)
@@ -167,7 +177,8 @@ only missing values does not change anything."))
                                       (aref accumulator2 i))
                                    (aref accumulator1 i))
                                n-inputs)
-                            (* weight-decay (aref weights j)))))
+                            (* weight-decay (aref weights j))
+                            weight-penalty)))
               (setf (aref weight-deltas i) delta)
               (decf (aref weights j) (* learning-rate delta)))))
         (setf (n-inputs-in-batch trainer) 0)
@@ -185,11 +196,12 @@ only missing values does not change anything."))
         (learning-rate (learning-rate trainer))
         (momentum (momentum trainer))
         (weight-decay (weight-decay trainer))
+        (weight-penalty (weight-penalty trainer))
         (batch-size (batch-size trainer)))
     (declare (type flt-vector accumulator1 weight-deltas)
              (type (or null flt-vector) accumulator2)
              (type index-vector n-weight-uses-in-batch)
-             (type flt learning-rate momentum weight-decay)
+             (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size)
              (optimize (speed 3) #.*no-array-bounds-check*))
     (do-segment-set (segment :start-in-segment-set start-in-segment-set)
@@ -214,7 +226,8 @@ only missing values does not change anything."))
                                          (aref accumulator2 i))
                                       (aref accumulator1 i))
                                   (aref n-weight-uses-in-batch i))
-                               (* weight-decay (aref weights j)))))
+                               (* weight-decay (aref weights j))
+                               weight-penalty)))
                  (setf (aref weight-deltas i) delta)
                  (decf (aref weights j) (* learning-rate delta))
                  (setf (aref n-weight-uses-in-batch i) 0

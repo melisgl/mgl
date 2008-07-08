@@ -93,6 +93,7 @@ and LEARNERs."))
            #:learning-rate
            #:momentum
            #:weight-decay
+           #:weight-penalty
            #:batch-gd-trainer
            #:batch-size
            #:n-inputs-in-batch
