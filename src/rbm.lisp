@@ -575,9 +575,7 @@ term of contrastive divergence learning rule."))
 (defgeneric positive-phase (trainer rbm)
   (:method (trainer rbm)
     (set-hidden-mean rbm)
-    (accumulate-positive-phase-statistics trainer rbm)
-    (when (sample-hidden-p trainer)
-      (sample-hidden rbm))))
+    (accumulate-positive-phase-statistics trainer rbm)))
 
 #+nil
 (defun print-nodes-by-chunk (network)
@@ -602,12 +600,12 @@ term of contrastive divergence learning rule."))
           (sample-hidden-p (sample-hidden-p trainer)))
       (assert (plusp n-gibbs))
       (loop for i below n-gibbs do
+            (when sample-hidden-p
+              (sample-hidden rbm))
             (set-visible-mean rbm)
             (when sample-visible-p
               (sample-visible rbm))
-            (set-hidden-mean rbm)
-            (when (and sample-hidden-p (/= i (1- n-gibbs)))
-              (sample-hidden rbm)))
+            (set-hidden-mean rbm))
       (accumulate-negative-phase-statistics trainer rbm 1))))
 
 
