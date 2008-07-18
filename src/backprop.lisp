@@ -388,14 +388,23 @@ stable. See http://groups.google.com/group/comp.ai.neural-nets/msg/a7594ebea01fe
                 (declare (optimize (speed 3)))
               (loop for i fixnum upfrom input-group-start below input-group-end
                     do (incf sum (aref nodes i)))
-              (setq sum (/ sum scale))
-              (loop for i upfrom input-group-start below input-group-end
-                    for j upfrom output-group-start below output-group-end
-                    do (incf (aref derivatives i)
-                             (* (aref derivatives j)
-                                (let* ((x (aref nodes i))
-                                       (a (- sum x)))
-                                  (/ a (+ x (* a a)) scale)))))))))))
+              (let ((sum-square (expt sum 2)))
+                (loop for xj upfrom input-group-start below input-group-end do
+                      (loop for xk upfrom input-group-start
+                            below input-group-end
+                            for lk upfrom output-group-start
+                            below output-group-end
+                            do (if (= xk xj)
+                                   (incf (aref derivatives xj)
+                                         (* (aref derivatives lk)
+                                            scale
+                                            (/ (- sum (aref nodes xj))
+                                               sum-square)))
+                                   (decf (aref derivatives xj)
+                                         (* (aref derivatives lk)
+                                            scale
+                                            (/ (aref nodes xk)
+                                               sum-square)))))))))))))
   (:method ((lump cross-entropy-softmax-lump) nodes derivatives)
     (let* ((input (input-lump lump))
            (target (target-lump lump))

@@ -145,8 +145,8 @@
                                   ;; such a way that pushes all weights up
                                   ;; towards infinity.
                                   (make-instance 'batch-gd-trainer
-                                                 :learning-rate (flt 0.0001)
-                                                 :weight-decay (flt 0.1)
+                                                 :learning-rate (flt 0.01)
+                                                 :weight-decay (flt 0)
                                                  :batch-size 10))))
              net)
       (bpn-error (make-instance 'counting-function-sampler
@@ -315,6 +315,7 @@
       (assert (> 0.01 (test-simple :cg nil)))
       (assert (> 0.01 (test-simple :cg t)))
       (assert (> 0.6 (test-softmax :cg nil)))
+      (assert (> 0.6 (test-softmax :cg t)))
       (assert (> 0.1 (test-cross-entropy :cg nil)))
       (assert (> 0.1 (test-cross-entropy :cg t)))
       (dolist (transposep '(nil t))
