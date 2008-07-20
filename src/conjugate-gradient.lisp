@@ -171,11 +171,9 @@ playing much with RHO."
   (flet ((get-w-sized-vector ()
            (let ((v (pop spare-vectors)))
              (declare (type (or null flt-vector) v))
-             (cond (v
-                    (fill v #.(flt 0))
-                    v)
-                   (t
-                    (make-flt-array (length w)))))))
+             (if v
+                 (fill v #.(flt 0))
+                 (make-flt-array (length w))))))
     (without-float-traps
       (let* ((df0 (get-w-sized-vector))
              (df3 (get-w-sized-vector))
@@ -423,7 +421,7 @@ add decay on a per-segment basis."))
                  (regularizer (/ decay 2)))
             (with-segment-weights ((weights start end) segment)
               (declare (optimize (speed 3)))
-              (loop for i upfrom start below end 
+              (loop for i upfrom start below end
                     for j upfrom segment-start
                     do (let ((x (aref weights i)))
                          (incf cost (* regularizer x x))
