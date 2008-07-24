@@ -174,7 +174,8 @@ only missing values does not change anything."))
         (setf (n-inputs-in-batch trainer) 0)
         (fill accumulator1 #.(flt 0))
         (when accumulator2
-          (fill accumulator2 #.(flt 0)))))))
+          (fill accumulator2 #.(flt 0))))))
+  (incf (n-inputs trainer) n-new-inputs))
 
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
