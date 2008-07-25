@@ -112,6 +112,7 @@ and LEARNERs."))
            #:momentum
            #:weight-decay
            #:batch-gd-trainer
+           #:batch-size
            #:n-inputs-in-batch
            #:n-batches
            #:per-weight-batch-gd-trainer
