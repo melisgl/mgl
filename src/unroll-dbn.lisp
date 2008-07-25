@@ -48,10 +48,10 @@
 ;;;; add-on without touching the backprop core.
 
 (defmacro *ndx (x y)
-  `(#.*the* index (* ,x ,y)))
+  `(the! index (* ,x ,y)))
 
 (defmacro +ndx (x y)
-  `(#.*the* index (+ ,x ,y)))
+  `(the! index (+ ,x ,y)))
 
 (defclass sparse-weight-lump (weight-lump)
   ((rows-present
@@ -61,6 +61,7 @@
     :type index :initform (error "ROW-SIZE missing") :initarg :row-size
     :reader row-size)))
 
+#+nil
 (defmethod map-segment-runs (fn (lump sparse-weight-lump))
   (let ((rows-present (rows-present lump)))
     (declare (type (or null index-vector) rows-present))
@@ -84,10 +85,12 @@ and ->CLOUD-ACTIVATION. The easy cases with no missing values are
 handled by the fast ACTIVATION-LUMP and the rest by
 ->CLOUD-ACTIVATION."))
 
+#+nil
 (defun missing-values-in-cloud-activation-p (lump)
   (or (indices-to-calculate lump)
       (indices-to-calculate (input-lump lump))))
 
+#+nil
 (defmethod transfer-lump ((lump cloud-activation-lump) nodes)
   (declare (type flt-vector nodes))
   (if (and (punt-to-activation-lump-p lump)
@@ -139,6 +142,7 @@ handled by the fast ACTIVATION-LUMP and the rest by
                                            (aref nodes weight-index))))
                      (setf (aref nodes (+ndx output-start row)) sum)))))))))
 
+#+nil
 (defmethod derivate-lump ((lump cloud-activation-lump) nodes derivatives)
   (declare (type flt-vector nodes derivatives))
   (if (and (punt-to-activation-lump-p lump)
@@ -253,20 +257,17 @@ parameter given by the symbol ACTIVATION-SYMBOL with NAME and SIZE.
 Only called for non-conditioning chunks. Second value is a list of
 clamp inits, the third is a list of inits.")
   (:method ((chunk sigmoid-chunk) sym name size activation-symbol)
-    `((hidden-lump :symbol ,sym :name ',name :size ,size
-       :def (->sigmoid (_) (ref ,activation-symbol _)))))
+    `((,sym (->sigmoid :name ',name :x ,activation-symbol))))
   (:method ((chunk gaussian-chunk) sym name size activation-symbol)
     ;; this is identity
-    `((hidden-lump :symbol ,sym :name ',name :size ,size
-       :def (->+ (_) (ref ,activation-symbol _)))))
+    `((,sym (->+ :name ',name :args (list ,activation-symbol)))))
   (:method ((chunk exp-normalized-group-chunk) sym name size activation-symbol)
     (let ((exp-symbol (gensym)))
       (values
-       `((hidden-lump :symbol ,exp-symbol :size ,size
-          :def (->exp (_) (ref ,activation-symbol _)))
-         (normalized-lump :symbol ,sym :name ',name :size ,size
-          :scale ,(scale chunk) :group-size ,(group-size chunk)
-          :normalized-lump ,exp-symbol))
+       `((,exp-symbol (->exp :x ,activation-symbol))
+         (,sym (normalized-lump :name ',name
+                :scale ,(scale chunk) :group-size ,(group-size chunk)
+                :x ,exp-symbol)))
        `((:from-lump ,name :to-lump ,exp-symbol))))))
 
 (defun lumpy-name (lumpy)
@@ -300,7 +301,7 @@ initialization specs and the name of the `end' lump as the third.")
   (:method (from-lumpy to-lumpy rbm-index (cloud cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
            (from-size (chunk-size from-chunk))
-           (n-weights (length (weights cloud)))
+           (n-weights (matlisp:number-of-elements (weights cloud)))
            (weight-symbol (gensym))
            (weight-name (cloud-weight-lump-name rbm-index cloud transposep))
            (size (/ n-weights from-size))
@@ -312,26 +313,23 @@ initialization specs and the name of the `end' lump as the third.")
       ;; Regardless of TRANSPOSEP the weight lump contains rows of
       ;; weights for each target node in the hidden chunk just like in
       ;; the RBM.
-      (list `((,(if sparsep
-                    'sparse-weight-lump
-                    'weight-lump)
-               ,@(when sparsep (list :row-size row-size))
-               :symbol ,weight-symbol :name ',weight-name
-               :size ,n-weights)
-              (cloud-activation-lump
-               :symbol ,linear-symbol
-               :name ',linear-name
-               :size ,size
-               :weight-lump ,weight-symbol
-               :input-lump ,(lumpy-symbol from-lumpy)
-               ;; ALERT: in a BPN WEIGHT*INPUT=OUTPUT but in RBMs
-               ;; WEIGHT'*VISIBLE=HIDDEN. In other words one is row
-               ;; major and the other is column major so the transpose
-               ;; flag must be flipped.
-               :transpose-weights-p ,(not transposep)))
+      (list `((,weight-symbol
+               (,(if sparsep
+                     'sparse-weight-lump
+                     'weight-lump)
+                ,@(when sparsep (list :row-size row-size))
+                :name ',weight-name
+                :size ,n-weights))
+              (,linear-symbol
+               (cloud-activation-lump
+                :name ',linear-name
+                :size ,size
+                :weights ,weight-symbol
+                :x ,(lumpy-symbol from-lumpy)
+                :transpose-weights-p ,transposep)))
             `((:from-lump ,(if transposep
-                                  (lumpy-name to-lumpy)
-                                  (lumpy-name from-lumpy))
+                               (lumpy-name to-lumpy)
+                               (lumpy-name from-lumpy))
                :to-lump ,weight-name :to :rows)
               (:from-lump ,(lumpy-name to-lumpy) :to-lump ,linear-name))
             `((:weight-name ,weight-name
@@ -365,30 +363,30 @@ initialization specs and the name of the `end' lump as the third.")
              (size (chunk-size chunk)))
         (cond ((typep chunk 'constant-chunk)
                (assert (endp incomings))
-               (push `(constant-lump :symbol ,(lumpy-symbol lumpy)
-                       :name ',name :size ,size
-                       :value ,(value chunk))
+               (push `(,(lumpy-symbol lumpy)
+                       (constant-lump
+                        :name ',name :size ,size
+                        :default-value ,(default-value chunk)))
                      defs))
               ((or (typep chunk 'conditioning-chunk)
                    (endp incomings))
                (assert (endp incomings))
-               (push `(input-lump :symbol ,(lumpy-symbol lumpy) :name ',name
-                       :size ,size) defs))
+               (push `(,(lumpy-symbol lumpy)
+                       (input-lump :name ',name :size ,size))
+                     defs))
               (t
                (multiple-value-bind (cloud-defs cloud-clamps cloud-inits
                                                 linear-symbols)
                    (incoming-list->bpn-definition lumpy incomings)
-                 (let ((linear-refs (mapcar (lambda (symbol) `(ref ,symbol _))
-                                            linear-symbols)))
-                   (push-all cloud-defs defs)
-                   (push-all cloud-clamps clamps)
-                   (push-all cloud-inits inits)
-                   (push `(hidden-lump :symbol ,activation-symbol
-                           :name ',activation-name :size ,size
-                           :def (->+ (_) ,@linear-refs))
-                         defs)
-                   (push `(:from-lump ,name :to-lump ,activation-name)
-                         clamps)))
+                 (push-all cloud-defs defs)
+                 (push-all cloud-clamps clamps)
+                 (push-all cloud-inits inits)
+                 (push `(,activation-symbol
+                         (->+ :name ',activation-name
+                              :args (list ,@linear-symbols)))
+                       defs)
+                 (push `(:from-lump ,name :to-lump ,activation-name)
+                       clamps))
                (multiple-value-bind (chunk-defs chunk-clamps chunk-inits)
                    (chunk->bpn-definition chunk (lumpy-symbol lumpy)
                                           name size activation-symbol)
@@ -527,10 +525,10 @@ returned by UNROLL-DBN."
           init
         (let* ((lump (find-lump weight-name bpn :errorp t))
                (cloud (find-cloud cloud-name (elt rbms rbm-index) :errorp t))
-               (weights (weights cloud)))
+               (weights (storage (weights cloud))))
           (declare (type flt-vector weights))
           (multiple-value-bind (nodes start end)
-              (lump-node-array lump)
+              (segment-weights lump)
             (declare (type flt-vector nodes))
             (unless (= (length weights) (- end start))
               (error "Cannot initialize lump ~S from cloud ~S: size mismatch"

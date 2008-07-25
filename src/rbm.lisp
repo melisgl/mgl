@@ -1,16 +1,3 @@
-;;;; TODO:
-;;;;
-;;;; * factored RBM: weight matrix is A*B?
-;;;;
-;;;; * conditioning chunks are not really visible nor hidden
-;;;;
-;;;; * semi-restricted (connections between visibles)
-;;;;
-;;;; * higher order rbm
-;;;;
-;;;; * training with conjugate gradient: is it possible to calculate
-;;;; the cost function?
-
 (in-package :mgl-rbm)
 
 ;;;; Chunk
@@ -18,14 +5,14 @@
 (defclass chunk ()
   ((name :initform (gensym) :initarg :name :reader name)
    (inputs
-    :type (or flt-vector null) :reader inputs
+    :type (or matlisp:real-matrix null) :reader inputs
     :documentation "This is where SET-INPUT saves the input for later
 use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
 CONSTANT-CHUNKS.")
    (nodes
-    :type flt-vector :reader nodes
-    :documentation "A value for each node in the chunk. First
-activations are put here (inputs*weights) then the mean of the
+    :type matlisp:real-matrix :reader nodes
+    :documentation "A value for each node in the chunk. First,
+activations are put here (weights*inputs) then the mean of the
 probability distribution is calculated from the activation and finally
 \(optionally) a sample is taken from the probability distribution. All
 these values are stored in this vector. This is also where SET-INPUT
@@ -34,18 +21,60 @@ is supposed to clamp the values.")
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
-layer's NODES. Need not be ordered. SET-INPUT sets it."))
+layer's NODES. Need not be ordered. SET-INPUT sets it. Note that if it
+is non-NIL then N-STRIPES must be 1.")
+   (default-value
+    :initform #.(flt 0) :initarg :default-value :type flt
+    :reader default-value
+    :documentation "Upon creation or resize the chunk's nodes get
+filled with this value."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
 
 (declaim (inline chunk-size))
 (defun chunk-size (chunk)
-  (length (the flt-vector (nodes chunk))))
+  (the index (values (matlisp:nrows (nodes chunk)))))
+
+(defmethod size ((chunk chunk))
+  (chunk-size chunk))
+
+(declaim (inline chunk-n-stripes))
+(defun chunk-n-stripes (chunk)
+  (the index (values (matlisp:ncols (nodes chunk)))))
+
+(defmethod n-stripes ((chunk chunk))
+  (chunk-n-stripes chunk))
+
+(declaim (inline chunk-max-n-stripes))
+(defun chunk-max-n-stripes (chunk)
+  (let ((nodes (nodes chunk)))
+    (the index (/ (length (storage nodes))
+                  (matlisp:nrows nodes)))))
+
+(defmethod max-n-stripes ((chunk chunk))
+  (chunk-max-n-stripes chunk))
+
+(defmethod stripe-start (stripe (chunk chunk))
+  (* stripe (chunk-size chunk)))
+
+(defmethod stripe-end (stripe (chunk chunk))
+  (* (1+ stripe) (chunk-size chunk)))
 
 (defmethod print-object ((chunk chunk) stream)
   (print-unreadable-object (chunk stream :type t :identity t)
-    (format stream "~S ~S" (name chunk) (chunk-size chunk)))
+    (format stream "~S ~S(~S/~S)" (name chunk) (chunk-size chunk)
+            (chunk-n-stripes chunk) (chunk-max-n-stripes chunk)))
   chunk)
+
+(defun use-blas-on-chunk-p (cost chunk)
+  (assert (or (null (indices-present chunk))
+              (= 1 (chunk-n-stripes chunk))))
+  (and
+   ;; several stripes or cost is high => blas
+   (or (< 1 (chunk-n-stripes chunk))
+       (use-blas-p cost))
+   ;; there is no missing value support in blas
+   (null (indices-present chunk))))
 
 (defun ->chunk (chunk-designator chunks)
   (if (typep chunk-designator 'chunk)
@@ -53,19 +82,44 @@ of nodes of the same type."))
       (or (find chunk-designator chunks :key #'name :test #'equal)
           (error "Cannot find chunk ~S." chunk-designator))))
 
-(defmacro do-chunk ((var chunk) &body body)
+(defvar *current-stripe*)
+
+(defmacro do-stripes ((chunk) &body body)
+  (with-gensyms (%chunk %stripe)
+    `(let ((,%chunk ,chunk))
+       (assert (locally (declare (optimize (speed 1)))
+                 (or (not (indices-present ,%chunk))
+                     (= 1 (chunk-n-stripes ,%chunk)))))
+       (dotimes (,%stripe (chunk-n-stripes ,%chunk))
+         (let ((*current-stripe* ,%stripe))
+           ,@body)))))
+
+(defmacro do-chunk ((index chunk) &body body)
   "Iterate over the indices of nodes of CHUNK skipping missing ones."
   (with-gensyms (%chunk %indices-present %size)
     `(let* ((,%chunk ,chunk)
             (,%indices-present (indices-present ,%chunk)))
        (if ,%indices-present
            (locally (declare (type index-vector ,%indices-present))
-             (loop for ,var across ,%indices-present
+             (loop for ,index across ,%indices-present
                    do (progn ,@body)))
            (let ((,%size (chunk-size ,%chunk)))
              (declare (type index ,%size))
-             (loop for ,var fixnum below ,%size
+             (loop for ,index fixnum
+                   upfrom (locally (declare (optimize (speed 1)))
+                            (the index (* *current-stripe* ,%size)))
+                   below (locally (declare (optimize (speed 1)))
+                           (the index (+ ,%size (* *current-stripe* ,%size))))
                    do ,@body))))))
+
+(defun fill-chunk (chunk value)
+  (declare (type flt value))
+  (if (use-blas-on-chunk-p (cost-of-fill (nodes chunk)) chunk)
+      (let ((nodes (storage (nodes chunk))))
+        (do-stripes (chunk)
+          (do-chunk (i chunk)
+            (setf (aref nodes i) value))))
+      (matlisp:fill-matrix (nodes chunk) value)))
 
 (defclass conditioning-chunk (chunk) ()
   (:documentation "Nodes in CONDITIONING-CHUNK never change their
@@ -75,23 +129,42 @@ the visible layer allows `conditional' RBMs."))
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
 
+(defun resize-chunk (chunk size max-n-stripes)
+  (unless (and (slot-boundp chunk 'nodes)
+               (= size (chunk-size chunk))
+               (= max-n-stripes (chunk-max-n-stripes chunk)))
+    (setf (slot-value chunk 'nodes)
+          (matlisp:make-real-matrix size max-n-stripes))
+    (fill-chunk chunk (default-value chunk))
+    (setf (slot-value chunk 'inputs)
+          (if (typep chunk 'constant-chunk)
+              nil
+              (matlisp:make-real-matrix size max-n-stripes)))))
+
+(defmethod set-n-stripes (n-stripes (chunk chunk))
+  (set-ncols (nodes chunk) n-stripes)
+  (when (inputs chunk)
+    (set-ncols (inputs chunk) n-stripes))
+  n-stripes)
+
+(defmethod set-max-n-stripes (max-n-stripes (chunk chunk))
+  (resize-chunk chunk (chunk-size chunk) max-n-stripes)
+  max-n-stripes)
+
 (defmethod initialize-instance :after ((chunk chunk)
-                                       &key (size 1) &allow-other-keys)
-  (setf (slot-value chunk 'nodes) (make-flt-array size))
-  (setf (slot-value chunk 'inputs)
-        (if (typep chunk 'constant-chunk)
-            nil
-            (make-flt-array size))))
+                                       &key (size 1) (max-n-stripes 1)
+                                       &allow-other-keys)
+  (resize-chunk chunk size max-n-stripes))
 
 (defclass constant-chunk (conditioning-chunk)
-  ((value :initform #.(flt 1) :initarg :value :type flt :reader value))
+  ((default-value :initform #.(flt 1)))
   (:documentation "A special kind of CONDITIONING-CHUNK whose NODES
-are always VALUE. This conveniently allows biases in the opposing
-layer."))
+are always DEFAULT-VALUE. This conveniently allows biases in the
+opposing layer."))
 
 (defmethod initialize-instance :after ((chunk constant-chunk)
                                        &key &allow-other-keys)
-  (fill (nodes chunk) (value chunk)))
+  (fill-chunk chunk (default-value chunk)))
 
 (defclass sigmoid-chunk (chunk) ()
   (:documentation "Nodes in a sigmoid chunk have two possible samples:
@@ -130,42 +203,42 @@ samples have exactly one 1 in each group of GROUP-SIZE."))
 distribution. When called NODES contains the activations.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((nodes (nodes chunk)))
-      (declare (type flt-vector nodes))
-      (do-chunk (i chunk)
-        (setf (aref nodes i)
-              (sigmoid (aref nodes i))))))
+    (let ((nodes (storage (nodes chunk))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes i)
+                (sigmoid (aref nodes i)))))))
   (:method ((chunk gaussian-chunk))
     ;; nothing to do: NODES already contains the activation
     )
   (:method ((chunk normalized-group-chunk))
     ;; NODES is already set up, only normalization within groups of
     ;; GROUP-SIZE remains.
-    (let ((nodes (nodes chunk))
+    (let ((nodes (storage (nodes chunk)))
           (scale (scale chunk))
           (group-size (group-size chunk)))
-      (declare (type flt-vector nodes)
-               (type flt scale)
+      (declare (type flt scale)
                (type index group-size))
       (assert (zerop (mod (chunk-size chunk) group-size)))
-      (do-chunk (i chunk)
-        ;; this assumes that nodes in the same group have values at
-        ;; the same time
-        (when (zerop (mod i group-size))
-          (let ((sum #.(flt 0)))
-            (declare (type flt sum) (optimize (speed 3)))
-            (loop for j upfrom i below (+ i group-size)
-                  do (incf sum (aref nodes j)))
-            (setq sum (/ sum scale))
-            (loop for j upfrom i below (+ i group-size)
-                  do (setf (aref nodes j)
-                           (/ (aref nodes j) sum))))))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          ;; this assumes that nodes in the same group have values at
+          ;; the same time
+          (when (zerop (mod i group-size))
+            (let ((sum #.(flt 0)))
+              (declare (type flt sum) (optimize (speed 3)))
+              (loop for j upfrom i below (+ i group-size)
+                    do (incf sum (aref nodes j)))
+              (setq sum (/ sum scale))
+              (loop for j upfrom i below (+ i group-size)
+                    do (setf (aref nodes j)
+                             (/ (aref nodes j) sum)))))))))
   (:method ((chunk exp-normalized-group-chunk))
-    (let ((nodes (nodes chunk)))
-      (declare (type flt-vector nodes))
-      (do-chunk (i chunk)
-        (setf (aref nodes i)
-              (exp (aref nodes i)))))
+    (let ((nodes (storage (nodes chunk))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes i)
+                (exp (aref nodes i))))))
     (call-next-method)))
 
 (defgeneric sample-chunk (chunk)
@@ -173,41 +246,41 @@ distribution. When called NODES contains the activations.")
 whose means are in NODES.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((nodes (nodes chunk)))
-      (declare (type flt-vector nodes))
-      (do-chunk (i chunk)
-        (setf (aref nodes i)
-              (binarize-randomly (aref nodes i))))))
+    (let ((nodes (storage (nodes chunk))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes i)
+                (binarize-randomly (aref nodes i)))))))
   (:method ((chunk gaussian-chunk))
-    (let ((nodes (nodes chunk)))
-      (declare (type flt-vector nodes))
-      (do-chunk (i chunk)
-        (setf (aref nodes i)
-              (+ (aref nodes i)
-                 (gaussian-random-1))))))
+    (let ((nodes (storage (nodes chunk))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes i)
+                (+ (aref nodes i)
+                   (gaussian-random-1)))))))
   (:method ((chunk softmax-chunk))
-    (let ((nodes (nodes chunk))
+    (let ((nodes (storage (nodes chunk)))
           (group-size (group-size chunk)))
-      (declare (type flt-vector nodes)
-               (type index group-size)
+      (declare (type index group-size)
                (optimize (speed 3)))
-      (do-chunk (i chunk)
-        (when (zerop (mod i group-size))
-          (let ((x (random #.(flt 1))))
-            (declare (type flt x))
-            (loop for j upfrom i below (+ i group-size) do
-                  (when (minusp (decf x (aref nodes j)))
-                    (fill nodes #.(flt 0) :start i :end (+ i group-size))
-                    (setf (aref nodes j) #.(flt 1))
-                    (return))))))))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (when (zerop (mod i group-size))
+            (let ((x (random #.(flt 1))))
+              (declare (type flt x))
+              (loop for j upfrom i below (+ i group-size) do
+                    (when (minusp (decf x (aref nodes j)))
+                      (fill nodes #.(flt 0) :start i :end (+ i group-size))
+                      (setf (aref nodes j) #.(flt 1))
+                      (return)))))))))
   (:method ((chunk constrained-poisson-chunk))
     (error "Not implemented yet.")
     #+nil
-    (let ((nodes (nodes chunk)))
-      (declare (type flt-vector nodes)
-               (optimize (speed 3)))
-      (do-chunk (i chunk)
-        (setf (aref nodes i) (poisson (aref nodes i)))))))
+    (let ((nodes (storage (nodes chunk))))
+      (declare (optimize (speed 3)))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes i) (poisson (aref nodes i))))))))
 
 
 ;;;; RBM
@@ -216,30 +289,37 @@ whose means are in NODES.")
   ((visible-chunks :initarg :visible-chunks :type list :reader visible-chunks)
    (hidden-chunks :initarg :hidden-chunks :type list :reader hidden-chunks)
    (clouds :initarg :clouds :type list :reader clouds)
-   (dbn :initform nil :type (or null dbn) :reader dbn))
+   (dbn :initform nil :type (or null dbn) :reader dbn)
+   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "An RBM is a network of two layers of nodes. By
 convention one is called `visible' and the other `hidden'. Connections
 between nodes are symmetrical and there are no intralayer connections.
 
-Layers consists of chunks and chunks of opposing layers can be
+Layers consist of chunks and chunks of opposing layers can be
 connected. A set of connections is called a `cloud'. Currently only
-fully connected clouds are supported and this restriction makes it
-easy to generate a backprop network from an RBM."))
+fully connected clouds are supported."))
 
 (defstruct (cloud (:conc-name "") (:constructor %make-cloud))
   cloud-name
   (visible-chunk nil :type chunk)
   (hidden-chunk nil :type chunk)
-  (weights nil :type flt-vector))
+  ;; In Matlisp, chunks are represented as column vectors
+  ;; (disregarding the more than one stripe case). If the visible
+  ;; chunk is Nx1 and the hidden is Mx1 then the weight matrix is MxN.
+  ;; Hidden = hidden + weights * visible. Visible = visible +
+  ;; weights^T * hidden. Looking directly at the underlying Lisp array
+  ;; (MATLISP::STORE), it's all transposed.
+  (weights nil :type matlisp:real-matrix))
 
 (defmethod name ((cloud cloud))
   (cloud-name cloud))
 
 (defun make-cloud (&key name visible-chunk hidden-chunk weights)
   (unless weights
-    (setq weights (make-flt-array (* (chunk-size visible-chunk)
-                                     (chunk-size hidden-chunk))))
-    (map-into weights (lambda () (flt (* 0.01 (gaussian-random-1))))))
+    (setq weights (matlisp:make-real-matrix (chunk-size hidden-chunk)
+                                            (chunk-size visible-chunk)))
+    (map-into (storage weights)
+              (lambda () (flt (* 0.01 (gaussian-random-1))))))
   (%make-cloud :cloud-name name
                :visible-chunk visible-chunk
                :hidden-chunk hidden-chunk
@@ -255,19 +335,20 @@ easy to generate a backprop network from an RBM."))
     `(let ((,%cloud ,cloud))
        (if (indices-present (visible-chunk ,%cloud))
            (let ((,%hidden-chunk-size (chunk-size (hidden-chunk ,%cloud))))
-             (do-chunk (,%index (visible-chunk ,%cloud))
-               (let* ((,start (#.*the* index (* ,%index ,%hidden-chunk-size)))
-                      (,end (#.*the* index (+ ,start ,%hidden-chunk-size))))
-                 ,@body)))
+             (do-stripes ((visible-chunk ,%cloud))
+               (do-chunk (,%index (visible-chunk ,%cloud))
+                 (let* ((,start (the! index (* ,%index ,%hidden-chunk-size)))
+                        (,end (the! index (+ ,start ,%hidden-chunk-size))))
+                   ,@body))))
            (let ((,start 0)
-                 (,end (length (weights ,%cloud))))
+                 (,end (matlisp:number-of-elements (weights ,%cloud))))
              ,@body)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-do-cloud/hidden (hidden-index index hidden-chunk-size
                                offset body)
-    `(do ((,hidden-index 0 (#.*the* index (1+ ,hidden-index)))
-          (,index ,offset (#.*the* index (1+ ,index))))
+    `(do ((,hidden-index 0 (the! index (1+ ,hidden-index)))
+          (,index ,offset (the! index (1+ ,index))))
          ((>= ,hidden-index ,hidden-chunk-size))
        ,@body)))
 
@@ -276,14 +357,16 @@ easy to generate a backprop network from an RBM."))
     `(let* ((,%cloud ,cloud)
             (,%hidden-chunk-size (chunk-size (hidden-chunk ,%cloud))))
        (declare (type index ,%hidden-chunk-size))
-       (do-chunk (,visible-index (visible-chunk ,%cloud))
-         (let ((,%offset (#.*the* index
-                                  (* ,visible-index ,%hidden-chunk-size))))
-           (macrolet ((do-cloud/hidden ((hidden-index index) &body body)
-                        (make-do-cloud/hidden hidden-index index
-                                              ',%hidden-chunk-size ',%offset
-                                              body)))
-             ,@body))))))
+       (assert (= 1 (chunk-n-stripes (visible-chunk ,%cloud))))
+       (do-stripes ((visible-chunk ,%cloud))
+         (do-chunk (,visible-index (visible-chunk ,%cloud))
+           (let ((,%offset (the! index
+                                 (* ,visible-index ,%hidden-chunk-size))))
+             (macrolet ((do-cloud/hidden ((hidden-index index) &body body)
+                          (make-do-cloud/hidden hidden-index index
+                                                ',%hidden-chunk-size ',%offset
+                                                body)))
+               ,@body)))))))
 
 (defun find-cloud (name rbm &key errorp)
   "Find the cloud in RBM whose name is EQUAL to NAME. Raise and error
@@ -334,6 +417,22 @@ lists of the names of the visible and hidden chunks."
                 clouds))))
     clouds))
 
+(defmethod n-stripes ((rbm rbm))
+  (n-stripes (first (visible-chunks rbm))))
+
+(defmethod set-n-stripes (n-stripes (rbm rbm))
+  (dolist (chunk (visible-chunks rbm))
+    (setf (n-stripes chunk) n-stripes))
+  (dolist (chunk (hidden-chunks rbm))
+    (setf (n-stripes chunk) n-stripes)))
+
+(defmethod set-max-n-stripes (max-n-stripes (rbm rbm))
+  (setf (slot-value rbm 'max-n-stripes) max-n-stripes)
+  (dolist (chunk (visible-chunks rbm))
+    (setf (max-n-stripes chunk) max-n-stripes))
+  (dolist (chunk (hidden-chunks rbm))
+    (setf (max-n-stripes chunk) max-n-stripes)))
+
 (defmethod initialize-instance :after
     ((rbm rbm) &key visible-chunks hidden-chunks
      (clouds (default-clouds visible-chunks hidden-chunks)))
@@ -346,7 +445,8 @@ Names of chunks and clouds shall be unique by EQUAL."
     (error "Name conflict among hidden chunks ~S." hidden-chunks))
   (setf (slot-value rbm 'clouds)
         (->clouds visible-chunks hidden-chunks clouds))
-  rbm)
+  ;; make sure chunks have the same MAX-N-STRIPES
+  (setf (max-n-stripes rbm) (max-n-stripes rbm)))
 
 (defun hijack-means-to-activation (rbm to-visible/hidden)
   "Set the chunks of TO-VISIBLE/HIDDEN layer of RBM to the activations
@@ -356,56 +456,46 @@ activations."
   (cond ((eq :hidden to-visible/hidden)
          (dolist (chunk (hidden-chunks rbm))
            (unless (conditioning-chunk-p chunk)
-             (fill (the flt-vector (nodes chunk)) #.(flt 0))))
+             (fill-chunk chunk #.(flt 0))))
          (do-clouds (cloud rbm)
            (unless (conditioning-chunk-p (hidden-chunk cloud))
              (let ((weights (weights cloud))
                    (from (nodes (visible-chunk cloud)))
                    (to (nodes (hidden-chunk cloud))))
-               (declare (type flt-vector weights from to))
-               (if (and (use-blas-p (length weights))
-                        (null (indices-present (visible-chunk cloud))))
-                   (funcall (intern #.(symbol-name 'dgemv)
-                                    (find-package 'blas))
-                            "N" (length to) (length from)
-                            1d0 weights (length to)
-                            from 1
-                            1d0 to 1)
-                   (do-cloud/visible (i cloud)
-                     (let ((x (aref from i)))
-                       (unless (zerop x)
-                         (do-cloud/hidden (j weight-index)
-                           (incf (aref to j)
-                                 (* x (aref weights weight-index))))))))))))
+               (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
+                                        (visible-chunk cloud))
+                   (matlisp:gemm! (flt 1) weights from (flt 1) to)
+                   (let ((weights (storage weights))
+                         (from (storage from))
+                         (to (storage to)))
+                     (do-cloud/visible (i cloud)
+                       (let ((x (aref from i)))
+                         (unless (zerop x)
+                           (do-cloud/hidden (j weight-index)
+                             (incf (aref to j)
+                                   (* x (aref weights weight-index)))))))))))))
         (t
          (dolist (chunk (visible-chunks rbm))
            (unless (conditioning-chunk-p chunk)
-             (let ((nodes (the flt-vector (nodes chunk))))
-               (if (indices-present chunk)
-                   (do-chunk (i chunk)
-                     (setf (aref nodes i) #.(flt 0)))
-                   (fill nodes #.(flt 0))))))
+             (fill-chunk chunk #.(flt 0))))
          (do-clouds (cloud rbm)
            (unless (conditioning-chunk-p (visible-chunk cloud))
              (let ((weights (weights cloud))
                    (from (nodes (hidden-chunk cloud)))
                    (to (nodes (visible-chunk cloud))))
-               (declare (type flt-vector weights from to))
-               (if (and (use-blas-p (length weights))
-                        (null (indices-present (visible-chunk cloud))))
-                   (funcall (intern #.(symbol-name 'dgemv)
-                                    (find-package 'blas))
-                            "T" (length from) (length to)
-                            1d0 weights (length from)
-                            from 1
-                            1d0 to 1)
-                   (do-cloud/visible (i cloud)
-                     (let ((sum #.(flt 0)))
-                       (declare (type flt sum))
-                       (do-cloud/hidden (j weight-index)
-                         (incf sum (* (aref from j)
-                                      (aref weights weight-index))))
-                       (incf (aref to i) sum))))))))))
+               (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
+                                        (visible-chunk cloud))
+                   (matlisp:gemm! (flt 1) weights from (flt 1) to :tn)
+                   (let ((weights (storage weights))
+                         (from (storage from))
+                         (to (storage to)))
+                     (do-cloud/visible (i cloud)
+                       (let ((sum #.(flt 0)))
+                         (declare (type flt sum))
+                         (do-cloud/hidden (j weight-index)
+                           (incf sum (* (aref from j)
+                                        (aref weights weight-index))))
+                         (incf (aref to i) sum)))))))))))
 
 (defun set-visible-mean (rbm)
   "Set NODES of the chunks in the visible layer to the means of their
@@ -434,7 +524,7 @@ chunk type and the mean that resides in NODES."
 
 ;;;; Integration with train and gradient descent
 
-(defclass rbm-trainer (segmented-trainer)
+(defclass rbm-trainer (segmented-gd-trainer)
   ((sample-visible-p
     :initform nil
     :initarg :sample-visible-p
@@ -458,45 +548,54 @@ the learning or the mean field is used instead.")
   (map nil fn (clouds rbm)))
 
 (defmethod segment-weights ((cloud cloud))
-  (values (weights cloud) 0 (length (weights cloud))))
+  (values (storage (weights cloud)) 0
+          (length (storage (weights cloud)))))
 
 (defmethod map-segment-runs (fn (cloud cloud))
   (do-cloud-runs ((start end) cloud)
     (funcall fn start end)))
 
-(defmethod train-one (sample (trainer rbm-trainer) rbm &key)
-  (set-input sample rbm)
-  (positive-phase trainer rbm)
-  (negative-phase trainer rbm)
-  (call-next-method))
+(defmethod train (sampler (trainer rbm-trainer) (rbm rbm))
+  (while (not (finishedp sampler))
+    (train-batch (sample-batch sampler (n-inputs-until-update trainer))
+                 trainer rbm)))
+
+(defmethod train-batch (batch (trainer rbm-trainer) (rbm rbm))
+  (loop for samples in (group batch (max-n-stripes rbm))
+        do (set-input samples rbm)
+        (positive-phase trainer rbm)
+        (negative-phase trainer rbm))
+  (maybe-update-weights trainer (length batch)))
 
 (defun inputs->nodes (rbm)
   "Copy the previously clamped INPUTS to NODES as if SET-INPUT were
 called with the same parameters."
   (map nil (lambda (chunk)
-             (when (inputs chunk)
-               (let ((inputs (inputs chunk))
-                     (nodes (nodes chunk)))
-                 (declare (type flt-vector inputs nodes)
-                          (optimize (speed 3)))
-                 (if (indices-present chunk)
-                     (do-chunk (i chunk)
-                       (setf (aref nodes i) (aref inputs i)))
-                     (replace nodes inputs)))))
+             (let ((inputs (inputs chunk)))
+               (when inputs
+                 (if (use-blas-on-chunk-p (cost-of-copy inputs) chunk)
+                     (matlisp:copy! (inputs chunk) (nodes chunk))
+                     (let ((inputs (storage (inputs chunk)))
+                           (nodes (storage (nodes chunk))))
+                       (declare (optimize (speed 3)))
+                       (do-stripes (chunk)
+                         (do-chunk (i chunk)
+                           (setf (aref nodes i) (aref inputs i)))))))))
        (visible-chunks rbm)))
 
 (defun nodes->inputs (rbm)
   "Copy NODES to INPUTS."
   (map nil (lambda (chunk)
-             (when (inputs chunk)
-               (let ((inputs (inputs chunk))
-                     (nodes (nodes chunk)))
-                 (declare (type flt-vector inputs nodes)
-                          (optimize (speed 3)))
-                 (if (indices-present chunk)
-                     (do-chunk (i chunk)
-                       (setf (aref inputs i) (aref nodes i)))
-                     (replace inputs nodes)))))
+             (let ((inputs (inputs chunk)))
+               (when inputs
+                 (if (use-blas-on-chunk-p (cost-of-copy inputs) chunk)
+                     (matlisp:copy! (nodes chunk) (inputs chunk))
+                     (let ((inputs (storage (inputs chunk)))
+                           (nodes (storage (nodes chunk))))
+                       (declare (optimize (speed 3)))
+                       (do-stripes (chunk)
+                         (do-chunk (i chunk)
+                           (setf (aref inputs i) (aref nodes i)))))))))
        (visible-chunks rbm)))
 
 
@@ -508,22 +607,26 @@ called with the same parameters."
     (do-segment-gradient-accumulators ((cloud acc-start products) trainer)
       (let ((v1 (nodes (visible-chunk cloud)))
             (v2 (nodes (hidden-chunk cloud))))
-        (declare (type flt-vector v1 v2 products)
-                 (optimize (speed 3) #.*no-array-bounds-check*))
-        ;; We cloud use (BLAS:DGER (LENGTH V1) (LENGTH V2) -1D0 V1 1
-        ;; V2 1 PRODUCTS (LENGTH V1)) as in SUBTRACT-PRODUCT but it
-        ;; seems to result in a slowdown most likely due to the UNLESS
-        ;; (ZEROP x) test being effective as typical data sets tend to
-        ;; have many zeros in the input.
-        (special-case (zerop acc-start)
-          (do-cloud/visible (i cloud)
-            (let ((x (aref v1 i)))
-              (unless (zerop x)
-                (do-cloud/hidden (j weight-index)
-                  (decf (aref products (#.*the*
-                                        index
-                                        (+ acc-start weight-index)))
-                        (* x (aref v2 j)))))))))))
+        (if (and (zerop acc-start)
+                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
+                                      (visible-chunk cloud)))
+            (matlisp:gemm! (flt -1) v2 v1 (flt 1)
+                           (reshape2 products
+                                     (matlisp:nrows v2)
+                                     (matlisp:nrows v1))
+                           :nt)
+            (let ((v1 (storage v1))
+                  (v2 (storage v2))
+                  (products (storage products)))
+              (declare (optimize (speed 3) #.*no-array-bounds-check*))
+              (special-case (zerop acc-start)
+                (do-cloud/visible (i cloud)
+                  (let ((x (aref v1 i)))
+                    (unless (zerop x)
+                      (do-cloud/hidden (j weight-index)
+                        (decf (aref products (the! index
+                                                   (+ acc-start weight-index)))
+                              (* x (aref v2 j)))))))))))))
   (:documentation "Subtract the product of the nodes of the two layers
 of each cloud to the appropriate gradient accumlator. This is the
 first term of contrastive divergence learning rule."))
@@ -539,14 +642,18 @@ first term of contrastive divergence learning rule."))
       (let ((v1 (nodes (visible-chunk cloud)))
             (v2 (nodes (hidden-chunk cloud)))
             (products (or accumulator2 accumulator1)))
-        (declare (type flt-vector v1 v2 products))
         (if (and (zerop acc-start)
-                 (use-blas-p (length products))
-                 (null (indices-present (visible-chunk cloud))))
-            (funcall (intern #.(symbol-name 'dger) (find-package 'blas))
-                     (length v2) (length v1) (/ (flt n-gibbs))
-                     v2 1 v1 1 products (length v2))
-            (locally (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
+                                      (visible-chunk cloud)))
+            (matlisp:gemm! (/ (flt n-gibbs)) v2 v1 (flt 1)
+                           (reshape2 products
+                                     (matlisp:nrows v2)
+                                     (matlisp:nrows v1))
+                           :nt)
+            (let ((v1 (storage v1))
+                  (v2 (storage v2))
+                  (products (storage products)))
+              (declare (optimize (speed 3) #.*no-array-bounds-check*))
               (special-case (zerop acc-start)
                 (if (= 1 n-gibbs)
                     (do-cloud/visible (i cloud)
@@ -554,9 +661,8 @@ first term of contrastive divergence learning rule."))
                         (unless (zerop x)
                           (do-cloud/hidden (j weight-index)
                             (incf (aref products
-                                        (#.*the*
-                                         index
-                                         (+ acc-start weight-index)))
+                                        (the! index
+                                              (+ acc-start weight-index)))
                                   (* x (aref v2 j)))))))
                     (let ((value (/ (flt n-gibbs))))
                       (do-cloud/visible (i cloud)
@@ -565,9 +671,8 @@ first term of contrastive divergence learning rule."))
                             (let ((x (* x value)))
                               (do-cloud/hidden (j weight-index)
                                 (incf (aref products
-                                            (#.*the*
-                                             index
-                                             (+ acc-start weight-index)))
+                                            (the! index
+                                                  (+ acc-start weight-index)))
                                       (* x (aref v2 j))))))))))))))))
   (:documentation "Add the product of the nodes of the two layers of
 each cloud to the appropriate gradient accumlator. This is the second
@@ -577,22 +682,6 @@ term of contrastive divergence learning rule."))
   (:method (trainer rbm)
     (set-hidden-mean rbm)
     (accumulate-positive-phase-statistics trainer rbm)))
-
-#+nil
-(defun print-nodes-by-chunk (network)
-  (map nil (lambda (chunk)
-             (unless (typep chunk 'mgl-rbm:conditioning-chunk)
-               (format t "~S~%  " chunk)
-               (let ((array (mgl-rbm:nodes chunk))
-                     (n 0))
-                 (mgl-rbm::do-chunk (i chunk)
-                   (format t "~S:~,5F " i (aref array i))
-                   (when (and *print-length*
-                              (<= *print-length* (incf n)))
-                     (return))))
-               (terpri)))
-       (append (mgl-rbm:visible-chunks network)
-               (mgl-rbm:hidden-chunks network))))
 
 (defgeneric negative-phase (trainer rbm)
   (:method ((trainer rbm-trainer) rbm)
@@ -613,14 +702,14 @@ term of contrastive divergence learning rule."))
 ;;;; I/O
 
 (defmethod write-weights ((cloud cloud) stream)
-  (mgl-util::write-double-float-vector (weights cloud) stream))
+  (write-double-float-vector (storage (weights cloud)) stream))
 
 (defmethod write-weights ((rbm rbm) stream)
   (dolist (cloud (clouds rbm))
     (write-weights cloud stream)))
 
 (defmethod read-weights ((cloud cloud) stream)
-  (mgl-util::read-double-float-vector (weights cloud) stream))
+  (read-double-float-vector (storage (weights cloud)) stream))
 
 (defmethod read-weights ((rbm rbm) stream)
   (dolist (cloud (clouds rbm))
@@ -631,20 +720,22 @@ term of contrastive divergence learning rule."))
 
 (defun reconstruction-error (rbm)
   "Return the squared norm of INPUTS - NODES not considering constant
-or conditioning chunks that aren't reconstructed in any case."
+or conditioning chunks that aren't reconstructed in any case. The
+second value returned is the number of nodes that contributed to the
+error."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n) (optimize (speed 3)))
     (dolist (chunk (visible-chunks rbm))
       (unless (conditioning-chunk-p chunk)
-        (let ((inputs (inputs chunk))
-              (nodes (nodes chunk)))
-          (declare (type flt-vector inputs nodes))
-          (do-chunk (i chunk)
-            (let ((x (aref inputs i))
-                  (y (aref nodes i)))
-              (incf sum (expt (- x y) 2))
-              (incf n))))))
+        (let ((inputs (storage (inputs chunk)))
+              (nodes (storage (nodes chunk))))
+          (do-stripes (chunk)
+            (do-chunk (i chunk)
+              (let ((x (aref inputs i))
+                    (y (aref nodes i)))
+                (incf sum (expt (- x y) 2))
+                (incf n)))))))
     (values sum n)))
 
 (defgeneric get-squared-error (rbm)

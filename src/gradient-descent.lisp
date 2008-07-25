@@ -14,8 +14,8 @@ TRAINER."))
   `(map-segment-gradient-accumulators
     (lambda (,segment ,acc-start ,accumulator &optional ,accumulator2)
       (declare (type index ,acc-start)
-               (type flt-vector ,accumulator)
-               (type (or flt-vector null) ,accumulator2)
+               (type matlisp:real-matrix ,accumulator)
+               (type (or matlisp:real-matrix null) ,accumulator2)
                (ignorable ,accumulator2))
       ,@body)
     ,trainer))
@@ -34,17 +34,17 @@ been seen since the last time this was called."))
     :documentation "The set of segments that are to be trained. The
 ACCUMULATOR1, ACCUMULATOR2, WEIGHT-DELTAS, etc vectors are indexed by
 SEGMENT-SET indices.")
-   (weight-deltas :accessor weight-deltas)
+   (weight-deltas :type matlisp:real-matrix :accessor weight-deltas)
    (use-accumulator2
     :initform nil :initarg :use-accumulator2 :reader use-accumulator2
     :documentation "Controls whether ACCUMULATOR2 shall be set up by
 INITIALIZE-GD-TRAINER.")
    (accumulator1
-    :type flt-vector :accessor accumulator1
+    :type matlisp:real-matrix :accessor accumulator1
     :documentation "One of two FLT vectors that are accessed directly
 by the client and are used to store the sum of the computed gradient.")
    (accumulator2
-    :type (or null flt-vector) :accessor accumulator2
+    :type (or null matlisp:real-matrix) :accessor accumulator2
     :documentation "Another accumulator that, if present, is simply
 added to ACCUMULATOR1. Accumulating the positive and negative
 gradients in different accumulators in a longish batch helps with
@@ -95,14 +95,14 @@ only missing values does not change anything."))
   (setf (slot-value trainer 'segment-set)
         (make-instance 'segment-set :segments (list-segments segmentable)))
   (let ((n-weights (segment-set-size (segment-set trainer))))
-    (setf (accumulator1 trainer) (make-flt-array n-weights))
-    (fill (accumulator1 trainer) #.(flt 0))
+    (setf (accumulator1 trainer) (matlisp:make-real-matrix n-weights 1))
+    (matlisp:fill-matrix (accumulator1 trainer) #.(flt 0))
     (cond ((use-accumulator2 trainer)
-           (setf (accumulator2 trainer) (make-flt-array n-weights))
-           (fill (accumulator2 trainer) #.(flt 0)))
+           (setf (accumulator2 trainer) (matlisp:make-real-matrix n-weights 1))
+           (matlisp:fill-matrix (accumulator2 trainer) #.(flt 0)))
           (t
            (setf (accumulator2 trainer) nil)))
-    (setf (weight-deltas trainer) (make-flt-array n-weights))))
+    (setf (weight-deltas trainer) (matlisp:make-real-matrix n-weights 1))))
 
 (defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer)
                                segmentable)
@@ -110,9 +110,6 @@ only missing values does not change anything."))
   (let ((n-weights (segment-set-size (segment-set trainer))))
     (setf (n-weight-uses-in-batch trainer)
           (make-array n-weights :element-type 'index :initial-element 0))))
-
-(defmethod supports-partial-updates-p ((trainer per-weight-batch-gd-trainer))
-  t)
 
 (defmethod segments ((trainer gd-trainer))
   (segments (segment-set trainer)))
@@ -142,9 +139,11 @@ only missing values does not change anything."))
 (defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
   (when (<= (batch-size trainer)
             (incf (n-inputs-in-batch trainer) n-new-inputs))
-    (let ((accumulator1 (accumulator1 trainer))
-          (accumulator2 (accumulator2 trainer))
-          (weight-deltas (weight-deltas trainer))
+    (let ((accumulator1 (storage (accumulator1 trainer)))
+          (accumulator2 (if (accumulator2 trainer)
+                            (storage (accumulator2 trainer))
+                            nil))
+          (weight-deltas (storage (weight-deltas trainer)))
           (learning-rate (learning-rate trainer))
           (n-inputs (flt (n-inputs-in-batch trainer)))
           (momentum (momentum trainer))
@@ -156,7 +155,9 @@ only missing values does not change anything."))
       (do-segment-set (segment :start-in-segment-set start-in-segment-set)
           (segment-set trainer)
         (with-segment-weights ((weights start end) segment)
-          (do ((i start-in-segment-set (#.*the* index (1+ i)))
+          ;; Maybe this could be done with Matlisp, but it's not a
+          ;; hotspot.
+          (do ((i start-in-segment-set (the! index (1+ i)))
                (j start (1+ j)))
               ((<= end j))
             (let ((delta (+ (* momentum (aref weight-deltas i))
@@ -179,10 +180,14 @@ only missing values does not change anything."))
 
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
-  (let ((accumulator1 (accumulator1 trainer))
-        (accumulator2 (accumulator2 trainer))
+  (assert (= 1 n-new-inputs))
+  (incf (n-inputs trainer))
+  (let ((accumulator1 (storage (accumulator1 trainer)))
+        (accumulator2 (if (accumulator2 trainer)
+                          (storage (accumulator2 trainer))
+                          nil))
         (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
-        (weight-deltas (weight-deltas trainer))
+        (weight-deltas (storage (weight-deltas trainer)))
         (learning-rate (learning-rate trainer))
         (momentum (momentum trainer))
         (weight-decay (weight-decay trainer))
@@ -200,15 +205,15 @@ only missing values does not change anything."))
         (map-segment-runs
          (lambda (start end)
            (declare (type index start end))
-           (do ((i (#.*the* index
-                            (+ start-in-segment-set (- start weights-start)))
-                   (#.*the* index (1+ i)))
+           (do ((i (the! index
+                         (+ start-in-segment-set (- start weights-start)))
+                   (the! index (1+ i)))
                 (j start (1+ j)))
                ((<= end j))
              (when (<= batch-size
                        (setf (aref n-weight-uses-in-batch i)
-                             (1+ (#.*the* index
-                                          (aref n-weight-uses-in-batch i)))))
+                             (1+ (the! index
+                                       (aref n-weight-uses-in-batch i)))))
                (let ((delta (+ (* momentum (aref weight-deltas i))
                                (/ (if accumulator2
                                       (+ (aref accumulator1 i)
@@ -222,21 +227,21 @@ only missing values does not change anything."))
                        (aref accumulator1 i) #.(flt 0))
                  (when accumulator2
                    (setf (aref accumulator2 i) #.(flt 0)))))))
-         segment))))
-  (incf (n-inputs trainer) n-new-inputs))
+         segment)))))
 
-(defmethod train-one (sample (trainer gd-trainer) learner &key)
-  (declare (ignore sample learner))
-  (maybe-update-weights trainer 1))
+(defmethod n-inputs-until-update ((trainer batch-gd-trainer))
+  ;; BATCH-SIZE may be setf'ed to a value lower than N-INPUTS-IN-BATCH
+  (max 0 (- (batch-size trainer)
+            (n-inputs-in-batch trainer))))
 
-(defmethod train-batch (batch (trainer gd-trainer) learner &key)
-  (declare (ignore learner))
-  (maybe-update-weights trainer (length batch)))
+(defmethod n-inputs-until-update ((trainer per-weight-batch-gd-trainer))
+  ;; Weight updates are async, don't overpromise.
+  1)
 
 
 ;;;; Trainer
 
-(defclass segmented-trainer ()
+(defclass segmented-gd-trainer ()
   ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (segmenter
     :initarg :segmenter :accessor segmenter
@@ -249,7 +254,7 @@ initialize SEGMENT-TRAINERS before training.")
 other trainers. Useful to delegate training of different segments to
 different trainers or simply to not train all segments."))
 
-(defmethod initialize-trainer ((trainer segmented-trainer) learner)
+(defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
   (let ((segmenter (segmenter trainer))
         (trainer-segments (make-hash-table :test 'eq)))
     (map-segments (lambda (segment)
@@ -272,20 +277,16 @@ different trainers or simply to not train all segments."))
       (setf (slot-value trainer 'segments)
             (apply #'append (mapcar #'segments trainers))))))
 
-(defmethod maybe-update-weights ((segmented-trainer segmented-trainer)
+(defmethod maybe-update-weights ((segmented-gd-trainer segmented-gd-trainer)
                                  n-new-inputs)
-  (dolist (trainer (trainers segmented-trainer))
+  (dolist (trainer (trainers segmented-gd-trainer))
     (maybe-update-weights trainer n-new-inputs))
-  (incf (n-inputs segmented-trainer) n-new-inputs))
+  (incf (n-inputs segmented-gd-trainer) n-new-inputs))
 
-(defmethod train-one (sample (trainer segmented-trainer) learner &key)
-  (declare (ignore sample learner))
-  (maybe-update-weights trainer 1))
+(defmethod n-inputs-until-update ((trainer segmented-gd-trainer))
+  (loop for child-trainer in (trainers trainer)
+        minimizing (n-inputs-until-update child-trainer)))
 
-(defmethod train-batch (batch (trainer segmented-trainer) learner &key)
-  (declare (ignore learner))
-  (maybe-update-weights trainer (length batch)))
-
-(defmethod map-segment-gradient-accumulators (fn (trainer segmented-trainer))
+(defmethod map-segment-gradient-accumulators (fn (trainer segmented-gd-trainer))
   (dolist (trainer (trainers trainer))
     (map-segment-gradient-accumulators fn trainer)))

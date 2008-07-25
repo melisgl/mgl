@@ -2,32 +2,53 @@
   (:use #:common-lisp)
   (:export #:*use-blas*
            #:use-blas-p
+           #:cost-of-copy
+           #:cost-of-fill
+           #:cost-of-gemm
            #:blas-supports-displaced-arrays-p
+           #:storage
+           #:reshape2
+           #:set-ncols
            #:with-gensyms
            #:split-body
            #:suffix-symbol
            #:special-case
            #:flt
+           #:positive-flt
            #:flt-vector
            #:make-flt-array
            #:index
            #:index-vector
            #:*no-array-bounds-check*
-           #:*the*
+           #:the!
            #:gaussian-random-1
            #:select-random-element
-           #:split-plist
+           #:while
            #:last1
            #:append1
            #:push-all
+           #:group
+           #:n-stripes
+           #:set-n-stripes
+           #:max-n-stripes
+           #:set-max-n-stripes
+           #:stripe-start
+           #:stripe-end
+           #:with-stripes
            #:name
+           #:size
            #:nodes
-           #:value
+           #:default-value
            #:group-size
+           #:batch-size
            #:repeatedly
            #:sigmoid
            #:try-chance
            #:binarize-randomly
+           #:read-single-float-vector
+           #:write-single-float-vector
+           #:read-double-float-vector
+           #:write-double-float-vector
            #:write-weights
            #:read-weights)
   (:documentation "Simple utilities, types, symbols of common
@@ -36,12 +57,10 @@ accessors such as NAME."))
 (cl:defpackage :mgl-train
   (:use #:common-lisp #:mgl-util)
   (:export #:train
-           #:train-one
            #:train-batch
-           #:batch-trainer
-           #:batch-size
            #:set-input
            #:initialize-trainer
+           #:n-inputs-until-update
            ;; Sampler
            #:sample
            #:finishedp
@@ -51,6 +70,7 @@ accessors such as NAME."))
            #:n-samples
            #:max-n-samples
            #:counting-function-sampler
+           #:sample-batch
            ;; Error counter
            #:error-counter
            #:rmse-counter
@@ -62,10 +82,8 @@ accessors such as NAME."))
            ;; Segments
            #:map-segments
            #:segment-weights
-           #:segment-derivatives
            #:with-segment-weights
            #:map-segment-runs
-           #:supports-partial-updates-p
            #:list-segments
            ;; Segment set
            #:segment-set
@@ -94,13 +112,12 @@ and LEARNERs."))
            #:momentum
            #:weight-decay
            #:batch-gd-trainer
-           #:batch-size
            #:n-inputs-in-batch
            #:n-batches
            #:per-weight-batch-gd-trainer
            #:n-weight-uses-in-batch
            ;; Segmented trainer
-           #:segmented-trainer
+           #:segmented-gd-trainer
            #:segmenter
            #:trainers
            #:n-inputs)
@@ -118,7 +135,7 @@ interface and simple gradient descent based trainers."))
            #:*default-max-n-line-searches*
            #:*default-max-n-evaluations-per-line-search*
            #:*default-max-n-evaluations*
-           #:batch-cg-trainer
+           #:cg-trainer
            #:cg-args
            #:compute-batch-cost-and-derive
            #:decayed-cg-trainer-mixin)
@@ -158,7 +175,7 @@ interface and simple gradient descent based trainers."))
            #:nodes
            #:indices-present
            #:constant-chunk
-           #:value
+           #:default-value
            #:conditioning-chunk
            #:sigmoid-chunk
            #:gaussian-chunk
@@ -190,24 +207,19 @@ stacks called Deep Belief Networks (DBN)."))
            #:lump-size
            #:lump-node-array
            #:indices-to-calculate
-           #:do-lump
-           #:nodewise-lump
            #:input-lump
            #:weight-lump
            #:constant-lump
-           #:value
+           #:default-value
            #:normalized-lump
            #:group-size
-           #:hidden-lump
-           #:output-lump
-           #:cross-entropy-softmax-lump
-           #:cross-entropy-softmax-error
            #:activation-lump
            #:transpose-weights-p
            #:error-node
            #:importance
+           #:cost
            #:transfer-lump
-           #:derivate-lump
+           #:derive-lump
            ;; BPN
            #:bpn
            #:nodes
@@ -227,14 +239,15 @@ stacks called Deep Belief Networks (DBN)."))
            #:node
            #:add-derivative
            #:->+
+           #:->sum
            #:->linear
            #:->sigmoid
            #:->exp
            #:->sum-squared-error
            #:->cross-entropy
-           #:ref
-           #:sub
-           #:col)
+           #:cross-entropy-softmax-lump
+           #:softmax
+           #:target)
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll-dbn
@@ -244,7 +257,3 @@ stacks called Deep Belief Networks (DBN)."))
            #:initialize-bpn-from-dbn)
   (:documentation "Translating a DBN to a backprop network, aka
 `unrolling'."))
-
-(cl:defpackage :mgl-svd
-  (:use #:common-lisp #:mgl-util #:mgl-gd)
-  (:export))

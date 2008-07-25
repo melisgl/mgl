@@ -15,25 +15,24 @@
         (aref array (+ start 1)) (sin x)
         (aref array (+ start 2)) (cos x)))
 
-(defun clamp-rbm (sample rbm)
-  (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
-    (when chunk
-      (clamp-array sample (nodes chunk) 0))))
-
-(defun clamp-bpn (sample bpn)
-  (multiple-value-bind (array start)
-      (lump-node-array (find-lump '(inputs 0) bpn))
-    (clamp-array sample array start)))
+(defun clamp-striped-nodes (samples striped)
+  (let ((nodes (storage (nodes striped))))
+    (loop for sample in samples
+          for stripe upfrom 0
+          do (with-stripes ((stripe striped start))
+               (clamp-array sample nodes start)))))
 
 (defclass spiral-rbm (rbm) ())
 
-(defmethod mgl-train:set-input (sample (rbm spiral-rbm))
-  (clamp-rbm sample rbm))
+(defmethod mgl-train:set-input (samples (rbm spiral-rbm))
+  (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
+    (when chunk
+      (clamp-striped-nodes samples chunk))))
 
 (defclass spiral-bpn (bpn) ())
 
-(defmethod mgl-train:set-input (sample (bpn spiral-bpn))
-  (clamp-bpn sample bpn))
+(defmethod mgl-train:set-input (samples (bpn spiral-bpn))
+  (clamp-striped-nodes samples (find-lump '(inputs 0) bpn)))
 
 
 ;;;; Progress reporting
@@ -45,13 +44,13 @@
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defun report-dbn-rmse (rbm trainer)
-  (format *trace-output* "DBN RMSE: ~{~,5F~^, ~} (~D)~%"
-          (coerce (dbn-rmse (make-sampler 1000) (dbn rbm) :rbm rbm) 'list)
-          (n-inputs trainer)))
+  (log-msg "DBN RMSE: ~{~,5F~^, ~} (~D)~%"
+           (coerce (dbn-rmse (make-sampler 1000) (dbn rbm) :rbm rbm) 'list)
+           (n-inputs trainer)))
 
 ;;; This prints the rmse of the the training examples after each 100
 ;;; and the test rmse on each level of the DBN after each 1000.
-(defmethod train-one (sample (trainer spiral-rbm-trainer) rbm &key)
+(defmethod train-batch :around (batch (trainer spiral-rbm-trainer) rbm)
   (when (zerop (mod (n-inputs trainer) 1000))
     (report-dbn-rmse rbm trainer))
   (let ((counter (counter trainer)))
@@ -60,49 +59,47 @@
     (call-next-method)
     (let ((n-inputs (n-inputs trainer)))
       (when (zerop (mod n-inputs 100))
-        (format *trace-output* "RMSE: ~,5F (~D, ~D)~%"
-                (or (get-error counter) #.(flt 0))
-                (n-sum-errors counter)
-                n-inputs)
+        (log-msg "RMSE: ~,5F (~D, ~D)~%"
+                 (or (get-error counter) #.(flt 0))
+                 (n-sum-errors counter)
+                 n-inputs)
         (force-output *trace-output*)
         (reset-counter counter)))))
 
 ;;; Make sure we print the test rmse at the end of training each rbm.
-(defmethod train :after (sampler (trainer spiral-rbm-trainer) rbm &key)
+(defmethod train :after (sampler (trainer spiral-rbm-trainer) rbm)
   (report-dbn-rmse rbm trainer))
 
 (defun bpn-rmse (sampler bpn)
-  (let ((sum-errors #.(flt 0))
-        (n-errors 0))
-    (loop until (finishedp sampler) do
-          (set-input (sample sampler) bpn)
-          (forward-bpn bpn)
-          (incf sum-errors (last1 (nodes bpn)))
-          (incf n-errors 3))
-    (if (zerop n-errors)
-        nil
-        (sqrt (/ sum-errors n-errors)))))
+  (let ((counter (make-instance 'rmse-counter))
+        (n-stripes (max-n-stripes bpn)))
+    (while (not (finishedp sampler))
+      (set-input (sample-batch sampler n-stripes) bpn)
+      (forward-bpn bpn)
+      (multiple-value-bind (e n) (cost bpn)
+        (add-error counter e (* n 3))))
+    (values (get-error counter) counter)))
 
 (defun report-bpn-rmse (bpn trainer)
-  (format *trace-output* "BPN RMSE: ~,5F (~D)~%"
-          (bpn-rmse (make-sampler 1000) bpn) (n-inputs trainer)))
+  (log-msg "BPN RMSE: ~,5F (~D)~%"
+           (bpn-rmse (make-sampler 1000) bpn) (n-inputs trainer)))
 
-(defmethod train-one (sample (trainer spiral-bp-trainer) bpn &key)
+(defmethod train-batch :around (batch (trainer spiral-bp-trainer) bpn)
   (when (zerop (mod (n-inputs trainer) 1000))
     (report-bpn-rmse bpn trainer))
   (let ((counter (counter trainer)))
     (call-next-method)
-    (add-error counter (last1 (nodes bpn)) 3)
+    (multiple-value-bind (e n) (cost bpn)
+      (add-error counter e (* n 3)))
     (let ((n-inputs (n-inputs trainer)))
       (when (zerop (mod n-inputs 100))
-        (format *trace-output* "RMSE: ~,5F (~D, ~D)~%"
-                (or (get-error counter) #.(flt 0))
-                (n-sum-errors counter)
-                n-inputs)
-        (force-output *trace-output*)
+        (log-msg "RMSE: ~,5F (~D, ~D)~%"
+                 (or (get-error counter) #.(flt 0))
+                 (n-sum-errors counter)
+                 n-inputs)
         (reset-counter counter)))))
 
-(defmethod train :after (sampler (trainer spiral-bp-trainer) bpn &key)
+(defmethod train :after (sampler (trainer spiral-bp-trainer) bpn)
   (report-bpn-rmse bpn trainer))
 
 
@@ -125,11 +122,11 @@
                       (make-instance 'gaussian-chunk :name 'f2 :size 1)))
                :class 'spiral-rbm))))
 
-(defun make-spiral-dbn ()
-  (make-instance 'spiral-dbn))
+(defun make-spiral-dbn (&key (max-n-stripes 1))
+  (make-instance 'spiral-dbn :max-n-stripes max-n-stripes))
 
-(defun train-spiral-dbn ()
-  (let ((dbn (make-spiral-dbn)))
+(defun train-spiral-dbn (&key (max-n-stripes 1))
+  (let ((dbn (make-spiral-dbn :max-n-stripes max-n-stripes)))
     (dolist (rbm (rbms dbn))
       (train (make-sampler 50000)
              (make-instance 'spiral-rbm-trainer
@@ -141,17 +138,20 @@
 
 (defclass spiral-bpn (bpn) ())
 
-(defun train-spiral-bpn (dbn)
+(defun train-spiral-bpn (dbn &key (max-n-stripes 1))
   (multiple-value-bind (defs clamps inits) (unroll-dbn dbn)
     (declare (ignore clamps))
     (print inits)
     (let ((bpn (eval (print
-                      `(build-bpn (:class 'spiral-bpn)
+                      `(build-bpn (:class 'spiral-bpn
+                                          :max-n-stripes ,max-n-stripes)
                          ,@defs
-                         (error-node
-                          :def (->sum-squared-error (_)
-                                 (lump '(inputs 0))
-                                 (lump '(inputs 0 :reconstruction)))))))))
+                         (my-error
+                          (error-node
+                           :x (make-instance
+                               '->sum-squared-error
+                               :x (lump '(inputs 0))
+                               :y (lump '(inputs 0 :reconstruction))))))))))
       (initialize-bpn-from-dbn bpn dbn inits)
       (train (make-sampler 50000)
              (make-instance 'spiral-bp-trainer
@@ -164,8 +164,9 @@
 
 #|
 
-(defparameter *spiral-dbn* (time (train-spiral-dbn)))
+(defparameter *spiral-dbn* (time (train-spiral-dbn :max-n-stripes 100)))
 
-(defparameter *spiral-bpn* (time (train-spiral-bpn *spiral-dbn*)))
+(defparameter *spiral-bpn* (time (train-spiral-bpn *spiral-dbn*
+                                                   :max-n-stripes 100)))
 
 |#

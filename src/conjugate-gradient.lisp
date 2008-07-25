@@ -44,9 +44,6 @@ RHO < SIG < 1.")
   #+sbcl (sb-ext:float-infinity-p x)
   #-sbcl (declare (ignore x)))
 
-(defmacro while (condition &body body)
-  `(loop while ,condition do (progn ,@body)))
-
 (defun negate-vector (v &key result)
   (declare (type flt-vector v))
   (unless result
@@ -197,134 +194,137 @@ playing much with RHO."
              (n-evaluations 1))
         (declare (type flt-vector df0 df3 w3 s best-w best-df)
                  (type flt f0 d0 best-f))
-        (loop while (and (check-limit n-line-searches max-n-line-searches)
-                         (check-limit n-evaluations max-n-evaluations))
-              do
-              (incf n-line-searches)
-              (replace best-w w)
-              (replace best-df df0)
-              (setq best-f f0)
-              (let ((n-evaluations-per-line-search 0))
-                (flet ((update3 ()
-                         (incf n-evaluations)
-                         (incf n-evaluations-per-line-search)
-                         (v1=v2+c*v3 w3 w x3 s)
-                         (setq f3 (funcall fn w3 df3))
-                         (when (< f3 best-f)
-                           (replace best-w w3)
-                           (replace best-df df3)
-                           (setq best-f f3)))
-                       (check-evaluation-limits ()
-                         (and (check-limit n-evaluations-per-line-search
-                                           max-n-evaluations-per-line-search)
-                              (check-limit n-evaluations max-n-evaluations))))
-                  ;; extrapolating
-                  (while t
-                    (setq x2 0 f2 f0 d2 d0 f3 f0)
-                    (replace df3 df0)
-                    (update3)
-                    (setq d3 (inner* df3 s))
-                    ;; are we done extrapolating?
-                    (when (or (> d3 (* sig d0))
-                              (> f3 (+ f0 (* x3 rho d0)))
-                              (not (check-evaluation-limits)))
-                      (return))
-                    (setq x1 x2 f1 f2 d1 d2
-                          x2 x3 f2 f3 d2 d3)
-                    ;; cubic extrapolation
-                    (let ((a (+ (* 6 (- f1 f2))
-                                (* 3 (+ d2 d1) (- x2 x1))))
-                          (b (- (* 3 (- f2 f1))
-                                (* (+ (* 2 d1) d2)
-                                   (- x2 x1)))))
-                      (setq x3 (- x1 (/ (* d1 (expt (- x2 x1) 2))
-                                        (+ b (sqrt (- (expt b 2)
-                                                      (* a d1 (- x2 x1)))))))))
-                    (cond
-                      ;; numerical problems?
-                      ((or (not (realp x3))
-                           (/= x3 x3)
-                           (float-infinity-p x3)
-                           (minusp x3)
-                           ;; or beyond extrapolation point?
-                           (> x3 (* x2 ext)))
-                       (setq x3 (* x2 ext)))
-                      ((< x3 (+ x2 (* int (- x2 x1))))
-                       (setq x3 (+ x2 (* int (- x2 x1)))))))
-                  ;; interpolation
-                  (while (and (or (> (abs d3) (- (* sig d0)))
-                                  (> f3 (+ f0 (* x3 rho d0))))
-                              (check-evaluation-limits))
-                    ;; choose subinterval
-                    (if (or (plusp d3) (> f3 (+ f0 (* x3 rho d0))))
-                        (setq x4 x3 f4 f3 d4 d3)
-                        (setq x2 x3 f2 f3 d2 d3))
-                    (if (> f4 f0)
-                        ;; quadratic interpolation
-                        (setq x3 (- x2 (/ (* 0.5 d2 (expt (- x4 x2) 2))
-                                          (- f4 f2 (* d2 (- x4 x2))))))
-                        ;; cubic interpolation
-                        (let ((a (+ (/ (* 6 (- f2 f4))
-                                       (- x4 x2))
-                                    (* 3 (+ d4 d2))))
-                              (b (- (* 3 (- f4 f2))
-                                    (* (+ (* 2 d2) d4)
-                                       (- x4 x2)))))
-                          (setq x3 (+ x2
-                                      (/ (- (sqrt (- (* b b)
-                                                     (* a d2
-                                                        (expt (- x4 x2) 2))))
-                                            b)
-                                         a)))))
-                    ;; bisect on numerical problem
-                    (when (or (/= x3 x3) (float-infinity-p x3))
-                      (setq x3 (/ (+ x2 x4) 2)))
-                    ;; don't accept too close
-                    (setq x3 (max (min x3 (- x4 (* int (- x4 x2))))
-                                  (+ x2 (* int (- x4 x2)))))
-                    (update3)
-                    (setq d3 (inner* df3 s)))
-                  (cond ((and (< (abs d3) (- (* sig d0)))
-                              (< f3 (+ f0 (* x3 rho d0))))
-                         (incf n-succesful-line-searches)
-                         (v1=v2+c*v3 w w x3 s)
-                         (setq f0 f3)
-                         (update-direction s df0 df3)
-                         (rotatef df0 df3)
-                         (setq d3 d0
-                               d0 (inner* df0 s))
-                         (when (plusp d0)
-                           (negate-vector df0 :result s)
-                           (setq d0 (- (inner* s s))))
-                         (setq x3 (* x3
-                                     (min ratio
-                                          (/ d3
-                                             (- d0
-                                                least-positive-double-float))))
-                               ls-failed nil))
-                        (t
-                         ;; restore best point so far
-                         (replace w best-w)
-                         (replace df0 best-df)
-                         (setq f0 best-f)
-                         ;; line search failed twice in a row ?
-                         (when (or ls-failed
-                                   (not (check-limit n-line-searches
-                                                     max-n-line-searches)))
-                           (return))
-                         ;; try steepest descent
-                         (negate-vector df0 :result s)
-                         (setq d0 (- (inner* s s))
-                               x3 (/ (- 1 d0))
-                               ls-failed t))))))
+        (while (and (check-limit n-line-searches max-n-line-searches)
+                    (check-limit n-evaluations max-n-evaluations))
+          (incf n-line-searches)
+          (replace best-w w)
+          (replace best-df df0)
+          (setq best-f f0)
+          (let ((n-evaluations-per-line-search 0))
+            (flet ((update3 ()
+                     (incf n-evaluations)
+                     (incf n-evaluations-per-line-search)
+                     (v1=v2+c*v3 w3 w x3 s)
+                     (setq f3 (funcall fn w3 df3))
+                     (when (< f3 best-f)
+                       (replace best-w w3)
+                       (replace best-df df3)
+                       (setq best-f f3)))
+                   (check-evaluation-limits ()
+                     (and (check-limit n-evaluations-per-line-search
+                                       max-n-evaluations-per-line-search)
+                          (check-limit n-evaluations max-n-evaluations))))
+              ;; extrapolating
+              (while t
+                (setq x2 0 f2 f0 d2 d0 f3 f0)
+                (replace df3 df0)
+                (update3)
+                (setq d3 (inner* df3 s))
+                ;; are we done extrapolating?
+                (when (or (> d3 (* sig d0))
+                          (> f3 (+ f0 (* x3 rho d0)))
+                          (not (check-evaluation-limits)))
+                  (return))
+                (setq x1 x2 f1 f2 d1 d2
+                      x2 x3 f2 f3 d2 d3)
+                ;; cubic extrapolation
+                (let ((a (+ (* 6 (- f1 f2))
+                            (* 3 (+ d2 d1) (- x2 x1))))
+                      (b (- (* 3 (- f2 f1))
+                            (* (+ (* 2 d1) d2)
+                               (- x2 x1)))))
+                  (setq x3 (- x1 (/ (* d1 (expt (- x2 x1) 2))
+                                    (+ b (sqrt (- (expt b 2)
+                                                  (* a d1 (- x2 x1)))))))))
+                (cond
+                  ;; numerical problems?
+                  ((or (not (realp x3))
+                       (/= x3 x3)
+                       (float-infinity-p x3)
+                       (minusp x3)
+                       ;; or beyond extrapolation point?
+                       (> x3 (* x2 ext)))
+                   (setq x3 (* x2 ext)))
+                  ((< x3 (+ x2 (* int (- x2 x1))))
+                   (setq x3 (+ x2 (* int (- x2 x1)))))))
+              ;; interpolation
+              (while (and (or (> (abs d3) (- (* sig d0)))
+                              (> f3 (+ f0 (* x3 rho d0))))
+                          (check-evaluation-limits))
+                ;; choose subinterval
+                (if (or (plusp d3) (> f3 (+ f0 (* x3 rho d0))))
+                    (setq x4 x3 f4 f3 d4 d3)
+                    (setq x2 x3 f2 f3 d2 d3))
+                (if (> f4 f0)
+                    ;; quadratic interpolation
+                    (setq x3 (- x2 (/ (* 0.5 d2 (expt (- x4 x2) 2))
+                                      (- f4 f2 (* d2 (- x4 x2))))))
+                    ;; cubic interpolation
+                    (let ((a (+ (/ (* 6 (- f2 f4))
+                                   (- x4 x2))
+                                (* 3 (+ d4 d2))))
+                          (b (- (* 3 (- f4 f2))
+                                (* (+ (* 2 d2) d4)
+                                   (- x4 x2)))))
+                      (setq x3 (+ x2
+                                  (/ (- (sqrt (- (* b b)
+                                                 (* a d2
+                                                    (expt (- x4 x2) 2))))
+                                        b)
+                                     a)))))
+                ;; bisect on numerical problem
+                (when (or (/= x3 x3) (float-infinity-p x3))
+                  (setq x3 (/ (+ x2 x4) 2)))
+                ;; don't accept too close
+                (setq x3 (max (min x3 (- x4 (* int (- x4 x2))))
+                              (+ x2 (* int (- x4 x2)))))
+                (update3)
+                (setq d3 (inner* df3 s)))
+              (cond ((and (< (abs d3) (- (* sig d0)))
+                          (< f3 (+ f0 (* x3 rho d0))))
+                     (incf n-succesful-line-searches)
+                     (v1=v2+c*v3 w w x3 s)
+                     (setq f0 f3)
+                     (update-direction s df0 df3)
+                     (rotatef df0 df3)
+                     (setq d3 d0
+                           d0 (inner* df0 s))
+                     (when (plusp d0)
+                       (negate-vector df0 :result s)
+                       (setq d0 (- (inner* s s))))
+                     (setq x3 (* x3
+                                 (min ratio
+                                      (/ d3
+                                         (- d0
+                                            least-positive-double-float))))
+                           ls-failed nil))
+                    (t
+                     ;; restore best point so far
+                     (replace w best-w)
+                     (replace df0 best-df)
+                     (setq f0 best-f)
+                     ;; line search failed twice in a row ?
+                     (when (or ls-failed
+                               (not (check-limit n-line-searches
+                                                 max-n-line-searches)))
+                       (return))
+                     ;; try steepest descent
+                     (negate-vector df0 :result s)
+                     (setq d0 (- (inner* s s))
+                           x3 (/ (- 1 d0))
+                           ls-failed t))))))
         (values best-w best-f
                 n-line-searches n-succesful-line-searches n-evaluations)))))
 
 
 ;;;; Trainer
 
-(defclass batch-cg-trainer (batch-trainer)
-  ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
+(defclass cg-trainer ()
+  ((batch-size
+    :initarg :batch-size :accessor batch-size
+    :documentation "After having gone through BATCH-SIZE number of
+inputs weights are updated.")
+   (n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (cg-args :initform '() :initarg :cg-args :accessor cg-args)
    (segment-filter
     :initform (constantly t)
@@ -343,13 +343,18 @@ leave the derivatives."))
   (:documentation "Updates all weights simultaneously after chewing
 through BATCH-SIZE inputs."))
 
-(defmethod map-segment-gradient-accumulators (fn (trainer batch-cg-trainer))
+(defmethod n-inputs-until-update ((trainer cg-trainer))
+  ;; deal with varying batch size gracefully
+  (- (batch-size trainer)
+     (mod (n-inputs trainer) (batch-size trainer))))
+
+(defmethod map-segment-gradient-accumulators (fn (trainer cg-trainer))
   (let ((segment-set (segment-set trainer))
         (accumulator1 (accumulator1 trainer)))
     (do-segment-set (segment :start-in-segment-set start) segment-set
       (funcall fn segment start accumulator1))))
 
-(defmethod segments ((trainer batch-cg-trainer))
+(defmethod segments ((trainer cg-trainer))
   (segments (segment-set trainer)))
 
 (defgeneric compute-batch-cost-and-derive (batch trainer learner)
@@ -357,7 +362,7 @@ through BATCH-SIZE inputs."))
 minimize) of all samples in BATCH and add the derivatives to
 ACCUMULATOR1 of TRAINER."))
 
-(defmethod initialize-trainer ((trainer batch-cg-trainer) segmentable)
+(defmethod initialize-trainer ((trainer cg-trainer) segmentable)
   (setf (slot-value trainer 'segment-set)
         (make-instance 'segment-set
                        :segments (remove-if-not (segment-filter trainer)
@@ -373,18 +378,30 @@ ACCUMULATOR1 of TRAINER."))
     (setf (slot-value trainer 'accumulator1) derivatives)
     (compute-batch-cost-and-derive batch trainer learner)))
 
-(defmethod train-batch (batch (trainer batch-cg-trainer) learner &key)
+(defmethod train (sampler (trainer cg-trainer) learner)
+  (while (not (finishedp sampler))
+    (let ((samples (sample-batch sampler (batch-size trainer))))
+      (train-batch samples trainer learner))))
+
+(defmethod train-batch (samples (trainer cg-trainer) learner)
   (let ((weights (weights trainer)))
-    (segment-set->weights (segment-set trainer) weights)
-    (multiple-value-prog1
-        (apply #'cg (lambda (weights derivatives)
-                      (process-batch trainer learner batch
-                                     weights derivatives))
-               weights
-               :spare-vectors (spare-vectors trainer)
-               (cg-args trainer))
-      (segment-set<-weights (segment-set trainer) weights)
-      (incf (n-inputs trainer) (length batch)))))
+    (cond ((= (length samples) (batch-size trainer))
+           (segment-set->weights (segment-set trainer) weights)
+           (multiple-value-prog1
+               (apply #'cg (lambda (weights derivatives)
+                             (process-batch trainer learner
+                                            samples weights
+                                            derivatives))
+                      weights
+                      :spare-vectors (spare-vectors trainer)
+                      (cg-args trainer))
+             (segment-set<-weights (segment-set trainer) (weights trainer))
+             (incf (n-inputs trainer) (length samples))))
+          (t
+           ;; Updating on shorter than prescribed batches is
+           ;; dangerous.
+           (warn "MGL-CG: only ~S samples in batch of size ~S. Skipping it."
+                 (length samples) (batch-size trainer))))))
 
 
 ;;;; Decay

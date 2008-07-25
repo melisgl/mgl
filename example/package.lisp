@@ -12,4 +12,6 @@
 
 (cl:defpackage :mgl-example-mnist
   (:use #:common-lisp #:mgl-util :mgl-train :mgl-gd :mgl-rbm :mgl-bp
-        :mgl-unroll-dbn :mgl-example-util))
+        :mgl-unroll-dbn :mgl-example-util)
+  (:export #:*mnist-dir*
+           #:train-mnist))

@@ -1,5 +1,6 @@
 (in-package :mgl-test)
 
+#+nil
 (defun test-cloud-activation (&key transposep cg)
   (let* ((net (build-bpn (:class 'test-bpn)
                 (input-lump :symbol inputs :size 2)
@@ -96,6 +97,7 @@
 
 (defun test-unroll-dbn ()
   (test-unroll)
+  #+nil
   (dolist (transposep '(nil t))
     (dolist (cg '(nil t))
       (assert (> 0.5 (test-cloud-activation :transposep transposep :cg cg))))))

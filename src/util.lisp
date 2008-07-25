@@ -4,47 +4,47 @@
 
 (defvar *use-blas* 10000
   "Use BLAS routines if available. If it is NIL then BLAS is never
-used. If it is a real number then BLAS is only used when the problem
-size exceeds that number. In all other cases BLAS is used whenever
+used \(not quite true as some code does not care about this setting).
+If it is a real number then BLAS is only used when the problem size
+exceeds that number. In all other cases BLAS is used whenever
 possible.")
 
-(let* ((a (make-array 4 :element-type 'double-float))
-       (b (make-array 2 :element-type 'double-float
-                      :displaced-to a :displaced-index-offset 1)))
-  (defun blas-supports-displaced-arrays-p ()
-    (if (find-package 'blas)
-        (handler-case
-            (progn
-              (replace a '(0d0 1d0 2d0 3d0))
-              (funcall (intern #.(symbol-name 'dscal) (find-package 'blas))
-                       2 2d0 b 1)
-              (assert (= (aref a 0) 0d0))
-              (assert (= (aref a 1) 2d0))
-              (assert (= (aref a 2) 4d0))
-              (assert (= (aref a 3) 3d0))
-              t)
-          (error (c)
-            (declare (ignore c))
-            nil))
-        nil)))
+(defun cost-of-copy (mat)
+  (matlisp:number-of-elements mat))
 
-(eval-when (:load-toplevel :execute)
-  (when *use-blas*
-    (cond ((not (find-package 'blas))
-           (warn "~S is ~S but there is no BLAS package. ~
-                  It may be loaded any time to speed up things."
-                 '*use-blas* *use-blas*))
-          ((not (blas-supports-displaced-arrays-p))
-           (warn "Blas does not support displaced arrays. ~
-                  Setting *USE-BLAS* to NIL. See README.")
-           (setq *use-blas* nil)))))
+(defun cost-of-fill (mat)
+  (matlisp:number-of-elements mat))
 
-(defun use-blas-p (problem-size)
+(defun cost-of-gemm (a b job)
+  (* (if (member job '(:nt :nn))
+         (matlisp:ncols a)
+         (matlisp:nrows a))
+     (matlisp:number-of-elements b)))
+
+(defun use-blas-p (cost)
   (let ((x *use-blas*))
     (and x
          (or (not (realp x))
-             (< x problem-size))
+             (< x cost))
          (find-package 'blas))))
+
+(declaim (inline storage))
+(defun storage (matlisp-matrix)
+  (the flt-vector (values (matlisp::store matlisp-matrix))))
+
+(defgeneric reshape2 (mat m n)
+  (:method ((mat matlisp:real-matrix) m n)
+    (assert (<= (* m n) (length (storage mat))))
+    (make-instance 'matlisp:real-matrix
+                   :nrows m :ncols n :store (storage mat))))
+
+(defgeneric set-ncols (mat ncols)
+  (:method ((mat matlisp:real-matrix) ncols)
+    (assert (<= 0 ncols (/ (length (storage mat))
+                           (matlisp:nrows mat))))
+    (setf (matlisp:ncols mat) ncols)
+    (setf (matlisp:number-of-elements mat) (* ncols (matlisp:nrows mat)))))
+
 
 
 ;;;; Macrology
@@ -84,6 +84,7 @@ optimized."
 
 (eval-when (:compile-toplevel :load-toplevel)
   (deftype flt () 'double-float)
+  (deftype positive-flt () '(double-float #.least-positive-double-float))
   (deftype flt-vector () '(simple-array flt (*)))
   (declaim (inline flt))
   (defun flt (x)
@@ -92,10 +93,13 @@ optimized."
   (deftype index-vector () '(simple-array index (*)))
   (defparameter *no-array-bounds-check*
     #+sbcl '(sb-c::insert-array-bounds-checks 0)
-    #-sbcl '())
-  (defparameter *the*
-    #+sbcl 'sb-ext:truly-the
-    #-sbcl 'the))
+    #-sbcl '()))
+
+(defmacro the! (&rest args)
+  `(#+sbcl sb-ext:truly-the
+    #+cmu ext:truly-the
+    #-(or sbcl cmu ) the
+    ,@args))
 
 (defun make-flt-array (dimensions)
   (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
@@ -103,32 +107,24 @@ optimized."
 (defun gaussian-random-1 ()
   "Return a single float of zero mean and unit variance."
   (loop
-   (let* ((x1 (1- (* 2.0 (random 1.0))))
-          (x2 (1- (* 2.0 (random 1.0))))
+   (let* ((x1 (1- (* #.(flt 2) (random #.(flt 1)))))
+          (x2 (1- (* #.(flt 2) (random #.(flt 1)))))
           (w (+ (* x1 x1) (* x2 x2))))
-     (declare (type single-float x1 x2)
-              (type (single-float 0.0) w)
+     (declare (type flt x1 x2)
+              (type (double-float 0d0) w)
               (optimize (speed 3)))
      (when (< w 1.0)
-       ;; Now we have two random numbers but return only one.
+       ;; Now we have two random numbers but return only one. The
+       ;; other would be X1 times the same.
        (return
          (* x2
-            (#.*the* single-float (sqrt (/ (* -2.0 (log w)) w)))))))))
+            (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
 
 (defun select-random-element (seq)
   (elt seq (random (length seq))))
 
-(defun split-plist (list keys)
-  (let ((known ())
-        (unknown ()))
-    (loop for (key value) on list by #'cddr
-          do (cond ((find key keys)
-                    (push key known)
-                    (push value known))
-                   (t
-                    (push key unknown)
-                    (push value unknown))))
-    (values (reverse known) (reverse unknown))))
+(defmacro while (test &body body)
+  `(loop while ,test do (progn ,@body)))
 
 (defun last1 (seq)
   (if (listp seq)
@@ -142,6 +138,11 @@ optimized."
   (with-gensyms (e)
     `(dolist (,e ,list)
        (push ,e ,place))))
+
+(defun group (seq n)
+  (let ((l (length seq)))
+    (loop for i below l by n
+          collect (subseq seq i (min l (+ i n))))))
 
 (defmacro repeatedly (&body body)
   "Like CONSTANTLY but evaluates BODY it for each time."
@@ -174,6 +175,57 @@ optimized."
           i))))
 
 
+;;;; Stripes
+
+(defgeneric max-n-stripes (learner)
+  (:documentation "The number of examples with which the learner is
+capable of dealing simultaneously."))
+
+(defgeneric set-max-n-stripes (max-n-stripes object)
+  (:documentation "Allocate the necessary stuff to allow for N-STRIPES
+number of examples to be worked with simultaneously."))
+
+(defsetf max-n-stripes (object) (store)
+  `(set-max-n-stripes ,store ,object))
+
+(defgeneric n-stripes (learner)
+  (:documentation "The number of examples with which the learner is
+currently dealing."))
+
+(defgeneric set-n-stripes (n-stripes object)
+  (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
+that are in use."))
+
+(defsetf n-stripes (object) (store)
+  `(set-n-stripes ,store ,object))
+
+(defgeneric stripe-start (stripe obj))
+(defgeneric stripe-end (stripe obj))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun stripe-binding (stripe obj start &optional end)
+    (with-gensyms (%stripe %obj)
+      `((,%stripe ,stripe)
+        (,%obj ,obj)
+        (,start (the index (stripe-start ,%stripe ,%obj)))
+        ,@(when end `((,end (the index (stripe-end ,%stripe ,%obj)))))))))
+
+(defmacro with-stripes (specs &body body)
+  `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
+                  specs)
+     ,@body))
+
+
+;;;; Various accessor type generic functions share by packages.
+
+(defgeneric name (object))
+(defgeneric size (object))
+(defgeneric nodes (object))
+(defgeneric default-value (object))
+(defgeneric group-size (object))
+(defgeneric batch-size (object))
+
+
 ;;;; float vector I/O
 
 (deftype single-float-vector () '(simple-array single-float (*)))

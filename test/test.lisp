@@ -4,4 +4,5 @@
   (test-cg)
   (test-rbm)
   (test-bp)
-  (test-unroll-dbn))
+  (test-unroll-dbn)
+  (values))

@@ -1,5 +1,3 @@
-(in-package :mgl-train)
-
 ;;;; Segments of learners
 ;;;;
 ;;;; The weights of a learner can be stored in a multitude of ways.
@@ -7,9 +5,11 @@
 ;;;; fast. Random access doesn't seem to be necessary.
 ;;;;
 ;;;; The following implementation requires that weights are stored in
-;;;; intervals of a number of FLT-VECTORs. MAP-SEGMENT provides
-;;;; iteration over segments, and SEGMENT-WEIGHTS returns the array
-;;;; and the start, end indices associated with it.
+;;;; FLT-VECTORs. MAP-SEGMENT provides iteration over segments, and
+;;;; SEGMENT-WEIGHTS returns the array and the start, end indices
+;;;; associated with it.
+
+(in-package :mgl-train)
 
 (defgeneric map-segments (fn segmentable)
   (:method (fn (segment-list list))
@@ -20,15 +20,8 @@
   (:documentation "Return the weight array and start, end indices of
 SEGMENT."))
 
-;;; FIXME: This is only used internally in backprop, should it go
-;;; away?
-(defgeneric segment-derivatives (segment)
-  (:documentation "Return the derivative array and start, end indices
-of SEGMENT. Must be of the same size the SEGMENT-WEIGHTS."))
-
-(defmacro with-segment-weights (((weights start end) segment
-                                 &optional (fn ''segment-weights)) &body body)
-  `(multiple-value-bind (,weights ,start ,end) (funcall ,fn ,segment)
+(defmacro with-segment-weights (((weights start end) segment) &body body)
+  `(multiple-value-bind (,weights ,start ,end) (segment-weights ,segment)
      (declare (type flt-vector ,weights)
               (type index ,start ,end))
      ,@body))
@@ -41,13 +34,6 @@ of SEGMENT. Must be of the same size the SEGMENT-WEIGHTS."))
   (:documentation "Call FN with start and end of intervals of
 consecutive indices that are not missing in SEGMENT. Called by
 trainers that support partial updates."))
-
-(defgeneric supports-partial-updates-p (trainer)
-  (:method (trainer)
-    (declare (ignore trainer))
-    nil)
-  (:documentation "See if TRAINER supports updating a subset of the
-weights within segments."))
 
 (defgeneric segments (object)
   (:documentation "A list of segments associated with OBJECT. Trainers
@@ -98,26 +84,22 @@ must implement this. It is also defined on SEGMENT-SETs."))
                    `((declare (type index ,start-in-segment-set))))
                ,@body)))))
 
-(defun segment-set<-weights (segment-set weights &key (fn #'segment-weights))
-  "Copy the values of WEIGHTS to SEGMENT-SET. FN is SEGMENT-WEIGHTS or
-SEGMENT-DERIVATIVES."
+(defun segment-set<-weights (segment-set weights)
+  "Copy the values of WEIGHTS to SEGMENT-SET."
   (declare (type flt-vector weights)
            (optimize (speed 3)))
-  (let ((fn (coerce fn 'function)))
-    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-        segment-set
-      (with-segment-weights ((array start end) segment fn)
-        (replace array weights :start1 start :end1 end
-                 :start2 start-in-segment-set)))))
+  (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+      segment-set
+    (with-segment-weights ((array start end) segment)
+      (replace array weights :start1 start :end1 end
+               :start2 start-in-segment-set))))
 
-(defun segment-set->weights (segment-set weights &key (fn #'segment-weights))
-  "Copy the values from SEGMENT-SET to WEIGHTS. FN is SEGMENT-WEIGHTS
-or SEGMENT-DERIVATIVES."
+(defun segment-set->weights (segment-set weights)
+  "Copy the values from SEGMENT-SET to WEIGHTS."
   (declare (type flt-vector weights)
            (optimize (speed 3)))
-  (let ((fn (coerce fn 'function)))
-    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-        segment-set
-      (with-segment-weights ((array start end) segment fn)
-        (replace weights array :start1 start-in-segment-set
-                 :start2 start :end2 end)))))
+  (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+      segment-set
+    (with-segment-weights ((array start end) segment)
+      (replace weights array :start1 start-in-segment-set
+               :start2 start :end2 end))))

@@ -1,16 +1,31 @@
 (in-package :mgl-rbm)
 
 (defclass dbn ()
-  ((rbms :type list :initarg :rbms :reader rbms))
+  ((rbms :type list :initarg :rbms :reader rbms)
+   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "Deep Belief Network: a stack of RBMs."))
+
+(defmethod n-stripes ((dbn dbn))
+  (n-stripes (first (rbms dbn))))
+
+(defmethod set-n-stripes ((dbn dbn) n-stripes)
+  (dolist (rbm (rbms dbn))
+    (setf (n-stripes rbm) n-stripes)))
+
+(defmethod set-max-n-stripes (max-n-stripes (dbn dbn))
+  (dolist (rbm (rbms dbn))
+    (setf (max-n-stripes rbm) max-n-stripes)))
 
 (defmethod initialize-instance :after ((dbn dbn) &key &allow-other-keys)
   (dolist (rbm (rbms dbn))
-    (setf (slot-value rbm 'dbn) dbn)))
+    (setf (slot-value rbm 'dbn) dbn))
+  ;; make sure rbms have the same MAX-N-STRIPES
+  (setf (max-n-stripes dbn) (max-n-stripes dbn)))
 
 (defun add-rbm (rbm dbn)
   (setf (slot-value rbm 'dbn) dbn
-        (slot-value dbn 'rbms) (append1 (rbms dbn) rbm)))
+        (slot-value dbn 'rbms) (append1 (rbms dbn) rbm))
+  (setf (max-n-stripes rbm) (max-n-stripes dbn)))
 
 (defun previous-rbm (dbn rbm)
   (let ((pos (position rbm (rbms dbn))))
@@ -18,22 +33,23 @@
         (elt (rbms dbn) (1- pos))
         nil)))
 
-(defmethod set-input :around (sample (rbm rbm))
+(defmethod set-input :around (samples (rbm rbm))
   ;; Do SET-INPUT on the previous rbm (if any) and propagate its mean
   ;; to this one.
   (when (dbn rbm)
     (let ((prev (previous-rbm (dbn rbm) rbm)))
       (when prev
-        (set-input sample prev)
+        (set-input samples prev)
         (set-hidden-mean prev))))
+  (setf (n-stripes rbm) (length samples))
   (unwind-protect
        ;; Do any clamping specific to this RBM.
        (call-next-method)
     ;; Then remember the inputs.
     (nodes->inputs rbm)))
 
-(defmethod set-input (sample (dbn dbn))
-  (set-input sample (last1 (rbms dbn))))
+(defmethod set-input (samples (dbn dbn))
+  (set-input samples (last1 (rbms dbn))))
 
 (defun not-before (list obj)
   (let ((pos (position obj list)))
@@ -49,9 +65,10 @@
 (defun dbn-rmse (sampler dbn &key (rbm (last1 (rbms dbn))))
   (let* ((n (1+ (position rbm (rbms dbn))))
          (sum-errors (make-array n :initial-element #.(flt 0)))
-         (n-errors (make-array n :initial-element 0)))
+         (n-errors (make-array n :initial-element 0))
+         (max-n-stripes (max-n-stripes dbn)))
     (loop until (finishedp sampler) do
-          (set-input (sample sampler) rbm)
+          (set-input (sample-batch sampler max-n-stripes) rbm)
           (set-hidden-mean rbm)
           (down-mean-field dbn :rbm rbm)
           (loop for i below n

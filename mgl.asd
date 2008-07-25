@@ -1,13 +1,26 @@
 ;;;; -*- mode: Lisp -*-
 
-(asdf:defsystem #:mgl
+(defpackage mgl-system
+  (:use #:common-lisp :asdf))
+
+(in-package :mgl-system)
+
+(defclass matlisp-source-file (cl-source-file) ())
+
+(defsystem #:mgl
   :name "MGL, the machine learning library"
   :author "Gabor Melis"
   :version "0.0.1"
   :licence "MIT"
   :components ((:module "src"
                 :serial t
-                :components ((:file "package")
+                :components ((:module "matlisp"
+                              :default-component-class matlisp-source-file
+                              :serial t
+                              :components ((:file "package")
+                                           (:file "matlisp-matrix")
+                                           (:file "matlisp-impl")))
+                             (:file "package")
                              (:file "util")
                              (:file "train")
                              (:file "segment")
@@ -18,12 +31,18 @@
                              (:file "backprop")
                              (:file "unroll-dbn")))))
 
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
-  (asdf:oos 'asdf:load-op '#:mgl-test)
+(defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
+  (oos 'load-op '#:mgl-test)
   (funcall (intern (symbol-name '#:test)
                    (find-package '#:mgl-test))))
 
-(defmethod asdf:operation-done-p ((o asdf:test-op)
-             
-                     (c (eql (asdf:find-system '#:mgl))))
+(defmethod operation-done-p ((o test-op) (c (eql (find-system '#:mgl))))
   (values nil))
+
+(defmethod operation-done-p ((o compile-op) (c matlisp-source-file))
+  (or (find-package '#:blas)
+      (call-next-method)))
+
+(defmethod operation-done-p ((o load-op) (c matlisp-source-file))
+  (or (find-package '#:blas)
+      (call-next-method)))

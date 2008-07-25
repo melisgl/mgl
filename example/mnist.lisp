@@ -7,14 +7,37 @@
 ;;;;   http://www.cs.toronto.edu/~hinton/absps/montrealTR.pdf
 ;;;;
 ;;;; Download the four files from http://yann.lecun.com/exdb/mnist and
-;;;; gunzip them.
+;;;; gunzip them. Set *MNIST-DIR* to point to their directory and call
+;;;; TRAIN-MNIST.
 ;;;;
 ;;;; A 784-500-500-2000 deep belief network is trained then 10 softmax
 ;;;; units are attached to the top layer of backpropagation network
 ;;;; converted from the upward half of the DBN. The new, 2000->10
-;;;; connections are trained and finally all weights are trained
-;;;; together. Takes six days to run on a 3GHz x86 and reaches 98.96%
-;;;; accuracy.
+;;;; connections in the backprop network are trained for a few batches
+;;;; and finally all weights are trained together. Takes less than two
+;;;; days to train on a 2.16GHz Core Duo and reaches ~98.96% accuracy.
+;;;;
+;;;; During DBN training the DBN TEST RMSE is the RMSE of the mean
+;;;; field reconstruction of the test images while TRAINING RMSE is of
+;;;; the stochastic reconstructions (that is, the hidden layer is
+;;;; sampled) during training. Naturally, the stochastic one tends to
+;;;; be higher but is cheap to compute.
+;;;;
+;;;; MGL is marginally faster (~10%) training the first RBM than the
+;;;; original matlab code when both are using single-threaded BLAS.
+;;;; Since 86% percent of the time is spent in BLAS this probably
+;;;; means only that the two BLAS implementations perform similarly.
+;;;; However, since the matlab code precomputes inputs for the stacked
+;;;; RBMs, this code is a doing a lot more on them making it ~32%
+;;;; slower on the 2nd. Probably due to the size of last layer, the
+;;;; picture changes again in the 3rd rbm: they are roughly on par.
+;;;;
+;;;; CG training of the BPN is also of the same speed except for the
+;;;; first phase where only the softmax weights are trained. Here,
+;;;; this code is about 6 times slower due to the input being clamped
+;;;; at the usual place and the BPN forwarded which is avoidable in
+;;;; this case, but it's not very important as the vast majority of
+;;;; time is spent training the whole BPN.
 
 (in-package :mgl-example-mnist)
 
@@ -109,6 +132,13 @@
   (declare (type flt-vector array)
            (optimize (speed 3)))
   (replace array (image-array image) :start1 start))
+
+(defun clamp-striped-nodes (samples striped)
+  (let ((nodes (storage (nodes striped))))
+    (loop for sample in samples
+          for stripe upfrom 0
+          do (with-stripes ((stripe striped start))
+               (clamp-array sample nodes start)))))
 
 
 ;;;; DBN
@@ -135,45 +165,47 @@
                     :class 'mnist-rbm))))
 
 (defun make-mnist-dbn ()
-  (make-instance 'mnist-dbn))
+  (make-instance 'mnist-dbn :max-n-stripes 100))
 
 (defclass mnist-rbm (rbm) ())
 
-(defmethod mgl-train:set-input (sample (rbm mnist-rbm))
-  (let* ((dbn (dbn rbm))
-         (chunk (find 'inputs (visible-chunks (first (rbms dbn)))
+(defmethod mgl-train:set-input (images (rbm mnist-rbm))
+  (let ((inputs (find 'inputs (visible-chunks rbm)
                       :key #'name)))
-    (when chunk
-      (clamp-array sample (nodes chunk) 0))))
+    (when inputs
+      (clamp-striped-nodes images inputs))))
 
 (defclass mnist-rbm-trainer (rbm-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defun report-dbn-rmse (rbm trainer)
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
-           (coerce (dbn-rmse (make-sampler *test-images* :max-n 1000)
+           (coerce (dbn-rmse (make-sampler *test-images*
+                                           :max-n 1000
+                                           #+nil (length *test-images*))
                              (dbn rbm) :rbm rbm) 'list)
            (n-inputs trainer)))
 
 ;;; This prints the rmse of the the training examples after each 100
 ;;; and the test rmse on each level of the DBN after each 1000.
-(defmethod train-one (sample (trainer mnist-rbm-trainer) rbm &key)
+(defmethod train-batch :around (samples (trainer mnist-rbm-trainer) rbm)
   (when (zerop (mod (n-inputs trainer) 10000))
     (report-dbn-rmse rbm trainer))
+  (call-next-method)
   (let ((counter (counter trainer)))
     (multiple-value-bind (e n) (mgl-rbm:reconstruction-error rbm)
       (add-error counter e n))
-    (call-next-method)
     (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs 1000))
-        (log-msg "RMSE: ~,5F (~D, ~D)~%"
+      (when (zerop (mod n-inputs (length *training-images*)))
+        (log-msg "TRAINING RMSE: ~,5F (~D, ~D)~%"
                  (or (get-error counter) #.(flt 0))
                  (n-sum-errors counter)
                  n-inputs)
         (reset-counter counter)))))
 
 ;;; Make sure we print the test rmse at the end of training each rbm.
-(defmethod train :after (sampler (trainer mnist-rbm-trainer) rbm &key)
+(defmethod train :around (sampler (trainer mnist-rbm-trainer) rbm)
+  (call-next-method)
   (report-dbn-rmse rbm trainer))
 
 
@@ -195,8 +227,8 @@
     (dolist (rbm (rbms dbn))
       (do-clouds (cloud rbm)
         (if (bias-cloud-p cloud)
-            (fill (weights cloud) #.(flt 0))
-            (map-into (weights cloud)
+            (fill (storage (weights cloud)) #.(flt 0))
+            (map-into (storage (weights cloud))
                       (lambda () (flt (* 0.1 (gaussian-random-1))))))))
     (loop for rbm in (rbms dbn)
           for i upfrom 0 do
@@ -221,47 +253,56 @@
 
 (defclass mnist-bpn (bpn) ())
 
-(defmethod set-input (image (bpn mnist-bpn))
-  (let ((lump (find-lump '(inputs 0) bpn :errorp t)))
-    (multiple-value-bind (array start) (lump-node-array lump)
-      (clamp-array image array start)))
-  (let ((lump (find-lump 'expectations bpn :errorp t)))
-    (multiple-value-bind (array start end) (lump-node-array lump)
-      (declare (type flt-vector array))
-      (fill array #.(flt 0) :start start :end end)
-      (setf (aref array (+ start (image-label image))) #.(flt 1)))))
+(defmethod set-input (images (bpn mnist-bpn))
+  (let* ((inputs (find-lump '(inputs 0) bpn :errorp t))
+         (expectations (find-lump 'expectations bpn :errorp t))
+         (inputs-nodes (storage (nodes inputs)))
+         (expectations-nodes (storage (nodes expectations))))
+    (loop for image in images
+          for stripe upfrom 0
+          do (with-stripes ((stripe inputs inputs-start)
+                            (stripe expectations expectations-start
+                                    expectations-end))
+               (clamp-array image inputs-nodes inputs-start)
+               (locally (declare (optimize (speed 3)))
+                 (fill expectations-nodes #.(flt 0) :start expectations-start
+                       :end expectations-end))
+               (setf (aref expectations-nodes
+                           (+ expectations-start (image-label image)))
+                     #.(flt 1))))))
 
 (defun max-position (array start end)
   (position (loop for i upfrom start below end maximizing (aref array i))
             array :start start :end end))
 
 (defun bpn-decode-digit (bpn lump-name)
-  (let ((predictions (find-lump lump-name bpn :errorp t)))
-    (multiple-value-bind (array start end)
-        (lump-node-array predictions)
-      (let ((pos (max-position array start end)))
-        (values (- pos start) (aref array pos))))))
+  (let* ((predictions (find-lump lump-name bpn :errorp t))
+         (nodes (storage (if (eq 'expectations lump-name)
+                             (nodes predictions)
+                             (softmax predictions)))))
+    (loop for stripe below (n-stripes predictions)
+          collect (with-stripes ((stripe predictions start end))
+                    (- (max-position nodes start end)
+                       start)))))
 
 (defun classification-error (bpn)
-  (if (= (bpn-decode-digit bpn 'predictions)
-         (bpn-decode-digit bpn 'expectations))
-      0
-      1))
+  (values (- (n-stripes bpn)
+             (loop for p in (bpn-decode-digit bpn 'predictions)
+                   for e in (bpn-decode-digit bpn 'expectations)
+                   count (= p e)))
+          (n-stripes bpn)))
 
 (defun bpn-error (sampler bpn)
-  (let ((sum-errors 0)
-        (n-errors 0)
-        (sum-ce-errors (flt 0)))
+  (let ((counter (make-instance 'error-counter))
+        (ce-counter (make-instance 'error-counter))
+        (n-stripes (max-n-stripes bpn)))
     (loop until (finishedp sampler) do
-          (set-input (sample sampler) bpn)
+          (set-input (sample-batch sampler n-stripes) bpn)
           (forward-bpn bpn)
-          (incf sum-errors (classification-error bpn))
-          (incf sum-ce-errors (last1 (nodes bpn)))
-          (incf n-errors))
-    (if (zerop n-errors)
-        nil
-        (values (/ sum-errors n-errors)
-                (/ sum-ce-errors n-errors)))))
+          (multiple-value-call #'add-error ce-counter (cost bpn))
+          (multiple-value-call #'add-error counter (classification-error bpn)))
+    (values (get-error counter)
+            (get-error ce-counter))))
 
 
 ;;;; BPN training
@@ -274,14 +315,13 @@
 (defclass mnist-cg-bp-trainer (cg-bp-trainer)
   ((cross-entropy-counter :initform (make-instance 'error-counter)
                           :reader cross-entropy-counter)
-   (counter :initform (make-instance 'error-counter) :reader counter)))
+   (counter :initform (make-instance 'error-counter) :reader counter)
+   (last-batch :accessor last-batch)))
 
-#+nil
 (defmethod mgl-cg:compute-batch-cost-and-derive
     (batch (trainer mnist-cg-bp-trainer) learner)
-  (let ((cost (call-next-method)))
-    (log-msg "Cost: ~,5F~%" cost)
-    cost))
+  (setf (last-batch trainer) batch)
+  (call-next-method))
  
 (defun report-bpn (bpn trainer &key (max-n (length *test-images*)))
   (multiple-value-bind (e ce)
@@ -291,14 +331,14 @@
     (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
              (* 100 (- 1 e)) (n-inputs trainer))))
 
-(defmethod train-one (image (trainer mnist-bp-trainer) bpn &key)
+(defmethod train-batch :around (samples (trainer mnist-bp-trainer) bpn)
   (when (zerop (mod (n-inputs trainer) (length *training-images*)))
     (report-bpn bpn trainer))
   (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
     (call-next-method)
-    (add-error ce-counter (last1 (nodes bpn)) 1)
-    (add-error counter (classification-error bpn) 1)
+    (multiple-value-call #'add-error ce-counter (cost bpn))
+    (multiple-value-call #'add-error counter (classification-error bpn))
     (let ((n-inputs (n-inputs trainer)))
       (when (zerop (mod n-inputs 1000))
         (log-msg "CROSS ENTROPY ERROR: ~,5F (~D, ~D)~%"
@@ -312,19 +352,20 @@
         (reset-counter ce-counter)
         (reset-counter counter)))))
 
-(defmethod train :after (sampler (trainer mnist-bp-trainer) bpn &key)
+(defmethod train :around (sampler (trainer mnist-bp-trainer) bpn)
+  (call-next-method)
   (report-bpn bpn trainer))
 
-(defmethod train-batch (batch (trainer mnist-cg-bp-trainer) bpn &key)
+(defmethod train-batch :around (batch (trainer mnist-cg-bp-trainer) bpn)
   (when (zerop (mod (n-inputs trainer) (length *training-images*)))
     (report-bpn bpn trainer))
   (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
-    (loop for sample in batch do
-          (set-input sample bpn)
+    (loop for samples in (group batch (max-n-stripes bpn)) do
+          (set-input samples bpn)
           (forward-bpn bpn)
-          (add-error ce-counter (last1 (nodes bpn)) 1)
-          (add-error counter (classification-error bpn) 1))
+          (multiple-value-call #'add-error ce-counter (cost bpn))
+          (multiple-value-call #'add-error counter (classification-error bpn)))
     (let ((n-inputs (n-inputs trainer)))
       (when (zerop (mod n-inputs 100))
         (log-msg "CROSS ENTROPY ERROR: ~,5F (~D, ~D)~%"
@@ -347,12 +388,13 @@
         (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
                  n-line-searches n-succesful-line-searches)))))
 
-(defmethod train :after (sampler (trainer mnist-cg-bp-trainer) bpn &key)
+(defmethod train :around (sampler (trainer mnist-cg-bp-trainer) bpn)
+  (call-next-method)
   (report-bpn bpn trainer))
 
-(defun init-lump (name bpn deviation)
+(defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)
-      (lump-node-array (find-lump name bpn :errorp t))
+      (segment-weights (find-lump name bpn :errorp t))
     (loop for i upfrom start below end
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
@@ -362,47 +404,31 @@
     (print inits)
     (terpri)
     (let ((bpn (eval (print
-                      `(build-bpn (:class 'mnist-bpn)
+                      `(build-bpn (:class 'mnist-bpn :max-n-stripes 1000)
                          ,@defs
                          ;; Add expectations
-                         (input-lump :symbol expectations
-                                     :size 10)
+                         (expectations (input-lump :size 10))
                          ;; Add a softmax layer. Oh, the pain.
-                         (weight-lump :symbol prediction-weights
-                                      :size (* (lump-size (lump '(f3 3))) 10))
-                         (weight-lump :symbol prediction-biases
-                                      :size 10)
-                         (activation-lump :symbol prediction-activations0
-                                          :weight-lump prediction-weights
-                                          :input-lump (lump '(f3 3))
-                                          :size 10)
-                         (hidden-lump :symbol prediction-activations
-                                      :size 10
-                                      :def (->+ (_)
-                                             (ref prediction-activations0 _)
-                                             (ref prediction-biases _)))
-                         (cross-entropy-softmax-lump
-                          :symbol predictions
-                          :size 10 :group-size 10
-                          :input-lump prediction-activations
-                          :target-lump expectations)
-                         ;; just to measure progress
-                         (hidden-lump :size 1
-                                      :def (->cross-entropy (_)
-                                             expectations
-                                             predictions)))))))
+                         (prediction-weights
+                          (weight-lump
+                           :size (* (size (lump '(f3 3))) 10)))
+                         (prediction-biases (weight-lump :size 10))
+                         (prediction-activations0
+                          (activation-lump :weights prediction-weights
+                                           :x (lump '(f3 3))))
+                         (prediction-activations
+                          (->+ :args (list prediction-activations0
+                                           prediction-biases)))
+                         (predictions
+                          (cross-entropy-softmax-lump
+                           :group-size 10
+                           :x prediction-activations
+                           :target expectations))
+                         (my-error (error-node :x predictions)))))))
       (initialize-bpn-from-dbn bpn dbn inits)
-      (init-lump 'prediction-weights bpn 0.1)
-      (init-lump 'prediction-biases bpn 0.1)
+      (init-weights 'prediction-weights bpn 0.1)
+      (init-weights 'prediction-biases bpn 0.1)
       bpn)))
-
-(defun weight-lump-p (lump)
-  (and (typep lump 'weight-lump)
-       (member (name lump) '(((inputs f1) :weights 0)
-                             ((f1 f2) :weights 1)
-                             ((f2 f3) :weights 2)
-                             prediction-weights)
-               :test #'equal)))
 
 (defun train-mnist-bpn (bpn &key (use-cg t))
   (flet ((softmax-segmenter (lump)
@@ -448,7 +474,7 @@
                                      'batch-gd-trainer
                                      :learning-rate
                                      ;; is this a bias?
-                                     (if (< 10000 (mgl-bp:lump-size lump))
+                                     (if (< 10000 (size lump))
                                          (flt 0.03)
                                          (flt 0.1))
                                      :momentum (flt 0.8)
@@ -478,7 +504,13 @@
   (cond (load-dbn-p
          (setq *dbn* (make-mnist-dbn))
          (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*))
-           (mgl-util:read-weights *dbn* s)))
+           (mgl-util:read-weights *dbn* s))
+         (log-msg "Loaded DBN~%")
+         (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
+                  (coerce (dbn-rmse (make-sampler *test-images*
+                                                  :max-n (length *test-images*))
+                                    *dbn*)
+                          'list)))
         (t
          (setq *dbn* (train-mnist-dbn))
          (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*)

@@ -7,9 +7,10 @@
             year month date hour minute second)))
 
 (defparameter *example-dir*
-  (make-pathname :name nil :type nil
-                 :defaults (asdf:component-pathname
-                            (asdf:find-system :mgl-example))))
+  (merge-pathnames (make-pathname :directory '(:relative "example"))
+                   (make-pathname :name nil :type nil
+                                  :defaults (asdf:component-pathname
+                                             (asdf:find-system :mgl-example)))))
 
 (defparameter *log-file*
   (merge-pathnames "mgl-example.log" *example-dir*))
@@ -34,7 +35,7 @@
   "Return a function that returns elements of VECTOR in random order
 without end. When there are no more elements, start over with a
 different random order."
-  (let ((vector (copy-seq vector))
+  (let ((vector (copy-seq (coerce vector 'vector)))
         (l (length vector))
         (n 0))
     (lambda ()

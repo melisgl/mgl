@@ -15,49 +15,26 @@ words simply something the can be used as input for the learning."))
 sets up TRAINER to be suitable for LEARNER. Normally called
 automatically from a :BEFORE method on TRAIN."))
 
-(defgeneric train (sampler trainer learner &key &allow-other-keys)
-  (:method :before (sampler trainer learner &rest args)
-           (declare (ignore sampler args))
+(defgeneric train (sampler trainer learner)
+  (:method :before (sampler trainer learner)
+           (declare (ignore sampler))
            (initialize-trainer trainer learner))
-  (:method (sampler trainer learner &rest args)
-    (loop until (finishedp sampler) do
-          (apply #'train-one (sample sampler) trainer learner args))
-    learner)
   (:documentation "Train LEARNER with TRAINER on the examples from
 SAMPLER. Before that TRAINER is initialized for LEARNER with
-INITIALIZE-TRAINER. Training continues until SAMPLER is finished. For
-trainers that inherit from BATCH-TRAINER BATCH-SIZE number of samples
-are collected and passed to TRAIN-BATCH. For other trainers samples
-are passed one by one to TRAIN-ONE."))
+INITIALIZE-TRAINER. Training continues until SAMPLER is finished."))
 
-(defgeneric set-input (sample learner)
-  (:documentation "Set SAMPLE as input in LEARNER."))
+(defgeneric train-batch (batch trainer learner)
+  (:documentation "Called by TRAIN. Useful to hang an around method on
+to monitor progress."))
 
-(defgeneric train-one (sample trainer learner &key &allow-other-keys)
-  (:documentation "Train LEARNER by TRAINER on one SAMPLE. This method
-usually starts with calling SET-INPUT."))
-
+(defgeneric set-input (samples learner)
+  (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
+a sequence of examples even for learners not capable of batch
+operation."))
 
-;;;; Batch training
-
-(defclass batch-trainer ()
-  ((batch-size :initarg :batch-size :accessor batch-size))
-  (:documentation "Batch trainers collect BATCH-SIZE number of samples
-and learn and train on them as a whole, possibly multiple times. Note
-that some trainers that really work on batches are not subclassed from
-this as they only use each sample once so TRAIN-ONE suffices for their
-needs."))
-
-(defgeneric train-batch (batch trainer learner &key &allow-other-keys)
-  (:documentation "Batch is a sequence of samples that can be used as
-input for LEARNER any number of times and in any order desired."))
-
-(defmethod train (sampler (trainer batch-trainer) learner &rest args)
-  (loop until (finishedp sampler) do
-        (let ((batch (loop repeat (batch-size trainer)
-                           until (finishedp sampler)
-                           collect (sample sampler))))
-          (apply #'train-batch batch trainer learner args))))
+(defgeneric n-inputs-until-update (trainer)
+  (:documentation "Return the largest number of inputs guaranteed not
+to cause a change in the learner being trained."))
 
 
 ;;;; Samplers
@@ -90,6 +67,13 @@ optional)."))
   (call-next-method))
 
 (defclass counting-function-sampler (counting-sampler function-sampler) ())
+
+(defun sample-batch (sampler max-size)
+  "Return a sequence of samples of length at most MAX-SIZE or less if
+SAMPLER runs out."
+  (loop repeat max-size
+        while (not (finishedp sampler))
+        collect (sample sampler)))
 
 
 ;;;; Error counter

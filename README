@@ -10,6 +10,7 @@ contributed by Ravenpack International. Implements:
 
 It's under the MIT licence. See COPYING.
 
+
 * Tests
 
 Run the built in tests with:
@@ -19,36 +20,63 @@ Run the built in tests with:
 Note, that most of the tests are rather stochastic and can fail once
 in a while.
 
-* Matlisp BLAS
 
-It takes advantage of BLAS if it is available, patched and
-MGL-UTIL:*USE-BLAS* is not NIL. BLAS typically speeds things up by a
-factor of 2-4. Matlisp may be loaded at any time, before or after MGL.
+* Matlisp
 
-For example, on my Debian Etch desktop machine with sbcl I did this to
-get BLAS:
+If Matlisp is loaded, MGL takes advantage of it which speeds things up
+by a factor of 2-4. Matlisp may be loaded at any time, before or after
+MGL. In src/matlisp/ there is a very small Lisp implementation of some
+of the Matlisp functionality to allow operation without Matlisp. This
+implementation was largely ripped from the true Matlisp distribution
+with trivial modifications.
 
-First you need to install a Blas implementation. Don't bother with the
+
+* Installing BLAS
+
+Installing BLAS can be a pain. For example, on my Debian Etch desktop
+machine with sbcl I did this to get BLAS:
+
+First you need to install a BLAS implementation. Don't bother with the
 fortran reference implementation, it's slower than the lisp code.
 Install the platform specific atlas or mkl (not free) package.
 Compiling atlas locally can be a big gain in some cases.
 
-Then install a fortran compiler (usually g77).
+On my Debian Lenny I compiled the ATLAS from source like this:
 
-Next get matlisp (for the BLAS wrapper):
+  # apt-get install gfortran
+  # echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+  $ cd ATLAS
+  $ mkdir build-f95-dyn
+  $ cd build-f95-dyn/
+  $ ../configure -Fa alg -fPIC
+  $ make
+  $ cd lib
+  $ make ptshared
+  $ cd ..
+  $ make ptcheck
+  $ make time
+
+
+* Installing Matlisp
+
+Get Matlisp:
 
   cvs -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp login
   cvs -z3 -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp \
       co -P matlisp
 
-and apply matlisp.patch to add support for passing displaced arrays to
-Blas.
-
-Configure it as:
+If you have the stock sse2 package of ATLAS then configure it as:
 
   ./configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --prefix=`pwd`
 
-edit the generated lib/lazy-loader.lisp:
+or 
+
+  ./configure --with-atlas=/home/mega/ATLAS/build-f95-dyn/lib/ \
+              --with-lisp=sbcl --prefix=`pwd`
+
+in my case.
+
+Edit the generated lib/lazy-loader.lisp:
 
   #+:sbcl
   (defun load-blas-&-lapack-libraries ()
@@ -58,14 +86,28 @@ edit the generated lib/lazy-loader.lisp:
     (sb-alien:load-shared-object "/usr/lib/sse2/liblapack_atlas.so.3")
     (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
 
+for me it was:
+
+  #+:sbcl
+  (defun load-blas-&-lapack-libraries ()
+    (sb-alien:load-shared-object
+    "/home/mega/ATLAS/build-f95-dyn/lib/libatlas.so")
+    (sb-alien:load-shared-object
+    "/home/mega/ATLAS/build-f95-dyn/lib/libptcblas.so")
+    (sb-alien:load-shared-object
+     "/home/mega/ATLAS/build-f95-dyn/lib/libptf77blas.so")
+    (sb-alien:load-shared-object
+    "/home/mega/ATLAS/build-f95-dyn/lib/liblapack.so")
+    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
+
 or if you have MKL:
 
   (defun load-blas-&-lapack-libraries ()
     (sb-alien:load-shared-object "/opt/intel/mkl/9.1.023/lib/32/libmkl.so")
     (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
 
-build it:
+Build Matlisp:
 
-  make
+  $ make
 
 finally load matlisp/start.lisp.

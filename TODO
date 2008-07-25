@@ -2,19 +2,45 @@
 #+STARTUP: lognotestate
 #+SEQ_TODO: MAYBE(m) TODO(t) NEXT(n) STARTED(s) WAITING(w) | DONE(d) CANCELLED(c)
 #+STARTUP: hidestars
-* unroll only part of the network
-* example for unrolling with missing values
-* factored rbm
-* higher order rbm
-* SRBM
-* true batch training (for speed)
-* clarify conjugate gradient license
-* cg: make sbcl specific float code portable
-* bp: the structure is static so there is no point in ->+ (&REST ARGS)
-* faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
-Doesn't seem to speed up things.
-* cg: failed line searches can still change the weights
+* gd
+** DONE rename segmented-trainer to segmented-gd-trainer
+* cg
+** WAITING clarify conjugate gradient license
+   - State "WAITING"    [2008-07-21 Mon 21:53] \\
+     Contacting Carl Rasmussen by email
+** TODO make sbcl specific float code portable
+** TODO failed line searches can still change the weights
 document it or fix it
-* rbm: sparsity constraint
-* rbm: generic support for exponential family distributions
+* rbm
+** TODO factored RBM: weight matrix is A*B
+** TODO conditioning chunks are not really visible nor hidden
+** TODO semi-restricted (connections between visibles)
+** MAYBE higher order rbm
+** MAYBE training with conjugate gradient: is it possible to calculate
+the cost function? Not quite, but there two ways out: 1) rbm
+importance sampling paper to estimate the partition function 2)
+constrain features to be sparse and don't use a partition function at
+all.
+** TODO sparsity constraint
+possible with WEIGHT-PENALTY
+** MAYBE generic support for exponential family distributions
 http://www.ics.uci.edu/~michal/GenHarm3.pdf
+** TODO cache inputs optionally
+This should make higher level RBMs a lot faster and can be implemented
+trivially with a samples -> node arrays hash table.
+* bp
+** TODO VALIDATE-LUMP: set and check size if possible, check inputs
+** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
+** TODO redo ->CROSS-ENTROPY
+** TODO what to do with INDICES-TO-CALCULATE?
+* unroll
+** MAYBE unroll only part of the network
+** MAYBE example for unrolling with missing values
+** TODO fix or remove missing value support
+* misc
+** DONE faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
+Doesn't seem to speed up things.
+** DONE remove dependency on BLAS: implement some of matlisp in Lisp
+Ripped matrix.lisp and various bits from Matlisp.
+** TODO what to do with *USE-BLAS*?
+The wrappers should calculate cost and call matlisp if it is avaible.
