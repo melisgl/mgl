@@ -113,3 +113,55 @@ contributed to SUM-ERROR.")))
       (if e
           (values (sqrt e) n)
           nil))))
+
+
+;;;; Stripes
+
+(defgeneric max-n-stripes (learner)
+  (:documentation "The number of examples with which the learner is
+capable of dealing simultaneously."))
+
+(defgeneric set-max-n-stripes (max-n-stripes object)
+  (:documentation "Allocate the necessary stuff to allow for N-STRIPES
+number of examples to be worked with simultaneously."))
+
+(defsetf max-n-stripes (object) (store)
+  `(set-max-n-stripes ,store ,object))
+
+(defgeneric n-stripes (learner)
+  (:documentation "The number of examples with which the learner is
+currently dealing."))
+
+(defgeneric set-n-stripes (n-stripes object)
+  (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
+that are in use."))
+
+(defsetf n-stripes (object) (store)
+  `(set-n-stripes ,store ,object))
+
+(defgeneric stripe-start (stripe obj))
+(defgeneric stripe-end (stripe obj))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun stripe-binding (stripe obj start &optional end)
+    (with-gensyms (%stripe %obj)
+      `((,%stripe ,stripe)
+        (,%obj ,obj)
+        (,start (the index (stripe-start ,%stripe ,%obj)))
+        ,@(when end `((,end (the index (stripe-end ,%stripe ,%obj)))))))))
+
+(defmacro with-stripes (specs &body body)
+  `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
+                  specs)
+     ,@body))
+
+
+;;;; Various accessor type generic functions share by packages.
+
+(defgeneric name (object))
+(defgeneric size (object))
+(defgeneric nodes (object))
+(defgeneric default-value (object))
+(defgeneric group-size (object))
+(defgeneric batch-size (object))
+(defgeneric n-inputs (object))

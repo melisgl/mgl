@@ -23,6 +23,23 @@ TRAINER."))
 (defgeneric maybe-update-weights (trainer n-new-inputs)
   (:documentation "Update the weights being trained. N-NEW-INPUTS have
 been seen since the last time this was called."))
+
+(defun find-segment-gradient-accumulator (segment trainer)
+  (do-segment-gradient-accumulators ((segment2 start accumulator accumulator2)
+                                     trainer)
+    (when (eq segment2 segment)
+      (return-from find-segment-gradient-accumulator
+        (values start accumulator accumulator2)))))
+
+(defmacro with-segment-gradient-accumulator (((start accumulator
+                                                     &optional accumulator2)
+                                              (segment trainer))
+                                             &body body)
+  `(multiple-value-bind (,start ,accumulator accumulator2)
+       (find-segment-gradient-accumulator ,segment ,trainer)
+     (declare (type (or index null) ,start)
+              (type (or matlisp:real-matrix null) ,accumulator ,accumulator2))
+     ,@body))
 
 
 ;;;; Gradient descent
@@ -57,16 +74,17 @@ in the batch or the number of uses the weight in question have seen.")
    (weight-decay
     :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
     :documentation "WEIGHT-DECAY * WEIGHT is subtracted from the
-gradient to penalize large weights."))
+gradient to penalize large weights.")
+   (batch-size
+    :initarg :batch-size :accessor batch-size
+    :documentation "Normally, after having gone through BATCH-SIZE
+number of inputs weights are updated. See subclasses for more correct
+descriptions."))
   (:documentation "This is the common base class of gradient descent
 based trainers with momentum and weight decay."))
 
 (defclass batch-gd-trainer (gd-trainer)
-  ((batch-size
-    :initarg :batch-size :accessor batch-size
-    :documentation "After having gone through BATCH-SIZE number of
-inputs weights are updated.")
-   (n-inputs-in-batch
+  ((n-inputs-in-batch
     :initform 0 :initarg :n-inputs-in-batch :accessor n-inputs-in-batch
     :documentation "In-batch counter of inputs."))
   (:documentation "Updates all weights simultaneously after chewing
@@ -74,20 +92,27 @@ through BATCH-SIZE inputs. PER-WEIGHT-BATCH-GD-TRAINER may be a better
 choice when some weights can go unused for instance due to missing
 input values."))
 
+(defclass normalized-batch-gd-trainer (batch-gd-trainer)
+  ((n-weight-uses-in-batch
+    :accessor n-weight-uses-in-batch
+    :documentation "Number of uses of the weight in its current batch."))
+  (:documentation "Like BATCH-GD-TRAINER but keeps count of how many
+times each weight was used in the batch and divides the accumulated
+gradient by this count instead of dividing by N-INPUTS-IN-BATCH. This
+only makes a difference if there are missing values in the learner
+that's being trained. The main feature that distuinguishes this class
+from PER-WEIGHT-BATCH-GD-TRAINER is that batches end at same time for
+all weights."))
+
 (defclass per-weight-batch-gd-trainer (gd-trainer)
-  ((batch-size
-    :initarg :batch-size :accessor batch-size
-    :documentation "After BATCH-SIZE number of `uses' of a weight it
-is updated. Normally there is one use per input, but it might be less
-when there are missing values or more with weight sharing.")
-   (n-weight-uses-in-batch
+  ((n-weight-uses-in-batch
     :accessor n-weight-uses-in-batch
     :documentation "Number of uses of the weight in its current batch."))
   (:documentation "This is much like BATCH-GD-TRAINER but it is more
 clever about when to update weights. Basically every weight has its
 own batch independent from the batches of others. It has desirable
 properties. One can for example put two neural networks together
-without addding any connections between them and the learning will
+without adding any connections between them and the learning will
 produce results equivalent to separated case. Also, adding inputs with
 only missing values does not change anything."))
 
@@ -104,12 +129,18 @@ only missing values does not change anything."))
            (setf (accumulator2 trainer) nil)))
     (setf (weight-deltas trainer) (matlisp:make-real-matrix n-weights 1))))
 
-(defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer)
-                               segmentable)
-  (call-next-method)
+(defun set-up-n-weight-uses (trainer)
   (let ((n-weights (segment-set-size (segment-set trainer))))
     (setf (n-weight-uses-in-batch trainer)
           (make-array n-weights :element-type 'index :initial-element 0))))
+
+(defmethod initialize-trainer ((trainer normalized-batch-gd-trainer) segmentable)
+  (call-next-method)
+  (set-up-n-weight-uses trainer))
+
+(defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer) segmentable)
+  (call-next-method)
+  (set-up-n-weight-uses trainer))
 
 (defmethod segments ((trainer gd-trainer))
   (segments (segment-set trainer)))
@@ -178,10 +209,73 @@ only missing values does not change anything."))
           (fill accumulator2 #.(flt 0))))))
   (incf (n-inputs trainer) n-new-inputs))
 
+(defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
+                                 n-new-inputs)
+  (declare (type index n-new-inputs))
+  (let ((accumulator1 (storage (accumulator1 trainer)))
+        (accumulator2 (if (accumulator2 trainer)
+                          (storage (accumulator2 trainer))
+                          nil))
+        (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
+        (weight-deltas (storage (weight-deltas trainer)))
+        (learning-rate (learning-rate trainer))
+        (momentum (momentum trainer))
+        (weight-decay (weight-decay trainer))
+        (batch-size (batch-size trainer)))
+    (declare (type flt-vector accumulator1 weight-deltas)
+             (type (or null flt-vector) accumulator2)
+             (type index-vector n-weight-uses-in-batch)
+             (type flt learning-rate momentum weight-decay)
+             (type index batch-size))
+    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+        (segment-set trainer)
+      (with-segment-weights ((weights weights-start weights-end) segment)
+        (declare (ignore weights weights-end))
+        (map-segment-runs
+         (lambda (start end)
+           (declare (type index start end)
+                    (optimize (speed 3) #.*no-array-bounds-check*))
+           (do ((i (the! index
+                         (+ start-in-segment-set (- start weights-start)))
+                   (the! index (1+ i)))
+                (j start (1+ j)))
+               ((<= end j))
+             (setf (aref n-weight-uses-in-batch i)
+                   (the! index
+                         (+ n-new-inputs
+                            (the! index
+                                  (aref n-weight-uses-in-batch i)))))))
+         segment)))
+    (when (<= batch-size (the index (incf (n-inputs-in-batch trainer)
+                                          n-new-inputs)))
+      (setf (n-inputs-in-batch trainer) 0)
+      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+          (segment-set trainer)
+        (with-segment-weights ((weights start end) segment)
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (do ((i start-in-segment-set (the! index (1+ i)))
+               (j start (1+ j)))
+              ((<= end j))
+            (let ((delta (+ (* momentum (aref weight-deltas i))
+                            (* (if (zerop (aref n-weight-uses-in-batch i))
+                                   #.(flt 0)
+                                   (/ (flt (aref n-weight-uses-in-batch i))))
+                               (if accumulator2
+                                   (+ (aref accumulator1 i)
+                                      (aref accumulator2 i))
+                                   (aref accumulator1 i)))
+                            (* weight-decay (aref weights j)))))
+              (setf (aref weight-deltas i) delta)
+              (decf (aref weights j) (* learning-rate delta))
+              (setf (aref n-weight-uses-in-batch i) 0
+                    (aref accumulator1 i) #.(flt 0))
+              (when accumulator2
+                (setf (aref accumulator2 i) #.(flt 0)))))))))
+  (incf (n-inputs trainer) n-new-inputs))
+
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
   (assert (= 1 n-new-inputs))
-  (incf (n-inputs trainer))
   (let ((accumulator1 (storage (accumulator1 trainer)))
         (accumulator2 (if (accumulator2 trainer)
                           (storage (accumulator2 trainer))
@@ -227,7 +321,8 @@ only missing values does not change anything."))
                        (aref accumulator1 i) #.(flt 0))
                  (when accumulator2
                    (setf (aref accumulator2 i) #.(flt 0)))))))
-         segment)))))
+         segment))))
+  (incf (n-inputs trainer)))
 
 (defmethod n-inputs-until-update ((trainer batch-gd-trainer))
   ;; BATCH-SIZE may be setf'ed to a value lower than N-INPUTS-IN-BATCH

@@ -9,6 +9,7 @@
            #:storage
            #:reshape2
            #:set-ncols
+           #:sum-elements
            #:with-gensyms
            #:split-body
            #:suffix-symbol
@@ -23,24 +24,12 @@
            #:the!
            #:gaussian-random-1
            #:select-random-element
+           #:split-plist
            #:while
            #:last1
            #:append1
            #:push-all
            #:group
-           #:n-stripes
-           #:set-n-stripes
-           #:max-n-stripes
-           #:set-max-n-stripes
-           #:stripe-start
-           #:stripe-end
-           #:with-stripes
-           #:name
-           #:size
-           #:nodes
-           #:default-value
-           #:group-size
-           #:batch-size
            #:repeatedly
            #:sigmoid
            #:try-chance
@@ -92,7 +81,22 @@ accessors such as NAME."))
            #:do-segment-set
            #:segment-set-size
            #:segment-set->weights
-           #:segment-set<-weights)
+           #:segment-set<-weights
+           ;; Common generic functions
+           #:n-stripes
+           #:set-n-stripes
+           #:max-n-stripes
+           #:set-max-n-stripes
+           #:stripe-start
+           #:stripe-end
+           #:with-stripes
+           #:name
+           #:size
+           #:nodes
+           #:default-value
+           #:group-size
+           #:batch-size
+           #:n-inputs)
   (:documentation "Generic training related interfaces and basic
 definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
@@ -101,6 +105,8 @@ and LEARNERs."))
   (:use #:common-lisp #:mgl-util #:mgl-train)
   (:export #:map-segment-gradient-accumulators
            #:do-segment-gradient-accumulators
+           #:find-segment-gradient-accumulator
+           #:with-segment-gradient-accumulator
            #:maybe-update-weights
            ;; Gradient descent
            #:gd-trainer
@@ -111,10 +117,10 @@ and LEARNERs."))
            #:learning-rate
            #:momentum
            #:weight-decay
-           #:batch-gd-trainer
            #:batch-size
+           #:batch-gd-trainer
            #:n-inputs-in-batch
-           #:n-batches
+           #:normalized-batch-gd-trainer
            #:per-weight-batch-gd-trainer
            #:n-weight-uses-in-batch
            ;; Segmented trainer
@@ -138,6 +144,9 @@ interface and simple gradient descent based trainers."))
            #:*default-max-n-evaluations*
            #:cg-trainer
            #:cg-args
+           #:n-inputs
+           #:segment-set
+           #:accumulator1
            #:compute-batch-cost-and-derive
            #:decayed-cg-trainer-mixin)
   (:documentation "Conjugate gradient based trainer."))
@@ -148,6 +157,7 @@ interface and simple gradient descent based trainers."))
            #:visible-chunks
            #:hidden-chunks
            #:default-clouds
+           #:merge-cloud-specs
            #:clouds
            #:do-clouds
            #:find-cloud
@@ -161,13 +171,19 @@ interface and simple gradient descent based trainers."))
            #:sample-visible-p
            #:sample-hidden-p
            #:n-gibbs
-           #:rmse-counting-rbm-trainer
+           #:positive-phase
+           #:negative-phase
            ;; Cloud
            #:cloud
            #:name
            #:visible-chunk
            #:hidden-chunk
+           #:full-cloud
            #:weights
+           #:factored-cloud
+           #:cloud-a
+           #:cloud-b
+           #:common-rank
            ;; Chunk
            #:name
            #:chunk
@@ -234,6 +250,7 @@ stacks called Deep Belief Networks (DBN)."))
            #:forward-bpn
            #:backward-bpn
            #:bp-trainer
+           #:compute-derivatives
            #:cg-bp-trainer
            ;; Node types
            #:define-node-type

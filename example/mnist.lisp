@@ -38,6 +38,9 @@
 ;;;; at the usual place and the BPN forwarded which is avoidable in
 ;;;; this case, but it's not very important as the vast majority of
 ;;;; time is spent training the whole BPN.
+;;;;
+;;;; There is support for gradient descent training for the BPN but
+;;;; ultimately its results are worse.
 
 (in-package :mgl-example-mnist)
 
@@ -141,6 +144,39 @@
                (clamp-array sample nodes start)))))
 
 
+;;;;
+
+(defgeneric log-training-error (trainer learner))
+(defgeneric log-test-error (trainer learner))
+
+(defclass logging-trainer ()
+  ((log-training-fn :initform (make-instance 'periodic-fn
+                                             :period 10000
+                                             :fn 'log-training-error)
+                    :reader log-training-fn)
+   (log-test-fn :initform (make-instance 'periodic-fn
+                                         :period (length *training-images*)
+                                         :fn 'log-test-error)
+                :reader log-test-fn)))
+
+(defmethod train-batch :around (samples (trainer logging-trainer) learner)
+  (multiple-value-prog1 (call-next-method)
+    (call-periodic-fn (n-inputs trainer) (log-training-fn trainer)
+                      trainer learner)
+    (call-periodic-fn (n-inputs trainer) (log-test-fn trainer)
+                      trainer learner)))
+
+(defmethod train :around (sampler (trainer logging-trainer) learner)
+  (setf (mgl-example-util::last-eval (log-training-fn trainer))
+        (n-inputs trainer))
+  (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer) trainer learner)
+  (multiple-value-prog1 (call-next-method)
+    (call-periodic-fn! (n-inputs trainer) (log-training-fn trainer)
+                       trainer learner)
+    (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer)
+                       trainer learner)))
+
+
 ;;;; DBN
 
 (defun layers->rbms (layers &key (class 'rbm))
@@ -175,10 +211,18 @@
     (when inputs
       (clamp-striped-nodes images inputs))))
 
-(defclass mnist-rbm-trainer (rbm-trainer)
+(defclass mnist-rbm-trainer (logging-trainer rbm-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
-(defun report-dbn-rmse (rbm trainer)
+(defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
+  (let ((counter (counter trainer))
+        (n-inputs (n-inputs trainer)))
+    (log-msg "TRAINING RMSE: ~,5F (~D)~%"
+             (or (get-error counter) #.(flt 0))
+             n-inputs)
+    (reset-counter counter)))
+
+(defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (coerce (dbn-rmse (make-sampler *test-images*
                                            :max-n 1000
@@ -186,27 +230,10 @@
                              (dbn rbm) :rbm rbm) 'list)
            (n-inputs trainer)))
 
-;;; This prints the rmse of the the training examples after each 100
-;;; and the test rmse on each level of the DBN after each 1000.
-(defmethod train-batch :around (samples (trainer mnist-rbm-trainer) rbm)
-  (when (zerop (mod (n-inputs trainer) 10000))
-    (report-dbn-rmse rbm trainer))
+(defmethod mgl-rbm:negative-phase :around (trainer (rbm mnist-rbm))
   (call-next-method)
-  (let ((counter (counter trainer)))
-    (multiple-value-bind (e n) (mgl-rbm:reconstruction-error rbm)
-      (add-error counter e n))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs (length *training-images*)))
-        (log-msg "TRAINING RMSE: ~,5F (~D, ~D)~%"
-                 (or (get-error counter) #.(flt 0))
-                 (n-sum-errors counter)
-                 n-inputs)
-        (reset-counter counter)))))
-
-;;; Make sure we print the test rmse at the end of training each rbm.
-(defmethod train :around (sampler (trainer mnist-rbm-trainer) rbm)
-  (call-next-method)
-  (report-dbn-rmse rbm trainer))
+  (multiple-value-call #'add-error (counter trainer)
+                       (mgl-rbm:reconstruction-error rbm)))
 
 
 ;;;; DBN training
@@ -307,58 +334,48 @@
 
 ;;;; BPN training
 
-(defclass mnist-bp-trainer (bp-trainer)
+(defclass mnist-bp-trainer (logging-trainer bp-trainer)
   ((cross-entropy-counter :initform (make-instance 'error-counter)
                           :reader cross-entropy-counter)
    (counter :initform (make-instance 'error-counter) :reader counter)))
 
-(defclass mnist-cg-bp-trainer (cg-bp-trainer)
+(defclass mnist-cg-bp-trainer (logging-trainer cg-bp-trainer)
   ((cross-entropy-counter :initform (make-instance 'error-counter)
                           :reader cross-entropy-counter)
-   (counter :initform (make-instance 'error-counter) :reader counter)
-   (last-batch :accessor last-batch)))
+   (counter :initform (make-instance 'error-counter) :reader counter)))
 
-(defmethod mgl-cg:compute-batch-cost-and-derive
-    (batch (trainer mnist-cg-bp-trainer) learner)
-  (setf (last-batch trainer) batch)
-  (call-next-method))
- 
-(defun report-bpn (bpn trainer &key (max-n (length *test-images*)))
+(defmethod log-training-error (trainer (bpn mnist-bpn))
+  (declare (ignore bpn))
+  (let ((n-inputs (n-inputs trainer))
+        (ce-counter (cross-entropy-counter trainer))
+        (counter (counter trainer)))
+    (when (zerop (mod n-inputs 100))
+      (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
+               (or (get-error ce-counter) #.(flt 0))
+               n-inputs)
+      (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
+               (* 100 (- 1 (or (get-error counter) #.(flt 0))))
+               n-inputs)
+      (reset-counter ce-counter)
+      (reset-counter counter))))
+
+(defmethod log-test-error (trainer (bpn mnist-bpn))
   (multiple-value-bind (e ce)
-      (bpn-error (make-sampler *test-images* :max-n max-n) bpn)
+      (bpn-error (make-sampler *test-images* :max-n (length *test-images*)) bpn)
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
              ce (n-inputs trainer))
     (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
              (* 100 (- 1 e)) (n-inputs trainer))))
 
-(defmethod train-batch :around (samples (trainer mnist-bp-trainer) bpn)
-  (when (zerop (mod (n-inputs trainer) (length *training-images*)))
-    (report-bpn bpn trainer))
+(defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
+                                                bpn)
   (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
     (call-next-method)
     (multiple-value-call #'add-error ce-counter (cost bpn))
-    (multiple-value-call #'add-error counter (classification-error bpn))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs 1000))
-        (log-msg "CROSS ENTROPY ERROR: ~,5F (~D, ~D)~%"
-                 (or (get-error ce-counter) #.(flt 0))
-                 (n-sum-errors ce-counter)
-                 n-inputs)
-        (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D, ~D)~%"
-                 (* 100 (- 1 (or (get-error counter) #.(flt 0))))
-                 (n-sum-errors counter)
-                 n-inputs)
-        (reset-counter ce-counter)
-        (reset-counter counter)))))
-
-(defmethod train :around (sampler (trainer mnist-bp-trainer) bpn)
-  (call-next-method)
-  (report-bpn bpn trainer))
+    (multiple-value-call #'add-error counter (classification-error bpn))))
 
 (defmethod train-batch :around (batch (trainer mnist-cg-bp-trainer) bpn)
-  (when (zerop (mod (n-inputs trainer) (length *training-images*)))
-    (report-bpn bpn trainer))
   (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
     (loop for samples in (group batch (max-n-stripes bpn)) do
@@ -366,31 +383,14 @@
           (forward-bpn bpn)
           (multiple-value-call #'add-error ce-counter (cost bpn))
           (multiple-value-call #'add-error counter (classification-error bpn)))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs 100))
-        (log-msg "CROSS ENTROPY ERROR: ~,5F (~D, ~D)~%"
-                 (or (get-error ce-counter) #.(flt 0))
-                 (n-sum-errors ce-counter)
-                 n-inputs)
-        (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D, ~D)~%"
-                 (* 100 (- 1 (or (get-error counter) #.(flt 0))))
-                 (n-sum-errors counter)
-                 n-inputs)
-        (reset-counter ce-counter)
-        (reset-counter counter))
-      (multiple-value-bind (best-w best-f
-                                   n-line-searches n-succesful-line-searches
-                                   n-evaluations)
-          (call-next-method)
-        (declare (ignore best-w))
-        (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%"
-                 best-f n-evaluations)
-        (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
-                 n-line-searches n-succesful-line-searches)))))
-
-(defmethod train :around (sampler (trainer mnist-cg-bp-trainer) bpn)
-  (call-next-method)
-  (report-bpn bpn trainer))
+    (multiple-value-bind (best-w best-f
+                                 n-line-searches n-succesful-line-searches
+                                 n-evaluations)
+        (call-next-method)
+      (declare (ignore best-w))
+      (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%" best-f n-evaluations)
+      (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
+               n-line-searches n-succesful-line-searches))))
 
 (defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)

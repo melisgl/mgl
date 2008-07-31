@@ -294,11 +294,12 @@ clamp inits, the third is a list of inits.")
 
 (defgeneric incoming->bpn-defintion (from-lumpy to-lumpy rbm-index
                                                 cloud transposep)
-  (:documentation "Return a list of lump definitions that represent
-the flow from FROM-LUMPY through CLOUD. The chunk of FROM-LUMPY may be
-either of the end points of CLOUD. As the second value return
-initialization specs and the name of the `end' lump as the third.")
-  (:method (from-lumpy to-lumpy rbm-index (cloud cloud) transposep)
+  (:documentation "Return a list of four elemenets. The first is a
+list of lump definitions that represent the flow from FROM-LUMPY
+through CLOUD. The chunk of FROM-LUMPY may be either of the end points
+of CLOUD. The second is the cloud clamps, while the third is the cloud
+inits. The fourth is name of the `end' lump.")
+  (:method (from-lumpy to-lumpy rbm-index (cloud full-cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
            (from-size (chunk-size from-chunk))
            (n-weights (matlisp:number-of-elements (weights cloud)))
@@ -310,9 +311,6 @@ initialization specs and the name of the `end' lump as the third.")
            (sparsep (or (possibly-sparse-lumpy-p from-lumpy)
                         (possibly-sparse-lumpy-p to-lumpy)))
            (row-size (chunk-size (hidden-chunk cloud))))
-      ;; Regardless of TRANSPOSEP the weight lump contains rows of
-      ;; weights for each target node in the hidden chunk just like in
-      ;; the RBM.
       (list `((,weight-symbol
                (,(if sparsep
                      'sparse-weight-lump
@@ -332,9 +330,58 @@ initialization specs and the name of the `end' lump as the third.")
                                (lumpy-name from-lumpy))
                :to-lump ,weight-name :to :rows)
               (:from-lump ,(lumpy-name to-lumpy) :to-lump ,linear-name))
-            `((:weight-name ,weight-name
+            `((:cloud-name ,(name cloud)
                :rbm-index ,rbm-index
-               :cloud-name ,(name cloud)))
+               :weight-name ,weight-name))
+            linear-symbol)))
+  (:method (from-lumpy to-lumpy rbm-index (cloud factored-cloud) transposep)
+    ;; We have two clouds: B goes from visible to shared and A from
+    ;; shared to hidden. So it's Hidden = AxBxVisible or Visible =
+    ;; B'*A'*Hidden.
+    (let* ((cloud-a (cloud-a cloud))
+           (cloud-b (cloud-b cloud))
+           (weight-b-symbol (gensym))
+           (weight-a-symbol (gensym))
+           (shared-symbol (gensym))
+           (linear-symbol (gensym))
+           (weight-base-name (cloud-weight-lump-name rbm-index cloud transposep))
+           (weight-b-name (list weight-base-name :b))
+           (weight-a-name (list weight-base-name :a))
+           (shared-name (list
+                         (cloud-linear-lump-name rbm-index cloud transposep)
+                         :shared))
+           (linear-name (cloud-linear-lump-name rbm-index cloud transposep)))
+      (list `((,weight-b-symbol (weight-lump
+                                 :name ',weight-b-name
+                                 :size ,(matlisp:number-of-elements
+                                         (weights cloud-b))))
+              (,weight-a-symbol (weight-lump
+                                 :name ',weight-a-name
+                                 :size ,(matlisp:number-of-elements
+                                         (weights cloud-a))))
+              (,shared-symbol (cloud-activation-lump
+                               :name ',shared-name
+                               :size ,(common-rank cloud)
+                               :weights ,(if transposep
+                                             weight-a-symbol
+                                             weight-b-symbol)
+                               :x ,(lumpy-symbol from-lumpy)
+                               :transpose-weights-p ,transposep))
+              (,linear-symbol (cloud-activation-lump
+                               :name ',linear-name
+                               :size ,(chunk-size (lumpy-chunk to-lumpy))
+                               :weights ,(if transposep
+                                             weight-b-symbol
+                                             weight-a-symbol)
+                               :x ,shared-symbol
+                               :transpose-weights-p ,transposep)))
+            ;; FIXME: cloud clamps for missing values
+            ()
+            ;; cloud inits
+            `((:cloud-name ,(name cloud)
+               :rbm-index ,rbm-index
+               :weight-b-name ,weight-b-name
+               :weight-a-name ,weight-a-name))
             linear-symbol))))
 
 (defun incoming-list->bpn-definition (to-lumpy incomings)
@@ -516,21 +563,33 @@ no lump was changed."
                   (setq first-changed-lump lump)))))))
     first-changed-lump))
 
+(defgeneric initialize-from-cloud (bpn cloud args)
+  (:method (bpn (cloud full-cloud) args)
+    (destructuring-bind (&key weight-name) args
+      (let* ((lump (find-lump weight-name bpn :errorp t))
+             (weights (storage (weights cloud))))
+        (declare (type flt-vector weights))
+        (multiple-value-bind (nodes start end)
+            (segment-weights lump)
+          (declare (type flt-vector nodes))
+          (unless (= (length weights) (- end start))
+            (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
+                   lump cloud))
+          (replace nodes weights :start1 start :end1 end)))))
+  (:method (bpn (cloud factored-cloud) args)
+    (destructuring-bind (&key weight-b-name weight-a-name) args
+      (initialize-from-cloud bpn (cloud-b cloud)
+                             (list :weight-name weight-b-name))
+      (initialize-from-cloud bpn (cloud-a cloud)
+                             (list :weight-name weight-a-name)))))
+
 (defun initialize-bpn-from-dbn (bpn dbn inits)
-  "Initialize BPN from the weights of DBN according to INITS that was
+  "Initialize BPN from the weights of DBN according to cloud INITS that was
 returned by UNROLL-DBN."
   (let ((rbms (rbms dbn)))
     (dolist (init inits)
-      (destructuring-bind (&key weight-name rbm-index cloud-name)
-          init
-        (let* ((lump (find-lump weight-name bpn :errorp t))
-               (cloud (find-cloud cloud-name (elt rbms rbm-index) :errorp t))
-               (weights (storage (weights cloud))))
-          (declare (type flt-vector weights))
-          (multiple-value-bind (nodes start end)
-              (segment-weights lump)
-            (declare (type flt-vector nodes))
-            (unless (= (length weights) (- end start))
-              (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
-                     lump cloud))
-            (replace nodes weights :start1 start :end1 end)))))))
+      (multiple-value-bind (known unknown)
+          (split-plist init '(:cloud-name :rbm-index))
+        (destructuring-bind (&key cloud-name rbm-index) known
+          (let ((cloud (find-cloud cloud-name (elt rbms rbm-index) :errorp t)))
+            (initialize-from-cloud bpn cloud unknown)))))))

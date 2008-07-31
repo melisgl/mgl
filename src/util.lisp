@@ -35,8 +35,11 @@ possible.")
 (defgeneric reshape2 (mat m n)
   (:method ((mat matlisp:real-matrix) m n)
     (assert (<= (* m n) (length (storage mat))))
-    (make-instance 'matlisp:real-matrix
-                   :nrows m :ncols n :store (storage mat))))
+    (if (and (= (matlisp:nrows mat) m)
+             (= (matlisp:ncols mat) n))
+        mat
+        (make-instance 'matlisp:real-matrix
+                       :nrows m :ncols n :store (storage mat)))))
 
 (defgeneric set-ncols (mat ncols)
   (:method ((mat matlisp:real-matrix) ncols)
@@ -45,6 +48,15 @@ possible.")
     (setf (matlisp:ncols mat) ncols)
     (setf (matlisp:number-of-elements mat) (* ncols (matlisp:nrows mat)))))
 
+(defgeneric sum-elements (mat))
+
+(defmethod sum-elements ((a matlisp:real-matrix))
+  (let ((sum 0d0)
+        (store-a (storage a)))
+    (declare (type double-float sum))
+    (loop for i of-type fixnum below (matlisp:number-of-elements a)
+          do (incf sum (aref store-a i)))
+    sum))
 
 
 ;;;; Macrology
@@ -120,6 +132,18 @@ optimized."
          (* x2
             (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
 
+(defun split-plist (list keys)
+  (let ((known ())
+        (unknown ()))
+    (loop for (key value) on list by #'cddr
+          do (cond ((find key keys)
+                    (push key known)
+                    (push value known))
+                   (t
+                    (push key unknown)
+                    (push value unknown))))
+    (values (reverse known) (reverse unknown))))
+
 (defun select-random-element (seq)
   (elt seq (random (length seq))))
 
@@ -173,58 +197,6 @@ optimized."
           (sum #.(mgl-util:flt 0) (+ sum (aref seq i))))
          ((or (<= x sum) (= i (1- (length seq))))
           i))))
-
-
-;;;; Stripes
-
-(defgeneric max-n-stripes (learner)
-  (:documentation "The number of examples with which the learner is
-capable of dealing simultaneously."))
-
-(defgeneric set-max-n-stripes (max-n-stripes object)
-  (:documentation "Allocate the necessary stuff to allow for N-STRIPES
-number of examples to be worked with simultaneously."))
-
-(defsetf max-n-stripes (object) (store)
-  `(set-max-n-stripes ,store ,object))
-
-(defgeneric n-stripes (learner)
-  (:documentation "The number of examples with which the learner is
-currently dealing."))
-
-(defgeneric set-n-stripes (n-stripes object)
-  (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
-that are in use."))
-
-(defsetf n-stripes (object) (store)
-  `(set-n-stripes ,store ,object))
-
-(defgeneric stripe-start (stripe obj))
-(defgeneric stripe-end (stripe obj))
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun stripe-binding (stripe obj start &optional end)
-    (with-gensyms (%stripe %obj)
-      `((,%stripe ,stripe)
-        (,%obj ,obj)
-        (,start (the index (stripe-start ,%stripe ,%obj)))
-        ,@(when end `((,end (the index (stripe-end ,%stripe ,%obj)))))))))
-
-(defmacro with-stripes (specs &body body)
-  `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
-                  specs)
-     ,@body))
-
-
-;;;; Various accessor type generic functions share by packages.
-
-(defgeneric name (object))
-(defgeneric size (object))
-(defgeneric nodes (object))
-(defgeneric default-value (object))
-(defgeneric group-size (object))
-(defgeneric batch-size (object))
-
 
 ;;;; float vector I/O
 

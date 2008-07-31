@@ -44,3 +44,25 @@ different random order."
       (prog1
           (aref vector n)
         (setf n (mod (1+ n) l))))))
+
+
+;;;; PERIODIC-FN
+
+(defclass periodic-fn ()
+  ((period :initarg :period :reader period)
+   (fn :initarg :fn :reader fn)
+   (last-eval :initform nil :initarg :last-eval :accessor last-eval)))
+
+(defun call-periodic-fn (n fn &rest args)
+  (let ((period (period fn)))
+    (when (or (null (last-eval fn))
+              (and (/= (floor n period)
+                       (floor (last-eval fn) period))))
+      (setf (last-eval fn) n)
+      (apply (fn fn) args))))
+
+(defun call-periodic-fn! (n fn &rest args)
+  (when (or (null (last-eval fn))
+            (and (/= n (last-eval fn))))
+    (setf (last-eval fn) n)
+    (apply (fn fn) args)))

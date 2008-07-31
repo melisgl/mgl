@@ -317,13 +317,14 @@ value is the number of stripes."
                            (if (same-stripes-p lump)
                                (n-stripes lump)
                                1)
-                           (matlisp:sum nodes))))))
+                           (sum-elements nodes))))))
     (values sum (n-stripes bpn))))
 
-(defun compute-derivatives (samples trainer bpn)
-  (set-input samples bpn)
-  (forward-bpn bpn)
-  (backward-bpn bpn :last-lump (first-trained-weight-lump trainer bpn)))
+(defgeneric compute-derivatives (samples trainer bpn)
+  (:method (samples trainer bpn)
+    (set-input samples bpn)
+    (forward-bpn bpn)
+    (backward-bpn bpn :last-lump (first-trained-weight-lump trainer bpn))))
 
 
 ;;;; CG trainer

@@ -283,51 +283,54 @@ whose means are in NODES.")
           (setf (aref nodes i) (poisson (aref nodes i))))))))
 
 
-;;;; RBM
+;;;; Cloud
 
-(defclass rbm ()
-  ((visible-chunks :initarg :visible-chunks :type list :reader visible-chunks)
-   (hidden-chunks :initarg :hidden-chunks :type list :reader hidden-chunks)
-   (clouds :initarg :clouds :type list :reader clouds)
-   (dbn :initform nil :type (or null dbn) :reader dbn)
-   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
-  (:documentation "An RBM is a network of two layers of nodes. By
-convention one is called `visible' and the other `hidden'. Connections
-between nodes are symmetrical and there are no intralayer connections.
+(defclass cloud ()
+  ((name :initarg :name :reader name)
+   (visible-chunk :type chunk :initarg :visible-chunk :reader visible-chunk)
+   (hidden-chunk :type chunk :initarg :hidden-chunk :reader hidden-chunk)))
 
-Layers consist of chunks and chunks of opposing layers can be
-connected. A set of connections is called a `cloud'. Currently only
-fully connected clouds are supported."))
+(defmethod print-object ((cloud cloud) stream)
+  (print-unreadable-object (cloud stream :type t :identity t)
+    (when (slot-boundp cloud 'name)
+      (format stream "~S" (name cloud))))
+  cloud)
 
-(defstruct (cloud (:conc-name "") (:constructor %make-cloud))
-  cloud-name
-  (visible-chunk nil :type chunk)
-  (hidden-chunk nil :type chunk)
-  ;; In Matlisp, chunks are represented as column vectors
-  ;; (disregarding the more than one stripe case). If the visible
-  ;; chunk is Nx1 and the hidden is Mx1 then the weight matrix is MxN.
-  ;; Hidden = hidden + weights * visible. Visible = visible +
-  ;; weights^T * hidden. Looking directly at the underlying Lisp array
-  ;; (MATLISP::STORE), it's all transposed.
-  (weights nil :type matlisp:real-matrix))
+(defmethod set-n-stripes (n-stripes (cloud cloud)))
+(defmethod set-max-n-stripes (max-n-stripes (cloud cloud)))
 
-(defmethod name ((cloud cloud))
-  (cloud-name cloud))
+(defgeneric activate-cloud (cloud to-visible/hidden)
+  (:documentation "Add the activations to the nodes of chunk to either
+the visible or the hidden chunk of CLOUD according to
+TO-VISIBLE/HIDDEN that can be :VISIBLE or :HIDDEN. In the simplest
+case this is add weights (of CLOUD) * nodes (of the visible chunk) to
+the nodes of the hidden chunk."))
 
-(defun make-cloud (&key name visible-chunk hidden-chunk weights)
-  (unless weights
-    (setq weights (matlisp:make-real-matrix (chunk-size hidden-chunk)
-                                            (chunk-size visible-chunk)))
-    (map-into (storage weights)
-              (lambda () (flt (* 0.01 (gaussian-random-1))))))
-  (%make-cloud :cloud-name name
-               :visible-chunk visible-chunk
-               :hidden-chunk hidden-chunk
-               :weights weights))
+(defgeneric accumulate-cloud-statistics (cloud trainer addp)
+  (:documentation "Add or subtract the derivative of positive phase
+term of contrastive divergence from the accumulator of TRAINER
+corresponding to CLOUD."))
+
 
-(defmacro do-clouds ((cloud rbm) &body body)
-  `(dolist (,cloud (clouds ,rbm))
-     ,@body))
+;;;; Full cloud
+
+(defclass full-cloud (cloud)
+  ((weights
+    :type matlisp:real-matrix :initarg :weights :reader weights
+    :documentation "In Matlisp, chunks are represented as column
+vectors \(disregarding the more than one stripe case). If the visible
+chunk is Nx1 and the hidden is Mx1 then the weight matrix is MxN.
+Hidden = hidden + weights * visible. Visible = visible + weights^T *
+hidden. Looking directly at the underlying Lisp array
+\(MATLISP::STORE), it's all transposed.")))
+
+(defmethod initialize-instance :after ((cloud full-cloud) &key &allow-other-keys)
+  (unless (slot-boundp cloud 'weights)
+    (setf (slot-value cloud 'weights)
+          (matlisp:make-real-matrix (chunk-size (hidden-chunk cloud))
+                                    (chunk-size (visible-chunk cloud))))
+    (map-into (storage (weights cloud))
+              (lambda () (flt (* 0.01 (gaussian-random-1)))))))
 
 (defmacro do-cloud-runs (((start end) cloud) &body body)
   "Iterate over consecutive runs of weights present in CLOUD."
@@ -368,6 +371,278 @@ fully connected clouds are supported."))
                                                 body)))
                ,@body)))))))
 
+(defmethod activate-cloud ((cloud full-cloud) to-visible/hidden)
+  (declare (optimize (speed 3) #.*no-array-bounds-check*))
+  (if (eq to-visible/hidden :hidden)
+      (let ((weights (weights cloud))
+            (from (nodes (visible-chunk cloud)))
+            (to (nodes (hidden-chunk cloud))))
+        (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
+                                 (visible-chunk cloud))
+            (matlisp:gemm! (flt 1) weights from (flt 1) to)
+            (let ((weights (storage weights))
+                  (from (storage from))
+                  (to (storage to)))
+              (do-cloud/visible (i cloud)
+                (let ((x (aref from i)))
+                  (unless (zerop x)
+                    (do-cloud/hidden (j weight-index)
+                      (incf (aref to j)
+                            (* x (aref weights weight-index))))))))))
+      (let ((weights (weights cloud))
+            (from (nodes (hidden-chunk cloud)))
+            (to (nodes (visible-chunk cloud))))
+        (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
+                                 (visible-chunk cloud))
+            (matlisp:gemm! (flt 1) weights from (flt 1) to :tn)
+            (let ((weights (storage weights))
+                  (from (storage from))
+                  (to (storage to)))
+              (do-cloud/visible (i cloud)
+                (let ((sum #.(flt 0)))
+                  (declare (type flt sum))
+                  (do-cloud/hidden (j weight-index)
+                    (incf sum (* (aref from j)
+                                 (aref weights weight-index))))
+                  (incf (aref to i) sum))))))))
+
+(defmethod accumulate-cloud-statistics ((cloud full-cloud) trainer addp)
+  (with-segment-gradient-accumulator ((start accumulator accumulator2)
+                                      (cloud trainer))
+    (when (and accumulator start)
+      (let ((v1 (nodes (visible-chunk cloud)))
+            (v2 (nodes (hidden-chunk cloud)))
+            (accumulator (if (or addp (null accumulator2))
+                             accumulator
+                             accumulator2)))
+        (if (and (zerop start)
+                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
+                                      (visible-chunk cloud)))
+            (matlisp:gemm! (flt (if addp 1 -1)) v2 v1 (flt 1)
+                           (reshape2 accumulator
+                                     (matlisp:nrows v2)
+                                     (matlisp:nrows v1))
+                           :nt)
+            (let ((v1 (storage v1))
+                  (v2 (storage v2))
+                  (accumulator (storage accumulator)))
+              (declare (optimize (speed 3) #.*no-array-bounds-check*))
+              (if addp
+                  (special-case (zerop start)
+                    (do-cloud/visible (i cloud)
+                      (let ((x (aref v1 i)))
+                        (unless (zerop x)
+                          (do-cloud/hidden (j weight-index)
+                            (incf (aref accumulator
+                                        (the! index (+ start weight-index)))
+                                  (* x (aref v2 j))))))))
+                  (special-case (zerop start)
+                    (do-cloud/visible (i cloud)
+                      (let ((x (aref v1 i)))
+                        (unless (zerop x)
+                          (do-cloud/hidden (j weight-index)
+                            (decf (aref accumulator
+                                        (the! index (+ start weight-index)))
+                                  (* x (aref v2 j)))))))))))))))
+
+(defmethod map-segments (fn (cloud full-cloud))
+  (funcall fn cloud))
+
+(defmethod segment-weights ((cloud full-cloud))
+  (values (storage (weights cloud)) 0
+          (length (storage (weights cloud)))))
+
+(defmethod map-segment-runs (fn (cloud full-cloud))
+  (do-cloud-runs ((start end) cloud)
+    (funcall fn start end)))
+
+(defmethod write-weights ((cloud full-cloud) stream)
+  (write-double-float-vector (storage (weights cloud)) stream))
+
+(defmethod read-weights ((cloud full-cloud) stream)
+  (read-double-float-vector (storage (weights cloud)) stream))
+
+
+;;;; Factored cloud
+
+(defclass factored-cloud (cloud)
+  ((cloud-a
+    :type full-cloud :initarg :cloud-a :reader cloud-a
+    :documentation "A full cloud whose hidden chunk is the same as the
+hidden chunk of this cloud and whose visible chunk is the same as the
+hidden chunk of CLOUD-B.")
+   (cloud-b
+    :type full-cloud :initarg :cloud-b :reader cloud-b
+    :documentation "A full cloud whose visible chunk is the same as
+the visible chunk of this cloud and whose hidden chunk is the same as
+the visible chunk of CLOUD-A."))
+  (:documentation "Like FULL-CLOUD but the weight matrix is factored
+into a product of two matrices: A*B. At activation time, HIDDEN +=
+A*B*VISIBLE."))
+
+(defclass factored-cloud-shared-chunk (chunk) ())
+
+(defmethod initialize-instance :after ((cloud factored-cloud)
+                                       &key common-rank
+                                       &allow-other-keys)
+  (assert (typep common-rank '(integer 1)))
+  (let ((shared (make-instance 'factored-cloud-shared-chunk
+                               :size common-rank
+                               :name `(name cloud))))
+    (setf (slot-value cloud 'cloud-a)
+          (make-instance 'full-cloud
+                         :name (list (name cloud) :a)
+                         :visible-chunk shared
+                         :hidden-chunk (hidden-chunk cloud)))
+    (setf (slot-value cloud 'cloud-b)
+          (make-instance 'full-cloud
+                         :name (list (name cloud) :b)
+                         :visible-chunk (visible-chunk cloud)
+                         :hidden-chunk shared))))
+
+(defun factored-cloud-shared-chunk (cloud)
+  (visible-chunk (cloud-a cloud)))
+
+(defun common-rank (cloud)
+  (chunk-size (factored-cloud-shared-chunk cloud)))
+
+(defmethod set-n-stripes (n-stripes (cloud factored-cloud))
+  (setf (n-stripes (factored-cloud-shared-chunk cloud)) n-stripes))
+
+(defmethod set-max-n-stripes (max-n-stripes (cloud factored-cloud))
+  (setf (max-n-stripes (factored-cloud-shared-chunk cloud)) max-n-stripes))
+
+(defmethod activate-cloud ((cloud factored-cloud) to-visible/hidden)
+  ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
+  (fill-chunk (factored-cloud-shared-chunk cloud) #.(flt 0))
+  (cond ((eq to-visible/hidden :hidden)
+         (activate-cloud (cloud-b cloud) to-visible/hidden)
+         (activate-cloud (cloud-a cloud) to-visible/hidden))
+        (t
+         (activate-cloud (cloud-a cloud) to-visible/hidden)
+         (activate-cloud (cloud-b cloud) to-visible/hidden))))
+
+(defmethod accumulate-cloud-statistics ((cloud factored-cloud) trainer addp)
+  (let* ((visible-chunk (visible-chunk cloud))
+         (v (nodes visible-chunk))
+         (h (nodes (hidden-chunk cloud)))
+         (a (weights (cloud-a cloud)))
+         (b (weights (cloud-b cloud)))
+         (n-stripes (n-stripes (visible-chunk cloud)))
+         (c (matlisp:nrows b))
+         (shared (factored-cloud-shared-chunk cloud))
+         (v* (storage v))
+         (shared* (storage (nodes shared))))
+    (with-segment-gradient-accumulator ((start accumulator accumulator2)
+                                        ((cloud-a cloud) trainer))
+      (when (and accumulator start)
+        ;; dCD/dA ~= h*v'*B'
+        (let ((x (reshape2 (nodes shared) n-stripes c))
+              (accumulator (if (or addp (null accumulator2))
+                               accumulator
+                               accumulator2)))
+          (if (and (zerop start)
+                   (null (indices-present (visible-chunk cloud))))
+              (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
+              (progn
+                (assert (= 1 (n-stripes visible-chunk)))
+                (let ((b* (storage b)))
+                  (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                  (matlisp:fill-matrix x (flt 0))
+                  (do-stripes (visible-chunk)
+                    (do-chunk (i visible-chunk)
+                      (let ((v*i (aref v* i)))
+                        (loop for j of-type index upfrom 0 below c
+                              for bi of-type index
+                              upfrom (the! index (* i c)) do
+                              (incf (aref shared* j) (* v*i (aref b* bi))))))))))
+          (matlisp:gemm! (flt (if addp 1 -1)) h x
+                         (flt 1) (reshape2 accumulator
+                                           (matlisp:nrows a)
+                                           (matlisp:ncols a))))))
+    (with-segment-gradient-accumulator ((start accumulator accumulator2)
+                                        ((cloud-b cloud) trainer))
+      (when (and accumulator start)
+        ;; dCD/dB ~= A'*h*v'
+        (let ((x (reshape2 (nodes shared) c n-stripes))
+              (accumulator (if (or addp (null accumulator2))
+                               accumulator
+                               accumulator2)))
+          (matlisp:gemm! (flt 1) a h (flt 0) x :tn)
+          (if (and (zerop start)
+                   (null (indices-present (visible-chunk cloud))))
+              (matlisp:gemm! (flt (if addp 1 -1)) x v
+                             (flt 1) (reshape2 accumulator
+                                               (matlisp:nrows b)
+                                               (matlisp:ncols b))
+                             :nt)
+              (progn
+                (assert (= 1 (n-stripes visible-chunk)))
+                (let ((acc* (storage accumulator)))
+                  (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                  (do-stripes (visible-chunk)
+                    (do-chunk (i visible-chunk)
+                      (let ((v*i (* (flt (if addp 1 -1)) (aref v* i))))
+                        (loop for j of-type index upfrom 0 below c
+                              for acc-i of-type index
+                              upfrom (the! index
+                                           (+ start (the! index (* i c)))) do
+                              (incf (aref acc* acc-i)
+                                    (* v*i (aref shared* j)))))))))))))))
+
+(defmethod map-segments (fn (cloud factored-cloud))
+  (funcall fn (cloud-a cloud))
+  (funcall fn (cloud-b cloud)))
+
+(defmethod write-weights ((cloud factored-cloud) stream)
+  (write-weights (cloud-a cloud) stream)
+  (write-weights (cloud-b cloud) stream))
+
+(defmethod read-weights ((cloud factored-cloud) stream)
+  (read-weights (cloud-a cloud) stream)
+  (read-weights (cloud-b cloud) stream))
+
+
+;;;; RBM
+
+(defclass rbm ()
+  ((visible-chunks :initarg :visible-chunks :type list :reader visible-chunks)
+   (hidden-chunks :initarg :hidden-chunks :type list :reader hidden-chunks)
+   (clouds :initarg :clouds :type list :reader clouds)
+   (dbn :initform nil :type (or null dbn) :reader dbn)
+   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
+  (:documentation "An RBM is a network of two layers of nodes. By
+convention one is called `visible' and the other `hidden'. Connections
+between nodes are symmetrical and there are no intralayer connections.
+
+Layers consist of chunks and chunks of opposing layers can be
+connected. A set of connections is called a `cloud'. Currently only
+fully connected clouds are supported."))
+
+(defmacro do-clouds ((cloud rbm) &body body)
+  `(dolist (,cloud (clouds ,rbm))
+     ,@body))
+
+(defmethod n-stripes ((rbm rbm))
+  (n-stripes (first (visible-chunks rbm))))
+
+(defmethod set-n-stripes (n-stripes (rbm rbm))
+  (dolist (chunk (visible-chunks rbm))
+    (setf (n-stripes chunk) n-stripes))
+  (dolist (chunk (hidden-chunks rbm))
+    (setf (n-stripes chunk) n-stripes))
+  (do-clouds (cloud rbm)
+    (setf (n-stripes cloud) n-stripes)))
+
+(defmethod set-max-n-stripes (max-n-stripes (rbm rbm))
+  (setf (slot-value rbm 'max-n-stripes) max-n-stripes)
+  (dolist (chunk (visible-chunks rbm))
+    (setf (max-n-stripes chunk) max-n-stripes))
+  (dolist (chunk (hidden-chunks rbm))
+    (setf (max-n-stripes chunk) max-n-stripes))
+  (do-clouds (cloud rbm)
+    (setf (max-n-stripes cloud) max-n-stripes)))
+
 (defun find-cloud (name rbm &key errorp)
   "Find the cloud in RBM whose name is EQUAL to NAME. Raise and error
 if not found and ERRORP."
@@ -382,20 +657,35 @@ if not found and ERRORP."
       (find-cloud cloud-designator rbm :errorp t)))
 
 (defun ->clouds (visible-chunks hidden-chunks cloud-specs)
-  (let ((clouds
-         (loop for spec in cloud-specs
-               collect
-               (if (typep spec 'cloud)
-                   spec
-                   (destructuring-bind (&key name visible-chunk hidden-chunk)
-                       spec
-                     (make-cloud
-                      :name name
-                      :visible-chunk (->chunk visible-chunk visible-chunks)
-                      :hidden-chunk (->chunk hidden-chunk hidden-chunks)))))))
-    (unless (unique-names-p clouds)
-      (error "Name conflict among clouds: ~S." clouds))
-    clouds))
+  (flet ((name* (chunk-or-name)
+           (if (typep chunk-or-name 'chunk)
+               (name chunk-or-name)
+               chunk-or-name)))
+    (let ((clouds
+           (loop for spec in cloud-specs
+                 collect
+                 (if (typep spec 'cloud)
+                     spec
+                     (multiple-value-bind (known unknown)
+                         (split-plist spec '(:class :name
+                                             :visible-chunk :hidden-chunk))
+                       (destructuring-bind (&key (class 'full-cloud)
+                                                 visible-chunk hidden-chunk
+                                                 (name
+                                                  (list (name* visible-chunk)
+                                                        (name* hidden-chunk))))
+                           known
+                         (apply #'make-instance
+                                class
+                                :name name
+                                :visible-chunk (->chunk visible-chunk
+                                                        visible-chunks)
+                                :hidden-chunk (->chunk hidden-chunk
+                                                       hidden-chunks)
+                                unknown)))))))
+      (unless (unique-names-p clouds)
+        (error "Name conflict among clouds: ~S." clouds))
+      clouds)))
 
 (defun unique-names-p (list)
   (= (length (remove-duplicates (mapcar #'name list) :test #'equal))
@@ -411,31 +701,38 @@ lists of the names of the visible and hidden chunks."
       (dolist (hidden-chunk hidden-chunks)
         (unless (and (conditioning-chunk-p visible-chunk)
                      (conditioning-chunk-p hidden-chunk))
-          (push `(:name ,(list (name visible-chunk) (name hidden-chunk))
-                  :visible-chunk ,(name visible-chunk)
+          (push `(:visible-chunk ,(name visible-chunk)
                   :hidden-chunk ,(name hidden-chunk))
                 clouds))))
     clouds))
 
-(defmethod n-stripes ((rbm rbm))
-  (n-stripes (first (visible-chunks rbm))))
-
-(defmethod set-n-stripes (n-stripes (rbm rbm))
-  (dolist (chunk (visible-chunks rbm))
-    (setf (n-stripes chunk) n-stripes))
-  (dolist (chunk (hidden-chunks rbm))
-    (setf (n-stripes chunk) n-stripes)))
-
-(defmethod set-max-n-stripes (max-n-stripes (rbm rbm))
-  (setf (slot-value rbm 'max-n-stripes) max-n-stripes)
-  (dolist (chunk (visible-chunks rbm))
-    (setf (max-n-stripes chunk) max-n-stripes))
-  (dolist (chunk (hidden-chunks rbm))
-    (setf (max-n-stripes chunk) max-n-stripes)))
+(defun merge-cloud-specs (specs default-specs)
+  "Take DEFAULT-SPECS, a list of cloud specs, remove those that are
+between chunks that have a spec in SPECS and add SPECS."
+  (labels ((visible-name (spec)
+             (if (listp spec)
+                 (getf spec :visible-chunk)
+                 (name (visible-chunk spec))))
+           (hidden-name (spec)
+             (if (listp spec)
+                 (getf spec :hidden-chunk)
+                 (name (hidden-chunk spec))))
+           (match (spec1 spec2)
+             (and (equal (visible-name spec1)
+                         (visible-name spec2))
+                  (equal (hidden-name spec1)
+                         (hidden-name spec2)))))
+    (append (remove-if (lambda (spec)
+                         (some (lambda (spec1)
+                                 (match spec spec1))
+                               specs))
+                       default-specs)
+            specs)))
 
 (defmethod initialize-instance :after
     ((rbm rbm) &key visible-chunks hidden-chunks
-     (clouds (default-clouds visible-chunks hidden-chunks)))
+     (default-clouds (default-clouds visible-chunks hidden-chunks))
+     clouds)
   "Return an RBM that consists of VISIBLE-CHUNKS, HIDDEN-CHUNKS and
 CLOUDS of weights. Where CLOUDS is a list of cloud specifications.
 Names of chunks and clouds shall be unique by EQUAL."
@@ -444,7 +741,8 @@ Names of chunks and clouds shall be unique by EQUAL."
   (unless (unique-names-p hidden-chunks)
     (error "Name conflict among hidden chunks ~S." hidden-chunks))
   (setf (slot-value rbm 'clouds)
-        (->clouds visible-chunks hidden-chunks clouds))
+        (->clouds visible-chunks hidden-chunks
+                  (merge-cloud-specs clouds default-clouds)))
   ;; make sure chunks have the same MAX-N-STRIPES
   (setf (max-n-stripes rbm) (max-n-stripes rbm)))
 
@@ -452,50 +750,20 @@ Names of chunks and clouds shall be unique by EQUAL."
   "Set the chunks of TO-VISIBLE/HIDDEN layer of RBM to the activations
 calculated from the other layer's nodes. Skip chunks that don't need
 activations."
-  (declare (optimize (speed 3) #.*no-array-bounds-check*))
   (cond ((eq :hidden to-visible/hidden)
          (dolist (chunk (hidden-chunks rbm))
            (unless (conditioning-chunk-p chunk)
              (fill-chunk chunk #.(flt 0))))
          (do-clouds (cloud rbm)
            (unless (conditioning-chunk-p (hidden-chunk cloud))
-             (let ((weights (weights cloud))
-                   (from (nodes (visible-chunk cloud)))
-                   (to (nodes (hidden-chunk cloud))))
-               (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
-                                        (visible-chunk cloud))
-                   (matlisp:gemm! (flt 1) weights from (flt 1) to)
-                   (let ((weights (storage weights))
-                         (from (storage from))
-                         (to (storage to)))
-                     (do-cloud/visible (i cloud)
-                       (let ((x (aref from i)))
-                         (unless (zerop x)
-                           (do-cloud/hidden (j weight-index)
-                             (incf (aref to j)
-                                   (* x (aref weights weight-index)))))))))))))
+             (activate-cloud cloud to-visible/hidden))))
         (t
          (dolist (chunk (visible-chunks rbm))
            (unless (conditioning-chunk-p chunk)
              (fill-chunk chunk #.(flt 0))))
          (do-clouds (cloud rbm)
            (unless (conditioning-chunk-p (visible-chunk cloud))
-             (let ((weights (weights cloud))
-                   (from (nodes (hidden-chunk cloud)))
-                   (to (nodes (visible-chunk cloud))))
-               (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
-                                        (visible-chunk cloud))
-                   (matlisp:gemm! (flt 1) weights from (flt 1) to :tn)
-                   (let ((weights (storage weights))
-                         (from (storage from))
-                         (to (storage to)))
-                     (do-cloud/visible (i cloud)
-                       (let ((sum #.(flt 0)))
-                         (declare (type flt sum))
-                         (do-cloud/hidden (j weight-index)
-                           (incf sum (* (aref from j)
-                                        (aref weights weight-index))))
-                         (incf (aref to i) sum)))))))))))
+             (activate-cloud cloud to-visible/hidden))))))
 
 (defun set-visible-mean (rbm)
   "Set NODES of the chunks in the visible layer to the means of their
@@ -520,6 +788,19 @@ chunk type and the mean that resides in NODES."
   "Generate samples from the probability distribution defined by the
 chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (hidden-chunks rbm)))
+
+(defmethod map-segments (fn (rbm rbm))
+  (map nil (lambda (cloud)
+             (map-segments fn cloud))
+       (clouds rbm)))
+
+(defmethod write-weights ((rbm rbm) stream)
+  (dolist (cloud (clouds rbm))
+    (write-weights cloud stream)))
+
+(defmethod read-weights ((rbm rbm) stream)
+  (dolist (cloud (clouds rbm))
+    (read-weights cloud stream)))
 
 
 ;;;; Integration with train and gradient descent
@@ -543,17 +824,6 @@ the learning or the mean field is used instead.")
     :initarg :n-gibbs
     :accessor n-gibbs
     :documentation "The number of steps of Gibbs sampling to perform.")))
-
-(defmethod map-segments (fn (rbm rbm))
-  (map nil fn (clouds rbm)))
-
-(defmethod segment-weights ((cloud cloud))
-  (values (storage (weights cloud)) 0
-          (length (storage (weights cloud)))))
-
-(defmethod map-segment-runs (fn (cloud cloud))
-  (do-cloud-runs ((start end) cloud)
-    (funcall fn start end)))
 
 (defmethod train (sampler (trainer rbm-trainer) (rbm rbm))
   (while (not (finishedp sampler))
@@ -603,80 +873,13 @@ called with the same parameters."
 
 (defgeneric accumulate-positive-phase-statistics (trainer rbm)
   (:method ((trainer rbm-trainer) rbm)
-    (declare (ignore rbm))
-    (do-segment-gradient-accumulators ((cloud acc-start products) trainer)
-      (let ((v1 (nodes (visible-chunk cloud)))
-            (v2 (nodes (hidden-chunk cloud))))
-        (if (and (zerop acc-start)
-                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
-                                      (visible-chunk cloud)))
-            (matlisp:gemm! (flt -1) v2 v1 (flt 1)
-                           (reshape2 products
-                                     (matlisp:nrows v2)
-                                     (matlisp:nrows v1))
-                           :nt)
-            (let ((v1 (storage v1))
-                  (v2 (storage v2))
-                  (products (storage products)))
-              (declare (optimize (speed 3) #.*no-array-bounds-check*))
-              (special-case (zerop acc-start)
-                (do-cloud/visible (i cloud)
-                  (let ((x (aref v1 i)))
-                    (unless (zerop x)
-                      (do-cloud/hidden (j weight-index)
-                        (decf (aref products (the! index
-                                                   (+ acc-start weight-index)))
-                              (* x (aref v2 j)))))))))))))
-  (:documentation "Subtract the product of the nodes of the two layers
-of each cloud to the appropriate gradient accumlator. This is the
-first term of contrastive divergence learning rule."))
+    (do-clouds (cloud rbm)
+      (accumulate-cloud-statistics cloud trainer nil))))
 
-;;; Takes N-GIBBS as parameter because it may change between
-;;; invocations. Currently it is always 1, though.
-(defgeneric accumulate-negative-phase-statistics (trainer rbm n-gibbs)
-  (:method ((trainer rbm-trainer) rbm n-gibbs)
-    (declare (ignore rbm)
-             (type index n-gibbs))
-    (do-segment-gradient-accumulators
-        ((cloud acc-start accumulator1 accumulator2) trainer)
-      (let ((v1 (nodes (visible-chunk cloud)))
-            (v2 (nodes (hidden-chunk cloud)))
-            (products (or accumulator2 accumulator1)))
-        (if (and (zerop acc-start)
-                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
-                                      (visible-chunk cloud)))
-            (matlisp:gemm! (/ (flt n-gibbs)) v2 v1 (flt 1)
-                           (reshape2 products
-                                     (matlisp:nrows v2)
-                                     (matlisp:nrows v1))
-                           :nt)
-            (let ((v1 (storage v1))
-                  (v2 (storage v2))
-                  (products (storage products)))
-              (declare (optimize (speed 3) #.*no-array-bounds-check*))
-              (special-case (zerop acc-start)
-                (if (= 1 n-gibbs)
-                    (do-cloud/visible (i cloud)
-                      (let ((x (aref v1 i)))
-                        (unless (zerop x)
-                          (do-cloud/hidden (j weight-index)
-                            (incf (aref products
-                                        (the! index
-                                              (+ acc-start weight-index)))
-                                  (* x (aref v2 j)))))))
-                    (let ((value (/ (flt n-gibbs))))
-                      (do-cloud/visible (i cloud)
-                        (let ((x (aref v1 i)))
-                          (unless (zerop x)
-                            (let ((x (* x value)))
-                              (do-cloud/hidden (j weight-index)
-                                (incf (aref products
-                                            (the! index
-                                                  (+ acc-start weight-index)))
-                                      (* x (aref v2 j))))))))))))))))
-  (:documentation "Add the product of the nodes of the two layers of
-each cloud to the appropriate gradient accumlator. This is the second
-term of contrastive divergence learning rule."))
+(defgeneric accumulate-negative-phase-statistics (trainer rbm)
+  (:method ((trainer rbm-trainer) rbm)
+    (do-clouds (cloud rbm)
+      (accumulate-cloud-statistics cloud trainer t))))
 
 (defgeneric positive-phase (trainer rbm)
   (:method (trainer rbm)
@@ -696,24 +899,7 @@ term of contrastive divergence learning rule."))
             (when sample-visible-p
               (sample-visible rbm))
             (set-hidden-mean rbm))
-      (accumulate-negative-phase-statistics trainer rbm 1))))
-
-
-;;;; I/O
-
-(defmethod write-weights ((cloud cloud) stream)
-  (write-double-float-vector (storage (weights cloud)) stream))
-
-(defmethod write-weights ((rbm rbm) stream)
-  (dolist (cloud (clouds rbm))
-    (write-weights cloud stream)))
-
-(defmethod read-weights ((cloud cloud) stream)
-  (read-double-float-vector (storage (weights cloud)) stream))
-
-(defmethod read-weights ((rbm rbm) stream)
-  (dolist (cloud (clouds rbm))
-    (read-weights cloud stream)))
+      (accumulate-negative-phase-statistics trainer rbm))))
 
 
 ;;;; Convenience

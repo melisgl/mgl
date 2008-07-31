@@ -33,7 +33,7 @@ with trivial modifications.
 
 * Installing BLAS
 
-Installing BLAS can be a pain. For example, on my Debian Etch desktop
+Installing BLAS can be a pain. For example, on my Debian Lenny desktop
 machine with sbcl I did this to get BLAS:
 
 First you need to install a BLAS implementation. Don't bother with the

@@ -4,7 +4,10 @@
            #:time->string
            #:log-msg
            #:nshuffle-vector
-           #:make-random-generator))
+           #:make-random-generator
+           #:periodic-fn
+           #:call-periodic-fn
+           #:call-periodic-fn!))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util :mgl-train :mgl-gd :mgl-rbm :mgl-bp

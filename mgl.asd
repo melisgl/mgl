@@ -18,7 +18,8 @@
                               :default-component-class matlisp-source-file
                               :serial t
                               :components ((:file "package")
-                                           (:file "matlisp-matrix")
+                                           (:file "matrix")
+                                           (:file "ref")
                                            (:file "matlisp-impl")))
                              (:file "package")
                              (:file "util")
