@@ -25,65 +25,6 @@
   #-(or sbcl cmu) (/= x x))
 
 
-;;;; BLAS support
-
-(defvar *use-blas* 10000
-  "Use BLAS routines if available. If it is NIL then BLAS is never
-used \(not quite true as some code does not care about this setting).
-If it is a real number then BLAS is only used when the problem size
-exceeds that number. In all other cases BLAS is used whenever
-possible.")
-
-(defun cost-of-copy (mat)
-  (matlisp:number-of-elements mat))
-
-(defun cost-of-fill (mat)
-  (matlisp:number-of-elements mat))
-
-(defun cost-of-gemm (a b job)
-  (* (if (member job '(:nt :nn))
-         (matlisp:ncols a)
-         (matlisp:nrows a))
-     (matlisp:number-of-elements b)))
-
-(defun use-blas-p (cost)
-  (let ((x *use-blas*))
-    (and x
-         (or (not (realp x))
-             (< x cost))
-         (find-package 'blas))))
-
-(declaim (inline storage))
-(defun storage (matlisp-matrix)
-  (the flt-vector (values (matlisp::store matlisp-matrix))))
-
-(defgeneric reshape2 (mat m n)
-  (:method ((mat matlisp:real-matrix) m n)
-    (assert (<= (* m n) (length (storage mat))))
-    (if (and (= (matlisp:nrows mat) m)
-             (= (matlisp:ncols mat) n))
-        mat
-        (make-instance 'matlisp:real-matrix
-                       :nrows m :ncols n :store (storage mat)))))
-
-(defgeneric set-ncols (mat ncols)
-  (:method ((mat matlisp:real-matrix) ncols)
-    (assert (<= 0 ncols (/ (length (storage mat))
-                           (matlisp:nrows mat))))
-    (setf (matlisp:ncols mat) ncols)
-    (setf (matlisp:number-of-elements mat) (* ncols (matlisp:nrows mat)))))
-
-(defgeneric sum-elements (mat))
-
-(defmethod sum-elements ((a matlisp:real-matrix))
-  (let ((sum 0d0)
-        (store-a (storage a)))
-    (declare (type double-float sum))
-    (loop for i of-type fixnum below (matlisp:number-of-elements a)
-          do (incf sum (aref store-a i)))
-    sum))
-
-
 ;;;; Macrology
 
 (defmacro with-gensyms (vars &body body)
@@ -143,22 +84,6 @@ optimized."
 (defun make-flt-array (dimensions)
   (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
 
-(defun gaussian-random-1 ()
-  "Return a single float of zero mean and unit variance."
-  (loop
-   (let* ((x1 (1- (* #.(flt 2) (random #.(flt 1)))))
-          (x2 (1- (* #.(flt 2) (random #.(flt 1)))))
-          (w (+ (* x1 x1) (* x2 x2))))
-     (declare (type flt x1 x2)
-              (type (double-float 0d0) w)
-              (optimize (speed 3)))
-     (when (< w 1.0)
-       ;; Now we have two random numbers but return only one. The
-       ;; other would be X1 times the same.
-       (return
-         (* x2
-            (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
-
 (defun split-plist (list keys)
   (let ((known ())
         (unknown ()))
@@ -202,6 +127,10 @@ optimized."
        (declare (ignore ,args))
        ,@body)))
 
+
+
+;;;; Random math
+
 (declaim (inline sigmoid))
 (defun sigmoid (x)
   (/ (1+ (exp (- x)))))
@@ -224,7 +153,93 @@ optimized."
           (sum #.(mgl-util:flt 0) (+ sum (aref seq i))))
          ((or (<= x sum) (= i (1- (length seq))))
           i))))
+
+(defun gaussian-random-1 ()
+  "Return a single float of zero mean and unit variance."
+  (loop
+   (let* ((x1 (1- (* #.(flt 2) (random #.(flt 1)))))
+          (x2 (1- (* #.(flt 2) (random #.(flt 1)))))
+          (w (+ (* x1 x1) (* x2 x2))))
+     (declare (type flt x1 x2)
+              (type (double-float 0d0) w)
+              (optimize (speed 3)))
+     (when (< w 1.0)
+       ;; Now we have two random numbers but return only one. The
+       ;; other would be X1 times the same.
+       (return
+         (* x2
+            (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
+
+;; Knuth's slow poisson sampler.
+(defun poisson-random (mean)
+  (let ((l (exp (- mean)))
+        (k 1)
+        (p (random #.(flt 1))))
+    (while (<= l p)
+      (incf k)
+      (setq p (* p (random #.(flt 1)))))
+    (1- k)))
 
+
+;;;; BLAS support
+
+(defvar *use-blas* 10000
+  "Use BLAS routines if available. If it is NIL then BLAS is never
+used \(not quite true as some code does not care about this setting).
+If it is a real number then BLAS is only used when the problem size
+exceeds that number. In all other cases BLAS is used whenever
+possible.")
+
+(defun cost-of-copy (mat)
+  (matlisp:number-of-elements mat))
+
+(defun cost-of-fill (mat)
+  (matlisp:number-of-elements mat))
+
+(defun cost-of-gemm (a b job)
+  (* (if (member job '(:nt :nn))
+         (matlisp:ncols a)
+         (matlisp:nrows a))
+     (matlisp:number-of-elements b)))
+
+(defun use-blas-p (cost)
+  (let ((x *use-blas*))
+    (and x
+         (or (not (realp x))
+             (< x cost))
+         (find-package 'blas))))
+
+(declaim (inline storage))
+(defun storage (matlisp-matrix)
+  (the flt-vector (values (matlisp::store matlisp-matrix))))
+
+(defgeneric reshape2 (mat m n)
+  (:method ((mat matlisp:real-matrix) m n)
+    (assert (<= (* m n) (length (storage mat))))
+    (if (and (= (matlisp:nrows mat) m)
+             (= (matlisp:ncols mat) n))
+        mat
+        (make-instance 'matlisp:real-matrix
+                       :nrows m :ncols n :store (storage mat)))))
+
+(defgeneric set-ncols (mat ncols)
+  (:method ((mat matlisp:real-matrix) ncols)
+    (assert (<= 0 ncols (/ (length (storage mat))
+                           (matlisp:nrows mat))))
+    (setf (matlisp:ncols mat) ncols)
+    (setf (matlisp:number-of-elements mat) (* ncols (matlisp:nrows mat)))))
+
+(defgeneric sum-elements (mat))
+
+(defmethod sum-elements ((a matlisp:real-matrix))
+  (let ((sum 0d0)
+        (store-a (storage a)))
+    (declare (type double-float sum))
+    (loop for i of-type fixnum below (matlisp:number-of-elements a)
+          do (incf sum (aref store-a i)))
+    sum))
+
+
 ;;;; float vector I/O
 
 (deftype single-float-vector () '(simple-array single-float (*)))

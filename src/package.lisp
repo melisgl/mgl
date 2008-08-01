@@ -8,11 +8,6 @@
            #:cost-of-copy
            #:cost-of-fill
            #:cost-of-gemm
-           #:blas-supports-displaced-arrays-p
-           #:storage
-           #:reshape2
-           #:set-ncols
-           #:sum-elements
            #:with-gensyms
            #:split-body
            #:suffix-symbol
@@ -25,8 +20,6 @@
            #:index-vector
            #:*no-array-bounds-check*
            #:the!
-           #:gaussian-random-1
-           #:select-random-element
            #:split-plist
            #:while
            #:last1
@@ -37,6 +30,13 @@
            #:sigmoid
            #:try-chance
            #:binarize-randomly
+           #:gaussian-random-1
+           #:poisson-random
+           #:select-random-element
+           #:storage
+           #:reshape2
+           #:set-ncols
+           #:sum-elements
            #:read-single-float-vector
            #:write-single-float-vector
            #:read-double-float-vector

@@ -275,13 +275,10 @@ whose means are in NODES.")
                       (setf (aref nodes j) #.(flt 1))
                       (return)))))))))
   (:method ((chunk constrained-poisson-chunk))
-    (error "Not implemented yet.")
-    #+nil
     (let ((nodes (storage (nodes chunk))))
-      (declare (optimize (speed 3)))
       (do-stripes (chunk)
         (do-chunk (i chunk)
-          (setf (aref nodes i) (poisson (aref nodes i))))))))
+          (setf (aref nodes i) (flt (poisson-random (aref nodes i)))))))))
 
 
 ;;;; Cloud
@@ -891,11 +888,9 @@ called with the same parameters."
 
 (defgeneric negative-phase (trainer rbm)
   (:method ((trainer rbm-trainer) rbm)
-    (let ((n-gibbs (n-gibbs trainer))
-          (sample-visible-p (sample-visible-p trainer))
+    (let ((sample-visible-p (sample-visible-p trainer))
           (sample-hidden-p (sample-hidden-p trainer)))
-      (assert (plusp n-gibbs))
-      (loop for i below n-gibbs do
+      (loop for i below (n-gibbs trainer) do
             (when sample-hidden-p
               (sample-hidden rbm))
             (set-visible-mean rbm)
