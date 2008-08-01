@@ -212,12 +212,12 @@ only missing values does not change anything."))
                                n-inputs)
                             (* weight-decay (aref weights j))
                             weight-penalty)))
+              (setf (aref accumulator1 i) #.(flt 0))
+              (when accumulator2
+                (setf (aref accumulator2 i) #.(flt 0)))
               (setf (aref weight-deltas i) delta)
               (decf (aref weights j) (* learning-rate delta)))))
-        (setf (n-inputs-in-batch trainer) 0)
-        (fill accumulator1 #.(flt 0))
-        (when accumulator2
-          (fill accumulator2 #.(flt 0))))))
+        (setf (n-inputs-in-batch trainer) 0))))
   (incf (n-inputs trainer) n-new-inputs))
 
 (defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
