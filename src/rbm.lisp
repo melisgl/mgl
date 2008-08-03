@@ -708,7 +708,8 @@ lists of the names of the visible and hidden chunks."
 
 (defun merge-cloud-specs (specs default-specs)
   "Take DEFAULT-SPECS, a list of cloud specs, remove those that are
-between chunks that have a spec in SPECS and add SPECS."
+between chunks that have a spec in SPECS and add SPECS. If a spec has
+CLASS NIL then remove it as well."
   (labels ((visible-name (spec)
              (if (listp spec)
                  (getf spec :visible-chunk)
@@ -722,12 +723,14 @@ between chunks that have a spec in SPECS and add SPECS."
                          (visible-name spec2))
                   (equal (hidden-name spec1)
                          (hidden-name spec2)))))
-    (append (remove-if (lambda (spec)
-                         (some (lambda (spec1)
-                                 (match spec spec1))
-                               specs))
-                       default-specs)
-            specs)))
+    (remove-if (lambda (spec)
+                 (null (getf spec :class 'full-cloud)))
+               (append (remove-if (lambda (spec)
+                                    (some (lambda (spec1)
+                                            (match spec spec1))
+                                          specs))
+                                  default-specs)
+                       specs))))
 
 (defmethod initialize-instance :after
     ((rbm rbm) &key visible-chunks hidden-chunks
