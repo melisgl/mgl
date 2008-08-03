@@ -117,6 +117,7 @@ and LEARNERs."))
            #:learning-rate
            #:momentum
            #:weight-decay
+           #:weight-penalty
            #:batch-size
            #:batch-gd-trainer
            #:n-inputs-in-batch

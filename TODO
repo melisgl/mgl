@@ -23,7 +23,7 @@ the cost function? Not quite, but there two ways out: 1) rbm
 importance sampling paper to estimate the partition function 2)
 constrain features to be sparse and don't use a partition function at
 all.
-** TODO sparsity constraint
+** DONE sparsity constraint
 possible with WEIGHT-PENALTY
 ** MAYBE generic support for exponential family distributions
 http://www.ics.uci.edu/~michal/GenHarm3.pdf
