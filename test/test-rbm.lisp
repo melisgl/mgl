@@ -165,7 +165,7 @@
                                              :test #'equal)
                                      (flt 2)
                                      (flt 0.1))
-                                 :batch-size 10)))
+                                 :batch-size 100)))
                rbm)
         (setq randomp nil)
         (rbm-rmse (make-instance 'counting-function-sampler
