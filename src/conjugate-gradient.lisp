@@ -27,23 +27,6 @@ RHO < SIG < 1.")
 (defvar *default-max-n-evaluations-per-line-search* 20)
 (defvar *default-max-n-evaluations* nil)
 
-;;; FIXME: WITHOUT-FLOAT-TRAPS and FLOAT-INFINITY-P are lacking a good
-;;; non-sbcl implementation.
-
-#+sbcl
-(defmacro without-float-traps (&body body)
-  `(sb-int:with-float-traps-masked
-       (:underflow :overflow :inexact :invalid :divide-by-zero)
-     ,@body))
-
-#-sbcl
-(defmacro without-float-traps (&body body)
-  `(progn ,@body))
-
-(defun float-infinity-p (x)
-  #+sbcl (sb-ext:float-infinity-p x)
-  #-sbcl (declare (ignore x)))
-
 (defun negate-vector (v &key result)
   (declare (type flt-vector v))
   (unless result
@@ -241,7 +224,7 @@ playing much with RHO."
                 (cond
                   ;; numerical problems?
                   ((or (not (realp x3))
-                       (/= x3 x3)
+                       (float-nan-p x3)
                        (float-infinity-p x3)
                        (minusp x3)
                        ;; or beyond extrapolation point?
@@ -275,7 +258,7 @@ playing much with RHO."
                                         b)
                                      a)))))
                 ;; bisect on numerical problem
-                (when (or (/= x3 x3) (float-infinity-p x3))
+                (when (or (float-nan-p x3) (float-infinity-p x3))
                   (setq x3 (/ (+ x2 x4) 2)))
                 ;; don't accept too close
                 (setq x3 (max (min x3 (- x4 (* int (- x4 x2))))

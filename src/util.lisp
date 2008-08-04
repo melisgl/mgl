@@ -1,6 +1,31 @@
-;;;; BLAS support
-
 (in-package :mgl-util)
+
+;;;; Floats
+
+(defmacro without-float-traps (&body body)
+  #+sbcl
+  `(sb-int:with-float-traps-masked
+       (:underflow :overflow :inexact :invalid :divide-by-zero)
+     ,@body)
+  #+cmu
+  `(ext:with-float-traps-masked
+       (:underflow :overflow :inexact :invalid :divide-by-zero)
+     ,@body)
+  #-(or sbcl cmu)
+  `(progn ,@body))
+
+(defun float-infinity-p (x)
+  #+sbcl (sb-ext:float-infinity-p x)
+  #+cmu (ext:float-infinity-p x)
+  #-(or sbcl cmu) (declare (ignore x)))
+
+(defun float-nan-p (x)
+  #+sbcl (sb-ext:float-nan-p x)
+  #+cmu (ext:float-nan-p x)
+  #-(or sbcl cmu) (/= x x))
+
+
+;;;; BLAS support
 
 (defvar *use-blas* 10000
   "Use BLAS routines if available. If it is NIL then BLAS is never
@@ -105,12 +130,14 @@ optimized."
   (deftype index-vector () '(simple-array index (*)))
   (defparameter *no-array-bounds-check*
     #+sbcl '(sb-c::insert-array-bounds-checks 0)
-    #-sbcl '()))
+    ;; (SAFETY 0) is too coarse, avoid warnings by using the
+    ;; relatively uncontroversial (SPEED 3) instead of ().
+    #-sbcl '(speed 3)))
 
 (defmacro the! (&rest args)
   `(#+sbcl sb-ext:truly-the
     #+cmu ext:truly-the
-    #-(or sbcl cmu ) the
+    #-(or sbcl cmu) the
     ,@args))
 
 (defun make-flt-array (dimensions)

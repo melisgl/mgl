@@ -1,6 +1,9 @@
 (cl:defpackage :mgl-util
   (:use #:common-lisp)
-  (:export #:*use-blas*
+  (:export #:without-float-traps
+           #:float-infinity-p
+           #:float-nan-p
+           #:*use-blas*
            #:use-blas-p
            #:cost-of-copy
            #:cost-of-fill
@@ -40,8 +43,7 @@
            #:write-double-float-vector
            #:write-weights
            #:read-weights)
-  (:documentation "Simple utilities, types, symbols of common
-accessors such as NAME."))
+  (:documentation "Simple utilities, types."))
 
 (cl:defpackage :mgl-train
   (:use #:common-lisp #:mgl-util)

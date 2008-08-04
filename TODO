@@ -9,7 +9,8 @@
 ** WAITING clarify conjugate gradient license
    - State "WAITING"    [2008-07-21 Mon 21:53] \\
      Contacting Carl Rasmussen by email
-** TODO make sbcl specific float code portable
+** TODO implement float-nan-p, float-infinity-p for allegro
+   Can't see how.
 ** DONE failed line searches can still change the weights
    documented
 * rbm
@@ -53,3 +54,4 @@ Doesn't seem to speed up things.
 ** TODO what to do with *USE-BLAS*?
    The wrappers should calculate cost and call matlisp if it is
    avaible.
+** TODO float vector I/O for cmucl
