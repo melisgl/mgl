@@ -10,31 +10,31 @@
    - State "WAITING"    [2008-07-21 Mon 21:53] \\
      Contacting Carl Rasmussen by email
 ** TODO make sbcl specific float code portable
-** TODO failed line searches can still change the weights
-document it or fix it
+** DONE failed line searches can still change the weights
+   documented
 * rbm
 ** MAYBE conditioning chunks are not really visible nor hidden
-Does it make sense to store them separately?
+   Does it make sense to store them separately?
 ** DONE factored RBM: weight matrix is A*B
 ** TODO semi-restricted (connections between visibles)
 ** MAYBE higher order rbm
 ** MAYBE training with conjugate gradient: is it possible to calculate
-the cost function? Not quite, but there two ways out: 1) rbm
-importance sampling paper to estimate the partition function 2)
-constrain features to be sparse and don't use a partition function at
-all.
+   the cost function? Not quite, but there two ways out: 1) rbm
+   importance sampling paper to estimate the partition function 2)
+   constrain features to be sparse and don't use a partition function
+   at all.
 ** DONE sparsity constraint
-possible with WEIGHT-PENALTY
+   possible with WEIGHT-PENALTY
 ** MAYBE generic support for exponential family distributions
-http://www.ics.uci.edu/~michal/GenHarm3.pdf
+   http://www.ics.uci.edu/~michal/GenHarm3.pdf
 ** TODO cache inputs optionally
-This should make higher level RBMs a lot faster and can be implemented
-trivially with a samples -> node arrays hash table.
+   This should make higher level RBMs a lot faster and can be
+   implemented trivially with a samples -> node arrays hash table.
 ** TODO fix gradient accumulation
-When the accumulator's start is not zero, there are two ways to fail:
-a) go to the matlisp branch and put it into the wrong place as if
-start were 0, b) use the lisp branch and fail if there are multiple
-stripes.
+   When the accumulator's start is not zero, there are two ways to
+   fail: a) go to the matlisp branch and put it into the wrong place
+   as if start were 0, b) use the lisp branch and fail if there are
+   multiple stripes.
 * bp
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
@@ -49,6 +49,7 @@ stripes.
 ** DONE faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
 Doesn't seem to speed up things.
 ** DONE remove dependency on BLAS: implement some of matlisp in Lisp
-Ripped matrix.lisp and various bits from Matlisp.
+   Ripped matrix.lisp and various bits from Matlisp.
 ** TODO what to do with *USE-BLAS*?
-The wrappers should calculate cost and call matlisp if it is avaible.
+   The wrappers should calculate cost and call matlisp if it is
+   avaible.

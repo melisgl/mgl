@@ -111,8 +111,10 @@ value (of type FLT) of the function that is being minimized.
 
 CG performs a number of line searches and invokes FN at each step. A
 line search invokes FN at most MAX-N-EVALUATIONS-PER-LINE-SEARCH
-number of times and can succeed in finding a better minimum or it can
-fail. CG stops when either:
+number of times and can succeed in improving the minimum by the
+sufficient margin or it can fail. Note, the even a failed line search
+may improve further and hence change the weights it's just that the
+improvement was deemed too small. CG stops when either:
 
 - two line searches fail in a row
 - MAX-N-LINE-SEARCHES is reached
