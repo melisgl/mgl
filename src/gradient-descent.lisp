@@ -344,6 +344,11 @@ only missing values does not change anything."))
   (max 0 (- (batch-size trainer)
             (n-inputs-in-batch trainer))))
 
+(defmethod n-inputs-until-update ((trainer normalized-batch-gd-trainer))
+  ;; Weights are updated as in BATCH-GD-TRAINER but we need to collect
+  ;; weight usage statistics after each example.
+  1)
+
 (defmethod n-inputs-until-update ((trainer per-weight-batch-gd-trainer))
   ;; Weight updates are async, don't overpromise.
   1)
