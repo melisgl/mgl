@@ -62,8 +62,10 @@ of nodes of the same type."))
 
 (defmethod print-object ((chunk chunk) stream)
   (print-unreadable-object (chunk stream :type t :identity t)
-    (format stream "~S ~S(~S/~S)" (name chunk) (chunk-size chunk)
-            (chunk-n-stripes chunk) (chunk-max-n-stripes chunk)))
+    (format stream "~S ~S(~S/~S)" (name chunk)
+            (ignore-errors (chunk-size chunk))
+            (ignore-errors (chunk-n-stripes chunk))
+            (ignore-errors (chunk-max-n-stripes chunk))))
   chunk)
 
 (defun use-blas-on-chunk-p (cost chunk)
@@ -84,14 +86,14 @@ of nodes of the same type."))
 
 (defvar *current-stripe*)
 
-(defmacro do-stripes ((chunk) &body body)
-  (with-gensyms (%chunk %stripe)
+(defmacro do-stripes ((chunk &optional (stripe (gensym))) &body body)
+  (with-gensyms (%chunk)
     `(let ((,%chunk ,chunk))
        (assert (locally (declare (optimize (speed 1)))
                  (or (not (indices-present ,%chunk))
                      (= 1 (chunk-n-stripes ,%chunk)))))
-       (dotimes (,%stripe (chunk-n-stripes ,%chunk))
-         (let ((*current-stripe* ,%stripe))
+       (dotimes (,stripe (chunk-n-stripes ,%chunk))
+         (let ((*current-stripe* ,stripe))
            ,@body)))))
 
 (defmacro do-chunk ((index chunk) &body body)
@@ -176,11 +178,14 @@ its activation."))
   (:documentation "Nodes are real valued. The sample of a node is its
 activation plus guassian noise of unit variance."))
 
-(defclass normalized-group-chunk ()
+(defclass normalized-group-chunk (chunk)
   ((scale
-    :initform #.(flt 1) :initarg :scale :accessor scale :type flt
+    :initform #.(flt 1) :type (or flt flt-vector)
+    :initarg :scale :accessor scale
     :documentation "The sum of the means after normalization. Can be
-changed during training, for instance when clamping.")
+changed during training, for instance when clamping. If it is a vector
+then its length must be MAX-N-STRIPES which automatically
+maintained.")
    (group-size
     :initform (error "GROUP-SIZE must be specified.")
     :initarg :group-size
@@ -188,15 +193,28 @@ changed during training, for instance when clamping.")
   (:documentation "Means are normalized to SCALE within groups of
 GROUP-SIZE."))
 
+(defmethod initialize-instance :after ((chunk normalized-group-chunk)
+                                       &key &allow-other-keys)
+  (resize-scale chunk))
+
+(defun resize-scale (chunk)
+  (when (and (typep (scale chunk) 'flt-vector)
+             (/= (max-n-stripes chunk) (length (scale chunk))))
+    (setf (scale chunk) (make-flt-array (max-n-stripes chunk)))))
+
+(defmethod set-max-n-stripes (max-n-stripes (chunk normalized-group-chunk))
+  (multiple-value-prog1 (call-next-method)
+    (resize-scale chunk)))
+
 (defclass exp-normalized-group-chunk (normalized-group-chunk) ()
   (:documentation "Means are normalized (EXP ACTIVATION)."))
 
-(defclass softmax-chunk (chunk exp-normalized-group-chunk) ()
+(defclass softmax-chunk (exp-normalized-group-chunk) ()
   (:documentation "Binary units with normalized (EXP ACTIVATION)
 firing probabilities representing a multinomial distribution. That is,
 samples have exactly one 1 in each group of GROUP-SIZE."))
 
-(defclass constrained-poisson-chunk (chunk exp-normalized-group-chunk) ()
+(defclass constrained-poisson-chunk (exp-normalized-group-chunk) ()
   (:documentation "Poisson units with normalized (EXP ACTIVATION) means."))
 
 (defgeneric set-chunk-mean (chunk)
@@ -218,22 +236,23 @@ distribution. When called NODES contains the activations.")
     (let ((nodes (storage (nodes chunk)))
           (scale (scale chunk))
           (group-size (group-size chunk)))
-      (declare (type flt scale)
+      (declare (type (or flt flt-vector) scale)
                (type index group-size))
       (assert (zerop (mod (chunk-size chunk) group-size)))
-      (do-stripes (chunk)
-        (do-chunk (i chunk)
-          ;; this assumes that nodes in the same group have values at
-          ;; the same time
-          (when (zerop (mod i group-size))
-            (let ((sum #.(flt 0)))
-              (declare (type flt sum) (optimize (speed 3)))
-              (loop for j upfrom i below (+ i group-size)
-                    do (incf sum (aref nodes j)))
-              (setq sum (/ sum scale))
-              (loop for j upfrom i below (+ i group-size)
-                    do (setf (aref nodes j)
-                             (/ (aref nodes j) sum)))))))))
+      (do-stripes (chunk stripe)
+        (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+          (do-chunk (i chunk)
+            ;; this assumes that nodes in the same group have values at
+            ;; the same time
+            (when (zerop (mod i group-size))
+              (let ((sum #.(flt 0)))
+                (declare (type flt sum) (optimize (speed 3)))
+                (loop for j upfrom i below (+ i group-size)
+                      do (incf sum (aref nodes j)))
+                (setq sum (/ sum scale))
+                (loop for j upfrom i below (+ i group-size)
+                      do (setf (aref nodes j)
+                               (/ (aref nodes j) sum))))))))))
   (:method ((chunk exp-normalized-group-chunk))
     (let ((nodes (storage (nodes chunk))))
       (do-stripes (chunk)

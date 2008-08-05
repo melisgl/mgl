@@ -36,11 +36,13 @@
    fail: a) go to the matlisp branch and put it into the wrong place
    as if start were 0, b) use the lisp branch and fail if there are
    multiple stripes.
+** DONE normalized-chunk: scale should be per stripe
 * bp
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
 ** TODO redo ->CROSS-ENTROPY
 ** TODO what to do with INDICES-TO-CALCULATE?
+** TODO normalized-lump: scale should be per stripe
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values
