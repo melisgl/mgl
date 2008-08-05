@@ -42,7 +42,7 @@
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
 ** TODO redo ->CROSS-ENTROPY
 ** TODO what to do with INDICES-TO-CALCULATE?
-** TODO normalized-lump: scale should be per stripe
+** DONE normalized-lump: scale should be per stripe
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values

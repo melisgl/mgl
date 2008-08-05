@@ -431,13 +431,22 @@ value is the number of stripes."
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)
    (scale
-    :initform #.(flt 1) :initarg :scale :accessor scale :type flt
-    :documentation "The sum of node values per group after
-normalization. Can be changed during training, for instance when
-clamping.")))
+    :initform #.(flt 1) :type (or flt flt-vector)
+    :initarg :scale :accessor scale
+    :documentation "The sum of nodes after normalization. Can be
+changed during training, for instance when clamping. If it is a vector
+then its length must be MAX-N-STRIPES which automatically
+maintained.")))
 
 (defmethod default-size ((lump normalized-lump))
   (size (x lump)))
+
+(defmethod set-max-n-stripes (max-n-stripes (lump normalized-lump))
+  (call-next-method)
+  (when (and (typep (scale lump) 'flt-vector)
+             (/= (max-n-stripes lump) (length (scale lump))))
+    (setf (scale lump) (make-flt-array (max-n-stripes lump))))
+  max-n-stripes)
 
 (defmethod transfer-lump ((lump normalized-lump))
   (let* ((x (x lump))
@@ -446,27 +455,28 @@ clamping.")))
          (x* (storage (nodes x)))
          (to* (storage (nodes lump))))
     (declare (type index group-size)
-             (type flt scale))
+             (type (or flt flt-vector) scale))
     (assert (= (size lump) (size x)))
     (assert (= (n-stripes lump) (n-stripes x)))
     (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe lump ls le)
-                         (stripe x xs xe))
-            (loop for li upfrom ls below le
-                  for xi upfrom xs below xe
-                  for i upfrom 0
-                  do
-                  (when (zerop (mod i group-size))
-                    (let ((sum #.(flt 0)))
-                      (declare (type flt sum)
-                               (optimize (speed 3)))
-                      (loop for j upfrom xi below (+ xi group-size)
-                            do (incf sum (aref x* j)))
-                      (setq sum (/ sum scale))
-                      (loop for xj upfrom xi below (+ xi group-size)
-                            for lj upfrom li below (+ li group-size)
-                            do (setf (aref to* lj)
-                                     (/ (aref x* xj) sum))))))))))
+          (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    for i upfrom 0
+                    do
+                    (when (zerop (mod i group-size))
+                      (let ((sum #.(flt 0)))
+                        (declare (type flt sum)
+                                 (optimize (speed 3)))
+                        (loop for j upfrom xi below (+ xi group-size)
+                              do (incf sum (aref x* j)))
+                        (setq sum (/ sum scale))
+                        (loop for xj upfrom xi below (+ xi group-size)
+                              for lj upfrom li below (+ li group-size)
+                              do (setf (aref to* lj)
+                                       (/ (aref x* xj) sum)))))))))))
 
 (defmethod derive-lump ((lump normalized-lump))
   (let* ((x (x lump))
@@ -476,38 +486,39 @@ clamping.")))
          (xd* (storage (derivatives x)))
          (ld* (storage (derivatives lump))))
     (declare (type index group-size)
-             (type flt scale))
+             (type (or flt flt-vector) scale))
     (assert (= (size lump) (size x)))
     (assert (= (n-stripes lump) (n-stripes x)))
     (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe lump ls le)
-                         (stripe x xs xe))
-            (loop for li of-type index upfrom ls below le by group-size
-                  for xi of-type index upfrom xs below xe by group-size
-                  do
-                  (let ((sum #.(flt 0))
-                        (lie (+ li group-size))
-                        (xie (+ xi group-size)))
-                    (declare (type flt sum)
-                             (optimize (speed 3)))
-                    (loop for xj upfrom xi below xie
-                          do (incf sum (aref x* xj)))
-                    (let ((sum-square (expt sum 2)))
-                      ;; derive by xj
-                      (loop for xj of-type index upfrom xi below xie do
-                            (loop for lk upfrom li below lie
-                                  for xk upfrom xi below xie do
-                                  (if (= xk xj)
-                                      (incf (aref xd* xj)
-                                            (* (aref ld* lk)
-                                               scale
-                                               (/ (- sum (aref x* xj))
-                                                  sum-square)))
-                                      (decf (aref xd* xj)
-                                            (* (aref ld* lk)
-                                               scale
-                                               (/ (aref x* xk)
-                                                  sum-square)))))))))))))
+          (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li of-type index upfrom ls below le by group-size
+                    for xi of-type index upfrom xs below xe by group-size
+                    do
+                    (let ((sum #.(flt 0))
+                          (lie (+ li group-size))
+                          (xie (+ xi group-size)))
+                      (declare (type flt sum)
+                               (optimize (speed 3)))
+                      (loop for xj upfrom xi below xie
+                            do (incf sum (aref x* xj)))
+                      (let ((sum-square (expt sum 2)))
+                        ;; derive by xj
+                        (loop for xj of-type index upfrom xi below xie do
+                              (loop for lk upfrom li below lie
+                                    for xk upfrom xi below xie do
+                                    (if (= xk xj)
+                                        (incf (aref xd* xj)
+                                              (* (aref ld* lk)
+                                                 scale
+                                                 (/ (- sum (aref x* xj))
+                                                    sum-square)))
+                                        (decf (aref xd* xj)
+                                              (* (aref ld* lk)
+                                                 scale
+                                                 (/ (aref x* xk)
+                                                    sum-square))))))))))))))
 
 
 ;;;; Activation lump
