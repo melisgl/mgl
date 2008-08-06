@@ -171,8 +171,8 @@ interface and simple gradient descent based trainers."))
            #:sample-hidden
            ;; RBM trainer
            #:rbm-trainer
-           #:sample-visible-p
-           #:sample-hidden-p
+           #:visible-sampling
+           #:hidden-sampling
            #:n-gibbs
            #:positive-phase
            #:negative-phase

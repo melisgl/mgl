@@ -825,18 +825,21 @@ chunk type and the mean that resides in NODES."
 ;;;; Integration with train and gradient descent
 
 (defclass rbm-trainer (segmented-gd-trainer)
-  ((sample-visible-p
+  ((visible-sampling
     :initform nil
-    :initarg :sample-visible-p
-    :accessor sample-visible-p
+    :initarg :visible-sampling
+    :accessor visible-sampling
     :documentation "Controls whether visible nodes are sampled during
 the learning or the mean field is used instead.")
-   (sample-hidden-p
-    :initform t
-    :initarg :sample-hidden-p
-    :accessor sample-hidden-p
+   (hidden-sampling
+    :initform :half-hearted
+    :type (member nil :half-hearted t)
+    :initarg :hidden-sampling
+    :accessor hidden-sampling
     :documentation "Controls whether hidden nodes are sampled during
-the learning or the mean field is used instead.")
+the learning or the mean field is used instead. :HALF-HEARTED, the
+default value, samples the hiddens but uses the hidden means to
+calculate the effect of the positive phase on the gradient.")
    (n-gibbs
     :type (integer 1)
     :initform 1
@@ -903,17 +906,24 @@ called with the same parameters."
 (defgeneric positive-phase (trainer rbm)
   (:method (trainer rbm)
     (set-hidden-mean rbm)
-    (accumulate-positive-phase-statistics trainer rbm)))
+    (ecase (hidden-sampling trainer)
+      ((nil) (accumulate-positive-phase-statistics trainer rbm))
+      ((:half-hearted)
+       (accumulate-positive-phase-statistics trainer rbm)
+       (sample-hidden rbm))
+      ((t)
+       (sample-hidden rbm)
+       (accumulate-positive-phase-statistics trainer rbm)))))
 
 (defgeneric negative-phase (trainer rbm)
   (:method ((trainer rbm-trainer) rbm)
-    (let ((sample-visible-p (sample-visible-p trainer))
-          (sample-hidden-p (sample-hidden-p trainer)))
+    (let ((visible-sampling (visible-sampling trainer))
+          (hidden-sampling (hidden-sampling trainer)))
       (loop for i below (n-gibbs trainer) do
-            (when sample-hidden-p
+            (when (and (not (zerop i)) hidden-sampling)
               (sample-hidden rbm))
             (set-visible-mean rbm)
-            (when sample-visible-p
+            (when visible-sampling
               (sample-visible rbm))
             (set-hidden-mean rbm))
       (accumulate-negative-phase-statistics trainer rbm))))
