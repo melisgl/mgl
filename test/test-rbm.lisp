@@ -48,7 +48,7 @@
                         sampler (test-sampler sampler)
                         hidden-bias-p
                         visible-bias-p
-                        common-rank
+                        rank
                         (max-n-samples 10000)
                         (max-n-test-samples 1000)
                         (batch-size 50)
@@ -74,9 +74,9 @@
                                                      :name 'constant)))
                                  ,(make-instance hidden-type
                                                  :name 'features :size 1))
-                :clouds (if common-rank
+                :clouds (if rank
                             `((:class factored-cloud
-                               :common-rank ,common-rank
+                               :rank ,rank
                                :visible-chunk inputs
                                :hidden-chunk features))
                             nil)
@@ -96,7 +96,7 @@
                                :sampler test-sampler)
                 rbm))))
 
-(defun test-rbm/identity-and-xor (&key missingp randomp common-rank)
+(defun test-rbm/identity-and-xor (&key missingp randomp rank)
   (let ((chunk (make-instance 'sigmoid-chunk :name 'inputs :size 2)))
     (flet ((sample ()
              (select-random-element (list #.(flt 0) #.(flt 1))))
@@ -141,9 +141,9 @@
                                                  :name 'constant)
                                   (make-instance 'sigmoid-chunk :name 'features
                                                  :size 1))
-                  :clouds (if common-rank
+                  :clouds (if rank
                               `((:class factored-cloud
-                                 :common-rank ,common-rank
+                                 :rank ,rank
                                  :visible-chunk inputs
                                  :hidden-chunk features))
                               nil)
@@ -260,7 +260,7 @@
 (defun test-factored-cloud ()
   (let* ((n-visible 2)
          (n-hidden 3)
-         (common-rank 1)
+         (rank 1)
          (visible-chunk (make-instance 'sigmoid-chunk
                                        :name 'inputs
                                        :size n-visible))
@@ -274,7 +274,7 @@
                              :clouds `((:class factored-cloud
                                         :visible-chunk inputs
                                         :hidden-chunk features
-                                        :common-rank ,common-rank))))
+                                        :rank ,rank))))
          (cloud (find-cloud '(inputs features) rbm))
          (a (weights (cloud-a cloud)))
          (b (weights (cloud-b cloud)))
@@ -285,8 +285,8 @@
                                  (repeatedly
                                    (make-instance 'batch-gd-trainer)))))
     (assert (= n-hidden (matlisp:nrows (weights (cloud-a cloud)))))
-    (assert (= common-rank (matlisp:ncols (weights (cloud-a cloud)))))
-    (assert (= common-rank (matlisp:nrows (weights (cloud-b cloud)))))
+    (assert (= rank (matlisp:ncols (weights (cloud-a cloud)))))
+    (assert (= rank (matlisp:nrows (weights (cloud-b cloud)))))
     (assert (= n-visible (matlisp:ncols (weights (cloud-b cloud)))))
     (initialize-trainer trainer rbm)
     (setf (matlisp:matrix-ref a 0 0) (flt 1))
@@ -303,12 +303,12 @@
     (print (trainers trainer))
     (assert (= 2 (length (trainers trainer))))
     (let ((db (reshape2 (accumulator1 (elt (trainers trainer) 0))
-                        common-rank n-visible))
+                        rank n-visible))
           (da (reshape2 (accumulator1 (elt (trainers trainer) 1))
-                        n-hidden common-rank)))
+                        n-hidden rank)))
       (print da)
       (print db)
-      (dotimes (c common-rank)
+      (dotimes (c rank)
         (dotimes (j n-visible)
           (let ((x (matlisp:matrix-ref db c j))
                 (y (* (loop for i below n-hidden
@@ -318,7 +318,7 @@
             (unless (~= x y)
               (error "db_{~A,~A}: ~S /= ~S~%" c j x y)))))
       (dotimes (i n-hidden)
-        (dotimes (c common-rank)
+        (dotimes (c rank)
           (let ((x (matlisp:matrix-ref da i c))
                 (y (* (loop for j below n-visible
                             sum (* (matlisp:matrix-ref b c j)
@@ -333,10 +333,10 @@
                                    :max-n-stripes 7)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
                                     :max-n-stripes 7
-                                    :common-rank 1)))
+                                    :rank 1)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
                                     :max-n-stripes 7
-                                    :common-rank 3)))
+                                    :rank 3)))
   ;; For constant zero we need to add a bias to either layer.
   (assert (> 0.01
              (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t)))
@@ -351,11 +351,10 @@
                               :hidden-bias-p t
                               :max-n-samples 100000)))
   (assert (> 0.01 (test-rbm/identity-and-xor)))
-  (assert (> 0.01 (test-rbm/identity-and-xor :common-rank 1)))
+  (assert (> 0.01 (test-rbm/identity-and-xor :rank 1)))
   (assert (> 0.25 (test-rbm/identity-and-xor :missingp t)))
   #+nil
-  (assert (> 0.25 (test-rbm/identity-and-xor :missingp t
-                                             :common-rank 1)))
+  (assert (> 0.25 (test-rbm/identity-and-xor :missingp t :rank 1)))
   (assert (> 0.25 (test-rbm/identity-and-xor :randomp t)))
   (assert (> 0.35 (test-rbm/identity-and-xor :missingp t :randomp t)))
   (assert (> 0.2 (test-rbm/single :sampler (constantly (flt 1))

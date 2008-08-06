@@ -361,7 +361,7 @@ inits. The fourth is name of the `end' lump.")
                                          (weights cloud-a))))
               (,shared-symbol (cloud-activation-lump
                                :name ',shared-name
-                               :size ,(common-rank cloud)
+                               :size ,(rank cloud)
                                :weights ,(if transposep
                                              weight-a-symbol
                                              weight-b-symbol)

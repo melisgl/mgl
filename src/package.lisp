@@ -186,7 +186,7 @@ interface and simple gradient descent based trainers."))
            #:factored-cloud
            #:cloud-a
            #:cloud-b
-           #:common-rank
+           #:rank
            ;; Chunk
            #:name
            #:chunk

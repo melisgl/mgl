@@ -483,12 +483,11 @@ A*B*VISIBLE."))
 
 (defclass factored-cloud-shared-chunk (chunk) ())
 
-(defmethod initialize-instance :after ((cloud factored-cloud)
-                                       &key common-rank
+(defmethod initialize-instance :after ((cloud factored-cloud) &key rank
                                        &allow-other-keys)
-  (assert (typep common-rank '(integer 1)))
+  (assert (typep rank '(integer 1)))
   (let ((shared (make-instance 'factored-cloud-shared-chunk
-                               :size common-rank
+                               :size rank
                                :name `(name cloud))))
     (setf (slot-value cloud 'cloud-a)
           (make-instance 'full-cloud
@@ -504,7 +503,7 @@ A*B*VISIBLE."))
 (defun factored-cloud-shared-chunk (cloud)
   (visible-chunk (cloud-a cloud)))
 
-(defun common-rank (cloud)
+(defun rank (cloud)
   (chunk-size (factored-cloud-shared-chunk cloud)))
 
 (defmethod set-n-stripes (n-stripes (cloud factored-cloud))
