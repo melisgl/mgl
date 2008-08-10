@@ -61,11 +61,10 @@
 (defmethod copy! ((x double-float) (y real-matrix))
   (let ((nxm-y (number-of-elements y))
         (y* (store y)))
-    (declare (type fixnum nxm-y)
-             (type (simple-array real-matrix-element-type (*)) y*)
+    (declare (type (simple-array real-matrix-element-type (*)) y*)
              (optimize (speed 3)))
-    (dotimes (i nxm-y y)
-      (setf (aref y* i) x))))
+    (fill y* x :end nxm-y)
+    y))
 
 (defgeneric gemm! (alpha a b beta c &optional job))
 
