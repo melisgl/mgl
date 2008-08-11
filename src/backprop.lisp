@@ -224,9 +224,9 @@ the previous last, non-weight lump of BPN."
                                  (make-instance ',(first init-form)
                                                 ,@(rest init-form))))))
                  lumps)))
-    `(let ((*bpn-being-built* (make-instance ,class
-                                             :max-n-stripes ,max-n-stripes
-                                             ,@initargs)))
+    `(let ((*bpn-being-built* (apply #'make-instance ,class
+                                     :max-n-stripes ,max-n-stripes
+                                     ,initargs)))
        (flet ((lump (name)
                 (find-lump name *bpn-being-built* :errorp t)))
          (let* ,bindings
