@@ -55,6 +55,8 @@ different random order."
 
 (defun call-periodic-fn (n fn &rest args)
   (let ((period (period fn)))
+    (when (typep period '(or symbol function))
+      (setq period (apply period args)))
     (when (or (null (last-eval fn))
               (and (/= (floor n period)
                        (floor (last-eval fn) period))))

@@ -7,7 +7,8 @@
            #:make-random-generator
            #:periodic-fn
            #:call-periodic-fn
-           #:call-periodic-fn!))
+           #:call-periodic-fn!
+           #:last-eval))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util :mgl-train :mgl-gd :mgl-rbm :mgl-bp
