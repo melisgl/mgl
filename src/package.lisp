@@ -211,7 +211,8 @@ interface and simple gradient descent based trainers."))
            #:dbn
            #:rbms
            #:down-mean-field
-           #:dbn-rmse
+           #:make-reconstruction-rmse-counters-and-measurers
+           #:dbn-mean-field-errors
            ;;
            #:inputs->nodes
            #:nodes->inputs

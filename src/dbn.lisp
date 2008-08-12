@@ -62,26 +62,42 @@
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) rbm)))
 
-(defun dbn-rmse (sampler dbn &key (rbm (last1 (rbms dbn))))
-  (let* ((n (1+ (position rbm (rbms dbn))))
-         (sum-errors (make-array n :initial-element #.(flt 0)))
-         (n-errors (make-array n :initial-element 0))
-         (max-n-stripes (max-n-stripes dbn)))
+(defun make-reconstruction-rmse-counters-and-measurers
+    (dbn &key (rbm (last1 (rbms dbn))))
+  (loop for i upto (position rbm (rbms dbn))
+        collect (let ((i i))
+                  (cons (make-instance 'rmse-counter)
+                        (lambda (dbn samples)
+                          (declare (ignore samples))
+                          (reconstruction-error (elt (rbms dbn) i)))))))
+
+(defun dbn-mean-field-errors
+    (sampler dbn &key (rbm (last1 (rbms dbn)))
+     (counters-and-measurers
+      (make-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+  "Sample from SAMPLER until it runs out. Set the samples as inputs
+and run the mean field up to RBM then down to the bottom.
+COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
+function. The function takes two parameters: the DBN and a sequence of
+samples and is called after each mean field reconstruction. Measurers
+return two values: the cumulative error and the counter, suitable as
+the second and third argument to ADD-ERROR. Finally, return the
+counters. By default, return the rmse at each level in the DBN."
+  (let ((max-n-stripes (max-n-stripes dbn)))
     (loop until (finishedp sampler) do
-          (set-input (sample-batch sampler max-n-stripes) rbm)
-          (set-hidden-mean rbm)
-          (down-mean-field dbn :rbm rbm)
-          (loop for i below n
-                for rbm in (rbms dbn) do
-                (multiple-value-bind (e n) (reconstruction-error rbm)
-                  (incf (aref sum-errors i) e)
-                  (incf (aref n-errors i) n))))
-    (map 'vector
-         (lambda (sum-errors n-errors)
-           (if (zerop n-errors)
-               nil
-               (sqrt (/ sum-errors n-errors))))
-         sum-errors n-errors)))
+          (let ((samples (sample-batch sampler max-n-stripes)))
+            (set-input samples rbm)
+            (set-hidden-mean rbm)
+            (down-mean-field dbn :rbm rbm)
+            (map nil
+                 (lambda (counter-and-measurer)
+                   (assert (consp counter-and-measurer))
+                   (multiple-value-call
+                       #'add-error (car counter-and-measurer)
+                       (funcall (cdr counter-and-measurer)
+                                dbn samples)))
+                 counters-and-measurers))))
+  (map 'list #'car counters-and-measurers))
 
 (defmethod write-weights ((dbn dbn) stream)
   (dolist (rbm (rbms dbn))

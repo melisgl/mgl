@@ -224,10 +224,13 @@
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
-           (coerce (dbn-rmse (make-sampler *test-images*
-                                           :max-n 1000
-                                           #+nil (length *test-images*))
-                             (dbn rbm) :rbm rbm) 'list)
+           (map 'list
+                #'get-error
+                (dbn-mean-field-errors (make-sampler *test-images*
+                                                     :max-n 1000
+                                                     #+nil
+                                                     (length *test-images*))
+                                       (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
 (defmethod mgl-rbm:negative-phase :around (trainer (rbm mnist-rbm))
@@ -507,10 +510,12 @@
            (mgl-util:read-weights *dbn* s))
          (log-msg "Loaded DBN~%")
          (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
-                  (coerce (dbn-rmse (make-sampler *test-images*
-                                                  :max-n (length *test-images*))
-                                    *dbn*)
-                          'list)))
+                  (map 'list
+                       #'get-error
+                       (dbn-mean-field-errors
+                        (make-sampler *test-images*
+                                      :max-n (length *test-images*))
+                        *dbn*))))
         (t
          (setq *dbn* (train-mnist-dbn))
          (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*)

@@ -45,7 +45,10 @@
 
 (defun report-dbn-rmse (rbm trainer)
   (log-msg "DBN RMSE: ~{~,5F~^, ~} (~D)~%"
-           (coerce (dbn-rmse (make-sampler 1000) (dbn rbm) :rbm rbm) 'list)
+           (map 'list
+                #'get-error
+                (dbn-mean-field-errors (make-sampler 1000) (dbn rbm)
+                                       :rbm rbm))
            (n-inputs trainer)))
 
 ;;; This prints the rmse of the the training examples after each 100
