@@ -204,6 +204,7 @@ interface and simple gradient descent based trainers."))
            #:exp-normalized-group-chunk
            #:softmax-chunk
            #:constrained-poisson-chunk
+           #:temporal-chunk
            ;; Chunk extensions
            #:set-chunk-mean
            #:sample-chunk

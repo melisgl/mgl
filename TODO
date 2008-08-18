@@ -39,6 +39,7 @@
 ** DONE normalized-chunk: scale should be per stripe
 ** DONE positive phase: if sample-hidden-p, then is it (* visible hidden-mean) or (* visible hidden-sample)?
    HIDDEN-SAMPLING parameter in RBM-TRAINER
+** DONE temporal rbm
 * bp
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner

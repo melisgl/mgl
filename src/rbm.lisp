@@ -45,11 +45,14 @@ of nodes of the same type."))
 (defmethod n-stripes ((chunk chunk))
   (chunk-n-stripes chunk))
 
+(declaim (inline mat-max-n-stripes))
+(defun mat-max-n-stripes (mat)
+  (the index (/ (length (storage mat))
+                (matlisp:nrows mat))))
+
 (declaim (inline chunk-max-n-stripes))
 (defun chunk-max-n-stripes (chunk)
-  (let ((nodes (nodes chunk)))
-    (the index (/ (length (storage nodes))
-                  (matlisp:nrows nodes)))))
+  (mat-max-n-stripes (nodes chunk)))
 
 (defmethod max-n-stripes ((chunk chunk))
   (chunk-max-n-stripes chunk))
@@ -132,17 +135,18 @@ the visible layer allows `conditional' RBMs."))
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
 
-(defun resize-chunk (chunk size max-n-stripes)
-  (unless (and (slot-boundp chunk 'nodes)
-               (= size (chunk-size chunk))
-               (= max-n-stripes (chunk-max-n-stripes chunk)))
-    (setf (slot-value chunk 'nodes)
-          (matlisp:make-real-matrix size max-n-stripes))
-    (fill-chunk chunk (default-value chunk))
-    (setf (slot-value chunk 'inputs)
-          (if (typep chunk 'constant-chunk)
-              nil
-              (matlisp:make-real-matrix size max-n-stripes)))))
+(defgeneric resize-chunk (chunk size max-n-stripes)
+  (:method ((chunk chunk) size max-n-stripes)
+    (unless (and (slot-boundp chunk 'nodes)
+                 (= size (chunk-size chunk))
+                 (= max-n-stripes (chunk-max-n-stripes chunk)))
+      (setf (slot-value chunk 'nodes)
+            (matlisp:make-real-matrix size max-n-stripes))
+      (fill-chunk chunk (default-value chunk))
+      (setf (slot-value chunk 'inputs)
+            (if (typep chunk 'constant-chunk)
+                nil
+                (matlisp:make-real-matrix size max-n-stripes))))))
 
 (defmethod set-n-stripes (n-stripes (chunk chunk))
   (set-ncols (nodes chunk) n-stripes)
@@ -193,18 +197,11 @@ maintained.")
   (:documentation "Means are normalized to SCALE within groups of
 GROUP-SIZE."))
 
-(defmethod initialize-instance :after ((chunk normalized-group-chunk)
-                                       &key &allow-other-keys)
-  (resize-scale chunk))
-
-(defun resize-scale (chunk)
+(defmethod resize-chunk ((chunk normalized-group-chunk) size max-n-stripes)
+  (call-next-method)
   (when (and (typep (scale chunk) 'flt-vector)
              (/= (max-n-stripes chunk) (length (scale chunk))))
     (setf (scale chunk) (make-flt-array (max-n-stripes chunk)))))
-
-(defmethod set-max-n-stripes (max-n-stripes (chunk normalized-group-chunk))
-  (multiple-value-prog1 (call-next-method)
-    (resize-scale chunk)))
 
 (defclass exp-normalized-group-chunk (normalized-group-chunk) ()
   (:documentation "Means are normalized (EXP ACTIVATION)."))
@@ -216,6 +213,39 @@ samples have exactly one 1 in each group of GROUP-SIZE."))
 
 (defclass constrained-poisson-chunk (exp-normalized-group-chunk) ()
   (:documentation "Poisson units with normalized (EXP ACTIVATION) means."))
+
+(defclass temporal-chunk (conditioning-chunk)
+  ((hidden-source-chunk
+    :initarg :hidden-source-chunk
+    :reader hidden-source-chunk)
+   (next-node-inputs :reader next-node-inputs)
+   (has-inputs-p :initform nil :reader has-inputs-p))
+  (:documentation "After a SET-HIDDEN-MEAN, the means of
+HIDDEN-SOURCE-CHUNK are stored in NEXT-NODE-INPUTS and on the next
+SET-INPUT copied onto NODES. If there are multiple SET-HIDDEN-MEAN
+calls between two SET-INPUT calls then only the first set of values
+are remembered."))
+
+(defmethod resize-chunk ((chunk temporal-chunk) size max-n-stripes)
+  (call-next-method)
+  (unless (and (slot-boundp chunk 'next-node-inputs)
+               (= size (matlisp:nrows (next-node-inputs chunk)))
+               (= max-n-stripes (mat-max-n-stripes (next-node-inputs chunk))))
+    (setf (slot-value chunk 'next-node-inputs)
+          (matlisp:make-real-matrix size max-n-stripes))))
+
+(defun maybe-remember (chunk)
+  (unless (has-inputs-p chunk)
+    (let ((hidden (hidden-source-chunk chunk)))
+      (assert (null (indices-present hidden)))
+      (copy-chunk-nodes chunk (nodes hidden) (next-node-inputs chunk))
+      (setf (slot-value chunk 'has-inputs-p) t))))
+
+(defun maybe-use-remembered (chunk)
+  (when (has-inputs-p chunk)
+    (setf (indices-present chunk) nil)
+    (copy-chunk-nodes chunk (next-node-inputs chunk) (nodes chunk))
+    (setf (slot-value chunk 'has-inputs-p) nil)))
 
 (defgeneric set-chunk-mean (chunk)
   (:documentation "Set NODES of CHUNK to the means of the probability
@@ -796,7 +826,10 @@ activations."
 respective probability distribution assuming NODES contains the
 activations."
   (hijack-means-to-activation rbm :hidden)
-  (map nil #'set-chunk-mean (hidden-chunks rbm)))
+  (map nil #'set-chunk-mean (hidden-chunks rbm))
+  (dolist (chunk (visible-chunks rbm))
+    (when (typep chunk 'temporal-chunk)
+      (maybe-remember chunk))))
 
 (defun sample-visible (rbm)
   "Generate samples from the probability distribution defined by the
@@ -859,20 +892,23 @@ calculate the effect of the positive phase on the gradient.")
         (negative-phase trainer rbm))
   (maybe-update-weights trainer (length batch)))
 
+(defun copy-chunk-nodes (chunk from to)
+  (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
+      (matlisp:copy! from to)
+      (let ((from (storage from))
+            (to (storage to)))
+        (declare (optimize (speed 3)))
+        (do-stripes (chunk)
+          (do-chunk (i chunk)
+            (setf (aref to i) (aref from i)))))))
+
 (defun inputs->nodes (rbm)
   "Copy the previously clamped INPUTS to NODES as if SET-INPUT were
 called with the same parameters."
   (map nil (lambda (chunk)
              (let ((inputs (inputs chunk)))
                (when inputs
-                 (if (use-blas-on-chunk-p (cost-of-copy inputs) chunk)
-                     (matlisp:copy! (inputs chunk) (nodes chunk))
-                     (let ((inputs (storage (inputs chunk)))
-                           (nodes (storage (nodes chunk))))
-                       (declare (optimize (speed 3)))
-                       (do-stripes (chunk)
-                         (do-chunk (i chunk)
-                           (setf (aref nodes i) (aref inputs i)))))))))
+                 (copy-chunk-nodes chunk inputs (nodes chunk)))))
        (visible-chunks rbm)))
 
 (defun nodes->inputs (rbm)
@@ -880,14 +916,7 @@ called with the same parameters."
   (map nil (lambda (chunk)
              (let ((inputs (inputs chunk)))
                (when inputs
-                 (if (use-blas-on-chunk-p (cost-of-copy inputs) chunk)
-                     (matlisp:copy! (nodes chunk) (inputs chunk))
-                     (let ((inputs (storage (inputs chunk)))
-                           (nodes (storage (nodes chunk))))
-                       (declare (optimize (speed 3)))
-                       (do-stripes (chunk)
-                         (do-chunk (i chunk)
-                           (setf (aref inputs i) (aref nodes i)))))))))
+                 (copy-chunk-nodes chunk (nodes chunk) inputs))))
        (visible-chunks rbm)))
 
 

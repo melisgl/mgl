@@ -44,7 +44,11 @@
   (setf (n-stripes rbm) (length samples))
   (unwind-protect
        ;; Do any clamping specific to this RBM.
-       (call-next-method)
+       (progn
+         (dolist (chunk (visible-chunks rbm))
+           (when (typep chunk 'temporal-chunk)
+             (maybe-use-remembered chunk)))
+         (call-next-method))
     ;; Then remember the inputs.
     (nodes->inputs rbm)))
 
