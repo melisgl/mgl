@@ -146,35 +146,13 @@
 
 ;;;;
 
-(defgeneric log-training-error (trainer learner))
-(defgeneric log-test-error (trainer learner))
+(defclass mnist-logging-trainer (logging-trainer) ())
 
-(defclass logging-trainer ()
-  ((log-training-fn :initform (make-instance 'periodic-fn
-                                             :period 10000
-                                             :fn 'log-training-error)
-                    :reader log-training-fn)
-   (log-test-fn :initform (make-instance 'periodic-fn
-                                         :period (length *training-images*)
-                                         :fn 'log-test-error)
-                :reader log-test-fn)))
+(defmethod log-training-period ((trainer mnist-logging-trainer) learner)
+  10000)
 
-(defmethod train-batch :around (samples (trainer logging-trainer) learner)
-  (multiple-value-prog1 (call-next-method)
-    (call-periodic-fn (n-inputs trainer) (log-training-fn trainer)
-                      trainer learner)
-    (call-periodic-fn (n-inputs trainer) (log-test-fn trainer)
-                      trainer learner)))
-
-(defmethod train :around (sampler (trainer logging-trainer) learner)
-  (setf (mgl-example-util::last-eval (log-training-fn trainer))
-        (n-inputs trainer))
-  (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer) trainer learner)
-  (multiple-value-prog1 (call-next-method)
-    (call-periodic-fn! (n-inputs trainer) (log-training-fn trainer)
-                       trainer learner)
-    (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer)
-                       trainer learner)))
+(defmethod log-test-period ((trainer mnist-logging-trainer) learner)
+  (length *training-images*))
 
 
 ;;;; DBN
@@ -211,7 +189,7 @@
     (when inputs
       (clamp-striped-nodes images inputs))))
 
-(defclass mnist-rbm-trainer (logging-trainer rbm-trainer)
+(defclass mnist-rbm-trainer (mnist-logging-trainer rbm-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
@@ -337,12 +315,12 @@
 
 ;;;; BPN training
 
-(defclass mnist-bp-trainer (logging-trainer bp-trainer)
+(defclass mnist-bp-trainer (mnist-logging-trainer bp-trainer)
   ((cross-entropy-counter :initform (make-instance 'error-counter)
                           :reader cross-entropy-counter)
    (counter :initform (make-instance 'error-counter) :reader counter)))
 
-(defclass mnist-cg-bp-trainer (logging-trainer cg-bp-trainer)
+(defclass mnist-cg-bp-trainer (mnist-logging-trainer cg-bp-trainer)
   ((cross-entropy-counter :initform (make-instance 'error-counter)
                           :reader cross-entropy-counter)
    (counter :initform (make-instance 'error-counter) :reader counter)))

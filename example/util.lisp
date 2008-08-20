@@ -68,3 +68,40 @@ different random order."
             (and (/= n (last-eval fn))))
     (setf (last-eval fn) n)
     (apply (fn fn) args)))
+
+
+;;;; Logging trainer
+
+(defgeneric log-training-error (trainer learner))
+(defgeneric log-test-error (trainer learner))
+(defgeneric log-training-period (trainer learner))
+(defgeneric log-test-period (trainer learner))
+
+(defclass logging-trainer ()
+  ((log-training-fn :initform (make-instance 'periodic-fn
+                                             :period 'log-training-period
+                                             :fn 'log-training-error)
+                    :reader log-training-fn)
+   (log-test-fn :initform (make-instance 'periodic-fn
+                                         :period 'log-test-period
+                                         :fn 'log-test-error)
+                :reader log-test-fn)))
+
+(defmethod mgl-train:train-batch :around
+    (samples (trainer logging-trainer) learner)
+  (multiple-value-prog1 (call-next-method)
+    (call-periodic-fn (mgl-train:n-inputs trainer) (log-training-fn trainer)
+                      trainer learner)
+    (call-periodic-fn (mgl-train:n-inputs trainer) (log-test-fn trainer)
+                      trainer learner)))
+
+(defmethod mgl-train:train :around (sampler (trainer logging-trainer) learner)
+  (setf (last-eval (log-training-fn trainer))
+        (mgl-train:n-inputs trainer))
+  (call-periodic-fn! (mgl-train:n-inputs trainer)
+                     (log-test-fn trainer) trainer learner)
+  (multiple-value-prog1 (call-next-method)
+    (call-periodic-fn! (mgl-train:n-inputs trainer) (log-training-fn trainer)
+                       trainer learner)
+    (call-periodic-fn! (mgl-train:n-inputs trainer) (log-test-fn trainer)
+                       trainer learner)))

@@ -37,41 +37,52 @@
 
 ;;;; Progress reporting
 
-(defclass spiral-rbm-trainer (rbm-trainer)
+(defclass spiral-logging-trainer (logging-trainer) ())
+
+(defmethod log-training-period ((trainer spiral-logging-trainer) learner)
+  100)
+
+(defmethod log-test-period ((trainer spiral-logging-trainer) learner)
+  1000)
+
+
+;;;; DBN training
+
+(defclass spiral-rbm-trainer (spiral-logging-trainer rbm-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
-(defclass spiral-bp-trainer (bp-trainer)
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+(defmethod log-training-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
+  (let ((counter (counter trainer))
+        (n-inputs (n-inputs trainer)))
+    (log-msg "TRAINING RMSE: ~,5F (~D)~%"
+             (or (get-error counter) #.(flt 0))
+             n-inputs)
+    (reset-counter counter)))
 
-(defun report-dbn-rmse (rbm trainer)
-  (log-msg "DBN RMSE: ~{~,5F~^, ~} (~D)~%"
+(defmethod log-test-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
+  (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
-                (dbn-mean-field-errors (make-sampler 1000) (dbn rbm)
-                                       :rbm rbm))
+                (dbn-mean-field-errors (make-sampler 1000) (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
-;;; This prints the rmse of the the training examples after each 100
-;;; and the test rmse on each level of the DBN after each 1000.
-(defmethod train-batch :around (batch (trainer spiral-rbm-trainer) rbm)
-  (when (zerop (mod (n-inputs trainer) 1000))
-    (report-dbn-rmse rbm trainer))
-  (let ((counter (counter trainer)))
-    (multiple-value-bind (e n) (mgl-rbm:reconstruction-error rbm)
-      (add-error counter e n))
-    (call-next-method)
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs 100))
-        (log-msg "RMSE: ~,5F (~D, ~D)~%"
-                 (or (get-error counter) #.(flt 0))
-                 (n-sum-errors counter)
-                 n-inputs)
-        (force-output *trace-output*)
-        (reset-counter counter)))))
+(defmethod mgl-rbm:negative-phase :around (trainer (rbm spiral-rbm))
+  (call-next-method)
+  (multiple-value-call #'add-error (counter trainer)
+                       (mgl-rbm:reconstruction-error rbm)))
+
 
-;;; Make sure we print the test rmse at the end of training each rbm.
-(defmethod train :after (sampler (trainer spiral-rbm-trainer) rbm)
-  (report-dbn-rmse rbm trainer))
+;;;; BPN training
+
+(defclass spiral-bp-trainer (spiral-logging-trainer bp-trainer)
+  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+
+(defmethod log-training-error (trainer (bpn spiral-bpn))
+  (declare (ignore bpn))
+  (let ((n-inputs (n-inputs trainer))
+        (counter (counter trainer)))
+    (log-msg "RMSE: ~,5F (~D)~%" (or (get-error counter) #.(flt 0)) n-inputs)
+    (reset-counter counter)))
 
 (defun bpn-rmse (sampler bpn)
   (let ((counter (make-instance 'rmse-counter))
@@ -83,27 +94,14 @@
         (add-error counter e (* n 3))))
     (values (get-error counter) counter)))
 
-(defun report-bpn-rmse (bpn trainer)
-  (log-msg "BPN RMSE: ~,5F (~D)~%"
+(defmethod log-test-error (trainer (bpn spiral-bpn))
+  (log-msg "BPN TEST RMSE: ~,5F (~D)~%"
            (bpn-rmse (make-sampler 1000) bpn) (n-inputs trainer)))
 
 (defmethod train-batch :around (batch (trainer spiral-bp-trainer) bpn)
-  (when (zerop (mod (n-inputs trainer) 1000))
-    (report-bpn-rmse bpn trainer))
-  (let ((counter (counter trainer)))
-    (call-next-method)
-    (multiple-value-bind (e n) (cost bpn)
-      (add-error counter e (* n 3)))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs 100))
-        (log-msg "RMSE: ~,5F (~D, ~D)~%"
-                 (or (get-error counter) #.(flt 0))
-                 (n-sum-errors counter)
-                 n-inputs)
-        (reset-counter counter)))))
-
-(defmethod train :after (sampler (trainer spiral-bp-trainer) bpn)
-  (report-bpn-rmse bpn trainer))
+  (call-next-method)
+  (multiple-value-bind (e n) (cost bpn)
+    (add-error (counter trainer) e (* n 3))))
 
 
 ;;;; Training
