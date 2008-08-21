@@ -979,9 +979,3 @@ error."
                 (incf sum (expt (- x y) 2))
                 (incf n)))))))
     (values sum n)))
-
-(defgeneric get-squared-error (rbm)
-  (:method ((rbm rbm))
-    (set-hidden-mean rbm)
-    (set-visible-mean rbm)
-    (reconstruction-error rbm)))
