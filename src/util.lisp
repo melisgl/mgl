@@ -51,8 +51,7 @@
 (defmacro special-case (test &body body)
   "Let the compiler compile BODY for the case when TEST is true and
 also when it's false. The purpose is to allow different constraints to
-propagate to the two branches allowing more them to be more
-optimized."
+propagate to the two branches allowing them to be more optimized."
   `(if ,test
        (progn ,@body)
        (progn ,@body)))
@@ -126,7 +125,6 @@ optimized."
     `(lambda (&rest ,args)
        (declare (ignore ,args))
        ,@body)))
-
 
 
 ;;;; Random math

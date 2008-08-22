@@ -21,8 +21,8 @@ is supposed to clamp the values.")
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
-layer's NODES. Need not be ordered. SET-INPUT sets it. Note that if it
-is non-NIL then N-STRIPES must be 1.")
+layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that if
+it is non-NIL then N-STRIPES must be 1.")
    (default-value
     :initform #.(flt 0) :initarg :default-value :type flt
     :reader default-value
@@ -350,13 +350,13 @@ whose means are in NODES.")
   (:documentation "Add the activations to the nodes of chunk to either
 the visible or the hidden chunk of CLOUD according to
 TO-VISIBLE/HIDDEN that can be :VISIBLE or :HIDDEN. In the simplest
-case this is add weights (of CLOUD) * nodes (of the visible chunk) to
-the nodes of the hidden chunk."))
+case it adds weights (of CLOUD) * nodes (of the visible chunk) to the
+nodes of the hidden chunk."))
 
 (defgeneric accumulate-cloud-statistics (cloud trainer addp)
-  (:documentation "Add or subtract the derivative of positive phase
-term of contrastive divergence from the accumulator of TRAINER
-corresponding to CLOUD."))
+  (:documentation "Take the accumulator of TRAINER that corresponds to
+CLOUD and depending on ADDP add to or subtract from it what is the
+negative or positive phase term of contrastive divergence."))
 
 
 ;;;; Full cloud
@@ -365,11 +365,11 @@ corresponding to CLOUD."))
   ((weights
     :type matlisp:real-matrix :initarg :weights :reader weights
     :documentation "In Matlisp, chunks are represented as column
-vectors \(disregarding the more than one stripe case). If the visible
-chunk is Nx1 and the hidden is Mx1 then the weight matrix is MxN.
-Hidden = hidden + weights * visible. Visible = visible + weights^T *
-hidden. Looking directly at the underlying Lisp array
-\(MATLISP::STORE), it's all transposed.")))
+vectors \(disregarding the multi-striped case). If the visible chunk
+is Nx1 and the hidden is Mx1 then the weight matrix is MxN. Hidden =
+hidden + weights * visible. Visible = visible + weights^T * hidden.
+Looking directly at the underlying Lisp array \(MATLISP::STORE), it's
+all transposed.")))
 
 (defmethod initialize-instance :after ((cloud full-cloud) &key &allow-other-keys)
   (unless (slot-boundp cloud 'weights)
@@ -662,8 +662,7 @@ convention one is called `visible' and the other `hidden'. Connections
 between nodes are symmetrical and there are no intralayer connections.
 
 Layers consist of chunks and chunks of opposing layers can be
-connected. A set of connections is called a `cloud'. Currently only
-fully connected clouds are supported."))
+connected. A set of connections is called a `cloud'."))
 
 (defmacro do-clouds ((cloud rbm) &body body)
   `(dolist (,cloud (clouds ,rbm))
@@ -739,7 +738,7 @@ if not found and ERRORP."
 
 (defun default-clouds (visible-chunks hidden-chunks)
   "Return a list of cloud specifications suitable for MAKE-RBM. Put a
-cloud between each pair of visible and hidden chunk unless they are
+cloud between each pair of visible and hidden chunks unless they are
 both conditioning chunks. The names of the clouds are two element
 lists of the names of the visible and hidden chunks."
   (let ((clouds '()))
@@ -784,7 +783,8 @@ CLASS NIL then remove it as well."
      clouds)
   "Return an RBM that consists of VISIBLE-CHUNKS, HIDDEN-CHUNKS and
 CLOUDS of weights. Where CLOUDS is a list of cloud specifications.
-Names of chunks and clouds shall be unique by EQUAL."
+Names of chunks and clouds shall be unique under EQUAL. CLOUDS is
+merged to DEFAULT-CLOUDS."
   (unless (unique-names-p visible-chunks)
     (error "Name conflict among visible chunks: ~S." visible-chunks))
   (unless (unique-names-p hidden-chunks)
@@ -816,14 +816,14 @@ activations."
 
 (defun set-visible-mean (rbm)
   "Set NODES of the chunks in the visible layer to the means of their
-respective probability distribution assuming NODES contains the
+respective probability distributions, assuming NODES contains the
 activations."
   (hijack-means-to-activation rbm :visible)
   (map nil #'set-chunk-mean (visible-chunks rbm)))
 
 (defun set-hidden-mean (rbm)
   "Set NODES of the chunks in the hidden layer to the means of their
-respective probability distribution assuming NODES contains the
+respective probability distributions, assuming NODES contains the
 activations."
   (hijack-means-to-activation rbm :hidden)
   (map nil #'set-chunk-mean (hidden-chunks rbm))
@@ -869,8 +869,8 @@ the learning or the mean field is used instead.")
     :type (member nil :half-hearted t)
     :initarg :hidden-sampling
     :accessor hidden-sampling
-    :documentation "Controls whether hidden nodes are sampled during
-the learning or the mean field is used instead. :HALF-HEARTED, the
+    :documentation "Controls whether and how hidden nodes are sampled
+during the learning or mean field is used instead. :HALF-HEARTED, the
 default value, samples the hiddens but uses the hidden means to
 calculate the effect of the positive phase on the gradient.")
    (n-gibbs
