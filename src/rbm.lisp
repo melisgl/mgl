@@ -371,7 +371,8 @@ hidden + weights * visible. Visible = visible + weights^T * hidden.
 Looking directly at the underlying Lisp array \(MATLISP::STORE), it's
 all transposed.")))
 
-(defmethod initialize-instance :after ((cloud full-cloud) &key &allow-other-keys)
+(defmethod initialize-instance :after ((cloud full-cloud)
+                                       &key &allow-other-keys)
   (unless (slot-boundp cloud 'weights)
     (setf (slot-value cloud 'weights)
           (matlisp:make-real-matrix (chunk-size (hidden-chunk cloud))
@@ -601,7 +602,8 @@ A*B*VISIBLE."))
                         (loop for j of-type index upfrom 0 below c
                               for bi of-type index
                               upfrom (the! index (* i c)) do
-                              (incf (aref shared* j) (* v*i (aref b* bi))))))))))
+                              (incf (aref shared* j)
+                                    (* v*i (aref b* bi))))))))))
           (matlisp:gemm! (flt (if addp 1 -1)) h x
                          (flt 1) (reshape2 accumulator
                                            (matlisp:nrows a)

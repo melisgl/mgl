@@ -142,14 +142,15 @@
                         (let* ((expectations
                                 (make-array 12 :initial-element (flt 0)))
                                (inputs
-                                (loop for i below 4
-                                      append
-                                      (let* ((s (elt sample i))
-                                             (max (loop for x in s maximizing x))
-                                             (pos (position max s :test #'=)))
-                                        (setf (aref expectations (+ (* i 3) pos))
-                                              (flt 1))
-                                        s))))
+                                (loop
+                                 for i below 4
+                                 append
+                                 (let* ((s (elt sample i))
+                                        (max (loop for x in s maximizing x))
+                                        (pos (position max s :test #'=)))
+                                   (setf (aref expectations (+ (* i 3) pos))
+                                         (flt 1))
+                                   s))))
                           (loop for i upfrom input-start below input-end
                                 for j upfrom 0
                                 do (setf (aref inputs-nodes i) (elt inputs j)))
@@ -216,7 +217,8 @@
                                                expectations-start
                                                expectations-end))
                   (let* ((expectations (make-array 3 :initial-element (flt 0)))
-                         (inputs (let* ((max (loop for x in sample maximizing x))
+                         (inputs (let* ((max (loop for x in sample
+                                                   maximizing x))
                                         (pos (position max sample :test #'=)))
                                    (setf (aref expectations pos) (flt 1))
                                    sample)))

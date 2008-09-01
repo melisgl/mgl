@@ -142,11 +142,13 @@ only missing values does not change anything."))
     (setf (n-weight-uses-in-batch trainer)
           (make-array n-weights :element-type 'index :initial-element 0))))
 
-(defmethod initialize-trainer ((trainer normalized-batch-gd-trainer) segmentable)
+(defmethod initialize-trainer ((trainer normalized-batch-gd-trainer)
+                               segmentable)
   (call-next-method)
   (set-up-n-weight-uses trainer))
 
-(defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer) segmentable)
+(defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer)
+                               segmentable)
   (call-next-method)
   (set-up-n-weight-uses trainer))
 

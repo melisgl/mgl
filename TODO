@@ -60,3 +60,6 @@ Doesn't seem to speed up things.
    The wrappers should calculate cost and call matlisp if it is
    avaible.
 ** TODO float vector I/O for cmucl
+* examples
+** TODO movie review example
+** TODO netflix example

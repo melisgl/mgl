@@ -344,7 +344,8 @@ inits. The fourth is name of the `end' lump.")
            (weight-a-symbol (gensym))
            (shared-symbol (gensym))
            (linear-symbol (gensym))
-           (weight-base-name (cloud-weight-lump-name rbm-index cloud transposep))
+           (weight-base-name (cloud-weight-lump-name rbm-index cloud
+                                                     transposep))
            (weight-b-name (list weight-base-name :b))
            (weight-a-name (list weight-base-name :a))
            (shared-name (list
