@@ -144,7 +144,7 @@ the visible layer allows `conditional' RBMs."))
             (matlisp:make-real-matrix size max-n-stripes))
       (fill-chunk chunk (default-value chunk))
       (setf (slot-value chunk 'inputs)
-            (if (typep chunk 'constant-chunk)
+            (if (typep chunk 'conditioning-chunk)
                 nil
                 (matlisp:make-real-matrix size max-n-stripes))))))
 
@@ -535,7 +535,7 @@ A*B*VISIBLE."))
   (assert (typep rank '(integer 1)))
   (let ((shared (make-instance 'factored-cloud-shared-chunk
                                :size rank
-                               :name `(name cloud))))
+                               :name (list (name cloud) :shared))))
     (setf (slot-value cloud 'cloud-a)
           (make-instance 'full-cloud
                          :name (list (name cloud) :a)
@@ -599,11 +599,12 @@ A*B*VISIBLE."))
                   (do-stripes (visible-chunk)
                     (do-chunk (i visible-chunk)
                       (let ((v*i (aref v* i)))
-                        (loop for j of-type index upfrom 0 below c
-                              for bi of-type index
-                              upfrom (the! index (* i c)) do
-                              (incf (aref shared* j)
-                                    (* v*i (aref b* bi))))))))))
+                        (unless (zerop v*i)
+                          (loop for j of-type index upfrom 0 below c
+                                for bi of-type index
+                                upfrom (the! index (* i c)) do
+                                (incf (aref shared* j)
+                                      (* v*i (aref b* bi)))))))))))
           (matlisp:gemm! (flt (if addp 1 -1)) h x
                          (flt 1) (reshape2 accumulator
                                            (matlisp:nrows a)
@@ -631,12 +632,13 @@ A*B*VISIBLE."))
                   (do-stripes (visible-chunk)
                     (do-chunk (i visible-chunk)
                       (let ((v*i (* (flt (if addp 1 -1)) (aref v* i))))
-                        (loop for j of-type index upfrom 0 below c
-                              for acc-i of-type index
-                              upfrom (the! index
-                                           (+ start (the! index (* i c)))) do
-                              (incf (aref acc* acc-i)
-                                    (* v*i (aref shared* j)))))))))))))))
+                        (unless (zerop v*i)
+                          (loop for j of-type index upfrom 0 below c
+                                for acc-i of-type index
+                                upfrom (the! index
+                                             (+ start (the! index (* i c)))) do
+                                (incf (aref acc* acc-i)
+                                      (* v*i (aref shared* j))))))))))))))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
