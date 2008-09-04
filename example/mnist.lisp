@@ -44,7 +44,8 @@
 
 (in-package :mgl-example-mnist)
 
-(defparameter *mnist-dir* "/home/mega/mnist/"
+(defparameter *mnist-dir*
+  (merge-pathnames "mnist-data/" *example-dir*)
   "Set this to the directory where the uncompressed mnist files reside.")
 
 (defstruct image
@@ -509,7 +510,6 @@
 
 #|
 
-(setq *mnist-dir* "/home/mega/mnist/")
 (train-mnist)
 
 (train-mnist :load-dbn-p t)
