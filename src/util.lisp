@@ -196,8 +196,8 @@ possible.")
 
 (defun cost-of-gemm (a b job)
   (* (if (member job '(:nt :nn))
-         (matlisp:ncols a)
-         (matlisp:nrows a))
+         (matlisp:nrows a)
+         (matlisp:ncols a))
      (matlisp:number-of-elements b)))
 
 (defun use-blas-p (cost)
