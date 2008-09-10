@@ -4,11 +4,6 @@
 
 (defclass chunk ()
   ((name :initform (gensym) :initarg :name :reader name)
-   (inputs
-    :type (or matlisp:real-matrix null) :reader inputs
-    :documentation "This is where SET-INPUT saves the input for later
-use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
-CONSTANT-CHUNKS.")
    (nodes
     :type matlisp:real-matrix :reader nodes
     :documentation "A value for each node in the chunk. First,
@@ -17,6 +12,26 @@ probability distribution is calculated from the activation and finally
 \(optionally) a sample is taken from the probability distribution. All
 these values are stored in this vector. This is also where SET-INPUT
 is supposed to clamp the values.")
+   (inputs
+    :type (or matlisp:real-matrix null) :reader inputs
+    :documentation "This is where SET-INPUT saves the input for later
+use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
+CONSTANT-CHUNKS.")
+   (cache-static-activations-p
+    :initform nil
+    :initarg :cache-static-activations-p
+    :reader cache-static-activations-p
+    :documentation "Controls whether activations that do not change
+between SET-INPUT calls \(i.e. they come from conditioning chunks
+including biases) are cached.")
+   (static-activations-cached-p
+    :initform nil :accessor static-activations-cached-p)
+   (static-activations
+    :type (or matlisp:real-matrix null) :reader static-activations
+    :documentation "Of the same size as NODES. This is where
+activations coming from biases and conditioning chunks are between two
+SET-INPUT calls. Gets more useful with a lot of conditioning and more
+activations such as high N-GIBBS.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
@@ -24,9 +39,9 @@ is supposed to clamp the values.")
 layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that if
 it is non-NIL then N-STRIPES must be 1.")
    (default-value
-    :initform #.(flt 0) :initarg :default-value :type flt
-    :reader default-value
-    :documentation "Upon creation or resize the chunk's nodes get
+       :initform #.(flt 0) :initarg :default-value :type flt
+       :reader default-value
+       :documentation "Upon creation or resize the chunk's nodes get
 filled with this value."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
@@ -146,7 +161,11 @@ the visible layer allows `conditional' RBMs."))
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
                 nil
-                (matlisp:make-real-matrix size max-n-stripes))))))
+                (matlisp:make-real-matrix size max-n-stripes)))
+      (setf (slot-value chunk 'static-activations)
+            (if (cache-static-activations-p chunk)
+                (matlisp:make-real-matrix size max-n-stripes)
+                nil)))))
 
 (defmethod set-n-stripes (n-stripes (chunk chunk))
   (set-ncols (nodes chunk) n-stripes)
@@ -803,20 +822,40 @@ merged to DEFAULT-CLOUDS."
   "Set the chunks of TO-VISIBLE/HIDDEN layer of RBM to the activations
 calculated from the other layer's nodes. Skip chunks that don't need
 activations."
-  (cond ((eq :hidden to-visible/hidden)
-         (dolist (chunk (hidden-chunks rbm))
-           (unless (conditioning-chunk-p chunk)
-             (fill-chunk chunk #.(flt 0))))
-         (do-clouds (cloud rbm)
-           (unless (conditioning-chunk-p (hidden-chunk cloud))
-             (activate-cloud cloud to-visible/hidden))))
-        (t
-         (dolist (chunk (visible-chunks rbm))
-           (unless (conditioning-chunk-p chunk)
-             (fill-chunk chunk #.(flt 0))))
-         (do-clouds (cloud rbm)
-           (unless (conditioning-chunk-p (visible-chunk cloud))
-             (activate-cloud cloud to-visible/hidden))))))
+  (flet ((to-cache-p (chunk)
+           (and (cache-static-activations-p chunk)
+                (not (static-activations-cached-p chunk)))))
+    (multiple-value-bind (cloud-from-chunk cloud-to-chunk rbm-to-chunks)
+        (ecase to-visible/hidden
+          ((:hidden) (values #'visible-chunk #'hidden-chunk #'hidden-chunks))
+          ((:visible) (values #'hidden-chunk #'visible-chunk #'visible-chunks)))
+      ;; Zero activations or copy cached activations coming from
+      ;; conditioning chunks.
+      (dolist (chunk (funcall rbm-to-chunks rbm))
+        (unless (conditioning-chunk-p chunk)
+          (if (static-activations-cached-p chunk)
+              (copy-chunk-nodes chunk (static-activations chunk) (nodes chunk))
+              (fill-chunk chunk #.(flt 0)))))
+      ;; Calculate the activations coming from conditioning chunks if
+      ;; they are to be cached.
+      (do-clouds (cloud rbm)
+        (when (and (to-cache-p (funcall cloud-to-chunk cloud))
+                   (conditioning-chunk-p (funcall cloud-from-chunk cloud)))
+          (activate-cloud cloud to-visible/hidden)))
+      ;; Remember those.
+      (dolist (chunk (funcall rbm-to-chunks rbm))
+        (when (to-cache-p chunk)
+          (copy-chunk-nodes chunk (nodes chunk) (static-activations chunk))
+          (setf (static-activations-cached-p chunk) t)))
+      ;; By now chunks with STATIC-ACTIVATIONS-CACHED-P have the bias
+      ;; activations in NODES. Do the non-cached activations.
+      (do-clouds (cloud rbm)
+        (unless (or (conditioning-chunk-p (funcall cloud-to-chunk cloud))
+                    (and (static-activations-cached-p
+                          (funcall cloud-to-chunk cloud))
+                         (conditioning-chunk-p
+                          (funcall cloud-from-chunk cloud))))
+          (activate-cloud cloud to-visible/hidden))))))
 
 (defun set-visible-mean (rbm)
   "Set NODES of the chunks in the visible layer to the means of their

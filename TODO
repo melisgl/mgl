@@ -40,6 +40,9 @@
 ** DONE positive phase: if sample-hidden-p, then is it (* visible hidden-mean) or (* visible hidden-sample)?
    HIDDEN-SAMPLING parameter in RBM-TRAINER
 ** DONE temporal rbm
+** DONE calculate bias+conditioning activation only once per training example
+   - State "DONE"       [2008-09-10 Wed 15:00] \\
+     :CACHE-STATIC-ACTIVATIONS-P initarg to CHUNK
 * bp
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner

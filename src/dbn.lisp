@@ -42,15 +42,26 @@
         (set-input samples prev)
         (set-hidden-mean prev))))
   (setf (n-stripes rbm) (length samples))
-  (unwind-protect
-       ;; Do any clamping specific to this RBM.
-       (progn
-         (dolist (chunk (visible-chunks rbm))
-           (when (typep chunk 'temporal-chunk)
-             (maybe-use-remembered chunk)))
-         (call-next-method))
-    ;; Then remember the inputs.
-    (nodes->inputs rbm)))
+  (flet ((clear-static-activations ()
+           (dolist (chunk (visible-chunks rbm))
+             (setf (static-activations-cached-p chunk) nil))
+           (dolist (chunk (hidden-chunks rbm))
+             (setf (static-activations-cached-p chunk) nil))))
+    (unwind-protect
+         ;; Do any clamping specific to this RBM.
+         (progn
+           (dolist (chunk (visible-chunks rbm))
+             (when (typep chunk 'temporal-chunk)
+               (maybe-use-remembered chunk)))
+           ;; STATIC-ACTIVATIONS-CACHED-P is cleared only before
+           ;; (CALL-NEXT-METHOD), therefore it is expected that it
+           ;; does not activate the rbm (as in SET-HIDDEN-MEAN,
+           ;; SET-VISIBLE-MEAN) before writing the final values to all
+           ;; conditioning chunks.
+           (clear-static-activations)
+           (call-next-method))
+      ;; Then remember the inputs.
+      (nodes->inputs rbm))))
 
 (defmethod set-input (samples (dbn dbn))
   (set-input samples (last1 (rbms dbn))))
