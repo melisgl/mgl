@@ -19,11 +19,12 @@
 ** DONE factored RBM: weight matrix is A*B
 ** TODO semi-restricted (connections between visibles)
 ** MAYBE higher order rbm
-** MAYBE training with conjugate gradient: is it possible to calculate
-   the cost function? Not quite, but there two ways out: 1) rbm
-   importance sampling paper to estimate the partition function 2)
-   constrain features to be sparse and don't use a partition function
-   at all.
+** MAYBE training with conjugate gradient
+   Is it possible to calculate the cost function? Not quite, but there
+   are two ways out: 1) rbm importance sampling paper to estimate the
+   partition function 2) constrain features to be sparse and don't use
+   a partition function at all.
+** MAYBE training with SMD
 ** DONE sparsity constraint
    possible with WEIGHT-PENALTY
 ** MAYBE generic support for exponential family distributions

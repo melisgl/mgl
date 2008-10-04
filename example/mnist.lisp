@@ -15,7 +15,7 @@
 ;;;; converted from the upward half of the DBN. The new, 2000->10
 ;;;; connections in the backprop network are trained for a few batches
 ;;;; and finally all weights are trained together. Takes less than two
-;;;; days to train on a 2.16GHz Core Duo and reaches ~98.96% accuracy.
+;;;; days to train on a 2.16GHz Core Duo and reaches ~98.86% accuracy.
 ;;;;
 ;;;; During DBN training the DBN TEST RMSE is the RMSE of the mean
 ;;;; field reconstruction of the test images while TRAINING RMSE is of
@@ -331,15 +331,14 @@
   (let ((n-inputs (n-inputs trainer))
         (ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
-    (when (zerop (mod n-inputs 100))
-      (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
-               (or (get-error ce-counter) #.(flt 0))
-               n-inputs)
-      (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-               (* 100 (- 1 (or (get-error counter) #.(flt 0))))
-               n-inputs)
-      (reset-counter ce-counter)
-      (reset-counter counter))))
+    (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
+             (or (get-error ce-counter) #.(flt 0))
+             n-inputs)
+    (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
+             (* 100 (- 1 (or (get-error counter) #.(flt 0))))
+             n-inputs)
+    (reset-counter ce-counter)
+    (reset-counter counter)))
 
 (defmethod log-test-error (trainer (bpn mnist-bpn))
   (multiple-value-bind (e ce)
