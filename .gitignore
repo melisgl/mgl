@@ -1,3 +1,5 @@
 *~
 *.fasl
 example/mgl-example.log
+example/mnist-data
+example/review-polarity-data
