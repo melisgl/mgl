@@ -5,6 +5,7 @@
            #:log-msg
            #:nshuffle-vector
            #:make-random-generator
+           #:log-likelihood-ratio
            #:periodic-fn
            #:call-periodic-fn
            #:call-periodic-fn!
@@ -24,3 +25,7 @@
         #:mgl-unroll-dbn #:mgl-example-util)
   (:export #:*mnist-dir*
            #:train-mnist))
+
+(cl:defpackage #:mgl-example-movie-review
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-rbm #:mgl-bp
+        #:mgl-unroll-dbn #:mgl-example-util))

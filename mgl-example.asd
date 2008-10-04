@@ -9,5 +9,6 @@
                 :components ((:file "package")
                              (:file "util")
                              (:file "spiral")
-                             (:file "mnist"))))
-  :depends-on (#:mgl))
+                             (:file "mnist")
+                             (:file "movie-review"))))
+  :depends-on (#:mgl #:cl-ppcre))

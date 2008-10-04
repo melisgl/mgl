@@ -65,5 +65,5 @@ Doesn't seem to speed up things.
    avaible.
 ** TODO float vector I/O for cmucl
 * examples
-** TODO movie review example
+** DONE movie review example
 ** TODO netflix example
