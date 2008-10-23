@@ -36,7 +36,8 @@
    When the accumulator's start is not zero, there are two ways to
    fail: a) go to the matlisp branch and put it into the wrong place
    as if start were 0, b) use the lisp branch and fail if there are
-   multiple stripes.
+   multiple stripes. Currently, non-zero start with several stripes
+   runs into an assert.
 ** DONE normalized-chunk: scale should be per stripe
 ** DONE positive phase: if sample-hidden-p, then is it (* visible hidden-mean) or (* visible hidden-sample)?
    HIDDEN-SAMPLING parameter in RBM-TRAINER
@@ -64,6 +65,8 @@ Doesn't seem to speed up things.
    The wrappers should calculate cost and call matlisp if it is
    avaible.
 ** TODO float vector I/O for cmucl
+** MAYBE support more lisps
+   Matlisp only supports cmucl, sbcl and allegro.
 * examples
 ** DONE movie review example
 ** TODO netflix example
