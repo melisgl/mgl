@@ -1,5 +1,4 @@
 # -*- mode: org -*-
-#+STARTUP: lognotestate
 #+STARTUP: content
 #+SEQ_TODO: MAYBE(m) TODO(t) NEXT(n) STARTED(s) WAITING(w) | DONE(d) CANCELLED(c)
 #+STARTUP: hidestars
@@ -9,8 +8,9 @@
 ** WAITING clarify conjugate gradient license
    - State "WAITING"    [2008-07-21 Mon 21:53] \\
      Contacting Carl Rasmussen by email
-** TODO implement float-nan-p, float-infinity-p for allegro
-   Can't see how.
+** DONE portably implement float nan, inf handling
+   There is no way to do traps in allegro so let's just catch
+   ARITHMETIC-ERROR at some strategically chosen places.
 ** DONE failed line searches can still change the weights
    documented
 * rbm

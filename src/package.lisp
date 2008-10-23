@@ -1,9 +1,6 @@
 (cl:defpackage :mgl-util
   (:use #:common-lisp)
-  (:export #:without-float-traps
-           #:float-infinity-p
-           #:float-nan-p
-           #:*use-blas*
+  (:export #:*use-blas*
            #:use-blas-p
            #:cost-of-copy
            #:cost-of-fill

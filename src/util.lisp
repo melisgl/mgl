@@ -1,30 +1,5 @@
 (in-package :mgl-util)
 
-;;;; Floats
-
-(defmacro without-float-traps (&body body)
-  #+sbcl
-  `(sb-int:with-float-traps-masked
-       (:underflow :overflow :inexact :invalid :divide-by-zero)
-     ,@body)
-  #+cmu
-  `(ext:with-float-traps-masked
-       (:underflow :overflow :inexact :invalid :divide-by-zero)
-     ,@body)
-  #-(or sbcl cmu)
-  `(progn ,@body))
-
-(defun float-infinity-p (x)
-  #+sbcl (sb-ext:float-infinity-p x)
-  #+cmu (ext:float-infinity-p x)
-  #-(or sbcl cmu) (declare (ignore x)))
-
-(defun float-nan-p (x)
-  #+sbcl (sb-ext:float-nan-p x)
-  #+cmu (ext:float-nan-p x)
-  #-(or sbcl cmu) (/= x x))
-
-
 ;;;; Macrology
 
 (defmacro with-gensyms (vars &body body)
