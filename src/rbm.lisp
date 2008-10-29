@@ -39,9 +39,9 @@ activations such as high N-GIBBS.")
 layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that if
 it is non-NIL then N-STRIPES must be 1.")
    (default-value
-       :initform #.(flt 0) :initarg :default-value :type flt
-       :reader default-value
-       :documentation "Upon creation or resize the chunk's nodes get
+    :initform #.(flt 0) :initarg :default-value :type flt
+    :reader default-value
+    :documentation "Upon creation or resize the chunk's nodes get
 filled with this value."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
@@ -86,15 +86,22 @@ of nodes of the same type."))
             (ignore-errors (chunk-max-n-stripes chunk))))
   chunk)
 
+;;; Currently the lisp code handles only the single stripe case and
+;;; blas cannot deal with no missing values.
+(defun check-stripes (chunk)
+  (let ((indices-present (indices-present chunk)))
+    (assert (or (null indices-present)
+                (= 1 (chunk-n-stripes chunk))))))
+
 (defun use-blas-on-chunk-p (cost chunk)
-  (assert (or (null (indices-present chunk))
-              (= 1 (chunk-n-stripes chunk))))
-  (and
-   ;; several stripes or cost is high => blas
-   (or (< 1 (chunk-n-stripes chunk))
-       (use-blas-p cost))
-   ;; there is no missing value support in blas
-   (null (indices-present chunk))))
+  (check-stripes chunk)
+  (cond ((indices-present chunk)
+         ;; there is no missing value support in blas
+         nil)
+        (t
+         ;; several stripes or cost is high => blas
+         (or (< 1 (chunk-n-stripes chunk))
+             (use-blas-p cost)))))
 
 (defun ->chunk (chunk-designator chunks)
   (if (typep chunk-designator 'chunk)
@@ -107,9 +114,7 @@ of nodes of the same type."))
 (defmacro do-stripes ((chunk &optional (stripe (gensym))) &body body)
   (with-gensyms (%chunk)
     `(let ((,%chunk ,chunk))
-       (assert (locally (declare (optimize (speed 1)))
-                 (or (not (indices-present ,%chunk))
-                     (= 1 (chunk-n-stripes ,%chunk)))))
+       (check-stripes ,%chunk)
        (dotimes (,stripe (chunk-n-stripes ,%chunk))
          (let ((*current-stripe* ,stripe))
            ,@body)))))
@@ -132,9 +137,9 @@ of nodes of the same type."))
                            (the index (+ ,%size (* *current-stripe* ,%size))))
                    do ,@body))))))
 
-(defun fill-chunk (chunk value)
+(defun fill-chunk (chunk value &key allp)
   (declare (type flt value))
-  (if (use-blas-on-chunk-p (cost-of-fill (nodes chunk)) chunk)
+  (if (or allp (use-blas-on-chunk-p (cost-of-fill (nodes chunk)) chunk))
       (matlisp:fill-matrix (nodes chunk) value)
       (let ((nodes (storage (nodes chunk))))
         (declare (optimize (speed 3) #.*no-array-bounds-check*))
@@ -157,7 +162,7 @@ the visible layer allows `conditional' RBMs."))
                  (= max-n-stripes (chunk-max-n-stripes chunk)))
       (setf (slot-value chunk 'nodes)
             (matlisp:make-real-matrix size max-n-stripes))
-      (fill-chunk chunk (default-value chunk))
+      (fill-chunk chunk (default-value chunk) :allp t)
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
                 nil
@@ -190,7 +195,7 @@ opposing layer."))
 
 (defmethod initialize-instance :after ((chunk constant-chunk)
                                        &key &allow-other-keys)
-  (fill-chunk chunk (default-value chunk)))
+  (fill-chunk chunk (default-value chunk) :allp t))
 
 (defclass sigmoid-chunk (chunk) ()
   (:documentation "Nodes in a sigmoid chunk have two possible samples:
@@ -427,7 +432,7 @@ all transposed.")))
     `(let* ((,%cloud ,cloud)
             (,%hidden-chunk-size (chunk-size (hidden-chunk ,%cloud))))
        (declare (type index ,%hidden-chunk-size))
-       (assert (= 1 (chunk-n-stripes (visible-chunk ,%cloud))))
+       (check-stripes (visible-chunk ,%cloud))
        (do-stripes ((visible-chunk ,%cloud))
          (do-chunk (,visible-index (visible-chunk ,%cloud))
            (let ((,%offset (the! index
@@ -599,6 +604,7 @@ A*B*VISIBLE."))
          (shared (factored-cloud-shared-chunk cloud))
          (v* (storage v))
          (shared* (storage (nodes shared))))
+    (check-stripes visible-chunk)
     (with-segment-gradient-accumulator ((start accumulator accumulator2)
                                         ((cloud-a cloud) trainer))
       (when (and accumulator start)
@@ -608,22 +614,20 @@ A*B*VISIBLE."))
                                accumulator
                                accumulator2)))
           (if (and (zerop start)
-                   (null (indices-present (visible-chunk cloud))))
+                   (null (indices-present visible-chunk)))
               (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
-              (progn
-                (assert (= 1 (n-stripes visible-chunk)))
-                (let ((b* (storage b)))
-                  (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                  (matlisp:fill-matrix x (flt 0))
-                  (do-stripes (visible-chunk)
-                    (do-chunk (i visible-chunk)
-                      (let ((v*i (aref v* i)))
-                        (unless (zerop v*i)
-                          (loop for j of-type index upfrom 0 below c
-                                for bi of-type index
-                                upfrom (the! index (* i c)) do
-                                (incf (aref shared* j)
-                                      (* v*i (aref b* bi)))))))))))
+              (let ((b* (storage b)))
+                (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                (matlisp:fill-matrix x (flt 0))
+                (do-stripes (visible-chunk)
+                  (do-chunk (i visible-chunk)
+                    (let ((v*i (aref v* i)))
+                      (unless (zerop v*i)
+                        (loop for j of-type index upfrom 0 below c
+                              for bi of-type index
+                              upfrom (the! index (* i c)) do
+                              (incf (aref shared* j)
+                                    (* v*i (aref b* bi))))))))))
           (matlisp:gemm! (flt (if addp 1 -1)) h x
                          (flt 1) (reshape2 accumulator
                                            (matlisp:nrows a)
@@ -644,20 +648,18 @@ A*B*VISIBLE."))
                                                (matlisp:nrows b)
                                                (matlisp:ncols b))
                              :nt)
-              (progn
-                (assert (= 1 (n-stripes visible-chunk)))
-                (let ((acc* (storage accumulator)))
-                  (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                  (do-stripes (visible-chunk)
-                    (do-chunk (i visible-chunk)
-                      (let ((v*i (* (flt (if addp 1 -1)) (aref v* i))))
-                        (unless (zerop v*i)
-                          (loop for j of-type index upfrom 0 below c
-                                for acc-i of-type index
-                                upfrom (the! index
-                                             (+ start (the! index (* i c)))) do
-                                (incf (aref acc* acc-i)
-                                      (* v*i (aref shared* j))))))))))))))))
+              (let ((acc* (storage accumulator)))
+                (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                (do-stripes (visible-chunk)
+                  (do-chunk (i visible-chunk)
+                    (let ((v*i (* (flt (if addp 1 -1)) (aref v* i))))
+                      (unless (zerop v*i)
+                        (loop for j of-type index upfrom 0 below c
+                              for acc-i of-type index
+                              upfrom (the! index
+                                           (+ start (the! index (* i c)))) do
+                              (incf (aref acc* acc-i)
+                                    (* v*i (aref shared* j)))))))))))))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
