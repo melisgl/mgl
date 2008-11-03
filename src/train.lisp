@@ -43,7 +43,6 @@ to cause a change in the learner being trained."))
   ((sampler :initarg :sampler :accessor sampler)))
 
 (defmethod finishedp ((sampler function-sampler))
-  (declare (ignore sampler))
   nil)
 
 (defmethod sample ((sampler function-sampler))
