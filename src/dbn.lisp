@@ -8,7 +8,7 @@
 (defmethod n-stripes ((dbn dbn))
   (n-stripes (first (rbms dbn))))
 
-(defmethod set-n-stripes ((dbn dbn) n-stripes)
+(defmethod set-n-stripes (n-stripes (dbn dbn))
   (dolist (rbm (rbms dbn))
     (setf (n-stripes rbm) n-stripes)))
 
