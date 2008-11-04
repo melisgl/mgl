@@ -137,8 +137,6 @@
              rbm))
     dbn))
 
-(defclass spiral-bpn (bpn) ())
-
 (defun train-spiral-bpn (dbn &key (max-n-stripes 1))
   (multiple-value-bind (defs clamps inits) (unroll-dbn dbn)
     (declare (ignore clamps))
