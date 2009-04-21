@@ -115,47 +115,63 @@ contributed to SUM-ERROR.")))
 
 
 ;;;; Stripes
+;;;;
+;;;; For batch processing, objects (typically inputs or objects that
+;;;; hold [intermediate] results of a computation) can be striped.
+;;;; Each stripe is identified by an index in [0,MAX-N-STRIPES-1].
 
-(defgeneric max-n-stripes (learner)
-  (:documentation "The number of examples with which the learner is
+(defgeneric max-n-stripes (object)
+  (:documentation "The number of stripes with which the OBJECT is
 capable of dealing simultaneously."))
 
 (defgeneric set-max-n-stripes (max-n-stripes object)
   (:documentation "Allocate the necessary stuff to allow for N-STRIPES
-number of examples to be worked with simultaneously."))
+number of stripes to be worked with simultaneously in OBJECT."))
 
 (defsetf max-n-stripes (object) (store)
   `(set-max-n-stripes ,store ,object))
 
-(defgeneric n-stripes (learner)
-  (:documentation "The number of examples with which the learner is
-currently dealing."))
+(defgeneric n-stripes (object)
+  (:documentation "The number of stripes currently present in OBJECT.
+This is at most MAX-N-STRIPES."))
 
 (defgeneric set-n-stripes (n-stripes object)
   (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
-that are in use."))
+that are in use in OBJECT."))
 
 (defsetf n-stripes (object) (store)
   `(set-n-stripes ,store ,object))
 
-(defgeneric stripe-start (stripe obj))
-(defgeneric stripe-end (stripe obj))
+(defgeneric stripe-start (stripe object)
+  (:documentation "Return the start of STRIPE in OBJECT, that's
+usually an index into some kind of storage that backs OBJECT."))
+
+(defgeneric stripe-end (stripe object)
+  (:documentation "Return the end of STRIPE in OBJECT, that's usually
+an index into some kind of storage that backs OBJECT."))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun stripe-binding (stripe obj start &optional end)
-    (with-gensyms (%stripe %obj)
+  (defun stripe-binding (stripe object start &optional end)
+    (with-gensyms (%stripe %object)
       `((,%stripe ,stripe)
-        (,%obj ,obj)
-        (,start (the index (stripe-start ,%stripe ,%obj)))
-        ,@(when end `((,end (the index (stripe-end ,%stripe ,%obj)))))))))
+        (,%object ,object)
+        (,start (the index (stripe-start ,%stripe ,%object)))
+        ,@(when end `((,end (the index (stripe-end ,%stripe ,%object)))))))))
 
 (defmacro with-stripes (specs &body body)
+  "Bind start and optionally end indices of belonging to stripes in
+striped objects.
+
+ (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
+               (STRIPE2 OBJECT2 START2 END2)
+               ...)
+  ...)"
   `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
                   specs)
      ,@body))
 
 
-;;;; Various accessor type generic functions share by packages.
+;;;; Various accessor type generic functions shared by packages.
 
 (defgeneric name (object))
 (defgeneric size (object))
