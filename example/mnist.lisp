@@ -10,12 +10,13 @@
 ;;;; gunzip them. Set *MNIST-DIR* to point to their directory and call
 ;;;; TRAIN-MNIST.
 ;;;;
-;;;; A 784-500-500-2000 deep belief network is trained then 10 softmax
-;;;; units are attached to the top layer of backpropagation network
-;;;; converted from the upward half of the DBN. The new, 2000->10
-;;;; connections in the backprop network are trained for a few batches
-;;;; and finally all weights are trained together. Takes less than two
-;;;; days to train on a 2.16GHz Core Duo and reaches ~98.86% accuracy.
+;;;; A 784-500-500-2000 deep belief network is trained, then 10
+;;;; softmax units are attached to the top layer of the
+;;;; backpropagation network converted from the top half of the DBN.
+;;;; The new, 2000->10 connections in the backprop network are trained
+;;;; for a few batches and finally all weights are trained together.
+;;;; Takes less than two days to train on a 2.16GHz Core Duo and
+;;;; reaches ~98.86% accuracy.
 ;;;;
 ;;;; During DBN training the DBN TEST RMSE is the RMSE of the mean
 ;;;; field reconstruction of the test images while TRAINING RMSE is of

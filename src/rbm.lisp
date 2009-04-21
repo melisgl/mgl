@@ -980,7 +980,7 @@ called with the same parameters."
       (accumulate-cloud-statistics cloud trainer t))))
 
 (defgeneric positive-phase (trainer rbm)
-  (:method (trainer rbm)
+  (:method ((trainer rbm-trainer) rbm)
     (set-hidden-mean rbm)
     (ecase (hidden-sampling trainer)
       ((nil) (accumulate-positive-phase-statistics trainer rbm))
