@@ -3,9 +3,6 @@
   (:export #:*example-dir*
            #:time->string
            #:log-msg
-           #:nshuffle-vector
-           #:make-random-generator
-           #:log-likelihood-ratio
            #:periodic-fn
            #:call-periodic-fn
            #:call-periodic-fn!

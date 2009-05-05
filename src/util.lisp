@@ -32,7 +32,7 @@ propagate to the two branches allowing them to be more optimized."
        (progn ,@body)))
 
 
-;;;; Misc
+;;;; Types
 
 (eval-when (:compile-toplevel :load-toplevel)
   (deftype flt () 'double-float)
@@ -42,7 +42,15 @@ propagate to the two branches allowing them to be more optimized."
   (defun flt (x)
     (coerce x 'flt))
   (deftype index () '(integer 0 #.(1- array-total-size-limit)))
-  (deftype index-vector () '(simple-array index (*)))
+  (deftype index-vector () '(simple-array index (*))))
+
+(defun make-flt-array (dimensions)
+  (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
+
+
+;;;; Declarations
+
+(eval-when (:compile-toplevel :load-toplevel)
   (defparameter *no-array-bounds-check*
     #+sbcl '(sb-c::insert-array-bounds-checks 0)
     ;; (SAFETY 0) is too coarse, avoid warnings by using the
@@ -54,9 +62,9 @@ propagate to the two branches allowing them to be more optimized."
     #+cmu ext:truly-the
     #-(or sbcl cmu) the
     ,@args))
+
 
-(defun make-flt-array (dimensions)
-  (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
+;;;; Misc
 
 (defun split-plist (list keys)
   (let ((known ())
@@ -69,9 +77,6 @@ propagate to the two branches allowing them to be more optimized."
                     (push key unknown)
                     (push value unknown))))
     (values (reverse known) (reverse unknown))))
-
-(defun select-random-element (seq)
-  (elt seq (random (length seq))))
 
 (defmacro while (test &body body)
   `(loop while ,test do (progn ,@body)))
@@ -100,9 +105,31 @@ propagate to the two branches allowing them to be more optimized."
     `(lambda (&rest ,args)
        (declare (ignore ,args))
        ,@body)))
+
+(defun nshuffle-vector (vector)
+  "Shuffle a vector in place using Fisher-Yates algorithm."
+  (loop for idx downfrom (1- (length vector)) to 1
+        for other = (random (1+ idx))
+        do (unless (= idx other)
+             (rotatef (aref vector idx) (aref vector other))))
+  vector)
+
+(defun make-random-generator (vector)
+  "Return a function that returns elements of VECTOR in random order
+without end. When there are no more elements, start over with a
+different random order."
+  (let ((vector (copy-seq (coerce vector 'vector)))
+        (l (length vector))
+        (n 0))
+    (lambda ()
+      (when (zerop n)
+        (setq vector (nshuffle-vector vector)))
+      (prog1
+          (aref vector n)
+        (setf n (mod (1+ n) l))))))
 
 
-;;;; Random math
+;;;; Math
 
 (declaim (inline sigmoid))
 (defun sigmoid (x)
@@ -152,6 +179,28 @@ propagate to the two branches allowing them to be more optimized."
       (incf k)
       (setq p (* p (random #.(flt 1)))))
     (1- k)))
+
+(defun select-random-element (seq)
+  (elt seq (random (length seq))))
+
+(defun log-likelihood-ratio (k1 n1 k2 n2)
+  "See \"Accurate Methods for the Statistics of Surprise and
+Coincidence\" by Ted Dunning \(http://citeseer.ist.psu.edu/29096.html).
+
+All classes must have non-zero counts, that is, K1, N1-K1, K2, N2-K2
+are positive integers. To ensure this - and also as kind of prior -
+add a small number such as 1 to K1, K2 and 2 to N1, N2 before
+calling."
+  (flet ((l (p k n)
+           (+ (* k (log p))
+              (* (- n k) (log (- 1 p))))))
+    (let ((p1 (/ k1 n1))
+          (p2 (/ k2 n2))
+          (p (/ (+ k1 k2) (+ n1 n2))))
+      (+ (- (l p k1 n1))
+         (- (l p k2 n2))
+         (l p1 k1 n1)
+         (l p2 k2 n2)))))
 
 
 ;;;; BLAS support
@@ -213,7 +262,7 @@ possible.")
     sum))
 
 
-;;;; float vector I/O
+;;;; Float vector I/O
 
 (deftype single-float-vector () '(simple-array single-float (*)))
 (deftype double-float-vector () '(simple-array double-float (*)))

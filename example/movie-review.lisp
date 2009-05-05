@@ -281,8 +281,8 @@
                    (assert (= count (+ neg-count pos-count)))
                    (when (< 2 count)
                      (let ((llr (log-likelihood-ratio
-                                 pos-count n-poss
-                                 neg-count n-negs)))
+                                 (+ 1 pos-count) (+ 2 n-poss)
+                                 (+ 1 neg-count) (+ 2 n-negs))))
                        (vector-push-extend (list feature llr
                                                  pos-count neg-count)
                                            llrs)))))
