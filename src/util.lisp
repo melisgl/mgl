@@ -127,6 +127,74 @@ different random order."
       (prog1
           (aref vector n)
         (setf n (mod (1+ n) l))))))
+
+(defun break-seq (fractions seq)
+  "Split SEQ into a number of subsequences. XXX is either a positive
+integer or a list of non-negative real numbers. If XXX is a positive
+integer then return a list of that many subsequences of equal size
+\(bar rounding errors), else split SEQ into subsequences, where the
+length of subsequence I is proportional to element I of FRACTIONS:
+
+  (BREAK-SEQ '(2 3) '(0 1 2 3 4 5 6 7 8 9))
+    => ((0 1 2 3) (4 5 6 7 8 9))"
+  (let ((length (length seq)))
+    (if (numberp fractions)
+        (let ((fraction-size (/ length fractions)))
+          (loop for fraction below fractions
+                collect (subseq seq
+                                (floor (* fraction fraction-size))
+                                (floor (* (1+ fraction) fraction-size)))))
+        (let ((sum-fractions (loop for x in fractions sum x))
+              (n-fractions (length fractions)))
+          (loop with sum = 0
+                for fraction in fractions
+                for i upfrom 0
+                collect (subseq seq
+                                (floor (* (/ sum sum-fractions)
+                                          length))
+                                ;; We want to partition SEQ: elements
+                                ;; must not be lost or duplicated. Use
+                                ;; INCF, because float precision in an
+                                ;; expression and in a variable may be
+                                ;; different.
+                                (if (= i (1- n-fractions))
+                                    length
+                                    (floor (* (/ (incf sum fraction)
+                                                 sum-fractions)
+                                              length)))))))))
+
+(defun collect-distinct (seq &key (key #'identity) (test #'eql))
+  (let ((result ()))
+    (map nil
+         (lambda (x)
+           (pushnew (funcall key x) result :test test))
+         seq)
+    (nreverse result)))
+
+(defun stratified-split (fractions seq &key (key #'identity) (test #'eql))
+  "Similar to BREAK-SEQ, but also makes sure that keys are equally
+distributed among the paritions. It can be useful for classification
+tasks to partition the data set while keeping the distribution of
+classes the same."
+  (let ((keys (collect-distinct seq :key key :test test)))
+    (if (zerop (length keys))
+        ()
+        (let ((per-key-splits
+               (loop for k in keys
+                     collect
+                     (break-seq fractions
+                                (remove-if-not (lambda (x)
+                                                 (funcall test k
+                                                          (funcall key x)))
+                                               seq)))))
+          (loop for i below (length (elt per-key-splits 0))
+                collect (apply #'concatenate
+                               (if (listp seq)
+                                   'list
+                                   `(vector ,(array-element-type seq)))
+                               (mapcar (lambda (splits)
+                                         (elt splits i))
+                                       per-key-splits)))))))
 
 
 ;;;; Math

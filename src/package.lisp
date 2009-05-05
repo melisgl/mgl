@@ -26,6 +26,8 @@
    #:repeatedly
    #:nshuffle-vector
    #:make-random-generator
+   #:break-seq
+   #:stratified-split
    ;; Math
    #:sigmoid
    #:try-chance

@@ -1,4 +1,4 @@
-(in-package :mgl-util)
+(in-package :mgl-test)
 
 (defun test-confusion-matrix ()
   (let ((m (make-instance 'confusion-matrix)))
