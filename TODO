@@ -67,6 +67,8 @@ Doesn't seem to speed up things.
 ** TODO float vector I/O for cmucl
 ** MAYBE support more lisps
    Matlisp only supports cmucl, sbcl and allegro.
+** TODO optimize the missing value case (SSE?)
+** TODO lookup table based exp/sigmoid
 * examples
 ** DONE movie review example
 ** TODO netflix example
