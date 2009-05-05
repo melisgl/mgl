@@ -591,7 +591,6 @@
    (counter :initform (make-instance 'error-counter) :reader counter)))
 
 (defmethod log-training-error (trainer (bpn mr-bpn))
-  (declare (ignore bpn))
   (let ((n-inputs (n-inputs trainer))
         (ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))

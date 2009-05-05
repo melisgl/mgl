@@ -78,7 +78,6 @@
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error (trainer (bpn spiral-bpn))
-  (declare (ignore bpn))
   (let ((n-inputs (n-inputs trainer))
         (counter (counter trainer)))
     (log-msg "RMSE: ~,5F (~D)~%" (or (get-error counter) #.(flt 0)) n-inputs)
