@@ -34,12 +34,26 @@
            #:reshape2
            #:set-ncols
            #:sum-elements
+           ;; I/O 
            #:read-single-float-vector
            #:write-single-float-vector
            #:read-double-float-vector
            #:write-double-float-vector
            #:write-weights
-           #:read-weights)
+           #:read-weights
+           ;; Printing
+           #:print-table
+           ;; Confusion matrix
+           confusion-matrix
+           sort-confusion-classes
+           confusion-class-name
+           confusion-count
+           incf-confusion-count
+           map-confusion-matrix
+           confusion-matrix-classes
+           confusion-matrix-accuracy
+           confusion-matrix-precision
+           confusion-matrix-recall)
   (:documentation "Simple utilities, types."))
 
 (cl:defpackage :mgl-train

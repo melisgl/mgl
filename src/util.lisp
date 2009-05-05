@@ -313,3 +313,28 @@ possible.")
 
 (defgeneric read-weights (object stream)
   (:documentation "Read the weights of OBJECT from STREAM."))
+
+
+;;;; Printing
+
+(defun print-table (list &key (stream t))
+  (unless (endp list)
+    (format stream "~&")
+    (let* ((n-columns (length (first list)))
+           (column-widths (loop for column below n-columns
+                                collect
+                                (loop for row in list
+                                      maximizing
+                                      (length
+                                       (princ-to-string (elt row column)))))))
+      (loop for row in list
+            do (loop for i below n-columns
+                     for column in row
+                     for width in column-widths
+                     do (let ((s (princ-to-string column)))
+                          (loop repeat (- width (length s))
+                                do (format stream " "))
+                          (format stream "~A" s)
+                          (when (< (1+ i) n-columns)
+                            (format stream " | "))))
+            (terpri stream)))))
