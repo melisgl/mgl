@@ -54,16 +54,15 @@
    ;; Printing
    #:print-table
    ;; Confusion matrix
-   confusion-matrix
-   sort-confusion-classes
-   confusion-class-name
-   confusion-count
-   incf-confusion-count
-   map-confusion-matrix
-   confusion-matrix-classes
-   confusion-matrix-accuracy
-   confusion-matrix-precision
-   confusion-matrix-recall)
+   #:confusion-matrix
+   #:sort-confusion-classes
+   #:confusion-class-name
+   #:confusion-count
+   #:map-confusion-matrix
+   #:confusion-matrix-classes
+   #:confusion-matrix-accuracy
+   #:confusion-matrix-precision
+   #:confusion-matrix-recall)
   (:documentation "Simple utilities, types."))
 
 (cl:defpackage :mgl-train

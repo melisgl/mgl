@@ -23,9 +23,9 @@ purposes.")
   (:method ((matrix confusion-matrix) target prediction)
     (gethash (cons target prediction) (counts matrix) 0)))
 
-(defgeneric incf-confusion-count (matrix target prediction &optional n)
-  (:method ((matrix confusion-matrix) target prediction &optional (n 1))
-    (incf (gethash (cons target prediction) (counts matrix) 0) n)))
+(defgeneric (setf confusion-count) (count matrix target prediction)
+  (:method (count (matrix confusion-matrix) target prediction)
+    (setf (gethash (cons target prediction) (counts matrix)) count)))
 
 (defgeneric map-confusion-matrix (fn matrix)
   (:documentation "Call FN with TARGET, PREDICTION, COUNT paramaters

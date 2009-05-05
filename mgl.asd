@@ -23,6 +23,7 @@
                                            (:file "matlisp-impl")))
                              (:file "package")
                              (:file "util")
+                             (:file "confusion-matrix")
                              (:file "train")
                              (:file "segment")
                              (:file "gradient-descent")
