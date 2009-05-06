@@ -118,7 +118,6 @@
 (defparameter *default-word-scanner*
   (cl-ppcre:create-scanner "\\b([^\\s]+)\\b"))
 
-
 (defun map-words (function string &key
                   (word-scanner *default-word-scanner*)
                   (n-grams *n-grams*))
@@ -154,6 +153,9 @@
                      ("simply" "why" "0/4"))))))
 
 (test-map-words)
+
+(defun map-story-words (fn story)
+  (map-words fn (story-string story)))
 
 
 ;;;; Sampling, clamping
@@ -193,105 +195,36 @@
     ((0) -1)
     ((1) 1)))
 
-(defun encode (story mapper words &key (type :binary))
-  (assert (member type '(:binary :frequency
-                         :normalized-binary :normalized-frequency)))
-  (let ((v (make-array 20 :adjustable t :fill-pointer 0)))
-    (funcall mapper
-             (lambda (word)
-               (let ((index-and-value (gethash word words)))
-                 (when index-and-value
-                   (destructuring-bind (index . value) index-and-value
-                     ;; let's work with counts:
-                     (setq value #.(flt 1))
-                     (let ((pos (position index v :key #'car)))
-                       (if pos
-                           (incf (cdr (aref v pos)) value)
-                           (vector-push-extend (cons index value) v)))))))
-             story)
-    (when (member type '(:binary :normalized-binary))
-      (loop for x across v
-            do (setf (cdr x) #.(flt 1))))
-    (when (member type '(:normalized-binary :normalized-frequency))
-      (let ((sum (loop for x across v summing (cdr x))))
-        (map-into v (lambda (x)
-                      (cons (car x)
-                            (/ (cdr x) sum)))
-                  v)))
-    (sort v #'< :key #'car)))
-
-(defun encode-all (stories mapper words &key (type :binary))
+(defun encode-all (stories mapper words &key (kind :binary))
   (map nil (lambda (story)
              (setf (story-array story)
-                   (encode (story-string story) mapper words :type type)))
+                   (mgl-util:encode/bag-of-words story
+                                                 mapper
+                                                 (lambda (word)
+                                                   (gethash word words))
+                                                 :kind kind)))
        stories))
 
-(defun hash-table->vector (h)
-  (let ((v ()))
-    (maphash (lambda (key value)
-               (push (cons key value) v))
-             h)
-    (coerce v 'vector)))
+(defun index-features (scored-features n &key (start 0))
+  (mgl-example-util:log-msg "Total number of features: ~S~%"
+                            (hash-table-count scored-features))
+  (let* ((features->indices (mgl-util:index-scored-features scored-features n
+                                                            :start start))
+         (last-index (+ (1- (hash-table-count features->indices))
+                        start))
+         (last-feature (gethash last-index
+                                (reverse-hash-table features->indices))))
+    (mgl-example-util:log-msg "Cut off score: ~S~%"
+                              (gethash last-feature scored-features))
+    features->indices))
 
-(defun vector->hash-table (v)
-  (let ((h (make-hash-table :test #'equal)))
-    (loop for (word . llr) across v
-          for i upfrom 1
-          do (setf (gethash word h)
-                   (cons i (flt 1))))
-    h))
+(defun most-frequent-features (documents mapper n &key (start 0))
+  (index-features (count-features documents mapper)
+                  n :start start))
 
-(defun most-frequent-words (documents mapper n)
-  (let ((words (make-hash-table :test #'equal)))
-    (map nil (lambda (document)
-               (funcall mapper
-                        (lambda (word)
-                          (incf (gethash word words 0)))
-                        document))
-         documents)
-    (log-msg "Total number of words: ~S~%" (hash-table-count words))
-    (let ((v (stable-sort (hash-table->vector words) #'> :key #'cdr)))
-      (log-msg "Cut off frequency: ~S~%" (cdr (aref v (1- n))))
-      (vector->hash-table (subseq v 0 (1- n))))))
-
-(defun best-features (stories mapper n)
-  (let ((all (make-hash-table :test #'equal)))
-    (map nil (lambda (story)
-               (let ((features (make-hash-table :test #'equal)))
-                 (funcall mapper
-                          (lambda (feature)
-                            (setf (gethash feature features) t))
-                          (story-string story))
-                 (maphash (lambda (feature -)
-                            (incf (first (or (gethash feature all)
-                                             (setf (gethash feature all)
-                                                   (list 0 0 0)))))
-                            (ecase (story-label story)
-                              ((-1) (incf (second (gethash feature all))))
-                              ((1) (incf (third (gethash feature all))))))
-                          features)))
-         stories)
-    (let ((llrs (make-array (hash-table-count all) :fill-pointer 0))
-          (n-negs (count -1 stories :key #'story-label))
-          (n-poss (count 1 stories :key #'story-label))
-          (total (length stories)))
-      (assert (= total (+ n-negs n-poss)))
-      (maphash (lambda (feature counts)
-                 (destructuring-bind (count neg-count pos-count) counts
-                   (assert (= count (+ neg-count pos-count)))
-                   (when (< 2 count)
-                     (let ((llr (log-likelihood-ratio
-                                 (+ 1 pos-count) (+ 2 n-poss)
-                                 (+ 1 neg-count) (+ 2 n-negs))))
-                       (vector-push-extend (list feature llr
-                                                 pos-count neg-count)
-                                           llrs)))))
-               all)
-      (log-msg "Total number of features: ~S~%" (fill-pointer llrs))
-      (let ((v (stable-sort llrs #'> :key #'second)))
-        (assert (< n (fill-pointer v)))
-        (log-msg "Cut off value: ~S~%" (second (aref v (1- n))))
-        (vector->hash-table (subseq v 0 (1- n)))))))
+(defun best-llr-features (documents mapper n &key (start 0))
+  (index-features (mgl-util:compute-feature-llrs documents mapper #'story-label)
+                  n :start start))
 
 
 ;;;; Common
@@ -794,17 +727,25 @@
       (load-stories)))
   (multiple-value-setq (*training-stories* *test-stories*)
     (split-fold fold n-folds))
-  (setq *words*
-        (best-features *training-stories* #'map-words *n-words*)
-        #+nil
-        (most-frequent-words (map 'vector #'story-string *training-stories*)
-                             #'map-words *n-words*))
+  ;;(gethash 2 (mgl-util:reverse-hash-table *words*))
   (when (find-package '#:libsvm)
-    (encode-all *training-stories* #'map-words *words* :type :normalized-binary)
-    (encode-all *test-stories* #'map-words *words* :type :normalized-binary)
+    (setq *words*
+          (best-llr-features *training-stories* #'map-story-words *n-words*
+                             :start 1)
+          #+nil
+          (most-frequent-features *training-stories* #'map-story-words *n-words*
+                                  :start 1))
+    (encode-all *training-stories* #'map-story-words *words*
+                :kind :normalized-binary)
+    (encode-all *test-stories* #'map-story-words *words*
+                :kind :normalized-binary)
     (test-svm))
-  (encode-all *training-stories* #'map-words *words* :type :binary)
-  (encode-all *test-stories* #'map-words *words* :type :binary)
+  (setq *words*
+        (best-llr-features *training-stories* #'map-story-words *n-words*)
+        #+nil
+        (most-frequent-features *training-stories* #'map-story-words *n-words*))
+  (encode-all *training-stories* #'map-story-words *words* :kind :binary)
+  (encode-all *test-stories* #'map-story-words *words* :kind :binary)
   (setq *dbn* (train-mr-dbn))
   (when unrollp
     (setq *bpn* (unroll-mr-dbn *dbn* :name '(f1 1)))

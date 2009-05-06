@@ -23,6 +23,11 @@
    #:append1
    #:push-all
    #:group
+   #:subseq*
+   #:hash-table->alist
+   #:alist->hash-table
+   #:hash-table->vector
+   #:reverse-hash-table
    #:repeatedly
    #:nshuffle-vector
    #:make-random-generator
@@ -64,7 +69,14 @@
    #:confusion-matrix-classes
    #:confusion-matrix-accuracy
    #:confusion-matrix-precision
-   #:confusion-matrix-recall)
+   #:confusion-matrix-recall
+   ;; Feature selection, encoding
+   #:count-features
+   #:compute-feature-llrs
+   #:index-scored-features
+   #:read-indexed-features
+   #:write-indexed-features
+   #:encode/bag-of-words)
   (:documentation "Simple utilities, types."))
 
 (cl:defpackage :mgl-train

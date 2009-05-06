@@ -24,6 +24,7 @@
                              (:file "package")
                              (:file "util")
                              (:file "confusion-matrix")
+                             (:file "feature")
                              (:file "train")
                              (:file "segment")
                              (:file "gradient-descent")

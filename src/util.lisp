@@ -99,6 +99,43 @@ propagate to the two branches allowing them to be more optimized."
     (loop for i below l by n
           collect (subseq seq i (min l (+ i n))))))
 
+(defun subseq* (sequence start &optional end)
+  (setq start (max 0 start))
+  (when end
+    (setq end (min (length sequence) end)))
+  (subseq sequence start end))
+
+(defun hash-table->alist (hash-table)
+  (let ((r ()))
+    (maphash (lambda (key value)
+               (push (cons key value) r))
+             hash-table)
+    r))
+
+(defun alist->hash-table (alist &rest args)
+  (let ((h (apply #'make-hash-table args)))
+    (loop for (key . value) in alist
+          do (setf (gethash key h) value))
+    h))
+
+(defun hash-table->vector (hash-table)
+  (let ((v (make-array (hash-table-count hash-table)))
+        (i 0))
+    (maphash (lambda (key value)
+               (setf (aref v i) (cons key value))
+               (incf i))
+             hash-table)
+    v))
+
+(defun reverse-hash-table (hash-table &key (test #'eql))
+  "Return a hash table that maps from the values of HASH-TABLE back to
+its keys. HASH-TABLE better be a bijection."
+  (let ((r (make-hash-table :test test)))
+    (maphash (lambda (key value)
+               (setf (gethash value r) key))
+             hash-table)
+    r))
+
 (defmacro repeatedly (&body body)
   "Like CONSTANTLY but evaluates BODY it for each time."
   (with-gensyms (args)

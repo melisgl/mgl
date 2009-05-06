@@ -69,6 +69,8 @@ Doesn't seem to speed up things.
    Matlisp only supports cmucl, sbcl and allegro.
 ** TODO optimize the missing value case (SSE?)
 ** TODO lookup table based exp/sigmoid
+** TODO investigate SPARTNS
+** DONE factor out most frequent and log-likelihood-ratio based feature selection
 * examples
 ** DONE movie review example
 ** TODO netflix example
