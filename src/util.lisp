@@ -165,6 +165,18 @@ different random order."
           (aref vector n)
         (setf n (mod (1+ n) l))))))
 
+(defun make-n-gram-mappee (function n)
+  "Make a function of a single argument that's suitable for the
+function arguments to a mapper function. It calls FUNCTION with every
+N element."
+  (let ((previous-values '()))
+    (lambda (x)
+      (push x previous-values)
+      (when (< n (length previous-values))
+        (setf previous-values (subseq previous-values 0 n)))
+      (when (= n (length previous-values))
+        (funcall function (reverse previous-values))))))
+
 (defun break-seq (fractions seq)
   "Split SEQ into a number of subsequences. XXX is either a positive
 integer or a list of non-negative real numbers. If XXX is a positive

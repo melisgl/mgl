@@ -3,7 +3,8 @@
 (defun count-features (documents mapper)
   "Return scored features as an EQUAL hash table whose keys are
 features of DOCUMENTS and values are counts of occurrences of
-features. MAPPER is over individual documents."
+features. MAPPER takes a function and a document and calls function
+with features of the document."
   (let ((features (make-hash-table :test #'equal)))
     (map nil (lambda (document)
                (funcall mapper
@@ -33,7 +34,8 @@ features. MAPPER is over individual documents."
                                    (all-document-classes documents class-fn)))
   "Return scored features as an EQUAL hash table whose keys are
 features of DOCUMENTS and values are their log likelihood ratios.
-MAPPER is over individual documents."
+MAPPER takes a function and a document and calls function with
+features of the document."
   (when (< (length classes) 2)
     (error "LLR feature selection needs at least 2 classes."))
   (flet ((document-class-index (document)

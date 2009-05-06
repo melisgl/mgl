@@ -53,15 +53,6 @@
 (defvar *bpn*)
 
 
-(defun make-n-gram-mapper (function n)
-  (let ((previous-values '()))
-    (lambda (x)
-      (push x previous-values)
-      (when (< n (length previous-values))
-        (setf previous-values (subseq previous-values 0 n)))
-      (when (= n (length previous-values))
-        (funcall function (reverse previous-values))))))
-
 ;;;;
 
 (defstruct story
@@ -124,7 +115,7 @@
   "Apply FUNCTION to all stemmed words in STREAM."
   (let ((function (coerce function 'function)))
     (loop for i upfrom 1 upto n-grams
-          do (let ((function (make-n-gram-mapper function i)))
+          do (let ((function (mgl-util:make-n-gram-mappee function i)))
                (cl-ppcre:do-register-groups (word) (word-scanner string)
                  (let ((word (normalize-word word)))
                    (map nil function (list word))))))))

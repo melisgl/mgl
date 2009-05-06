@@ -31,6 +31,7 @@
    #:repeatedly
    #:nshuffle-vector
    #:make-random-generator
+   #:make-n-gram-mappee
    #:break-seq
    #:stratified-split
    ;; Math
