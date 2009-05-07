@@ -67,17 +67,13 @@ features of the document."
                        counts
                      (assert (= count (loop for x in feature-class-counts
                                             sum x)))
-                     (cond
-                       ((<= count 2)
-                        (remhash feature all))
-                       (t
-                        (let ((k1 (map 'vector #'1+ feature-class-counts))
-                              (k2 (map 'vector
-                                       (lambda (x)
-                                         (1+ (- count x)))
-                                       feature-class-counts)))
-                          (setf (gethash feature all)
-                                (multinomial-log-likelihood-ratio k1 k2)))))))
+                     (let ((k1 (map 'vector #'1+ feature-class-counts))
+                           (k2 (map 'vector
+                                    (lambda (x)
+                                      (1+ (- count x)))
+                                    feature-class-counts)))
+                       (setf (gethash feature all)
+                             (multinomial-log-likelihood-ratio k1 k2)))))
                  all)
         all))))
 
