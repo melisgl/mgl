@@ -41,7 +41,8 @@
    #:gaussian-random-1
    #:poisson-random
    #:select-random-element
-   #:log-likelihood-ratio
+   #:binomial-log-likelihood-ratio
+   #:multinomial-log-likelihood-ratio
    ;; Blas support
    #:*use-blas*
    #:use-blas-p

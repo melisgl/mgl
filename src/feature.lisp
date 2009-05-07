@@ -62,22 +62,23 @@ features of the document."
                                          (funcall class-fn document)))))
             (total (length documents)))
         (assert (= total (loop for x in class-counts sum x)))
-        (when (< 2 (length classes))
-          (error "LLR feature selection currently only works with 2 classes."))
-        ;; FIXME: only two classes are supported in this form:
-        (let ((n-negs (elt class-counts 0))
-              (n-poss (elt class-counts 1)))
-          (maphash (lambda (feature counts)
-                     (destructuring-bind (count neg-count pos-count) counts
-                       (assert (= count (+ neg-count pos-count)))
-                       (cond ((<= count 2)
-                              (remhash feature all))
-                             (t
-                              (setf (gethash feature all)
-                                    (log-likelihood-ratio
-                                     (+ 1 pos-count) (+ 2 n-poss)
-                                     (+ 1 neg-count) (+ 2 n-negs)))))))
-                   all))
+        (maphash (lambda (feature counts)
+                   (destructuring-bind (count &rest feature-class-counts)
+                       counts
+                     (assert (= count (loop for x in feature-class-counts
+                                            sum x)))
+                     (cond
+                       ((<= count 2)
+                        (remhash feature all))
+                       (t
+                        (let ((k1 (map 'vector #'1+ feature-class-counts))
+                              (k2 (map 'vector
+                                       (lambda (x)
+                                         (1+ (- count x)))
+                                       feature-class-counts)))
+                          (setf (gethash feature all)
+                                (multinomial-log-likelihood-ratio k1 k2)))))))
+                 all)
         all))))
 
 (defun index-scored-features (feature-scores n &key (start 0))

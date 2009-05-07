@@ -300,7 +300,7 @@ classes the same."
 (defun select-random-element (seq)
   (elt seq (random (length seq))))
 
-(defun log-likelihood-ratio (k1 n1 k2 n2)
+(defun binomial-log-likelihood-ratio (k1 n1 k2 n2)
   "See \"Accurate Methods for the Statistics of Surprise and
 Coincidence\" by Ted Dunning \(http://citeseer.ist.psu.edu/29096.html).
 
@@ -308,16 +308,51 @@ All classes must have non-zero counts, that is, K1, N1-K1, K2, N2-K2
 are positive integers. To ensure this - and also as kind of prior -
 add a small number such as 1 to K1, K2 and 2 to N1, N2 before
 calling."
-  (flet ((l (p k n)
+  (flet ((log-l (p k n)
            (+ (* k (log p))
               (* (- n k) (log (- 1 p))))))
     (let ((p1 (/ k1 n1))
           (p2 (/ k2 n2))
           (p (/ (+ k1 k2) (+ n1 n2))))
-      (+ (- (l p k1 n1))
-         (- (l p k2 n2))
-         (l p1 k1 n1)
-         (l p2 k2 n2)))))
+      (* 2
+         (+ (- (log-l p k1 n1))
+            (- (log-l p k2 n2))
+            (log-l p1 k1 n1)
+            (log-l p2 k2 n2))))))
+
+(defun multinomial-log-likelihood-ratio (k1 k2)
+  "See \"Accurate Methods for the Statistics of Surprise and
+Coincidence\" by Ted Dunning \(http://citeseer.ist.psu.edu/29096.html).
+
+K1 is the number of outcomes in each class. K2 is the same in a
+possibly different process.
+
+All elements in K1 and K2 are positive integers. To ensure this - and
+also as kind of prior - add a small number such as 1 each element in
+K1 and K2 before calling."
+  (flet ((log-l (p k)
+           (let ((sum 0))
+             (map nil
+                  (lambda (p-i k-i)
+                    (incf sum (* k-i (log p-i))))
+                  p k)
+             sum))
+         (normalize (k)
+           (let ((sum (loop for k-i across k sum k-i)))
+             (map 'vector
+                  (lambda (x)
+                    (/ x sum))
+                  k)))
+         (sum (x y)
+           (map 'vector #'+ x y)))
+    (let ((p1 (normalize k1))
+          (p2 (normalize k2))
+          (p (normalize (sum k1 k2))))
+      (* 2
+         (+ (- (log-l p k1))
+            (- (log-l p k2))
+            (log-l p1 k1)
+            (log-l p2 k2))))))
 
 
 ;;;; BLAS support
