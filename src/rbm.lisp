@@ -80,7 +80,7 @@ of nodes of the same type."))
 
 (defmethod print-object ((chunk chunk) stream)
   (print-unreadable-object (chunk stream :type t :identity t)
-    (format stream "~S ~S(~S/~S)" (name chunk)
+    (format stream "~S ~S(~S/~S)" (ignore-errors (name chunk))
             (ignore-errors (chunk-size chunk))
             (ignore-errors (chunk-n-stripes chunk))
             (ignore-errors (chunk-max-n-stripes chunk))))
@@ -258,6 +258,16 @@ are remembered."))
     (setf (slot-value chunk 'next-node-inputs)
           (matlisp:make-real-matrix size max-n-stripes))))
 
+(defun copy-chunk-nodes (chunk from to)
+  (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
+      (matlisp:copy! from to)
+      (let ((from (storage from))
+            (to (storage to)))
+        (declare (optimize (speed 3)))
+        (do-stripes (chunk)
+          (do-chunk (i chunk)
+            (setf (aref to i) (aref from i)))))))
+
 (defun maybe-remember (chunk)
   (unless (has-inputs-p chunk)
     (let ((hidden (hidden-source-chunk chunk)))
@@ -377,10 +387,10 @@ TO-VISIBLE/HIDDEN that can be :VISIBLE or :HIDDEN. In the simplest
 case it adds weights (of CLOUD) * nodes (of the visible chunk) to the
 nodes of the hidden chunk."))
 
-(defgeneric accumulate-cloud-statistics (cloud trainer addp)
+(defgeneric accumulate-cloud-statistics (trainer cloud multiplier)
   (:documentation "Take the accumulator of TRAINER that corresponds to
-CLOUD and depending on ADDP add to or subtract from it what is the
-negative or positive phase term of contrastive divergence."))
+CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
+contrastive divergence."))
 
 
 ;;;; Full cloud
@@ -480,19 +490,17 @@ all transposed.")))
                                  (aref weights weight-index))))
                   (incf (aref to i) sum))))))))
 
-(defmethod accumulate-cloud-statistics ((cloud full-cloud) trainer addp)
-  (with-segment-gradient-accumulator ((start accumulator accumulator2)
+(defmethod accumulate-cloud-statistics (trainer (cloud full-cloud) multiplier)
+  (declare (type flt multiplier))
+  (with-segment-gradient-accumulator ((start accumulator)
                                       (cloud trainer))
     (when (and accumulator start)
       (let ((v1 (nodes (visible-chunk cloud)))
-            (v2 (nodes (hidden-chunk cloud)))
-            (accumulator (if (or addp (null accumulator2))
-                             accumulator
-                             accumulator2)))
+            (v2 (nodes (hidden-chunk cloud))))
         (if (and (zerop start)
                  (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
                                       (visible-chunk cloud)))
-            (matlisp:gemm! (flt (if addp 1 -1)) v2 v1 (flt 1)
+            (matlisp:gemm! multiplier v2 v1 (flt 1)
                            (reshape2 accumulator
                                      (matlisp:nrows v2)
                                      (matlisp:nrows v1))
@@ -501,23 +509,33 @@ all transposed.")))
                   (v2 (storage v2))
                   (accumulator (storage accumulator)))
               (declare (optimize (speed 3) #.*no-array-bounds-check*))
-              (if addp
-                  (special-case (zerop start)
-                    (do-cloud/visible (i cloud)
-                      (let ((x (aref v1 i)))
-                        (unless (zerop x)
-                          (do-cloud/hidden (j weight-index)
-                            (incf (aref accumulator
-                                        (the! index (+ start weight-index)))
-                                  (* x (aref v2 j))))))))
-                  (special-case (zerop start)
-                    (do-cloud/visible (i cloud)
-                      (let ((x (aref v1 i)))
-                        (unless (zerop x)
-                          (do-cloud/hidden (j weight-index)
-                            (decf (aref accumulator
-                                        (the! index (+ start weight-index)))
-                                  (* x (aref v2 j)))))))))))))))
+              (cond ((= multiplier (flt 1))
+                     (special-case (zerop start)
+                       (do-cloud/visible (i cloud)
+                         (let ((x (aref v1 i)))
+                           (unless (zerop x)
+                             (do-cloud/hidden (j weight-index)
+                               (incf (aref accumulator
+                                           (the! index (+ start weight-index)))
+                                     (* x (aref v2 j)))))))))
+                    ((= multiplier (flt -1))
+                     (special-case (zerop start)
+                       (do-cloud/visible (i cloud)
+                         (let ((x (aref v1 i)))
+                           (unless (zerop x)
+                             (do-cloud/hidden (j weight-index)
+                               (decf (aref accumulator
+                                           (the! index (+ start weight-index)))
+                                     (* x (aref v2 j)))))))))
+                    (t
+                     (special-case (zerop start)
+                       (do-cloud/visible (i cloud)
+                         (let ((x (* multiplier (aref v1 i))))
+                           (unless (zerop x)
+                             (do-cloud/hidden (j weight-index)
+                               (incf (aref accumulator
+                                           (the! index (+ start weight-index)))
+                                     (* x (aref v2 j))))))))))))))))
 
 (defmethod map-segments (fn (cloud full-cloud))
   (funcall fn cloud))
@@ -558,20 +576,22 @@ A*B*VISIBLE."))
 
 (defmethod initialize-instance :after ((cloud factored-cloud) &key rank
                                        &allow-other-keys)
-  (assert (typep rank '(integer 1)))
-  (let ((shared (make-instance 'factored-cloud-shared-chunk
-                               :size rank
-                               :name (list (name cloud) :shared))))
-    (setf (slot-value cloud 'cloud-a)
-          (make-instance 'full-cloud
-                         :name (list (name cloud) :a)
-                         :visible-chunk shared
-                         :hidden-chunk (hidden-chunk cloud)))
-    (setf (slot-value cloud 'cloud-b)
-          (make-instance 'full-cloud
-                         :name (list (name cloud) :b)
-                         :visible-chunk (visible-chunk cloud)
-                         :hidden-chunk shared))))
+  (assert (typep rank '(or (integer 1) null)))
+  (unless (and (slot-boundp cloud 'cloud-a)
+               (slot-boundp cloud 'cloud-b))
+    (let ((shared (make-instance 'factored-cloud-shared-chunk
+                                 :size rank
+                                 :name (list (name cloud) :shared))))
+      (setf (slot-value cloud 'cloud-a)
+            (make-instance 'full-cloud
+                           :name (list (name cloud) :a)
+                           :visible-chunk shared
+                           :hidden-chunk (hidden-chunk cloud)))
+      (setf (slot-value cloud 'cloud-b)
+            (make-instance 'full-cloud
+                           :name (list (name cloud) :b)
+                           :visible-chunk (visible-chunk cloud)
+                           :hidden-chunk shared)))))
 
 (defun factored-cloud-shared-chunk (cloud)
   (visible-chunk (cloud-a cloud)))
@@ -595,7 +615,9 @@ A*B*VISIBLE."))
          (activate-cloud (cloud-a cloud) to-visible/hidden)
          (activate-cloud (cloud-b cloud) to-visible/hidden))))
 
-(defmethod accumulate-cloud-statistics ((cloud factored-cloud) trainer addp)
+(defmethod accumulate-cloud-statistics (trainer (cloud factored-cloud)
+                                        multiplier)
+  (declare (type flt multiplier))
   (let* ((visible-chunk (visible-chunk cloud))
          (v (nodes visible-chunk))
          (h (nodes (hidden-chunk cloud)))
@@ -607,14 +629,11 @@ A*B*VISIBLE."))
          (v* (storage v))
          (shared* (storage (nodes shared))))
     (check-stripes visible-chunk)
-    (with-segment-gradient-accumulator ((start accumulator accumulator2)
+    (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud-a cloud) trainer))
       (when (and accumulator start)
         ;; dCD/dA ~= h*v'*B'
-        (let ((x (reshape2 (nodes shared) n-stripes c))
-              (accumulator (if (or addp (null accumulator2))
-                               accumulator
-                               accumulator2)))
+        (let ((x (reshape2 (nodes shared) n-stripes c)))
           (if (and (zerop start)
                    (null (indices-present visible-chunk)))
               (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
@@ -630,22 +649,19 @@ A*B*VISIBLE."))
                               upfrom (the! index (* i c)) do
                               (incf (aref shared* j)
                                     (* v*i (aref b* bi))))))))))
-          (matlisp:gemm! (flt (if addp 1 -1)) h x
+          (matlisp:gemm! multiplier h x
                          (flt 1) (reshape2 accumulator
                                            (matlisp:nrows a)
                                            (matlisp:ncols a))))))
-    (with-segment-gradient-accumulator ((start accumulator accumulator2)
+    (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud-b cloud) trainer))
       (when (and accumulator start)
         ;; dCD/dB ~= A'*h*v'
-        (let ((x (reshape2 (nodes shared) c n-stripes))
-              (accumulator (if (or addp (null accumulator2))
-                               accumulator
-                               accumulator2)))
+        (let ((x (reshape2 (nodes shared) c n-stripes)))
           (matlisp:gemm! (flt 1) a h (flt 0) x :tn)
           (if (and (zerop start)
                    (null (indices-present (visible-chunk cloud))))
-              (matlisp:gemm! (flt (if addp 1 -1)) x v
+              (matlisp:gemm! multiplier x v
                              (flt 1) (reshape2 accumulator
                                                (matlisp:nrows b)
                                                (matlisp:ncols b))
@@ -654,7 +670,7 @@ A*B*VISIBLE."))
                 (declare (optimize (speed 3) #.*no-array-bounds-check*))
                 (do-stripes (visible-chunk)
                   (do-chunk (i visible-chunk)
-                    (let ((v*i (* (flt (if addp 1 -1)) (aref v* i))))
+                    (let ((v*i (* multiplier (aref v* i))))
                       (unless (zerop v*i)
                         (loop for j of-type index upfrom 0 below c
                               for acc-i of-type index
@@ -764,10 +780,10 @@ if not found and ERRORP."
      (length (mapcar #'name list))))
 
 (defun default-clouds (visible-chunks hidden-chunks)
-  "Return a list of cloud specifications suitable for MAKE-RBM. Put a
-cloud between each pair of visible and hidden chunks unless they are
-both conditioning chunks. The names of the clouds are two element
-lists of the names of the visible and hidden chunks."
+  "Return a list of cloud specifications suitable for instantiating an
+RBM. Put a cloud between each pair of visible and hidden chunks unless
+they are both conditioning chunks. The names of the clouds are two
+element lists of the names of the visible and hidden chunks."
   (let ((clouds '()))
     (dolist (visible-chunk visible-chunks)
       (dolist (hidden-chunk hidden-chunks)
@@ -796,7 +812,8 @@ CLASS NIL then remove it as well."
                   (equal (hidden-name spec1)
                          (hidden-name spec2)))))
     (remove-if (lambda (spec)
-                 (null (getf spec :class 'full-cloud)))
+                 (and (not (typep spec 'cloud))
+                      (null (getf spec :class 'full-cloud))))
                (append (remove-if (lambda (spec)
                                     (some (lambda (spec1)
                                             (match spec spec1))
@@ -902,9 +919,29 @@ chunk type and the mean that resides in NODES."
     (read-weights cloud stream)))
 
 
-;;;; Integration with train and gradient descent
+;;;; Integration with gradient descent
 
-(defclass rbm-trainer (segmented-gd-trainer)
+(defclass segmented-gd-rbm-trainer (segmented-gd-trainer) ())
+
+(defgeneric accumulate-positive-phase-statistics (trainer rbm &key multiplier)
+  (:method ((trainer segmented-gd-rbm-trainer) rbm &key (multiplier (flt 1)))
+    (do-clouds (cloud rbm)
+      (accumulate-cloud-statistics trainer cloud (flt (* -1 multiplier))))))
+
+(defgeneric accumulate-negative-phase-statistics (trainer rbm &key multiplier)
+  (:method ((trainer segmented-gd-rbm-trainer) rbm &key (multiplier (flt 1)))
+    (do-clouds (cloud rbm)
+      (accumulate-cloud-statistics trainer cloud (flt multiplier)))))
+
+(defmethod train (sampler (trainer segmented-gd-rbm-trainer) (rbm rbm))
+  (while (not (finishedp sampler))
+    (train-batch (sample-batch sampler (n-inputs-until-update trainer))
+                 trainer rbm)))
+
+
+;;;; Common base class for MCMC based RBM trainers
+
+(defclass rbm-mcmc-parameters ()
   ((visible-sampling
     :initform nil
     :initarg :visible-sampling
@@ -926,29 +963,131 @@ calculate the effect of the positive phase on the gradient.")
     :initarg :n-gibbs
     :accessor n-gibbs
     :documentation "The number of steps of Gibbs sampling to perform."))
-  (:documentation "A contrastive divergence based trainer for RBMs."))
+  (:documentation "Paramaters for Markov Chain Monte Carlo based
+trainers for RBMs."))
+
 
-(defmethod train (sampler (trainer rbm-trainer) (rbm rbm))
-  (while (not (finishedp sampler))
-    (train-batch (sample-batch sampler (n-inputs-until-update trainer))
-                 trainer rbm)))
+;;;; Contrastive Divergence (CD) learning
+
+(defclass rbm-trainer (segmented-gd-rbm-trainer rbm-mcmc-parameters)
+  ()
+  (:documentation "A contrastive divergence based trainer for RBMs."))
 
 (defmethod train-batch (batch (trainer rbm-trainer) (rbm rbm))
   (loop for samples in (group batch (max-n-stripes rbm))
         do (set-input samples rbm)
-        (positive-phase trainer rbm)
-        (negative-phase trainer rbm))
+        (positive-phase batch trainer rbm)
+        (negative-phase batch trainer rbm))
   (maybe-update-weights trainer (length batch)))
 
-(defun copy-chunk-nodes (chunk from to)
-  (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
-      (matlisp:copy! from to)
-      (let ((from (storage from))
-            (to (storage to)))
-        (declare (optimize (speed 3)))
-        (do-stripes (chunk)
-          (do-chunk (i chunk)
-            (setf (aref to i) (aref from i)))))))
+(defgeneric positive-phase (batch trainer rbm)
+  (:method (batch (trainer rbm-trainer) rbm)
+    (set-hidden-mean rbm)
+    (ecase (hidden-sampling trainer)
+      ((nil) (accumulate-positive-phase-statistics trainer rbm))
+      ((:half-hearted)
+       (accumulate-positive-phase-statistics trainer rbm)
+       (sample-hidden rbm))
+      ((t)
+       (sample-hidden rbm)
+       (accumulate-positive-phase-statistics trainer rbm)))))
+
+(defgeneric negative-phase (batch trainer rbm)
+  (:method (batch (trainer rbm-trainer) rbm)
+    (let ((visible-sampling (visible-sampling trainer))
+          (hidden-sampling (hidden-sampling trainer)))
+      (loop for i below (n-gibbs trainer) do
+            (when (and (not (zerop i)) hidden-sampling)
+              (sample-hidden rbm))
+            (set-visible-mean rbm)
+            (when visible-sampling
+              (sample-visible rbm))
+            (set-hidden-mean rbm))
+      (accumulate-negative-phase-statistics trainer rbm))))
+
+
+;;;; Persistent Contrastive Divergence (PCD) learning
+
+(define-slots-not-to-be-copied 'pcd chunk
+  nodes inputs cache-static-activations-p static-activations-cached-p
+  static-activations indices-present)
+
+(defmethod copy-object-extra-initargs ((context (eql 'pcd)) (chunk chunk))
+  `(:size ,(chunk-size chunk)
+    :max-n-stripes ,(max-n-stripes chunk)))
+
+(define-slots-not-to-be-copied 'pcd temporal-chunk
+  next-node-inputs has-inputs-p)
+
+(define-slots-to-be-shallow-copied 'pcd full-cloud
+  weights)
+
+(define-slots-not-to-be-copied 'pcd rbm
+  max-n-stripes)
+
+(define-slots-to-be-shallow-copied 'pcd rbm
+  dbn)
+
+(defclass rbm-pcd-trainer (segmented-gd-rbm-trainer rbm-mcmc-parameters)
+  ((normal-chains
+    :accessor normal-chains
+    :documentation "The RBM being trained.")
+   (persistent-chains
+    :accessor persistent-chains
+    :documentation "An RBM that keeps the states of the persistent
+chains, initialized from the RBM being trained by COPY with 'PCD as
+the context.")))
+
+(defmethod initialize-trainer ((trainer rbm-pcd-trainer) rbm)
+  (setf (normal-chains trainer) rbm)
+  (setf (persistent-chains trainer) (copy 'pcd rbm))
+  (call-next-method))
+
+(defmethod train-batch (batch (trainer rbm-pcd-trainer) (rbm rbm))
+  (loop for samples in (group batch (max-n-stripes rbm))
+        do (set-input samples rbm)
+        (positive-phase batch trainer rbm))
+  (negative-phase batch trainer (persistent-chains trainer))
+  (maybe-update-weights trainer (length batch)))
+
+;;; If CLOUD is in the persistent chain, that is, it's a copy of a
+;;; cloud in the normal RBM then use the orignal as that's what the
+;;; SEGMENTED-GD-RBM-TRAINER was initialized with (and they of course
+;;; share the weights).
+(defmethod find-segment-gradient-accumulator (cloud (trainer rbm-pcd-trainer))
+  (if (find cloud (clouds (persistent-chains trainer)))
+      (find-segment-gradient-accumulator (find-cloud (name cloud)
+                                                     (normal-chains trainer))
+                                         trainer)
+      (call-next-method)))
+
+(defmethod positive-phase (batch (trainer rbm-pcd-trainer) rbm)
+  (set-hidden-mean rbm)
+  (when (eq t (hidden-sampling trainer))
+    (sample-hidden rbm))
+  (accumulate-positive-phase-statistics trainer rbm))
+
+(defmethod negative-phase (batch (trainer rbm-pcd-trainer) rbm)
+  (let ((visible-sampling (visible-sampling trainer))
+        (hidden-sampling (hidden-sampling trainer)))
+    (loop repeat (n-gibbs trainer) do
+          (when hidden-sampling
+            (sample-hidden rbm))
+          (set-visible-mean rbm)
+          (when visible-sampling
+            (sample-visible rbm))
+          (set-hidden-mean rbm))
+    (accumulate-negative-phase-statistics
+     trainer rbm
+     ;; The number of persistent chains (or fantasy particles), that
+     ;; is, N-STRIPES of PERSISTENT-CHAINS is not necessarily the same
+     ;; as the batch size. Normalize so that positive and negative
+     ;; phase has the same weight.
+     :multiplier (/ (length batch)
+                    (n-stripes (persistent-chains trainer))))))
+
+
+;;;; Convenience, utilities
 
 (defun inputs->nodes (rbm)
   "Copy the previously clamped INPUTS to NODES as if SET-INPUT were
@@ -966,47 +1105,6 @@ called with the same parameters."
                (when inputs
                  (copy-chunk-nodes chunk (nodes chunk) inputs))))
        (visible-chunks rbm)))
-
-
-;;;; Training implementation
-
-(defgeneric accumulate-positive-phase-statistics (trainer rbm)
-  (:method ((trainer rbm-trainer) rbm)
-    (do-clouds (cloud rbm)
-      (accumulate-cloud-statistics cloud trainer nil))))
-
-(defgeneric accumulate-negative-phase-statistics (trainer rbm)
-  (:method ((trainer rbm-trainer) rbm)
-    (do-clouds (cloud rbm)
-      (accumulate-cloud-statistics cloud trainer t))))
-
-(defgeneric positive-phase (trainer rbm)
-  (:method ((trainer rbm-trainer) rbm)
-    (set-hidden-mean rbm)
-    (ecase (hidden-sampling trainer)
-      ((nil) (accumulate-positive-phase-statistics trainer rbm))
-      ((:half-hearted)
-       (accumulate-positive-phase-statistics trainer rbm)
-       (sample-hidden rbm))
-      ((t)
-       (sample-hidden rbm)
-       (accumulate-positive-phase-statistics trainer rbm)))))
-
-(defgeneric negative-phase (trainer rbm)
-  (:method ((trainer rbm-trainer) rbm)
-    (let ((visible-sampling (visible-sampling trainer))
-          (hidden-sampling (hidden-sampling trainer)))
-      (loop for i below (n-gibbs trainer) do
-            (when (and (not (zerop i)) hidden-sampling)
-              (sample-hidden rbm))
-            (set-visible-mean rbm)
-            (when visible-sampling
-              (sample-visible rbm))
-            (set-hidden-mean rbm))
-      (accumulate-negative-phase-statistics trainer rbm))))
-
-
-;;;; Convenience
 
 (defun reconstruction-error (rbm)
   "Return the squared norm of INPUTS - NODES not considering constant

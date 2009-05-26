@@ -62,6 +62,12 @@
    #:read-weights
    ;; Printing
    #:print-table
+   ;; Copy
+   #:copy-object-extra-initargs
+   #:copy-object-slot
+   #:define-slots-not-to-be-copied
+   #:define-slots-to-be-shallow-copied
+   #:copy
    ;; Confusion matrix
    #:confusion-matrix
    #:sort-confusion-classes
@@ -152,8 +158,7 @@ and LEARNERs."))
    #:gd-trainer
    #:n-inputs
    #:use-accumulator2
-   #:accumulator1
-   #:accumulator2
+   #:accumulator
    #:learning-rate
    #:momentum
    #:weight-decay
@@ -188,7 +193,7 @@ interface and simple gradient descent based trainers."))
    #:cg-args
    #:n-inputs
    #:segment-set
-   #:accumulator1
+   #:accumulator
    #:compute-batch-cost-and-derive
    #:decayed-cg-trainer-mixin)
   (:documentation "Conjugate gradient based trainer."))
@@ -211,6 +216,8 @@ interface and simple gradient descent based trainers."))
    #:sample-hidden
    ;; RBM trainer
    #:rbm-trainer
+   #:rbm-pcd-trainer
+   #:pcd
    #:visible-sampling
    #:hidden-sampling
    #:n-gibbs

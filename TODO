@@ -50,6 +50,7 @@
 ** TODO redo ->CROSS-ENTROPY
 ** TODO what to do with INDICES-TO-CALCULATE?
 ** DONE normalized-lump: scale should be per stripe
+** DONE persistent contrastive divergence
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values

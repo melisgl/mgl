@@ -23,6 +23,7 @@
                                            (:file "matlisp-impl")))
                              (:file "package")
                              (:file "util")
+                             (:file "copy")
                              (:file "confusion-matrix")
                              (:file "feature")
                              (:file "train")

@@ -8,8 +8,9 @@
                 :serial t
                 :components ((:file "package")
                              (:file "util")
-                             (:file "test-confusion-matrix")
                              (:file "test-util")
+                             (:file "test-copy")
+                             (:file "test-confusion-matrix")
                              (:file "test-conjugate-gradient")
                              (:file "test-rbm")
                              (:file "test-backprop")

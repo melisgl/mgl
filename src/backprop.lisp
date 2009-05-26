@@ -350,7 +350,7 @@ value is the number of stripes."
     ;; By now the weight derivatives have accumulated, see
     ;; ZERO-NON-WEIGHT-DERIVATIVES.
     (segment-set-derivatives->weights (segment-set trainer)
-                                      (accumulator1 trainer))
+                                      (accumulator trainer))
     cost))
 
 

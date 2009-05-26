@@ -1,7 +1,18 @@
 (in-package :mgl-test)
 
-(defclass test-trainer (rbm-trainer)
+(defclass test-trainer ()
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+
+(defclass test-cd-trainer (test-trainer rbm-trainer) ())
+
+(defclass test-pcd-trainer (test-trainer rbm-pcd-trainer) ())
+
+(defmethod initialize-trainer ((trainer test-pcd-trainer) rbm)
+  (call-next-method)
+  (setf (max-n-stripes (mgl-rbm::persistent-chains trainer))
+        (batch-size (elt (trainers trainer) 0)))
+  (log-msg "Persistent chain n-stripes: ~S~%"
+           (n-stripes (mgl-rbm::persistent-chains trainer))))
 
 (defclass test-rbm (rbm)
   ((clamper :initarg :clamper :reader clamper)))
@@ -57,7 +68,9 @@
                         (max-n-samples 10000)
                         (max-n-test-samples 1000)
                         (batch-size 50)
-                        (max-n-stripes 10))
+                        (max-n-stripes 10)
+                        (trainer-class 'test-cd-trainer)
+                        (learning-rate (flt 0.1)))
   (flet ((clamp (samples rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
              (loop for sample in samples
@@ -90,10 +103,11 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples max-n-samples
                             :sampler sampler)
-             (make-instance 'test-trainer
+             (make-instance trainer-class
                             :segmenter
                             (repeatedly
                               (make-instance 'batch-gd-trainer
+                                             :learning-rate (flt learning-rate)
                                              :batch-size batch-size)))
              rbm)
       (rbm-rmse (make-instance 'counting-function-sampler
@@ -156,7 +170,7 @@
         (train (make-instance 'counting-function-sampler
                               :max-n-samples 100000
                               :sampler #'sample)
-               (make-instance 'test-trainer
+               (make-instance 'test-cd-trainer
                               :segmenter
                               (lambda (chunk)
                                 (make-instance
@@ -204,7 +218,7 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 10000
                             :sampler #'sample)
-             (make-instance 'test-trainer
+             (make-instance 'test-cd-trainer
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
@@ -251,7 +265,7 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 100000
                             :sampler #'sample)
-             (make-instance 'test-trainer
+             (make-instance 'test-cd-trainer
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
@@ -306,9 +320,9 @@
     (setf (matlisp:matrix-ref h 2 0) (flt 1/7))
     (mgl-rbm::accumulate-negative-phase-statistics trainer rbm)
     (assert (= 2 (length (trainers trainer))))
-    (let ((db (reshape2 (accumulator1 (elt (trainers trainer) 0))
+    (let ((db (reshape2 (accumulator (elt (trainers trainer) 0))
                         rank n-visible))
-          (da (reshape2 (accumulator1 (elt (trainers trainer) 1))
+          (da (reshape2 (accumulator (elt (trainers trainer) 1))
                         n-hidden rank)))
       (dotimes (c rank)
         (dotimes (j n-visible)
@@ -334,11 +348,11 @@
   (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
                                    :max-n-stripes 7)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
-                                    :max-n-stripes 7
-                                    :rank 1)))
+                                     :max-n-stripes 7
+                                     :rank 1)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
-                                    :max-n-stripes 7
-                                    :rank 3)))
+                                     :max-n-stripes 7
+                                     :rank 3)))
   ;; For constant zero we need to add a bias to either layer.
   (assert (> 0.01
              (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t)))
@@ -366,6 +380,109 @@
   (assert (> 0.2 (test-rbm/identity/softmax :hidden-type 'gaussian-chunk)))
   (assert (> 0.1 (test-rbm/sine))))
 
+(defun compare-objects (x y)
+  (let ((class (class-of x))
+        (different-slots ()))
+    (if (not (eq class (class-of y)))
+        (error "~A ~A" class (class-of y))
+        (dolist (slot (sb-mop:class-slots class))
+          (let ((slot-name (sb-mop:slot-definition-name slot)))
+            (if (eql (slot-boundp x slot-name)
+                     (slot-boundp y slot-name))
+                (when (slot-boundp x slot-name)
+                  (unless (eql (slot-value x slot-name)
+                               (slot-value y slot-name))
+                    (push (list slot-name
+                                (slot-value x slot-name)
+                                (slot-value y slot-name))
+                          different-slots)))
+                (push (list slot-name
+                            (if (slot-boundp x slot-name)
+                                (slot-value x slot-name)
+                                :unbound)
+                            (if (slot-boundp y slot-name)
+                                (slot-value y slot-name)
+                                :unbound))
+                      different-slots)))))
+    (nreverse different-slots)))
+
+(defun test-copy-pcd-chunk ()
+  (let ((chunk (make-instance 'sigmoid-chunk
+                              :name 'this-chunk
+                              :size 10)))
+    (assert (equal (mapcar #'first (compare-objects chunk (copy 'pcd chunk)))
+                   '(nodes inputs)))))
+
+(defun test-copy-pcd-full-cloud ()
+  (let* ((chunk1 (make-instance 'constant-chunk
+                                :name 'constant-chunk
+                                :size 1))
+         (chunk2 (make-instance 'sigmoid-chunk
+                                :name 'sigmoid-chunk
+                                :size 10))
+         (cloud (make-instance 'full-cloud
+                               :name 'this-cloud
+                               :visible-chunk chunk1
+                               :hidden-chunk chunk2)))
+    (assert (equal (mapcar #'first (compare-objects cloud (copy 'pcd cloud)))
+                   '(visible-chunk hidden-chunk)))))
+
+(defun test-copy-pcd-rbm ()
+  (let ((rbm (make-instance
+              'rbm
+              :visible-chunks (list (make-instance 'constant-chunk
+                                                   :name 'constant)
+                                    (make-instance 'sigmoid-chunk
+                                                   :name 'inputs
+                                                   :size 1))
+              :hidden-chunks (list (make-instance 'constant-chunk
+                                                  :name 'constant)
+                                   (make-instance 'sigmoid-chunk
+                                                  :name 'features
+                                                  :size 1))
+              :max-n-stripes 3)))
+    (assert (equal (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
+                   '(visible-chunks hidden-chunks clouds max-n-stripes)))
+    (dolist (cloud (clouds rbm))
+      (assert (member (visible-chunk cloud) (visible-chunks rbm)))
+      (assert (member (hidden-chunk cloud) (hidden-chunks rbm))))))
+
+(defun test-copy-pcd ()
+  (test-copy-pcd-chunk)
+  (test-copy-pcd-full-cloud)
+  (test-copy-pcd-rbm))
+
+(defun test-rbm-examples/pcd ()
+  ;; Constant one is easily solved with a single large weight.
+  (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
+                                   :max-n-stripes 7
+                                   :trainer-class 'test-pcd-trainer)))
+  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+                                     :max-n-stripes 7
+                                     :rank 1
+                                     :trainer-class 'test-pcd-trainer)))
+  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+                                     :max-n-stripes 7
+                                     :rank 3
+                                     :trainer-class 'test-pcd-trainer)))
+  ;; For constant zero we need to add a bias to either layer.
+  (assert (> 0.01
+             (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t
+                              :trainer-class 'test-pcd-trainer)))
+  (assert (> 0.01
+             (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t
+                              :trainer-class 'test-pcd-trainer)))
+  ;; identity
+  (assert (> 0.01
+             (test-rbm/single :sampler (repeatedly
+                                         (select-random-element
+                                          (list #.(flt 0) #.(flt 1))))
+                              :visible-bias-p t
+                              :hidden-bias-p t
+                              :trainer-class 'test-pcd-trainer
+                              :learning-rate (flt 0.01)
+                              :max-n-samples 1000000))))
+
 (defun test-rbm ()
   (test-do-chunk)
   (let ((mgl-util:*use-blas* nil))
@@ -373,4 +490,6 @@
     (test-rbm-examples))
   (let ((mgl-util:*use-blas* t))
     (test-factored-cloud)
-    (test-rbm-examples)))
+    (test-rbm-examples))
+  (test-copy-pcd)
+  (test-rbm-examples/pcd))

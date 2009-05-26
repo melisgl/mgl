@@ -32,4 +32,5 @@
   (test-break-seq)
   (test-stratified-split)
   (test-log-likelihood-ratio)
+  (test-copy)
   (test-confusion-matrix))

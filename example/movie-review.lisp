@@ -335,8 +335,23 @@
                          ((-1) (setf (aref nodes (+ start 0)) (flt 1)))
                          ((1) (setf (aref nodes (+ start 1)) (flt 1))))))))))))
 
-(defclass mr-rbm-trainer (mr-logging-trainer rbm-trainer)
+(defclass mr-rbm-trainer (mr-logging-trainer rbm-pcd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+
+(defmethod initialize-trainer ((trainer mr-rbm-trainer) rbm)
+  (call-next-method)
+  (when (typep trainer 'rbm-pcd-trainer)
+    (setf (max-n-stripes (mgl-rbm::persistent-chains trainer))
+          (batch-size (elt (trainers trainer) 0)))
+    (describe (mgl-rbm::normal-chains trainer))
+    (describe (mgl-rbm::persistent-chains trainer))
+    (let ((inputs (find 'inputs (visible-chunks rbm) :key #'name)))
+      (when inputs
+        (let ((features (find 'f1 (hidden-chunks rbm) :key #'name)))
+          (fill (storage (nodes features)) (flt 0.01)))
+        (fill (scale inputs) (flt 128))))
+    (format *trace-output* "n-stripes: ~S~%"
+            (n-stripes (mgl-rbm::persistent-chains trainer)))))
 
 (defun dbn-error (sampler rbm)
   (let* ((dbn (dbn rbm))
@@ -401,7 +416,7 @@
                          errors)
                  (n-inputs trainer))))))
 
-(defmethod mgl-rbm:negative-phase :around (trainer (rbm mr-rbm))
+(defmethod mgl-rbm:negative-phase :around (batch trainer (rbm mr-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
                        (mgl-rbm:reconstruction-error rbm)))

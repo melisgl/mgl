@@ -66,7 +66,7 @@
                 (dbn-mean-field-errors (make-sampler 1000) (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
-(defmethod mgl-rbm:negative-phase :around (trainer (rbm spiral-rbm))
+(defmethod mgl-rbm:negative-phase :around (batch trainer (rbm spiral-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
                        (mgl-rbm:reconstruction-error rbm)))

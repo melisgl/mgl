@@ -326,8 +326,8 @@ uninteresting segments. Called from INITIALIZE-TRAINER.")
    (spare-vectors
     :initform nil :accessor spare-vectors :type list
     :documentation "Pre-allocated vectors to make CG less consy.")
-   (accumulator1
-    :initform nil :reader accumulator1
+   (accumulator
+    :initform nil :reader accumulator
     :documentation "This is where COMPUTE-BATCH-COST-AND-DERIVE should
 leave the derivatives."))
   (:documentation "Updates all weights simultaneously after chewing
@@ -340,9 +340,9 @@ through BATCH-SIZE inputs."))
 
 (defmethod map-segment-gradient-accumulators (fn (trainer cg-trainer))
   (let ((segment-set (segment-set trainer))
-        (accumulator1 (accumulator1 trainer)))
+        (accumulator (accumulator trainer)))
     (do-segment-set (segment :start-in-segment-set start) segment-set
-      (funcall fn segment start accumulator1))))
+      (funcall fn segment start accumulator))))
 
 (defmethod segments ((trainer cg-trainer))
   (segments (segment-set trainer)))
@@ -365,7 +365,7 @@ ACCUMULATOR1 of TRAINER."))
 (defun process-batch (trainer learner batch weights derivatives)
   (let ((segment-set (segment-set trainer)))
     (segment-set<-weights segment-set weights)
-    (setf (slot-value trainer 'accumulator1) derivatives)
+    (setf (slot-value trainer 'accumulator) derivatives)
     (compute-batch-cost-and-derive batch trainer learner)))
 
 (defmethod train (sampler (trainer cg-trainer) learner)
@@ -414,8 +414,8 @@ add decay on a per-segment basis."))
     (batch (trainer decayed-cg-trainer-mixin) learner)
   (let* ((cost (flt (call-next-method)))
          (segment-decay-fn (segment-decay-fn trainer))
-         (accumulator1 (accumulator1 trainer)))
-    (declare (type flt-vector accumulator1)
+         (accumulator (accumulator trainer)))
+    (declare (type flt-vector accumulator)
              (type flt cost))
     (do-segment-set (segment :start-in-segment-set segment-start)
         (segment-set trainer)
@@ -432,5 +432,5 @@ add decay on a per-segment basis."))
                     for j upfrom segment-start
                     do (let ((x (aref weights i)))
                          (incf cost (* regularizer x x))
-                         (incf (aref accumulator1 j) (* decay x)))))))))
+                         (incf (aref accumulator j) (* decay x)))))))))
     cost))

@@ -213,7 +213,7 @@
                                        (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
-(defmethod mgl-rbm:negative-phase :around (trainer (rbm mnist-rbm))
+(defmethod mgl-rbm:negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
                        (mgl-rbm:reconstruction-error rbm)))

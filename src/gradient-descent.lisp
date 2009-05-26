@@ -4,19 +4,14 @@
 
 (defgeneric map-segment-gradient-accumulators (fn trainer)
   (:documentation "Call FN of lambda list (SEGMENT ACC-START
-ACCUMULATOR &OPTIONAL ACCUMULATOR2) on each segment trained by
-TRAINER."))
+ACCUMULATOR) on each segment trained by TRAINER."))
 
 (defmacro do-segment-gradient-accumulators
-    (((segment acc-start accumulator &optional (accumulator2 (gensym)))
-      trainer)
-     &body body)
+    (((segment acc-start accumulator) trainer) &body body)
   `(map-segment-gradient-accumulators
-    (lambda (,segment ,acc-start ,accumulator &optional ,accumulator2)
+    (lambda (,segment ,acc-start ,accumulator)
       (declare (type index ,acc-start)
-               (type matlisp:real-matrix ,accumulator)
-               (type (or matlisp:real-matrix null) ,accumulator2)
-               (ignorable ,accumulator2))
+               (type matlisp:real-matrix ,accumulator))
       ,@body)
     ,trainer))
 
@@ -24,21 +19,23 @@ TRAINER."))
   (:documentation "Update the weights being trained. N-NEW-INPUTS have
 been seen since the last time this was called."))
 
-(defun find-segment-gradient-accumulator (segment trainer)
-  (do-segment-gradient-accumulators ((segment2 start accumulator accumulator2)
-                                     trainer)
-    (when (eq segment2 segment)
-      (return-from find-segment-gradient-accumulator
-        (values start accumulator accumulator2)))))
+(defgeneric find-segment-gradient-accumulator (segment trainer)
+  (:documentation "Return the start index and the accumulator
+belonging to SEGMENT in TRAINER or NIL if it is not found.")
+  (:method (segment trainer)
+    (do-segment-gradient-accumulators ((segment2 start accumulator)
+                                       trainer)
+      (when (eq segment2 segment)
+        (return-from find-segment-gradient-accumulator
+          (values start accumulator))))))
 
-(defmacro with-segment-gradient-accumulator (((start accumulator
-                                                     &optional accumulator2)
+(defmacro with-segment-gradient-accumulator (((start accumulator)
                                               (segment trainer))
                                              &body body)
-  `(multiple-value-bind (,start ,accumulator accumulator2)
+  `(multiple-value-bind (,start ,accumulator)
        (find-segment-gradient-accumulator ,segment ,trainer)
      (declare (type (or index null) ,start)
-              (type (or matlisp:real-matrix null) ,accumulator ,accumulator2))
+              (type (or matlisp:real-matrix null) ,accumulator))
      ,@body))
 
 
@@ -49,23 +46,13 @@ been seen since the last time this was called."))
    (segment-set
     :reader segment-set
     :documentation "The set of segments that are to be trained. The
-ACCUMULATOR1, ACCUMULATOR2, WEIGHT-DELTAS, etc vectors are indexed by
-SEGMENT-SET indices.")
+ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
+indices.")
    (weight-deltas :type matlisp:real-matrix :accessor weight-deltas)
-   (use-accumulator2
-    :initform nil :initarg :use-accumulator2 :reader use-accumulator2
-    :documentation "Controls whether ACCUMULATOR2 shall be set up by
-INITIALIZE-GD-TRAINER.")
-   (accumulator1
-    :type matlisp:real-matrix :accessor accumulator1
-    :documentation "One of two FLT vectors that are accessed directly
-by the client and are used to store the sum of the computed gradient.")
-   (accumulator2
-    :type (or null matlisp:real-matrix) :accessor accumulator2
-    :documentation "Another accumulator that, if present, is simply
-added to ACCUMULATOR1. Accumulating the positive and negative
-gradients in different accumulators in a longish batch helps with
-numerical aaccuracy problems.")
+   (accumulator
+    :type matlisp:real-matrix :accessor accumulator
+    :documentation "An FLT vector that is accessed directly by the
+client and are used to store the sum of the computed gradient.")
    (learning-rate
     :initform #.(flt 0.1) :initarg :learning-rate :accessor learning-rate
     :documentation "This is normally divided by the number of inputs
@@ -128,13 +115,8 @@ only missing values does not change anything."))
   (setf (slot-value trainer 'segment-set)
         (make-instance 'segment-set :segments (list-segments segmentable)))
   (let ((n-weights (segment-set-size (segment-set trainer))))
-    (setf (accumulator1 trainer) (matlisp:make-real-matrix n-weights 1))
-    (matlisp:fill-matrix (accumulator1 trainer) #.(flt 0))
-    (cond ((use-accumulator2 trainer)
-           (setf (accumulator2 trainer) (matlisp:make-real-matrix n-weights 1))
-           (matlisp:fill-matrix (accumulator2 trainer) #.(flt 0)))
-          (t
-           (setf (accumulator2 trainer) nil)))
+    (setf (accumulator trainer) (matlisp:make-real-matrix n-weights 1))
+    (matlisp:fill-matrix (accumulator trainer) #.(flt 0))
     (setf (weight-deltas trainer) (matlisp:make-real-matrix n-weights 1))))
 
 (defun set-up-n-weight-uses (trainer)
@@ -157,10 +139,9 @@ only missing values does not change anything."))
 
 (defmethod map-segment-gradient-accumulators (fn (trainer gd-trainer))
   (let ((segment-set (segment-set trainer))
-        (accumulator1 (accumulator1 trainer))
-        (accumulator2 (accumulator2 trainer)))
+        (accumulator (accumulator trainer)))
     (do-segment-set (segment :start-in-segment-set start) segment-set
-      (funcall fn segment start accumulator1 accumulator2))))
+      (funcall fn segment start accumulator))))
 
 ;;; delta_w' += m * delta_w + df/dw
 ;;;
@@ -174,24 +155,19 @@ only missing values does not change anything."))
 ;;;
 ;;; Decrement WEIGHTS by
 ;;;
-;;;   (+ (/ (+ ACCUMULATOR1 ACCUMULATOR2)
-;;;        N-INPUTS)
-;;;     (* WEIGHT-DECAY WEIGHTS))
+;;;   (+ (/ ACCUMULATOR N-INPUTS)
+;;;      (* WEIGHT-DECAY WEIGHTS))
 (defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
   (when (<= (batch-size trainer)
             (incf (n-inputs-in-batch trainer) n-new-inputs))
-    (let ((accumulator1 (storage (accumulator1 trainer)))
-          (accumulator2 (if (accumulator2 trainer)
-                            (storage (accumulator2 trainer))
-                            nil))
+    (let ((accumulator (storage (accumulator trainer)))
           (weight-deltas (storage (weight-deltas trainer)))
           (learning-rate (learning-rate trainer))
           (n-inputs (flt (n-inputs-in-batch trainer)))
           (momentum (momentum trainer))
           (weight-decay (weight-decay trainer))
           (weight-penalty (weight-penalty trainer)))
-      (declare (type flt-vector accumulator1 weight-deltas)
-               (type (or null flt-vector) accumulator2)
+      (declare (type flt-vector accumulator weight-deltas)
                (type flt learning-rate n-inputs momentum
                      weight-decay weight-penalty)
                (optimize (speed 3) #.*no-array-bounds-check*))
@@ -207,16 +183,11 @@ only missing values does not change anything."))
                             ;; Normally we'd multiply this by LEARNING-RATE
                             ;; here, but doing it when updating the weights
                             ;; plays nicer with changing learning rates.
-                            (/ (if accumulator2
-                                   (+ (aref accumulator1 i)
-                                      (aref accumulator2 i))
-                                   (aref accumulator1 i))
+                            (/ (aref accumulator i)
                                n-inputs)
                             (* weight-decay (aref weights j))
                             weight-penalty)))
-              (setf (aref accumulator1 i) #.(flt 0))
-              (when accumulator2
-                (setf (aref accumulator2 i) #.(flt 0)))
+              (setf (aref accumulator i) #.(flt 0))
               (setf (aref weight-deltas i) delta)
               (decf (aref weights j) (* learning-rate delta)))))
         (setf (n-inputs-in-batch trainer) 0))))
@@ -225,10 +196,7 @@ only missing values does not change anything."))
 (defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
                                  n-new-inputs)
   (declare (type index n-new-inputs))
-  (let ((accumulator1 (storage (accumulator1 trainer)))
-        (accumulator2 (if (accumulator2 trainer)
-                          (storage (accumulator2 trainer))
-                          nil))
+  (let ((accumulator (storage (accumulator trainer)))
         (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
         (weight-deltas (storage (weight-deltas trainer)))
         (learning-rate (learning-rate trainer))
@@ -236,8 +204,7 @@ only missing values does not change anything."))
         (weight-decay (weight-decay trainer))
         (weight-penalty (weight-penalty trainer))
         (batch-size (batch-size trainer)))
-    (declare (type flt-vector accumulator1 weight-deltas)
-             (type (or null flt-vector) accumulator2)
+    (declare (type flt-vector accumulator weight-deltas)
              (type index-vector n-weight-uses-in-batch)
              (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
@@ -274,27 +241,19 @@ only missing values does not change anything."))
                             (* (if (zerop (aref n-weight-uses-in-batch i))
                                    #.(flt 0)
                                    (/ (flt (aref n-weight-uses-in-batch i))))
-                               (if accumulator2
-                                   (+ (aref accumulator1 i)
-                                      (aref accumulator2 i))
-                                   (aref accumulator1 i)))
+                               (aref accumulator i))
                             (* weight-decay (aref weights j))
                             weight-penalty)))
               (setf (aref weight-deltas i) delta)
               (decf (aref weights j) (* learning-rate delta))
               (setf (aref n-weight-uses-in-batch i) 0
-                    (aref accumulator1 i) #.(flt 0))
-              (when accumulator2
-                (setf (aref accumulator2 i) #.(flt 0)))))))))
+                    (aref accumulator i) #.(flt 0))))))))
   (incf (n-inputs trainer) n-new-inputs))
 
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
   (assert (= 1 n-new-inputs))
-  (let ((accumulator1 (storage (accumulator1 trainer)))
-        (accumulator2 (if (accumulator2 trainer)
-                          (storage (accumulator2 trainer))
-                          nil))
+  (let ((accumulator (storage (accumulator trainer)))
         (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
         (weight-deltas (storage (weight-deltas trainer)))
         (learning-rate (learning-rate trainer))
@@ -302,8 +261,7 @@ only missing values does not change anything."))
         (weight-decay (weight-decay trainer))
         (weight-penalty (weight-penalty trainer))
         (batch-size (batch-size trainer)))
-    (declare (type flt-vector accumulator1 weight-deltas)
-             (type (or null flt-vector) accumulator2)
+    (declare (type flt-vector accumulator weight-deltas)
              (type index-vector n-weight-uses-in-batch)
              (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size)
@@ -325,19 +283,14 @@ only missing values does not change anything."))
                              (1+ (the! index
                                        (aref n-weight-uses-in-batch i)))))
                (let ((delta (+ (* momentum (aref weight-deltas i))
-                               (/ (if accumulator2
-                                      (+ (aref accumulator1 i)
-                                         (aref accumulator2 i))
-                                      (aref accumulator1 i))
+                               (/ (aref accumulator i)
                                   (aref n-weight-uses-in-batch i))
                                (* weight-decay (aref weights j))
                                weight-penalty)))
                  (setf (aref weight-deltas i) delta)
                  (decf (aref weights j) (* learning-rate delta))
                  (setf (aref n-weight-uses-in-batch i) 0
-                       (aref accumulator1 i) #.(flt 0))
-                 (when accumulator2
-                   (setf (aref accumulator2 i) #.(flt 0)))))))
+                       (aref accumulator i) #.(flt 0))))))
          segment))))
   (incf (n-inputs trainer)))
 
