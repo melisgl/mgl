@@ -31,7 +31,7 @@ including biases) are cached.")
     :documentation "Of the same size as NODES. This is where
 activations coming from biases and conditioning chunks are between two
 SET-INPUT calls. Gets more useful with a lot of conditioning and more
-activations such as high N-GIBBS.")
+activations, for instance, with high N-GIBBS.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
@@ -41,7 +41,7 @@ it is non-NIL then N-STRIPES must be 1.")
    (default-value
     :initform #.(flt 0) :initarg :default-value :type flt
     :reader default-value
-    :documentation "Upon creation or resize the chunk's nodes get
+    :documentation "Upon creation or resizing, the chunk's nodes get
 filled with this value."))
   (:documentation "Base class for different chunks. A chunk is a set
 of nodes of the same type."))
@@ -212,8 +212,8 @@ activation plus guassian noise of unit variance."))
     :initarg :scale :accessor scale
     :documentation "The sum of the means after normalization. Can be
 changed during training, for instance when clamping. If it is a vector
-then its length must be MAX-N-STRIPES which automatically
-maintained.")
+then its length must be MAX-N-STRIPES which automatically maintained
+when changing the number of stripes.")
    (group-size
     :initform (error "GROUP-SIZE must be specified.")
     :initarg :group-size
@@ -925,7 +925,8 @@ calculate the effect of the positive phase on the gradient.")
     :initform 1
     :initarg :n-gibbs
     :accessor n-gibbs
-    :documentation "The number of steps of Gibbs sampling to perform.")))
+    :documentation "The number of steps of Gibbs sampling to perform."))
+  (:documentation "A contrastive divergence based trainer for RBMs."))
 
 (defmethod train (sampler (trainer rbm-trainer) (rbm rbm))
   (while (not (finishedp sampler))

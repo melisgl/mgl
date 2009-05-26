@@ -362,14 +362,18 @@ only missing values does not change anything."))
   ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (segmenter
     :initarg :segmenter :accessor segmenter
-    :documentation "A function that maps a segment to a trainer or
-NIL. Several segments may be mapped to the same trainer. Used to
-initialize SEGMENT-TRAINERS before training.")
+    :documentation "When this trainer is initialized it loops over the
+segment of the learner with MAP-SEGMENTS. SEGMENTER is a function that
+is called with each segment and returns a trainer or NIL. Several
+segments may be mapped to the same trainer. After the segment->trainer
+mappings are collected, each trainer is initialized by
+INITIALIZE-TRAINER with the list segments mapped to it.")
    (trainers :type list :reader trainers)
    (segments :type list :reader segments))
   (:documentation "A trainer that delegates training of segments to
 other trainers. Useful to delegate training of different segments to
-different trainers or simply to not train all segments."))
+different trainers (capable of working with segmantables) or simply to
+not train all segments."))
 
 (defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
   (let ((segmenter (segmenter trainer))
