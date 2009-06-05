@@ -2,9 +2,9 @@
 #+STARTUP: content
 #+SEQ_TODO: MAYBE(m) TODO(t) NEXT(n) STARTED(s) WAITING(w) | DONE(d) CANCELLED(c)
 #+STARTUP: hidestars
-* gd
+* gradient descent
 ** DONE rename segmented-trainer to segmented-gd-trainer
-* cg
+* conjugate gradient
 ** WAITING clarify conjugate gradient license
    - State "WAITING"    [2008-07-21 Mon 21:53] \\
      Contacting Carl Rasmussen by email
@@ -13,7 +13,7 @@
    ARITHMETIC-ERROR at some strategically chosen places.
 ** DONE failed line searches can still change the weights
    documented
-* rbm
+* boltzmann machines
 ** MAYBE conditioning chunks are not really visible nor hidden
    Does it make sense to store them separately?
 ** DONE factored RBM: weight matrix is A*B
@@ -45,7 +45,6 @@
 ** DONE calculate bias+conditioning activation only once per training example
    - State "DONE"       [2008-09-10 Wed 15:00] \\
      :CACHE-STATIC-ACTIVATIONS-P initarg to CHUNK
-* bp
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
 ** TODO redo ->CROSS-ENTROPY
