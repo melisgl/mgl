@@ -17,7 +17,7 @@
 ** MAYBE conditioning chunks are not really visible nor hidden
    Does it make sense to store them separately?
 ** DONE factored RBM: weight matrix is A*B
-** TODO semi-restricted (connections between visibles)
+** DONE semi-restricted (connections between visibles)
 ** MAYBE higher order rbm
 ** MAYBE training with conjugate gradient
    Is it possible to calculate the cost function? Not quite, but there
@@ -51,6 +51,9 @@
 ** TODO what to do with INDICES-TO-CALCULATE?
 ** DONE normalized-lump: scale should be per stripe
 ** DONE persistent contrastive divergence
+** DONE general boltzmann machines
+** TODO deep boltzmann machines
+** TODO initialize DBM/BM from DBN
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values

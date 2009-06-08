@@ -199,42 +199,10 @@ interface and simple gradient descent based trainers."))
    #:decayed-cg-trainer-mixin)
   (:documentation "Conjugate gradient based trainer."))
 
-(cl:defpackage :mgl-rbm
+(cl:defpackage :mgl-bm
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-cg)
+  (:nicknames #:mgl-rbm)
   (:export
-   #:rbm
-   #:visible-chunks
-   #:hidden-chunks
-   #:default-clouds
-   #:merge-cloud-specs
-   #:clouds
-   #:do-clouds
-   #:find-cloud
-   ;; Operating an RBM
-   #:set-visible-mean
-   #:sample-visible
-   #:set-hidden-mean
-   #:sample-hidden
-   ;; RBM trainer
-   #:rbm-trainer
-   #:rbm-pcd-trainer
-   #:pcd
-   #:visible-sampling
-   #:hidden-sampling
-   #:n-gibbs
-   #:positive-phase
-   #:negative-phase
-   ;; Cloud
-   #:cloud
-   #:name
-   #:visible-chunk
-   #:hidden-chunk
-   #:full-cloud
-   #:weights
-   #:factored-cloud
-   #:cloud-a
-   #:cloud-b
-   #:rank
    ;; Chunk
    #:name
    #:chunk
@@ -256,18 +224,62 @@ interface and simple gradient descent based trainers."))
    ;; Chunk extensions
    #:set-chunk-mean
    #:sample-chunk
+   ;; Cloud
+   #:cloud
+   #:name
+   #:chunk1
+   #:chunk2
+   #:full-cloud
+   #:weights
+   #:factored-cloud
+   #:cloud-a
+   #:cloud-b
+   #:rank
+   ;; BM
+   #:bm
+   #:visible-chunks
+   #:hidden-chunks
+   #:default-clouds
+   #:merge-cloud-specs
+   #:clouds
+   #:do-clouds
+   #:find-cloud
+   ;; Operating an BM
+   #:set-visible-mean
+   #:sample-visible
+   #:set-hidden-mean
+   #:sample-hidden
+   ;; RBM
+   #:rbm
+   #:dbn
+   ;; Stuff common to trainers
+   #:visible-sampling
+   #:hidden-sampling
+   #:n-gibbs
+   #:positive-phase
+   #:negative-phase
+   ;; Contrastive Divergence (CD) learning for RBMs
+   #:rbm-cd-trainer
+   ;; Persistent Contrastive Divergence (PCD) learning
+   #:bm-pcd-trainer
+   #:persistent-chains
+   #:pcd
+   #:settle-visible-mean-field
+   #:settle-hidden-mean-field
+   #:set-hidden-mean-in-pcd
+   ;; Convenience, utilities
+   #:inputs->nodes
+   #:nodes->inputs
+   #:reconstruction-error
    ;; DBN
    #:dbn
    #:rbms
    #:down-mean-field
    #:make-reconstruction-rmse-counters-and-measurers
-   #:dbn-mean-field-errors
-   ;;
-   #:inputs->nodes
-   #:nodes->inputs
-   #:reconstruction-error)
-  (:documentation "Restricted Boltzmann Machines (RBM) and their
-stacks called Deep Belief Networks (DBN)."))
+   #:dbn-mean-field-errors)
+  (:documentation "Fully General Boltzmann Machines, Restricted
+Boltzmann Machines and their stacks called Deep Belief
+Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-cg)
@@ -322,7 +334,7 @@ stacks called Deep Belief Networks (DBN)."))
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll-dbn
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-rbm #:mgl-bp #:mgl-gd)
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bm #:mgl-bp #:mgl-gd)
   (:export
    #:unroll-dbn
    #:clamp-indices-in-unrolled-dbn

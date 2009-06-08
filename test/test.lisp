@@ -3,7 +3,7 @@
 (defun test ()
   (test-util)
   (test-cg)
-  (test-rbm)
+  (test-bm)
   (test-bp)
   (test-unroll-dbn)
   (values))

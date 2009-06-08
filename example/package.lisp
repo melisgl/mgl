@@ -14,15 +14,15 @@
            #:log-test-period))
 
 (cl:defpackage :mgl-example-spiral
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-rbm #:mgl-bp
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
         #:mgl-unroll-dbn #:mgl-example-util))
 
 (cl:defpackage :mgl-example-mnist
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-rbm #:mgl-bp
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
         #:mgl-unroll-dbn #:mgl-example-util)
   (:export #:*mnist-dir*
            #:train-mnist))
 
 (cl:defpackage #:mgl-example-movie-review
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-rbm #:mgl-bp
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
         #:mgl-unroll-dbn #:mgl-example-util))

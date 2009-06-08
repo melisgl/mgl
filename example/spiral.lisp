@@ -48,7 +48,7 @@
 
 ;;;; DBN training
 
-(defclass spiral-rbm-trainer (spiral-logging-trainer rbm-trainer)
+(defclass spiral-rbm-trainer (spiral-logging-trainer rbm-cd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
@@ -66,10 +66,10 @@
                 (dbn-mean-field-errors (make-sampler 1000) (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
-(defmethod mgl-rbm:negative-phase :around (batch trainer (rbm spiral-rbm))
+(defmethod negative-phase :around (batch trainer (rbm spiral-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
-                       (mgl-rbm:reconstruction-error rbm)))
+                       (reconstruction-error rbm)))
 
 
 ;;;; BPN training

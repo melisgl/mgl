@@ -30,8 +30,8 @@
                              (:file "segment")
                              (:file "gradient-descent")
                              (:file "conjugate-gradient")
-                             (:file "rbm")
-                             (:file "dbn")
+                             (:file "boltzmann-machine")
+                             (:file "deep-belief-network")
                              (:file "backprop")
                              (:file "unroll-dbn")))))
 

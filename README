@@ -3,8 +3,11 @@ MGL
 Common Lisp machine learning library by Gabor Melis with some parts
 contributed by Ravenpack International. Implements:
 - Restricted Boltzmann Machines and Deep Belief Networks
+- Semi Restricted Boltzmann Machines
+- Boltzmann Machines
 - Backprop networks
 - Unrolling DBN to backrop network
+- Contrastive Divergence, Persistent Contrastive Divergence
 - Gradient descent optimization
 - Conjugate gradient optimization
 

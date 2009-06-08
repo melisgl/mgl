@@ -83,13 +83,13 @@
   (let ((rbm (make-instance 'rbm
                             :visible-chunks (list
                                              (make-instance 'constant-chunk
-                                                            :name 'constant)
+                                                            :name 'constant1)
                                              (make-instance 'gaussian-chunk
                                                             :name 'inputs
                                                             :size 10))
                             :hidden-chunks (list
                                             (make-instance 'constant-chunk
-                                                           :name 'constant)
+                                                           :name 'constant2)
                                             (make-instance 'sigmoid-chunk
                                                            :name 'features
                                                            :size 2)))))

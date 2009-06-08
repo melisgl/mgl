@@ -310,7 +310,7 @@ inits. The fourth is name of the `end' lump.")
            (linear-name (cloud-linear-lump-name rbm-index cloud transposep))
            (sparsep (or (possibly-sparse-lumpy-p from-lumpy)
                         (possibly-sparse-lumpy-p to-lumpy)))
-           (row-size (chunk-size (hidden-chunk cloud))))
+           (row-size (chunk-size (chunk2 cloud))))
       (list `((,weight-symbol
                (,(if sparsep
                      'sparse-weight-lump
@@ -496,14 +496,14 @@ goes into the middle of the backprop network."
                                   :cloud cloud
                                   :rbm-index (- n-rbms (abs depth) 1)
                                   :transposep (eq (lumpy-chunk from)
-                                                  (hidden-chunk cloud)))
+                                                  (chunk2 cloud)))
                    (lumpy-incomings to))))
       (loop for rbm in (reverse (rbms dbn))
             for depth upfrom 0
             do
             (do-clouds (cloud rbm)
-              (let ((hidden-chunk (hidden-chunk cloud))
-                    (visible-chunk (visible-chunk cloud)))
+              (let ((visible-chunk (chunk1 cloud))
+                    (hidden-chunk (chunk2 cloud)))
                 (unless (typep hidden-chunk 'conditioning-chunk)
                   (add-connection cloud depth
                                   :from (ensure-lumpy (1+ depth) visible-chunk)

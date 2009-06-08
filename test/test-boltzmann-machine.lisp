@@ -3,16 +3,16 @@
 (defclass test-trainer ()
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
-(defclass test-cd-trainer (test-trainer rbm-trainer) ())
+(defclass test-cd-trainer (test-trainer rbm-cd-trainer) ())
 
-(defclass test-pcd-trainer (test-trainer rbm-pcd-trainer) ())
+(defclass test-pcd-trainer (test-trainer bm-pcd-trainer) ())
 
 (defmethod initialize-trainer ((trainer test-pcd-trainer) rbm)
   (call-next-method)
-  (setf (max-n-stripes (mgl-rbm::persistent-chains trainer))
+  (setf (max-n-stripes (mgl-bm::persistent-chains trainer))
         (batch-size (elt (trainers trainer) 0)))
   (log-msg "Persistent chain n-stripes: ~S~%"
-           (n-stripes (mgl-rbm::persistent-chains trainer))))
+           (n-stripes (mgl-bm::persistent-chains trainer))))
 
 (defclass test-rbm (rbm)
   ((clamper :initarg :clamper :reader clamper)))
@@ -37,7 +37,7 @@
 (defmethod train-batch :around (batch (trainer test-trainer) rbm)
   (call-next-method)
   (let ((counter (counter trainer)))
-    (mgl-rbm:inputs->nodes rbm)
+    (inputs->nodes rbm)
     (multiple-value-bind (e n) (get-squared-error rbm)
       (add-error counter e n))
     (let ((n-inputs (n-inputs trainer)))
@@ -55,7 +55,7 @@
                               (make-array 3 :element-type 'index
                                           :initial-contents '(1 3 4))))
         (r '()))
-    (mgl-rbm::do-chunk (i chunk)
+    (mgl-bm::do-chunk (i chunk)
       (push i r))
     (assert (equal (reverse r) '(1 3 4)))))
 
@@ -83,20 +83,20 @@
                 :visible-chunks `(,@(when hidden-bias-p
                                       (list
                                        (make-instance 'constant-chunk
-                                                      :name 'constant)))
+                                                      :name 'constant1)))
                                   ,(make-instance visible-type
                                                   :name 'inputs :size 1))
                 :hidden-chunks `(,@(when visible-bias-p
                                      (list
                                       (make-instance 'constant-chunk
-                                                     :name 'constant)))
+                                                     :name 'constant2)))
                                  ,(make-instance hidden-type
                                                  :name 'features :size 1))
                 :clouds (if rank
                             `((:class factored-cloud
                                :rank ,rank
-                               :visible-chunk inputs
-                               :hidden-chunk features))
+                               :chunk1 inputs
+                               :chunk2 features))
                             nil)
                 :max-n-stripes max-n-stripes
                 :clamper #'clamp)))
@@ -153,18 +153,18 @@
                   'test-rbm
                   :visible-chunks (list
                                    (make-instance 'constant-chunk
-                                                  :name 'constant)
+                                                  :name 'constant1)
                                    chunk)
                   :hidden-chunks (list
                                   (make-instance 'constant-chunk
-                                                 :name 'constant)
+                                                 :name 'constant2)
                                   (make-instance 'sigmoid-chunk :name 'features
                                                  :size 1))
                   :clouds (if rank
                               `((:class factored-cloud
                                  :rank ,rank
-                                 :visible-chunk inputs
-                                 :hidden-chunk features))
+                                 :chunk1 inputs
+                                 :chunk2 features))
                               nil)
                   :clamper #'clamp)))
         (train (make-instance 'counting-function-sampler
@@ -207,11 +207,11 @@
                 'test-rbm
                 :visible-chunks (list
                                  (make-instance 'constant-chunk
-                                                :name 'constant)
+                                                :name 'constant1)
                                  (make-instance 'softmax-chunk :name 'inputs
                                                 :size 5 :group-size 5))
                 :hidden-chunks (list
-                                (make-instance 'constant-chunk :name 'constant)
+                                (make-instance 'constant-chunk :name 'constant2)
                                 (make-instance hidden-type :name 'features
                                                :size 1))
                 :clamper #'clamp)))
@@ -254,11 +254,11 @@
                 'test-rbm
                 :visible-chunks (list
                                  (make-instance 'constant-chunk
-                                                :name 'constant)
+                                                :name 'constant1)
                                  (make-instance 'softmax-chunk :name 'inputs
                                                 :size 10 :group-size 5))
                 :hidden-chunks (list
-                                (make-instance 'constant-chunk :name 'constant)
+                                (make-instance 'constant-chunk :name 'constant2)
                                 (make-instance 'gaussian-chunk :name 'features
                                                :size 2))
                 :clamper #'clamp)))
@@ -291,15 +291,15 @@
                              :hidden-chunks (list hidden-chunk)
                              :default-clouds nil
                              :clouds `((:class factored-cloud
-                                        :visible-chunk inputs
-                                        :hidden-chunk features
+                                        :chunk1 inputs
+                                        :chunk2 features
                                         :rank ,rank))))
          (cloud (find-cloud '(inputs features) rbm))
          (a (weights (cloud-a cloud)))
          (b (weights (cloud-b cloud)))
          (v (nodes visible-chunk))
          (h (nodes hidden-chunk))
-         (trainer (make-instance 'rbm-trainer
+         (trainer (make-instance 'rbm-cd-trainer
                                  :segmenter
                                  (repeatedly
                                    (make-instance 'batch-gd-trainer)))))
@@ -318,7 +318,7 @@
     (setf (matlisp:matrix-ref h 0 0) (flt 1/4))
     (setf (matlisp:matrix-ref h 1 0) (flt 1/5))
     (setf (matlisp:matrix-ref h 2 0) (flt 1/7))
-    (mgl-rbm::accumulate-negative-phase-statistics trainer rbm)
+    (mgl-bm::accumulate-negative-phase-statistics trainer rbm)
     (assert (= 2 (length (trainers trainer))))
     (let ((db (reshape2 (accumulator (elt (trainers trainer) 0))
                         rank n-visible))
@@ -411,7 +411,7 @@
                               :name 'this-chunk
                               :size 10)))
     (assert (equal (mapcar #'first (compare-objects chunk (copy 'pcd chunk)))
-                   '(nodes inputs)))))
+                   '(nodes mgl-bm::old-nodes inputs)))))
 
 (defun test-copy-pcd-full-cloud ()
   (let* ((chunk1 (make-instance 'constant-chunk
@@ -422,21 +422,21 @@
                                 :size 10))
          (cloud (make-instance 'full-cloud
                                :name 'this-cloud
-                               :visible-chunk chunk1
-                               :hidden-chunk chunk2)))
+                               :chunk1 chunk1
+                               :chunk2 chunk2)))
     (assert (equal (mapcar #'first (compare-objects cloud (copy 'pcd cloud)))
-                   '(visible-chunk hidden-chunk)))))
+                   '(chunk1 chunk2)))))
 
 (defun test-copy-pcd-rbm ()
   (let ((rbm (make-instance
               'rbm
               :visible-chunks (list (make-instance 'constant-chunk
-                                                   :name 'constant)
+                                                   :name 'constant1)
                                     (make-instance 'sigmoid-chunk
                                                    :name 'inputs
                                                    :size 1))
               :hidden-chunks (list (make-instance 'constant-chunk
-                                                  :name 'constant)
+                                                  :name 'constant2)
                                    (make-instance 'sigmoid-chunk
                                                   :name 'features
                                                   :size 1))
@@ -444,8 +444,8 @@
     (assert (equal (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
                    '(visible-chunks hidden-chunks clouds max-n-stripes)))
     (dolist (cloud (clouds rbm))
-      (assert (member (visible-chunk cloud) (visible-chunks rbm)))
-      (assert (member (hidden-chunk cloud) (hidden-chunks rbm))))))
+      (assert (member (chunk1 cloud) (visible-chunks rbm)))
+      (assert (member (chunk2 cloud) (hidden-chunks rbm))))))
 
 (defun test-copy-pcd ()
   (test-copy-pcd-chunk)
@@ -493,3 +493,6 @@
     (test-rbm-examples))
   (test-copy-pcd)
   (test-rbm-examples/pcd))
+
+(defun test-bm ()
+  (test-rbm))

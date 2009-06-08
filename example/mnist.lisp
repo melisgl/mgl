@@ -191,7 +191,7 @@
     (when inputs
       (clamp-striped-nodes images inputs))))
 
-(defclass mnist-rbm-trainer (mnist-logging-trainer rbm-trainer)
+(defclass mnist-rbm-trainer (mnist-logging-trainer rbm-cd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
@@ -213,17 +213,17 @@
                                        (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
-(defmethod mgl-rbm:negative-phase :around (batch trainer (rbm mnist-rbm))
+(defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
-                       (mgl-rbm:reconstruction-error rbm)))
+                       (reconstruction-error rbm)))
 
 
 ;;;; DBN training
 
 (defun bias-cloud-p (cloud)
-  (or (typep (visible-chunk cloud) 'constant-chunk)
-      (typep (hidden-chunk cloud) 'constant-chunk)))
+  (or (typep (chunk1 cloud) 'constant-chunk)
+      (typep (chunk2 cloud) 'constant-chunk)))
 
 (defclass mnist-rbm-segment-trainer (batch-gd-trainer) ())
 

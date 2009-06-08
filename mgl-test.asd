@@ -12,7 +12,7 @@
                              (:file "test-copy")
                              (:file "test-confusion-matrix")
                              (:file "test-conjugate-gradient")
-                             (:file "test-rbm")
+                             (:file "test-boltzmann-machine")
                              (:file "test-backprop")
                              (:file "test-unroll-dbn")
                              (:file "test"))))
