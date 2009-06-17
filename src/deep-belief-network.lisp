@@ -17,6 +17,20 @@ multiple hidden layers are not Boltzmann Machines."))
   (dolist (rbm (rbms dbn))
     (setf (max-n-stripes rbm) max-n-stripes)))
 
+(defun check-no-name-clashes (rbms)
+  (unless (unique-names-p
+           (mapcar #'name
+                   (append (apply #'append (mapcar #'visible-chunks rbms))
+                           (apply #'append (mapcar #'hidden-chunks rbms)))))
+    (error "Name conflict between chunks: ~S" rbms))
+  (unless (unique-names-p
+           (mapcar #'name
+                   (apply #'append (mapcar #'clouds rbms))))
+    (error "Name conflict between clouds: ~S" rbms)))
+
+(defmethod initialize-instance :before ((dbn dbn) &key rbms &allow-other-keys)
+  (check-no-name-clashes rbms))
+
 (defmethod initialize-instance :after ((dbn dbn) &key &allow-other-keys)
   (dolist (rbm (rbms dbn))
     (setf (slot-value rbm 'dbn) dbn))
@@ -24,6 +38,7 @@ multiple hidden layers are not Boltzmann Machines."))
   (setf (max-n-stripes dbn) (max-n-stripes dbn)))
 
 (defun add-rbm (rbm dbn)
+  (check-no-name-clashes (cons rbm (rbms dbn)))
   (setf (slot-value rbm 'dbn) dbn
         (slot-value dbn 'rbms) (append1 (rbms dbn) rbm))
   (setf (max-n-stripes rbm) (max-n-stripes dbn)))
