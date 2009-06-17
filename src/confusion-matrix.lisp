@@ -89,6 +89,14 @@ TARGET."
                                        (declare (ignore prediction))
                                        (eql target target2))))
 
+(defun add-confusion-matrix (matrix result-matrix)
+  "Add MATRIX into RESULT-MATRIX."
+  (map-confusion-matrix (lambda (target prediction count)
+                          (incf (confusion-count result-matrix target prediction)
+                                count))
+                        matrix)
+  result-matrix)
+
 (defmethod print-object ((matrix confusion-matrix) stream)
   (flet ((->% (x)
            (if x

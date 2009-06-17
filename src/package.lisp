@@ -78,6 +78,7 @@
    #:confusion-matrix-accuracy
    #:confusion-matrix-precision
    #:confusion-matrix-recall
+   #:add-confusion-matrix
    ;; Feature selection, encoding
    #:count-features
    #:compute-feature-llrs
