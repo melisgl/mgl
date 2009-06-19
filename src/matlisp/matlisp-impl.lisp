@@ -161,6 +161,15 @@
     (dotimes (i nxm b)
       (incf (aref b* i) (aref a* i)))))
 
+(defmethod scal! ((a double-float) (x real-matrix))
+  (let* ((nx (number-of-elements x))
+         (x* (store x)))
+    (declare (type fixnum nx)
+             (type (simple-array real-matrix-element-type (*)) x*)
+             (optimize (speed 3)))
+    (dotimes (i nx x)
+      (setf (aref x* i) (* a (aref x* i))))))
+
 (defun ones (n &optional (m n))
   (unless (and (typep m '(integer 1))
 	       (typep n '(integer 1)))

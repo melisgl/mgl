@@ -14,5 +14,6 @@
            #:copy!
            #:gemm!
            #:m+!
+           #:scal!
            #:ones
            #:sum))
