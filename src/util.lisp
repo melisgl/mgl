@@ -248,9 +248,21 @@ classes the same."
 
 ;;;; Math
 
+;;; Beat Allegro's underflow errors into submission with a club. The
+;;; values must be known to be FLT for this to work.
+#+allegro
+(defmacro with-zero-on-underflow (&body body)
+  `(locally (declare (optimize (safety 0) (speed 3)))
+     ,@body))
+
+#-allegro
+(defmacro with-zero-on-underflow (&body body)
+  `(locally ,@body))
+
 (declaim (inline sigmoid))
 (defun sigmoid (x)
-  (/ (1+ (exp (- x)))))
+  (declare (type flt x))
+  (/ (1+ (with-zero-on-underflow (exp (- x))))))
 
 (declaim (inline try-chance))
 (defun try-chance (chance)
