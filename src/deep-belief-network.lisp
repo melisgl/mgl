@@ -19,13 +19,10 @@ multiple hidden layers are not Boltzmann Machines."))
 
 (defun check-no-name-clashes (rbms)
   (unless (unique-names-p
-           (mapcar #'name
-                   (append (apply #'append (mapcar #'visible-chunks rbms))
-                           (apply #'append (mapcar #'hidden-chunks rbms)))))
+           (append (apply #'append (mapcar #'visible-chunks rbms))
+                   (apply #'append (mapcar #'hidden-chunks rbms))))
     (error "Name conflict between chunks: ~S" rbms))
-  (unless (unique-names-p
-           (mapcar #'name
-                   (apply #'append (mapcar #'clouds rbms))))
+  (unless (unique-names-p (apply #'append (mapcar #'clouds rbms)))
     (error "Name conflict between clouds: ~S" rbms)))
 
 (defmethod initialize-instance :before ((dbn dbn) &key rbms &allow-other-keys)
