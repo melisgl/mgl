@@ -82,15 +82,14 @@ The same consideration applies to non-constant conditioning chunks.")
     (let ((class (class-of object))
           (initargs ())
           (inits ()))
-      ;; FIXME: sbcl specific
-      (dolist (slot (sb-mop:class-slots class))
-        (let ((slot-name (sb-mop:slot-definition-name slot)))
+      (dolist (slot (c2mop:class-slots class))
+        (let ((slot-name (c2mop:slot-definition-name slot)))
           (when (slot-boundp object slot-name)
             (multiple-value-bind (new-slot-value initializep)
                 (copy-object-slot context object slot-name
                                   (slot-value object slot-name))
               (when initializep
-                (let ((initarg (first (sb-mop:slot-definition-initargs slot))))
+                (let ((initarg (first (c2mop:slot-definition-initargs slot))))
                   (if initarg
                       (push-all (list new-slot-value initarg) initargs)
                       (push (list slot-name new-slot-value) inits))))))))

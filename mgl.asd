@@ -33,7 +33,8 @@
                              (:file "boltzmann-machine")
                              (:file "deep-belief-network")
                              (:file "backprop")
-                             (:file "unroll-dbn")))))
+                             (:file "unroll-dbn"))))
+  :depends-on (:closer-mop))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
   (oos 'load-op '#:mgl-test)
