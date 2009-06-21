@@ -207,8 +207,6 @@ handled by the fast ACTIVATION-LUMP and the rest by
   ;; the visible of layer of the topmost rbm, depth -1 is the
   ;; reconstruction of the same.
   depth
-  ;; The level of the layer of the DBN this lumpy comes from.
-  level
   chunk
   (incomings '())
   ;; the lumpy with a non-negative depth from which this was mirrored
@@ -220,35 +218,28 @@ handled by the fast ACTIVATION-LUMP and the rest by
 (defstruct incoming
   from-lumpy
   cloud
-  rbm-index
   transposep)
 
-(defgeneric chunk-lump-name (level chunk reconstructionp)
-  (:documentation "The name of the lump that represents CHUNK or its
-reconstruction at LEVEL in the DBN.")
-  (:method (level chunk reconstructionp)
-    `(,(name chunk) ,level ,@(when reconstructionp '(:reconstruction)))))
+(defun chunk-lump-name (chunk-name reconstructionp)
+  "The name of the lump that represents CHUNK or its reconstruction in
+  the DBN."
+  `(:chunk ,chunk-name ,@(when reconstructionp '(:reconstruction))))
 
-(defgeneric chunk-activation-lump-name (level chunk reconstructionp)
-  (:documentation "The name of the lump that computes the activations
-of CHUNK or its reconstructed version at LEVEL in the DBN.")
-  (:method (level chunk reconstructionp)
-    (append (chunk-lump-name level chunk reconstructionp) '(:activation))))
+(defun chunk-activation-lump-name (chunk-name reconstructionp)
+  "The name of the lump that computes the activations of CHUNK or its
+reconstructed version in the DBN."
+  (append (chunk-lump-name chunk-name reconstructionp) '(:activation)))
 
-(defgeneric cloud-weight-lump-name (rbm-index cloud transposep)
-  (:documentation "The name of the lump that represents the weights of
-CLOUD or its transpose. CLOUD comes from the rbm at RBM-INDEX in the
-DBN.")
-  (:method (rbm-index (cloud cloud) transposep)
-    `(,(name cloud) :weights ,rbm-index ,@(when transposep '(:transpose)))))
+(defun cloud-weight-lump-name (cloud-name transposep)
+  "The name of the lump that represents the weights of CLOUD or its
+transpose. CLOUD comes from the rbm in the DBN."
+  `(:cloud ,cloud-name ,@(when transposep '(:transpose))))
 
-(defgeneric cloud-linear-lump-name (rbm-index cloud transposep)
-  (:documentation "The name of the lump that represents part of the
-activation of a chunk. CLOUD comes from the rbm at RBM-INDEX in the
-DBN. TRANSPOSEP determines from which direction the activation crosses
-the cloud.")
-  (:method (rbm-index cloud transposep)
-    (append (cloud-weight-lump-name rbm-index cloud transposep) '(:linear))))
+(defun cloud-linear-lump-name (cloud-name transposep)
+  "The name of the lump that represents part of the activation of a
+chunk. CLOUD comes from the rbm in the DBN. TRANSPOSEP determines from
+which direction the activation crosses the cloud."
+  (append (cloud-weight-lump-name cloud-name transposep) '(:linear)))
 
 (defgeneric chunk->bpn-definition (chunk sym name size activation-symbol)
   (:documentation "Return a bpn definition form (that is a list of
@@ -271,11 +262,10 @@ clamp inits, the third is a list of inits.")
        `((:from-lump ,name :to-lump ,exp-symbol))))))
 
 (defun lumpy-name (lumpy)
-  (chunk-lump-name (lumpy-level lumpy) (lumpy-chunk lumpy)
-                   (minusp (lumpy-depth lumpy))))
+  (chunk-lump-name (name (lumpy-chunk lumpy)) (minusp (lumpy-depth lumpy))))
 
 (defun lumpy-activation-name (lumpy)
-  (chunk-activation-lump-name (lumpy-level lumpy) (lumpy-chunk lumpy)
+  (chunk-activation-lump-name (name (lumpy-chunk lumpy))
                               (minusp (lumpy-depth lumpy))))
 
 ;;; Find CHUNK at DEPTH in LUMPIES.
@@ -292,22 +282,21 @@ clamp inits, the third is a list of inits.")
 (defun possibly-sparse-lumpy-p (lumpy)
   (endp (lumpy-incomings (or (lumpy-original lumpy) lumpy))))
 
-(defgeneric incoming->bpn-defintion (from-lumpy to-lumpy rbm-index
-                                                cloud transposep)
+(defgeneric incoming->bpn-defintion (from-lumpy to-lumpy cloud transposep)
   (:documentation "Return a list of four elemenets. The first is a
 list of lump definitions that represent the flow from FROM-LUMPY
 through CLOUD. The chunk of FROM-LUMPY may be either of the end points
 of CLOUD. The second is the cloud clamps, while the third is the cloud
 inits. The fourth is name of the `end' lump.")
-  (:method (from-lumpy to-lumpy rbm-index (cloud full-cloud) transposep)
+  (:method (from-lumpy to-lumpy (cloud full-cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
            (from-size (chunk-size from-chunk))
            (n-weights (matlisp:number-of-elements (weights cloud)))
            (weight-symbol (gensym))
-           (weight-name (cloud-weight-lump-name rbm-index cloud transposep))
+           (weight-name (cloud-weight-lump-name (name cloud) transposep))
            (size (/ n-weights from-size))
            (linear-symbol (gensym))
-           (linear-name (cloud-linear-lump-name rbm-index cloud transposep))
+           (linear-name (cloud-linear-lump-name (name cloud) transposep))
            (sparsep (or (possibly-sparse-lumpy-p from-lumpy)
                         (possibly-sparse-lumpy-p to-lumpy)))
            (row-size (chunk-size (chunk2 cloud))))
@@ -331,10 +320,9 @@ inits. The fourth is name of the `end' lump.")
                :to-lump ,weight-name :to :rows)
               (:from-lump ,(lumpy-name to-lumpy) :to-lump ,linear-name))
             `((:cloud-name ,(name cloud)
-               :rbm-index ,rbm-index
                :weight-name ,weight-name))
             linear-symbol)))
-  (:method (from-lumpy to-lumpy rbm-index (cloud factored-cloud) transposep)
+  (:method (from-lumpy to-lumpy (cloud factored-cloud) transposep)
     ;; We have two clouds: B goes from visible to shared and A from
     ;; shared to hidden. So it's Hidden = AxBxVisible or Visible =
     ;; B'*A'*Hidden.
@@ -344,14 +332,13 @@ inits. The fourth is name of the `end' lump.")
            (weight-a-symbol (gensym))
            (shared-symbol (gensym))
            (linear-symbol (gensym))
-           (weight-base-name (cloud-weight-lump-name rbm-index cloud
-                                                     transposep))
+           (weight-base-name (cloud-weight-lump-name (name cloud) transposep))
            (weight-b-name (list weight-base-name :b))
            (weight-a-name (list weight-base-name :a))
            (shared-name (list
-                         (cloud-linear-lump-name rbm-index cloud transposep)
+                         (cloud-linear-lump-name (name cloud) transposep)
                          :shared))
-           (linear-name (cloud-linear-lump-name rbm-index cloud transposep)))
+           (linear-name (cloud-linear-lump-name (name cloud) transposep)))
       (list `((,weight-b-symbol (weight-lump
                                  :name ',weight-b-name
                                  :size ,(matlisp:number-of-elements
@@ -380,7 +367,6 @@ inits. The fourth is name of the `end' lump.")
             ()
             ;; cloud inits
             `((:cloud-name ,(name cloud)
-               :rbm-index ,rbm-index
                :weight-b-name ,weight-b-name
                :weight-a-name ,weight-a-name))
             linear-symbol))))
@@ -390,7 +376,6 @@ inits. The fourth is name of the `end' lump.")
                  collect (incoming->bpn-defintion
                           (incoming-from-lumpy incoming)
                           to-lumpy
-                          (incoming-rbm-index incoming)
                           (incoming-cloud incoming)
                           (incoming-transposep incoming)))))
     (values (mapcan #'first x)
@@ -474,8 +459,7 @@ below or there is no rbm below then the chunk is translated into an
 INPUT lump. Desired outputs and error node are not added. The first
 element of RMBS is the topmost one (last of the DBN), the one that
 goes into the middle of the backprop network."
-  (let ((lumpies '())
-        (n-rbms (length (rbms dbn))))
+  (let ((lumpies '()))
     (flet ((ensure-lumpy (depth chunk)
              (or (find-lumpy depth chunk lumpies)
                  (let ((lumpy
@@ -484,17 +468,15 @@ goes into the middle of the backprop network."
                                                   (find-lumpy (abs depth)
                                                               chunk lumpies)
                                                   nil)
-                                    :level (- n-rbms (abs depth))
                                     :chunk chunk)))
                    (push lumpy lumpies)
                    lumpy)))
-           (add-connection (cloud depth &key from to)
+           (add-connection (cloud &key from to)
              (assert (> (lumpy-depth from) (lumpy-depth to)))
              (assert (not (member from (lumpy-incomings to)
                                   :key #'incoming-from-lumpy)))
              (push (make-incoming :from-lumpy from
                                   :cloud cloud
-                                  :rbm-index (- n-rbms (abs depth) 1)
                                   :transposep (eq (lumpy-chunk from)
                                                   (chunk2 cloud)))
                    (lumpy-incomings to))))
@@ -505,7 +487,7 @@ goes into the middle of the backprop network."
               (let ((visible-chunk (chunk1 cloud))
                     (hidden-chunk (chunk2 cloud)))
                 (unless (typep hidden-chunk 'conditioning-chunk)
-                  (add-connection cloud depth
+                  (add-connection cloud
                                   :from (ensure-lumpy (1+ depth) visible-chunk)
                                   :to (ensure-lumpy depth hidden-chunk)))
                 (unless (or (typep visible-chunk 'conditioning-chunk)
@@ -518,7 +500,7 @@ goes into the middle of the backprop network."
                          (if (typep hidden-chunk 'conditioning-chunk)
                              depth
                              (- depth))))
-                    (add-connection cloud depth
+                    (add-connection cloud
                                     :from (ensure-lumpy hidden-depth
                                                         hidden-chunk)
                                     :to (ensure-lumpy (- (1+ depth))
@@ -588,10 +570,9 @@ no lump was changed."
 (defun initialize-bpn-from-dbn (bpn dbn inits)
   "Initialize BPN from the weights of DBN according to cloud INITS that was
 returned by UNROLL-DBN."
-  (let ((rbms (rbms dbn)))
-    (dolist (init inits)
-      (multiple-value-bind (known unknown)
-          (split-plist init '(:cloud-name :rbm-index))
-        (destructuring-bind (&key cloud-name rbm-index) known
-          (let ((cloud (find-cloud cloud-name (elt rbms rbm-index) :errorp t)))
-            (initialize-from-cloud bpn cloud unknown)))))))
+  (dolist (init inits)
+    (multiple-value-bind (known unknown)
+        (split-plist init '(:cloud-name))
+      (destructuring-bind (&key cloud-name) known
+        (let ((cloud (find-cloud cloud-name dbn :errorp t)))
+          (initialize-from-cloud bpn cloud unknown))))))

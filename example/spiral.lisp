@@ -32,7 +32,7 @@
 (defclass spiral-bpn (bpn) ())
 
 (defmethod mgl-train:set-input (samples (bpn spiral-bpn))
-  (clamp-striped-nodes samples (find-lump '(inputs 0) bpn)))
+  (clamp-striped-nodes samples (find-lump (chunk-lump-name 'inputs nil) bpn)))
 
 
 ;;;; Progress reporting
@@ -148,8 +148,8 @@
                           (error-node
                            :x (make-instance
                                '->sum-squared-error
-                               :x (lump '(inputs 0))
-                               :y (lump '(inputs 0 :reconstruction))))))))))
+                               :x (lump ',(chunk-lump-name 'inputs nil))
+                               :y (lump ',(chunk-lump-name 'inputs t))))))))))
       (initialize-bpn-from-dbn bpn dbn inits)
       (train (make-sampler 50000)
              (make-instance 'spiral-bp-trainer

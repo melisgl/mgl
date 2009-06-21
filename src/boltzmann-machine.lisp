@@ -805,6 +805,16 @@ A*B*VISIBLE."))
   (:documentation "The network is assembled from CHUNKS (nodes of the
 same behaviour) and CLOUDs (connections between two chunks)."))
 
+(defgeneric find-chunk (name object &key errorp)
+  (:documentation "Find the chunk in OBJECT whose name is EQUAL to
+NAME. Signal an error if not found and ERRORP.")
+  (:method (name (bm bm) &key errorp)
+    (or (find name (visible-chunks bm) :key #'name :test #'equal)
+        (find name (hidden-chunks bm) :key #'name :test #'equal)
+        (if errorp
+            (error "Cannot find chunk ~S." name)
+            nil))))
+
 (defmacro do-clouds ((cloud bm) &body body)
   `(dolist (,cloud (clouds ,bm))
      ,@body))
@@ -829,13 +839,14 @@ same behaviour) and CLOUDs (connections between two chunks)."))
   (do-clouds (cloud bm)
     (setf (max-n-stripes cloud) max-n-stripes)))
 
-(defun find-cloud (name bm &key errorp)
-  "Find the cloud in BM whose name is EQUAL to NAME. Raise and error
-if not found and ERRORP."
-  (or (find name (clouds bm) :key #'name :test #'equal)
-      (if errorp
-          (error "Cannot find cloud ~S." name)
-          nil)))
+(defgeneric find-cloud (name object &key errorp)
+  (:documentation "Find the cloud in OBJECT whose name is EQUAL to
+NAME. Signal an error if not found and ERRORP.")
+  (:method (name (bm bm) &key errorp)
+    (or (find name (clouds bm) :key #'name :test #'equal)
+        (if errorp
+            (error "Cannot find cloud ~S." name)
+            nil))))
 
 (defun ->cloud (cloud-designator bm)
   (if (typep cloud-designator 'cloud)

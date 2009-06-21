@@ -239,6 +239,7 @@ interface and simple gradient descent based trainers."))
    #:bm
    #:visible-chunks
    #:hidden-chunks
+   #:find-chunk
    #:default-clouds
    #:merge-cloud-specs
    #:clouds
@@ -336,6 +337,7 @@ Networks (DBN)."))
 (cl:defpackage :mgl-unroll-dbn
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bm #:mgl-bp #:mgl-gd)
   (:export
+   #:chunk-lump-name
    #:unroll-dbn
    #:clamp-indices-in-unrolled-dbn
    #:initialize-bpn-from-dbn)

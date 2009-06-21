@@ -34,6 +34,24 @@ multiple hidden layers are not Boltzmann Machines."))
   ;; make sure rbms have the same MAX-N-STRIPES
   (setf (max-n-stripes dbn) (max-n-stripes dbn)))
 
+(defmethod find-chunk (name (dbn dbn) &key errorp)
+  (dolist (rbm (rbms dbn))
+    (let ((chunk (find-chunk name rbm)))
+      (when chunk
+        (return-from find-chunk chunk))))
+  (when errorp
+    (error "Can't find chunk named ~A in ~A." name dbn))
+  nil)
+
+(defmethod find-cloud (name (dbn dbn) &key errorp)
+  (dolist (rbm (rbms dbn))
+    (let ((cloud (find-cloud name rbm)))
+      (when cloud
+        (return-from find-cloud cloud))))
+  (when errorp
+    (error "Can't find cloud named ~A in ~A." name dbn))
+  nil)
+
 (defun add-rbm (rbm dbn)
   (check-no-name-clashes (cons rbm (rbms dbn)))
   (setf (slot-value rbm 'dbn) dbn

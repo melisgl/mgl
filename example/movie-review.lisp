@@ -335,7 +335,7 @@
                          ((-1) (setf (aref nodes (+ start 0)) (flt 1)))
                          ((1) (setf (aref nodes (+ start 1)) (flt 1))))))))))))
 
-(defclass mr-rbm-trainer (mr-logging-trainer rbm-pcd-trainer)
+(defclass mr-rbm-trainer (mr-logging-trainer rbm-cd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod initialize-trainer ((trainer mr-rbm-trainer) rbm)
@@ -472,8 +472,8 @@
 (defclass mr-bpn (bpn) ())
 
 (defmethod set-input (stories (bpn mr-bpn))
-  (let* ((inputs (find-lump '(inputs 0) bpn :errorp t))
-         (label (find-lump '(input-label 0) bpn :errorp nil))
+  (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
+         (label (find-lump (chunk-lump-name 'input-label nil) bpn :errorp nil))
          (expectations (find-lump 'expectations bpn :errorp t))
          (inputs* (storage (nodes inputs)))
          (expectations* (storage (nodes expectations))))
@@ -583,7 +583,7 @@
     (loop for i upfrom start below end
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
-(defun unroll-mr-dbn (dbn &key (name '(f3 3)) (n-classes 2))
+(defun unroll-mr-dbn (dbn &key (name (chunk-lump-name 'f3 nil)) (n-classes 2))
   (multiple-value-bind (defs clamps inits) (unroll-dbn dbn :bottom-up-only t)
     (print clamps)
     (print inits)
@@ -755,7 +755,7 @@
   (encode-all *test-stories* #'map-story-words *words* :kind :binary)
   (setq *dbn* (train-mr-dbn))
   (when unrollp
-    (setq *bpn* (unroll-mr-dbn *dbn* :name '(f1 1)))
+    (setq *bpn* (unroll-mr-dbn *dbn* :name (chunk-lump-name 'f1 nil)))
     (train-mr-bpn *bpn*)))
 
 #|

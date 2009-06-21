@@ -264,7 +264,7 @@
 (defclass mnist-bpn (bpn) ())
 
 (defmethod set-input (images (bpn mnist-bpn))
-  (let* ((inputs (find-lump '(inputs 0) bpn :errorp t))
+  (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
          (expectations (find-lump 'expectations bpn :errorp t))
          (inputs-nodes (storage (nodes inputs)))
          (expectations-nodes (storage (nodes expectations))))
@@ -392,11 +392,13 @@
                          ;; Add a softmax layer. Oh, the pain.
                          (prediction-weights
                           (weight-lump
-                           :size (* (size (lump '(f3 3))) 10)))
+                           :size (* (size (lump ',(chunk-lump-name 'f3 nil)))
+                                    10)))
                          (prediction-biases (weight-lump :size 10))
                          (prediction-activations0
                           (activation-lump :weights prediction-weights
-                                           :x (lump '(f3 3))))
+                                           :x (lump
+                                               ',(chunk-lump-name 'f3 nil))))
                          (prediction-activations
                           (->+ :args (list prediction-activations0
                                            prediction-biases)))
