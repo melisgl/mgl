@@ -150,7 +150,7 @@
                                '->sum-squared-error
                                :x (lump ',(chunk-lump-name 'inputs nil))
                                :y (lump ',(chunk-lump-name 'inputs t))))))))))
-      (initialize-bpn-from-dbn bpn dbn inits)
+      (initialize-bpn-from-bm bpn dbn inits)
       (train (make-sampler 50000)
              (make-instance 'spiral-bp-trainer
                             :segmenter

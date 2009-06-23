@@ -249,13 +249,14 @@
                                :hidden-chunks (hidden-chunks-only h)
                                :clouds (if (find 'inputs (all-chunks v)
                                                  :key #'name)
-                                           nil
+                                           '(:merge)
                                            #+nil
-                                           '((:class factored-cloud
+                                           '(:merge
+                                             (:class factored-cloud
                                               :visible-chunk inputs
                                               :hidden-chunk f1
                                               :rank 10))
-                                           nil))))
+                                           '(:merge)))))
 
 (defclass mr-dbn (dbn)
   ((rbms :initform (layers->rbms
@@ -318,7 +319,7 @@
                      (if (listp sample) sample (list sample))
                    (declare (ignore omit-label-p))
                    (when scale
-                     (setf (aref scale stripe) (story-size story)))
+                     (setf (aref scale stripe) (flt (story-size story))))
                    (with-stripes ((stripe chunk start end))
                      (clamp-story story nodes start end)))))))
   (let ((chunk (find 'input-label (visible-chunks rbm) :key #'name)))
@@ -610,7 +611,7 @@
                            :x prediction-activations
                            :target expectations))
                          (my-error (error-node :x predictions)))))))
-      (initialize-bpn-from-dbn bpn dbn inits)
+      (initialize-bpn-from-bm bpn dbn inits)
       (init-lump 'prediction-weights bpn 0.1)
       (init-lump 'prediction-biases bpn 0)
       bpn)))

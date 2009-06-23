@@ -12,9 +12,9 @@
 (in-package :mgl-train)
 
 (defgeneric map-segments (fn segmentable)
+  (:documentation "Apply FN to each segment of LEARNER.")
   (:method (fn (segment-list list))
-    (mapc fn segment-list))
-  (:documentation "Apply FN to each segment of LEARNER."))
+    (mapc fn segment-list)))
 
 (defgeneric segment-weights (segment)
   (:documentation "Return the weight array and start, end indices of
@@ -27,13 +27,13 @@ SEGMENT."))
      ,@body))
 
 (defgeneric map-segment-runs (fn segment)
+  (:documentation "Call FN with start and end of intervals of
+consecutive indices that are not missing in SEGMENT. Called by
+trainers that support partial updates.")
   (:method (fn segment)
     (with-segment-weights ((array start end) segment)
       (declare (ignore array))
-      (funcall fn start end)))
-  (:documentation "Call FN with start and end of intervals of
-consecutive indices that are not missing in SEGMENT. Called by
-trainers that support partial updates."))
+      (funcall fn start end))))
 
 (defgeneric segments (object)
   (:documentation "A list of segments associated with OBJECT. Trainers

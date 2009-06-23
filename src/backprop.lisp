@@ -530,7 +530,7 @@ maintained.")))
                         :reader transpose-weights-p))
   (:documentation "Perform WEIGHTS*X where X is of size N and WEIGHTS
 is a WEIGHT-LUMP whose single stripe is taken to be of dimensions M x
-N stored on column major. M is the size of this lump. If
+N stored in column major order. M is the size of this lump. If
 TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and WEIGHTS'*X is
 computed."))
 

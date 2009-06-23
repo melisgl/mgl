@@ -43,7 +43,7 @@
 ;;;; There is support for gradient descent training for the BPN but
 ;;;; ultimately its results are worse.
 
-(in-package :mgl-example-mnist)
+(in-package :mgl-example-mnist-dbm)
 
 (defparameter *mnist-dir*
   (merge-pathnames "mnist-data/" *example-dir*)
@@ -157,33 +157,104 @@
   (length *training-images*))
 
 
+;;;; DBM
+
+(defclass mnist-dbm (dbm)
+  ((layers :initform (list
+                      (list (make-instance 'constant-chunk :name 'c0)
+                            (make-instance 'sigmoid-chunk :name 'inputs
+                                           :size (* 28 28)))
+                      (list (make-instance 'constant-chunk :name 'c1)
+                            (make-instance 'sigmoid-chunk :name 'f1
+                                           :size 500))
+                      (list (make-instance 'constant-chunk :name 'c2)
+                            (make-instance 'sigmoid-chunk :name 'f2
+                                           :size 1000))))))
+
+(defun make-mnist-dbm ()
+  (make-instance 'mnist-dbm :max-n-stripes 100))
+
+(defmethod mgl-train:set-input (images (dbm mnist-dbm))
+  (clamp-striped-nodes images (mgl-bm:find-chunk 'inputs dbm)))
+
+(defclass mnist-dbm-trainer (mnist-logging-trainer bm-pcd-trainer)
+  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+
+(defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
+  (let ((counter (counter trainer))
+        (n-inputs (n-inputs trainer)))
+    (log-msg "TRAINING RMSE: ~,5F (~D)~%"
+             (or (get-error counter) #.(flt 0))
+             n-inputs)
+    (reset-counter counter)))
+
+(defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
+  (let ((sampler (make-sampler *test-images*
+                               :max-n 1000
+                               #+nil
+                               (length *test-images*)))
+        (counter (make-instance 'rmse-counter)))
+    (let ((max-n-stripes (max-n-stripes dbm)))
+      (loop until (finishedp sampler) do
+            (let ((samples (sample-batch sampler max-n-stripes)))
+              (set-input samples dbm)
+              (up-dbm dbm)
+              (settle-hidden-mean-field dbm 10 (flt 0.5))
+              (settle-visible-mean-field dbm 10 (flt 0.5))
+              (multiple-value-call #'add-error
+                counter
+                (reconstruction-error dbm)))))
+    (log-msg "DBM TEST RMSE: ~,5F (~D)~%"
+             (get-error counter)
+             (n-inputs trainer))))
+
+(defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
+  (call-next-method)
+  (settle-visible-mean-field dbm 10 (flt 0.5))
+  (multiple-value-call #'add-error (counter trainer)
+                       (reconstruction-error dbm)))
+
+
+;;;; DBM training
+
+(defun bias-cloud-p (cloud)
+  (or (typep (chunk1 cloud) 'constant-chunk)
+      (typep (chunk2 cloud) 'constant-chunk)))
+
+(defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
+
+(defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
+  (* (slot-value trainer 'learning-rate)
+     (1+ (/ (n-inputs trainer)
+            (length *training-images*)))))
+
+(defun train-mnist-dbm (dbm)
+  (log-msg "Starting to train DBM.~%")
+  (train (make-sampler *training-images*
+                       :max-n (* 50 (length *training-images*)))
+         (make-instance 'mnist-dbm-trainer
+                        :n-gibbs 5
+                        :segmenter
+                        (lambda (cloud)
+                          (make-instance 'mnist-dbm-segment-trainer
+                                         :learning-rate (flt 0.005)
+                                         :weight-decay
+                                         (if (bias-cloud-p cloud)
+                                             (flt 0)
+                                             (flt 0.0002))
+                                         :batch-size 100)))
+         dbm))
+
+
 ;;;; DBN
 
-(defun layers->rbms (layers &key (class 'rbm))
-  (loop for (v h) on layers
-        when h
-        collect (make-instance class :visible-chunks v :hidden-chunks h)))
-
-(defclass mnist-dbn (dbn)
-  ((rbms :initform (layers->rbms
-                    (list (list (make-instance 'constant-chunk :name 'c0)
-                                (make-instance 'sigmoid-chunk :name 'inputs
-                                               :size (* 28 28)))
-                          (list (make-instance 'constant-chunk :name 'c1)
-                                (make-instance 'sigmoid-chunk :name 'f1
-                                               :size 500))
-                          (list (make-instance 'constant-chunk :name 'c2)
-                                (make-instance 'sigmoid-chunk :name 'f2
-                                               :size 500))
-                          (list (make-instance 'constant-chunk :name 'c3)
-                                (make-instance 'sigmoid-chunk :name 'f3
-                                               :size 2000)))
-                    :class 'mnist-rbm))))
-
-(defun make-mnist-dbn ()
-  (make-instance 'mnist-dbn :max-n-stripes 100))
+(defclass mnist-dbn (dbn) ())
 
 (defclass mnist-rbm (rbm) ())
+
+(defun make-mnist-dbn (dbm)
+  (mgl-bm:dbm->dbn dbm :dbn-class 'mnist-dbn :rbm-class 'mnist-rbm
+                   :dbn-initargs '(:max-n-stripes 100)))
 
 (defmethod mgl-train:set-input (images (rbm mnist-rbm))
   (let ((inputs (find 'inputs (visible-chunks rbm)
@@ -221,10 +292,6 @@
 
 ;;;; DBN training
 
-(defun bias-cloud-p (cloud)
-  (or (typep (chunk1 cloud) 'constant-chunk)
-      (typep (chunk2 cloud) 'constant-chunk)))
-
 (defclass mnist-rbm-segment-trainer (batch-gd-trainer) ())
 
 (defmethod momentum ((trainer mnist-rbm-segment-trainer))
@@ -232,31 +299,29 @@
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defun train-mnist-dbn ()
-  (let ((dbn (make-mnist-dbn)))
-    (dolist (rbm (rbms dbn))
-      (do-clouds (cloud rbm)
-        (if (bias-cloud-p cloud)
-            (fill (storage (weights cloud)) #.(flt 0))
-            (map-into (storage (weights cloud))
-                      (lambda () (flt (* 0.1 (gaussian-random-1))))))))
-    (loop for rbm in (rbms dbn)
-          for i upfrom 0 do
-          (log-msg "Starting to train level ~S RBM in DBN.~%" i)
-          (train (make-sampler *training-images*
-                               :max-n (* 50 (length *training-images*)))
-                 (make-instance 'mnist-rbm-trainer
-                                :segmenter
-                                (lambda (cloud)
-                                  (make-instance 'mnist-rbm-segment-trainer
-                                                 :learning-rate (flt 0.1)
-                                                 :weight-decay
-                                                 (if (bias-cloud-p cloud)
-                                                     (flt 0)
-                                                     (flt 0.0002))
-                                                 :batch-size 100)))
-                 rbm))
-    dbn))
+(defun train-mnist-dbn (dbn)
+  (dolist (rbm (rbms dbn))
+    (do-clouds (cloud rbm)
+      (if (bias-cloud-p cloud)
+          (fill (storage (weights cloud)) #.(flt 0))
+          (map-into (storage (weights cloud))
+                    (lambda () (flt (* 0.1 (gaussian-random-1))))))))
+  (loop for rbm in (rbms dbn)
+        for i upfrom 0 do
+        (log-msg "Starting to train level ~S RBM in DBN.~%" i)
+        (train (make-sampler *training-images*
+                             :max-n (* 50 (length *training-images*)))
+               (make-instance 'mnist-rbm-trainer
+                              :segmenter
+                              (lambda (cloud)
+                                (make-instance 'mnist-rbm-segment-trainer
+                                               :learning-rate (flt 0.1)
+                                               :weight-decay
+                                               (if (bias-cloud-p cloud)
+                                                   (flt 0)
+                                                   (flt 0.0002))
+                                               :batch-size 100)))
+               rbm)))
 
 
 ;;;; BPN
@@ -379,9 +444,8 @@
     (loop for i upfrom start below end
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
-(defun unroll-mnist-dbn (dbn)
-  (multiple-value-bind (defs clamps inits) (unroll-dbn dbn :bottom-up-only t)
-    (print clamps)
+(defun unroll-mnist-dbm (dbm)
+  (multiple-value-bind (defs inits) (unroll-dbm dbm)
     (print inits)
     (terpri)
     (let ((bpn (eval (print
@@ -408,7 +472,7 @@
                            :x prediction-activations
                            :target expectations))
                          (my-error (error-node :x predictions)))))))
-      (initialize-bpn-from-bm bpn dbn inits)
+      (initialize-bpn-from-bm bpn dbm inits)
       (init-weights 'prediction-weights bpn 0.1)
       (init-weights 'prediction-biases bpn 0.1)
       bpn)))
@@ -477,37 +541,55 @@
 ;;;;
 
 (defvar *dbn*)
+(defvar *dbm*)
 (defvar *bpn*)
 
-(defun train-mnist (&key load-dbn-p)
+(defun train-mnist (&key load-dbn-p load-dbm-p)
   (unless (boundp '*training-images*)
     (setq *training-images* (load-training)))
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
-  (cond (load-dbn-p
-         (setq *dbn* (make-mnist-dbn))
-         (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*))
-           (mgl-util:read-weights *dbn* s))
-         (log-msg "Loaded DBN~%")
-         (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
-                  (map 'list
-                       #'get-error
-                       (dbn-mean-field-errors
-                        (make-sampler *test-images*
-                                      :max-n (length *test-images*))
-                        *dbn*))))
-        (t
-         (setq *dbn* (train-mnist-dbn))
-         (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*)
-                          :direction :output
-                          :if-does-not-exist :create :if-exists :supersede)
-           (mgl-util:write-weights *dbn* s))))
-  (setq *bpn* (unroll-mnist-dbn *dbn*))
-  (train-mnist-bpn *bpn*)
-  (with-open-file (s (merge-pathnames "mnist.bpn" *mnist-dir*)
-                   :direction :output
-                   :if-does-not-exist :create :if-exists :supersede)
-    (mgl-util:write-weights *bpn* s)))
+  (flet ((train-dbn ()
+           (train-mnist-dbn *dbn*)
+           (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*)
+                            :direction :output
+                            :if-does-not-exist :create :if-exists :supersede)
+             (mgl-util:write-weights *dbn* s)))
+         (train-dbm ()
+           (train-mnist-dbm *dbm*)
+           (with-open-file (s (merge-pathnames "mnist.dbm" *mnist-dir*)
+                            :direction :output
+                            :if-does-not-exist :create :if-exists :supersede)
+             (mgl-util:write-weights *dbm* s))))
+    (cond (load-dbm-p
+           (setq *dbm* (make-mnist-dbm))
+           (with-open-file (s (merge-pathnames "mnist.dbm" *mnist-dir*))
+             (mgl-util:read-weights *dbn* s)))
+          (load-dbn-p
+           (setq *dbm* (make-mnist-dbm))
+           (setq *dbn* (make-mnist-dbn *dbm*))
+           (with-open-file (s (merge-pathnames "mnist.dbn" *mnist-dir*))
+             (mgl-util:read-weights *dbn* s))
+           (log-msg "Loaded DBN~%")
+           (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
+                    (map 'list
+                         #'get-error
+                         (dbn-mean-field-errors
+                          (make-sampler *test-images*
+                                        :max-n (length *test-images*))
+                          *dbn*)))
+           (train-dbm))
+          (t
+           (setq *dbm* (make-mnist-dbm))
+           (setq *dbn* (make-mnist-dbn *dbm*))
+           (train-dbn)
+           (train-dbm)))
+    (setq *bpn* (unroll-mnist-dbm *dbn*))
+    (train-mnist-bpn *bpn*)
+    (with-open-file (s (merge-pathnames "mnist.bpn" *mnist-dir*)
+                     :direction :output
+                     :if-does-not-exist :create :if-exists :supersede)
+      (mgl-util:write-weights *bpn* s))))
 
 #|
 

@@ -63,6 +63,7 @@
    ;; Printing
    #:print-table
    ;; Copy
+   #:with-copying
    #:copy-object-extra-initargs
    #:copy-object-slot
    #:define-slots-not-to-be-copied
@@ -229,6 +230,7 @@ interface and simple gradient descent based trainers."))
    #:name
    #:chunk1
    #:chunk2
+   #:cloud-chunk-among-chunks
    #:full-cloud
    #:weights
    #:factored-cloud
@@ -240,7 +242,6 @@ interface and simple gradient descent based trainers."))
    #:visible-chunks
    #:hidden-chunks
    #:find-chunk
-   #:default-clouds
    #:merge-cloud-specs
    #:clouds
    #:do-clouds
@@ -250,6 +251,12 @@ interface and simple gradient descent based trainers."))
    #:sample-visible
    #:set-hidden-mean
    #:sample-hidden
+   ;; DBM
+   #:dbm
+   #:layers
+   #:clouds-up-to-layers
+   #:up-dbm
+   #:dbm->dbn
    ;; RBM
    #:rbm
    #:dbn
@@ -334,12 +341,13 @@ Networks (DBN)."))
    #:target)
   (:documentation "Backpropagation."))
 
-(cl:defpackage :mgl-unroll-dbn
+(cl:defpackage :mgl-unroll
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bm #:mgl-bp #:mgl-gd)
   (:export
    #:chunk-lump-name
    #:unroll-dbn
+   #:unroll-dbm
    #:clamp-indices-in-unrolled-dbn
-   #:initialize-bpn-from-dbn)
-  (:documentation "Translating a DBN to a backprop network, aka
-`unrolling'."))
+   #:initialize-bpn-from-bm)
+  (:documentation "Translating Boltzmann Machines to a Backprop
+networks, aka `unrolling'."))

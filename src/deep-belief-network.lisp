@@ -4,7 +4,11 @@
   ((rbms :type list :initarg :rbms :reader rbms)
    (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "Deep Belief Network: a stack of RBMs. DBNs with
-multiple hidden layers are not Boltzmann Machines."))
+multiple hidden layers are not Boltzmann Machines. The chunks in the
+hidden layer of a constituent RBM and the chunk in the visible layer
+of the RBM one on top of it must be EQ for the DBN to consider them
+the same. Naming them the same is not enough, in fact, all chunks must
+have unique names under EQUAL as usual."))
 
 (defmethod n-stripes ((dbn dbn))
   (n-stripes (first (rbms dbn))))
@@ -18,12 +22,14 @@ multiple hidden layers are not Boltzmann Machines."))
     (setf (max-n-stripes rbm) max-n-stripes)))
 
 (defun check-no-name-clashes (rbms)
-  (unless (unique-names-p
-           (append (apply #'append (mapcar #'visible-chunks rbms))
-                   (apply #'append (mapcar #'hidden-chunks rbms))))
-    (error "Name conflict between chunks: ~S" rbms))
-  (unless (unique-names-p (apply #'append (mapcar #'clouds rbms)))
-    (error "Name conflict between clouds: ~S" rbms)))
+  (let ((name-clashes (name-clashes
+                       (append (apply #'append (mapcar #'visible-chunks rbms))
+                               (apply #'append (mapcar #'hidden-chunks rbms))))))
+    (when name-clashes
+      (error "Name conflict between chunks: ~S" name-clashes)))
+  (let ((name-clashes (name-clashes (apply #'append (mapcar #'clouds rbms)))))
+    (when name-clashes
+      (error "Name conflict between clouds: ~S" name-clashes))))
 
 (defmethod initialize-instance :before ((dbn dbn) &key rbms &allow-other-keys)
   (check-no-name-clashes rbms))

@@ -45,15 +45,16 @@
 ** DONE calculate bias+conditioning activation only once per training example
    - State "DONE"       [2008-09-10 Wed 15:00] \\
      :CACHE-STATIC-ACTIVATIONS-P initarg to CHUNK
+** DONE persistent contrastive divergence
+** DONE general boltzmann machines
+** DONE deep boltzmann machines
+** DONE initialize DBM from DBN
+* backprop
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
 ** TODO redo ->CROSS-ENTROPY
 ** TODO what to do with INDICES-TO-CALCULATE?
 ** DONE normalized-lump: scale should be per stripe
-** DONE persistent contrastive divergence
-** DONE general boltzmann machines
-** TODO deep boltzmann machines
-** TODO initialize DBM/BM from DBN
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values

@@ -14,6 +14,6 @@
                              (:file "test-conjugate-gradient")
                              (:file "test-boltzmann-machine")
                              (:file "test-backprop")
-                             (:file "test-unroll-dbn")
+                             (:file "test-unroll")
                              (:file "test"))))
   :depends-on (#:mgl))

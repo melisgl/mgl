@@ -1,6 +1,6 @@
 ;;;; Unrolling RBMs to backprop network
 
-(in-package :mgl-unroll-dbn)
+(in-package :mgl-unroll)
 
 ;;;; Extending BPNs with limited missing value support
 ;;;;
@@ -209,9 +209,15 @@ handled by the fast ACTIVATION-LUMP and the rest by
   depth
   chunk
   (incomings '())
-  ;; the lumpy with a non-negative depth from which this was mirrored
-  ;; or nil
+  ;; The lumpy with a non-negative depth from which this was mirrored
+  ;; or nil. In a DBN being unrolled, the lumpy for the reconstruction
+  ;; of a chunk has the lumpy of the chunk as its ORIGINAL. In a DBM
+  ;; being unrolled, the reconstruction is really the marginals of the
+  ;; approximate posterior in the paper and it is to be clamped.
   original
+  ;; :RECONSTRUCTION is the reconstruction in a DBN, :MAP is the
+  ;; marginals of the approximate posterior in a DBM.
+  (kind nil :type (member nil :reconstruction :map))
   ;; This symbol is bound to the added lump when creating the network.
   (symbol (gensym)))
 
@@ -220,15 +226,13 @@ handled by the fast ACTIVATION-LUMP and the rest by
   cloud
   transposep)
 
-(defun chunk-lump-name (chunk-name reconstructionp)
-  "The name of the lump that represents CHUNK or its reconstruction in
-  the DBN."
-  `(:chunk ,chunk-name ,@(when reconstructionp '(:reconstruction))))
+(defun chunk-lump-name (chunk-name kind)
+  "The name of the lump that represents CHUNK."
+  `(:chunk ,chunk-name ,@(when kind (list kind))))
 
-(defun chunk-activation-lump-name (chunk-name reconstructionp)
-  "The name of the lump that computes the activations of CHUNK or its
-reconstructed version in the DBN."
-  (append (chunk-lump-name chunk-name reconstructionp) '(:activation)))
+(defun chunk-activation-lump-name (chunk-name kind)
+  "The name of the lump that computes the activations of CHUNK."
+  (append (chunk-lump-name chunk-name kind) '(:activation)))
 
 (defun cloud-weight-lump-name (cloud-name transposep)
   "The name of the lump that represents the weights of CLOUD or its
@@ -262,17 +266,17 @@ clamp inits, the third is a list of inits.")
        `((:from-lump ,name :to-lump ,exp-symbol))))))
 
 (defun lumpy-name (lumpy)
-  (chunk-lump-name (name (lumpy-chunk lumpy)) (minusp (lumpy-depth lumpy))))
+  (chunk-lump-name (name (lumpy-chunk lumpy)) (lumpy-kind lumpy)))
 
 (defun lumpy-activation-name (lumpy)
-  (chunk-activation-lump-name (name (lumpy-chunk lumpy))
-                              (minusp (lumpy-depth lumpy))))
+  (chunk-activation-lump-name (name (lumpy-chunk lumpy)) (lumpy-kind lumpy)))
 
 ;;; Find CHUNK at DEPTH in LUMPIES.
-(defun find-lumpy (depth chunk lumpies)
+(defun find-lumpy (lumpies &key (depth nil depthp) chunk kind)
   (find-if (lambda (lumpy)
-             (and (eql depth (lumpy-depth lumpy))
-                  (eq chunk (lumpy-chunk lumpy))))
+             (and (or (not depthp) (eql depth (lumpy-depth lumpy)))
+                  (eq chunk (lumpy-chunk lumpy))
+                  (eq kind (lumpy-kind lumpy))))
            lumpies))
 
 (defun find-lumpy-by-name (name lumpies)
@@ -435,14 +439,35 @@ inits. The fourth is name of the `end' lump.")
                            clamps)
             inits)))
 
+(defun add-connection (cloud &key from to)
+  (assert (> (lumpy-depth from) (lumpy-depth to)))
+  (assert (not (member from (lumpy-incomings to)
+                       :key #'incoming-from-lumpy)))
+  (push (make-incoming :from-lumpy from
+                       :cloud cloud
+                       :transposep (eq (lumpy-chunk from)
+                                       (chunk2 cloud)))
+        (lumpy-incomings to)))
+
+(defun ensure-lumpy (lumpies &key depth chunk kind)
+  (or (find-lumpy lumpies :depth depth :chunk chunk :kind kind)
+      (make-lumpy :depth depth
+                  :chunk chunk
+                  :kind kind
+                  :original (if kind
+                                (find-lumpy lumpies
+                                            :chunk chunk
+                                            :kind nil)
+                                nil))))
+
 (defun unroll-dbn (dbn &key bottom-up-only)
   "Unroll DBN recursively and turn it into a feed-forward
 backpropagation network. A single RBM in DBN of the form VISIBLE <->
 HIDDEN is transformed into a VISIBLE -> HIDDEN ->
 RECONSTRUCTION-OF-VISIBLE network. While the undirected connection <->
-has a common weight matrix for both directions in the backprop network
-the weights pertaining to ->'s are distinct but are initialized from
-the same <-> (with one being the tranpose of it).
+has a common weight matrix for both directions, in the backprop
+network the weights pertaining to ->'s are distinct but are
+initialized from the same <-> (with one being the tranpose of it).
 
 If BOTTOM-UP-ONLY then don't generate the part of the network that
 represents the top-down flow, that is, skip the reconstructions.
@@ -450,42 +475,30 @@ represents the top-down flow, that is, skip the reconstructions.
 Return backprop network lump definition forms, as the second value the
 `clamps': that can be passed to CLAMP-INDICES-IN-UNROLLED-DBN, and as
 the third value `inits': initialization specifications suitable for
-INITIALIZE-BPN-FROM-RBM.
+INITIALIZE-BPN-FROM-BM.
 
-Chunks of `touching' layers (e.g. the hidden layer of one and the
-visible layer of the one on top) are considered to be the same if they
-have the same name. If there is no corresponding chunk in the layer
-below or there is no rbm below then the chunk is translated into an
-INPUT lump. Desired outputs and error node are not added. The first
-element of RMBS is the topmost one (last of the DBN), the one that
-goes into the middle of the backprop network."
+If there is no corresponding chunk in the layer below or there is no
+rbm below then the chunk is translated into an INPUT lump. Desired
+outputs and error node are not added. The first element of RMBS is the
+topmost one (last of the DBN), the one that goes into the middle of
+the backprop network."
   (let ((lumpies '()))
     (flet ((ensure-lumpy (depth chunk)
-             (or (find-lumpy depth chunk lumpies)
-                 (let ((lumpy
-                        (make-lumpy :depth depth
-                                    :original (if (minusp depth)
-                                                  (find-lumpy (abs depth)
-                                                              chunk lumpies)
-                                                  nil)
-                                    :chunk chunk)))
-                   (push lumpy lumpies)
-                   lumpy)))
-           (add-connection (cloud &key from to)
-             (assert (> (lumpy-depth from) (lumpy-depth to)))
-             (assert (not (member from (lumpy-incomings to)
-                                  :key #'incoming-from-lumpy)))
-             (push (make-incoming :from-lumpy from
-                                  :cloud cloud
-                                  :transposep (eq (lumpy-chunk from)
-                                                  (chunk2 cloud)))
-                   (lumpy-incomings to))))
+             (let ((lumpy (ensure-lumpy lumpies
+                                        :depth depth :chunk chunk
+                                        :kind (if (minusp depth)
+                                                  :reconstruction
+                                                  nil))))
+               (pushnew lumpy lumpies)
+               lumpy)))
       (loop for rbm in (reverse (rbms dbn))
             for depth upfrom 0
             do
             (do-clouds (cloud rbm)
-              (let ((visible-chunk (chunk1 cloud))
-                    (hidden-chunk (chunk2 cloud)))
+              (let ((visible-chunk
+                     (cloud-chunk-among-chunks cloud (visible-chunks rbm)))
+                    (hidden-chunk
+                     (cloud-chunk-among-chunks cloud (hidden-chunks rbm))))
                 (unless (typep hidden-chunk 'conditioning-chunk)
                   (add-connection cloud
                                   :from (ensure-lumpy (1+ depth) visible-chunk)
@@ -505,6 +518,40 @@ goes into the middle of the backprop network."
                                                         hidden-chunk)
                                     :to (ensure-lumpy (- (1+ depth))
                                                       visible-chunk)))))))
+      (lumpies->bpn-definition lumpies))))
+
+(defun unroll-dbm (dbm)
+  (let ((lumpies '()))
+    (flet ((ensure-lumpy (depth chunk &optional kind)
+             (let ((lumpy (ensure-lumpy lumpies
+                                        :depth depth :chunk chunk :kind kind)))
+               (pushnew lumpy lumpies)
+               lumpy)))
+      (loop for (lower-layer higher-layer) on (layers dbm)
+            while higher-layer
+            for clouds in (rest (clouds-up-to-layers dbm))
+            for depth downfrom (1- (length (layers dbm)))
+            do
+            (dolist (cloud clouds)
+              (let ((lower-chunk (cloud-chunk-among-chunks cloud lower-layer))
+                    (higher-chunk (cloud-chunk-among-chunks cloud higher-layer)))
+                (when (and lower-chunk higher-chunk)
+                  (unless (typep higher-chunk 'conditioning-chunk)
+                    (add-connection cloud
+                                    :from (ensure-lumpy (1+ depth) lower-chunk)
+                                    :to (ensure-lumpy depth higher-chunk)))
+                  (unless (typep lower-chunk 'conditioning-chunk)
+                    ;; Add the marginals of the approximate posterior as
+                    ;; an input.
+                    (let ((lower-lumpy (ensure-lumpy (1+ depth) lower-chunk)))
+                      ;; If it has no connections from below then it's
+                      ;; an input, so don't add the :MAP connection.
+                      (when (lumpy-incomings lower-lumpy)
+                        (add-connection cloud
+                                        :from (ensure-lumpy (+ 2 depth)
+                                                            higher-chunk
+                                                            :map)
+                                        :to lower-lumpy))))))))
       (lumpies->bpn-definition lumpies))))
 
 (defmacro setf-eq-p (place newvalue)
@@ -567,12 +614,12 @@ no lump was changed."
       (initialize-from-cloud bpn (cloud-a cloud)
                              (list :weight-name weight-a-name)))))
 
-(defun initialize-bpn-from-dbn (bpn dbn inits)
-  "Initialize BPN from the weights of DBN according to cloud INITS that was
-returned by UNROLL-DBN."
+(defun initialize-bpn-from-bm (bpn bm inits)
+  "Initialize BPN from the weights of BM according to cloud INITS that
+was returned by UNROLL-DBN or UNROLL-DBM."
   (dolist (init inits)
     (multiple-value-bind (known unknown)
         (split-plist init '(:cloud-name))
       (destructuring-bind (&key cloud-name) known
-        (let ((cloud (find-cloud cloud-name dbn :errorp t)))
+        (let ((cloud (find-cloud cloud-name bm :errorp t)))
           (initialize-from-cloud bpn cloud unknown))))))

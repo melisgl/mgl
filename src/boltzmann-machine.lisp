@@ -397,7 +397,15 @@ whose means are in NODES.")
 (defclass cloud ()
   ((name :initarg :name :reader name)
    (chunk1 :type chunk :initarg :chunk1 :reader chunk1)
-   (chunk2 :type chunk :initarg :chunk2 :reader chunk2))
+   (chunk2 :type chunk :initarg :chunk2 :reader chunk2)
+   (scale1
+    :type flt :initform #.(flt 1) :initarg :scale1 :reader scale1
+    :documentation "When CHUNK1 is being activated count activations
+coming from this cloud multiplied by SCALE1.")
+   (scale2
+    :type flt :initform #.(flt 1) :initarg :scale2 :reader scale2
+    :documentation "When CHUNK2 is being activated count activations
+coming from this cloud multiplied by SCALE2."))
   (:documentation "A set of connections between two chunks. The chunks
 may be the same, be both visible or both hidden subject to constraints
 imposed by the type of boltzmann machine the cloud is part of."))
@@ -480,6 +488,22 @@ chunks that don't need activations."
 
 (defmethod activate-cloud :before (cloud reversep)
   (zero-weight-to-self cloud))
+
+;;; Return the chunk of CLOUD that's among CHUNKS and the other chunk
+;;; of CLOUD as the second value.
+(defun cloud-chunk-among-chunks (cloud chunks)
+  (cond ((member (chunk1 cloud) chunks)
+         (values (chunk1 cloud) (chunk2 cloud)))
+        ((member (chunk2 cloud) chunks)
+         (values (chunk2 cloud) (chunk1 cloud)))
+        (t
+         (values nil nil))))
+
+(defun cloud-between-chunks-p (cloud chunks1 chunks2)
+  (or (and (member (chunk1 cloud) chunks1)
+           (member (chunk2 cloud) chunks2))
+      (and (member (chunk1 cloud) chunks2)
+           (member (chunk2 cloud) chunks1))))
 
 
 ;;;; Full cloud
@@ -519,25 +543,26 @@ all transposed.")))
              ,@body)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun make-do-cloud/hidden (hidden-index index chunk2-size
+  (defun make-do-cloud/chunk2 (chunk2-index index chunk2-size
                                offset body)
-    `(do ((,hidden-index 0 (the! index (1+ ,hidden-index)))
+    `(do ((,chunk2-index 0 (the! index (1+ ,chunk2-index)))
           (,index ,offset (the! index (1+ ,index))))
-         ((>= ,hidden-index ,chunk2-size))
+         ((>= ,chunk2-index ,chunk2-size))
        ,@body)))
 
-(defmacro do-cloud/visible ((visible-index cloud) &body body)
+(defmacro do-cloud/chunk1 ((chunk1-index cloud) &body body)
   (with-gensyms (%cloud %chunk2-size %offset)
     `(let* ((,%cloud ,cloud)
             (,%chunk2-size (chunk-size (chunk2 ,%cloud))))
        (declare (type index ,%chunk2-size))
-       (check-stripes (chunk1 ,%cloud))
+       (when (indices-present (chunk2 ,%cloud))
+         (error "CHUNK2 cannot have INDICES-PRESENT."))
        (do-stripes ((chunk1 ,%cloud))
-         (do-chunk (,visible-index (chunk1 ,%cloud))
+         (do-chunk (,chunk1-index (chunk1 ,%cloud))
            (let ((,%offset (the! index
-                                 (* ,visible-index ,%chunk2-size))))
-             (macrolet ((do-cloud/hidden ((hidden-index index) &body body)
-                          (make-do-cloud/hidden hidden-index index
+                                 (* ,chunk1-index ,%chunk2-size))))
+             (macrolet ((do-cloud/chunk2 ((chunk2-index index) &body body)
+                          (make-do-cloud/chunk2 chunk2-index index
                                                 ',%chunk2-size ',%offset
                                                 body)))
                ,@body)))))))
@@ -553,37 +578,42 @@ all transposed.")))
   (if (not reversep)
       (let ((weights (weights cloud))
             (from (old-nodes (chunk1 cloud)))
-            (to (nodes (chunk2 cloud))))
+            (to (nodes (chunk2 cloud)))
+            (scale (scale2 cloud)))
+        (declare (type flt scale))
         (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
                                  (chunk1 cloud))
-            (matlisp:gemm! (flt 1) weights from (flt 1) to)
+            (matlisp:gemm! scale weights from (flt 1) to)
             (let ((weights (storage weights))
                   (from (storage from))
                   (to (storage to)))
               (declare (type flt-vector weights from to))
-              (do-cloud/visible (i cloud)
+              (do-cloud/chunk1 (i cloud)
                 (let ((x (aref from i)))
                   (unless (zerop x)
-                    (do-cloud/hidden (j weight-index)
+                    (setq x (* x scale))
+                    (do-cloud/chunk2 (j weight-index)
                       (incf (aref to j)
                             (* x (aref weights weight-index))))))))))
       (let ((weights (weights cloud))
             (from (old-nodes (chunk2 cloud)))
-            (to (nodes (chunk1 cloud))))
+            (to (nodes (chunk1 cloud)))
+            (scale (scale1 cloud)))
+        (declare (type flt scale))
         (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
                                  (chunk1 cloud))
-            (matlisp:gemm! (flt 1) weights from (flt 1) to :tn)
+            (matlisp:gemm! scale weights from (flt 1) to :tn)
             (let ((weights (storage weights))
                   (from (storage from))
                   (to (storage to)))
               (declare (type flt-vector weights from to))
-              (do-cloud/visible (i cloud)
+              (do-cloud/chunk1 (i cloud)
                 (let ((sum #.(flt 0)))
                   (declare (type flt sum))
-                  (do-cloud/hidden (j weight-index)
+                  (do-cloud/chunk2 (j weight-index)
                     (incf sum (* (aref from j)
                                  (aref weights weight-index))))
-                  (incf (aref to i) sum))))))))
+                  (incf (aref to i) (* sum scale)))))))))
 
 (defmethod accumulate-cloud-statistics (trainer (cloud full-cloud) multiplier)
   (declare (type flt multiplier))
@@ -606,28 +636,28 @@ all transposed.")))
               (declare (optimize (speed 3) #.*no-array-bounds-check*))
               (cond ((= multiplier (flt 1))
                      (special-case (zerop start)
-                       (do-cloud/visible (i cloud)
+                       (do-cloud/chunk1 (i cloud)
                          (let ((x (aref v1 i)))
                            (unless (zerop x)
-                             (do-cloud/hidden (j weight-index)
+                             (do-cloud/chunk2 (j weight-index)
                                (incf (aref accumulator
                                            (the! index (+ start weight-index)))
                                      (* x (aref v2 j)))))))))
                     ((= multiplier (flt -1))
                      (special-case (zerop start)
-                       (do-cloud/visible (i cloud)
+                       (do-cloud/chunk1 (i cloud)
                          (let ((x (aref v1 i)))
                            (unless (zerop x)
-                             (do-cloud/hidden (j weight-index)
+                             (do-cloud/chunk2 (j weight-index)
                                (decf (aref accumulator
                                            (the! index (+ start weight-index)))
                                      (* x (aref v2 j)))))))))
                     (t
                      (special-case (zerop start)
-                       (do-cloud/visible (i cloud)
+                       (do-cloud/chunk1 (i cloud)
                          (let ((x (* multiplier (aref v1 i))))
                            (unless (zerop x)
-                             (do-cloud/hidden (j weight-index)
+                             (do-cloud/chunk2 (j weight-index)
                                (incf (aref accumulator
                                            (the! index (+ start weight-index)))
                                      (* x (aref v2 j))))))))))))))))
@@ -683,12 +713,14 @@ A*B*VISIBLE."))
             (make-instance 'full-cloud
                            :name (list (name cloud) :a)
                            :chunk1 shared
-                           :chunk2 (chunk2 cloud)))
+                           :chunk2 (chunk2 cloud)
+                           :scale2 (scale2 cloud)))
       (setf (slot-value cloud 'cloud-b)
             (make-instance 'full-cloud
                            :name (list (name cloud) :b)
                            :chunk1 (chunk1 cloud)
-                           :chunk2 shared)))))
+                           :chunk2 shared
+                           :scale1 (scale1 cloud))))))
 
 (defun factored-cloud-shared-chunk (cloud)
   (chunk1 (cloud-a cloud)))
@@ -796,14 +828,35 @@ A*B*VISIBLE."))
 ;;;; Boltzmann Machine
 
 (defclass bm ()
-  ((visible-chunks :initarg :visible-chunks :type list :reader visible-chunks)
-   (hidden-chunks :initarg :hidden-chunks :type list :reader hidden-chunks)
-   (clouds :initarg :clouds :type list :reader clouds)
+  ((visible-chunks
+    :type list :initarg :visible-chunks :reader visible-chunks
+    :documentation "A list of CHUNKs whose values come from the
+outside world: SET-INPUT sets them.")
+   (hidden-chunks
+    :type list :initarg :hidden-chunks :reader hidden-chunks
+    :documentation "A list of CHUNKs that are not directly observed.
+Disjunct from VISIBLE-CHUNKS.")
+   (clouds
+    :type list :initform '(:merge) :initarg :clouds :reader clouds
+    :documentation "Normally, a list of CLOUDS representing the
+connections between chunks. During initialization cloud specs are
+allowed in the list.")
    (has-hidden-to-hidden-p :reader has-hidden-to-hidden-p)
    (has-visible-to-visible-p :reader has-visible-to-visible-p)
    (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "The network is assembled from CHUNKS (nodes of the
-same behaviour) and CLOUDs (connections between two chunks)."))
+same behaviour) and CLOUDs (connections between two chunks). To
+instantiate, arrange for VISIBLE-CHUNKS, HIDDEN-CHUNKS, CLOUDS (either
+as initargs or initforms) to be set.
+
+Usage of CLOUDS is slightly tricky: you may pass a list of CLOUD
+objects connected to chunks in this network. Alternatively, a cloud
+spec may stand for a cloud. Also, the initial value of CLOUDS is
+merged with the default cloud spec list before the final cloud spec
+list is instantiated. The default cloud spec list is what
+FULL-CLOUDS-EVERYWHERE returns for VISIBLE-CHUNKS and HIDDEN-CHUNKS.
+See MERGE-CLOUD-SPECS for the gory details. The initform, '(:MERGE),
+simply leaves the default cloud specs alone."))
 
 (defgeneric find-chunk (name object &key errorp)
   (:documentation "Find the chunk in OBJECT whose name is EQUAL to
@@ -877,15 +930,17 @@ NAME. Signal an error if not found and ERRORP.")
                                 :chunk1 (->chunk chunk1 chunks)
                                 :chunk2 (->chunk chunk2 chunks)
                                 unknown)))))))
-      (unless (unique-names-p clouds)
-        (error "Name conflict among clouds: ~S." clouds))
+      (when (name-clashes clouds)
+        (error "Name conflict among clouds: ~S." (name-clashes clouds)))
       clouds)))
 
-(defun unique-names-p (list)
-  (= (length (remove-duplicates (mapcar #'name list) :test #'equal))
-     (length (mapcar #'name list))))
+(defun name-clashes (list)
+  (let ((names (mapcar #'name list)))
+    (set-difference names
+                    (remove-duplicates names :test #'equal)
+                    :test #'equal)))
 
-(defun default-clouds (visible-chunks hidden-chunks)
+(defun full-clouds-everywhere (visible-chunks hidden-chunks)
   "Return a list of cloud specifications suitable for instantiating an
 BM. Put a cloud between each pair of visible and hidden chunks unless
 they are both conditioning chunks. The names of the clouds are two
@@ -898,12 +953,32 @@ element lists of the names of the visible and hidden chunks."
           (push `(:chunk1 ,(name visible-chunk)
                   :chunk2 ,(name hidden-chunk))
                 clouds))))
-    clouds))
+    (nreverse clouds)))
 
 (defun merge-cloud-specs (specs default-specs)
-  "Take DEFAULT-SPECS, a list of cloud specs, remove those that are
-between chunks that have a spec in SPECS and add SPECS. If a spec has
-CLASS NIL then remove it as well."
+  "Combine cloud SPECS and DEFAULT-SPECS. If the first element of
+SPECS is :MERGE then merge them else return SPECS. Merging
+concatenates them but removes those specs from DEFAULT-SPECS that are
+between chunks that have a spec in SPECS. If a spec has CLASS NIL then
+it is removed as well. A cloud spec at minimum specifies the name of
+the chunks it connects:
+
+  (:chunk1 inputs :chunk2 features)
+
+in which case it defaults to be a FULL-CLOUD. If that is not desired
+then the class can be specified:
+
+  (:chunk1 inputs :chunk2 features :class factored-cloud)
+
+To remove a cloud from DEFAULT-SPECS use :CLASS NIL:
+
+  (:chunk1 inputs :chunk2 features :class nil)
+
+Other initargs are passed as is to MAKE-INSTANCE:
+
+  (:chunk1 inputs :chunk2 features :class factored-cloud :rank 10)
+
+You may also pass a CLOUD object as a spec."
   (labels ((chunk1-name (spec)
              (if (listp spec)
                  (getf spec :chunk1)
@@ -917,34 +992,38 @@ CLASS NIL then remove it as well."
                          (chunk1-name spec2))
                   (equal (chunk2-name spec1)
                          (chunk2-name spec2)))))
-    (remove-if (lambda (spec)
-                 (and (not (typep spec 'cloud))
-                      (null (getf spec :class 'full-cloud))))
-               (append (remove-if (lambda (spec)
-                                    (some (lambda (spec1)
-                                            (match spec spec1))
-                                          specs))
-                                  default-specs)
-                       specs))))
+    (if (eq :merge (first specs))
+        (let ((specs (rest specs)))
+          (remove-if (lambda (spec)
+                       (and (not (typep spec 'cloud))
+                            (null (getf spec :class 'full-cloud))))
+                     (append (remove-if (lambda (spec)
+                                          (some (lambda (spec1)
+                                                  (match spec spec1))
+                                                specs))
+                                        default-specs)
+                             specs)))
+        specs)))
 
-(defmethod initialize-instance :after ((bm bm) &key
-                                       (default-clouds (default-clouds
-                                                           (visible-chunks bm)
-                                                           (hidden-chunks bm)))
-                                       clouds &allow-other-keys)
+(defmethod initialize-instance :after ((bm bm) &key &allow-other-keys)
   "Return an BM that consists of VISIBLE-CHUNKS, HIDDEN-CHUNKS and
 CLOUDS of weights where CLOUDS is a list of cloud specifications.
 Names of chunks and clouds must be unique under EQUAL. CLOUDS is
 merged with DEFAULT-CLOUDS. DEFAULT-CLOUDS defaults to connecting all
 visible and hidden chunks with FULL-CLOUDS without any intralayer
 connection. See MERGE-CLOUD-SPECS on the semantics of merging."
-  (let ((visible-chunks (visible-chunks bm))
-        (hidden-chunks (hidden-chunks bm)))
-    (unless (unique-names-p (append visible-chunks hidden-chunks))
-      (error "Name conflict among chunks."))
-    (setf (slot-value bm 'clouds)
-          (->clouds (append visible-chunks hidden-chunks)
-                    (merge-cloud-specs clouds default-clouds)))
+  (let* ((visible-chunks (visible-chunks bm))
+         (hidden-chunks (hidden-chunks bm))
+         (name-clashes (name-clashes (append visible-chunks hidden-chunks))))
+    (when name-clashes
+      (error "Name conflict among chunks ~S." name-clashes))
+    (unless (every (lambda (obj) (typep obj 'cloud)) (clouds bm))
+      (setf (slot-value bm 'clouds)
+            (->clouds (append visible-chunks hidden-chunks)
+                      (merge-cloud-specs (clouds bm)
+                                         (full-clouds-everywhere
+                                          visible-chunks
+                                          hidden-chunks)))))
     ;; make sure chunks have the same MAX-N-STRIPES
     (setf (max-n-stripes bm) (max-n-stripes bm))
     (setf (slot-value bm 'has-visible-to-visible-p)
@@ -1040,11 +1119,219 @@ chunk type and the mean that resides in NODES."
     :initarg :layers :type list :reader layers
     :documentation "A list of layers from bottom up. A layer is a list
 of chunks. The layers partition the set of all chunks in the BM.
-Chunks with no connections to layers below are visible, constant or
-conditioning chunks. The layered structure is used in the single,
-bottom-up approximate inference pass. When instantiating a DBM,
-VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred from LAYERS and
-CLOUDS.")))
+Chunks with no connections to layers below are visible (including
+constant and conditioning) chunks. The layered structure is used in
+the single, bottom-up approximate inference pass. When instantiating a
+DBM, VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred from LAYERS and
+CLOUDS.")
+   (clouds-up-to-layers
+    :type list :reader clouds-up-to-layers
+    :documentation "Each element of this list is a list of clouds
+connected from below to the layer of the same index."))
+  (:documentation "A Deep Boltzmann Machine. See \"Deep Boltzmann
+Machines\" by Ruslan Salakhutdinov and Geoffrey Hinton at
+<http://www.cs.toronto.edu/~hinton/absps/dbm.pdf>.
+
+To instantiate, set up LAYERS and CLOUDS but not VISIBLE-CHUNKS and
+HIDDEN-CHUNKS, because contrary to how initialization works in the
+superclass (BM), the values of these slots are inferred from LAYERS
+and CLOUDS: chunks without a connection from below are visible while
+the rest are hidden.
+
+The default cloud spec list is computed by calling
+FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
+
+(defun full-clouds-everywhere-between-layers (layers)
+  (loop for (layer1 layer2) on layers
+        while layer2
+        append (full-clouds-everywhere layer1 layer2)))
+
+;;; See if CHUNK has a cloud among CLOUDS that connects it to any of
+;;; CHUNKS.
+(defun connects-to-p (chunk chunks clouds)
+  (some (lambda (cloud)
+          (if (typep cloud 'cloud)
+              (or (and (eq chunk (chunk1 cloud))
+                       (member (chunk2 cloud) chunks))
+                  (and (eq chunk (chunk2 cloud))
+                       (member (chunk1 cloud) chunks)))
+              ;; Same thing for cloud specs.
+              (let ((chunk1-name (getf cloud :chunk1))
+                    (chunk2-name (getf cloud :chunk2))
+                    (chunk-name (name chunk)))
+                (or (and (eq chunk-name chunk1-name)
+                         (member chunk2-name chunks
+                                 :key #'name :test #'equal))
+                    (and (eq chunk-name chunk2-name)
+                         (member chunk1-name chunks
+                                 :key #'name :test #'equal))))))
+        clouds))
+
+;;; FIXME: check that there are no clouds between non-adjacent layers.
+(defmethod initialize-instance :around ((dbm dbm) &rest initargs
+                                        &key &allow-other-keys)
+  ;; We need LAYERS and CLOUDS in order to infer visible/hidden
+  ;; chunks, so compute clouds here.
+  ;;
+  ;; LAYERS might have an initform in a subclass or be passed as an
+  ;; initarg. Call SHARED-INITIALIZE for the slots we are interested
+  ;; in, so that they are initialized to whatever value takes
+  ;; precedence.
+  (apply #'shared-initialize dbm '(layers clouds visible-chunks hidden-chunks)
+         initargs)
+  (when (or (slot-boundp dbm 'visible-chunks)
+            (slot-boundp dbm 'hidden-chunks))
+    (error "Don't supply VISIBLE-CHUNKS and HIDDEN-CHUNKS for DBMs."))
+  (let ((clouds (clouds dbm))
+        (layers (layers dbm))
+        (visible-chunks ())
+        (hidden-chunks ()))
+    ;; Merge clouds, at this point it may contain cloud specs or cloud
+    ;; objects. Specs will be resolved in due time by the next method.
+    (setq clouds
+          (merge-cloud-specs clouds
+                             (full-clouds-everywhere-between-layers layers)))
+    ;; Infer VISIBLE-CHUNKS, HIDDEN-CHUNKS from LAYERS and CLOUDS.
+    (dolist (layer (layers dbm))
+      (let ((layer-visible-chunks ())
+            (layer-hidden-chunks ()))
+        (dolist (chunk layer)
+          (if (or (connects-to-p chunk visible-chunks clouds)
+                  (connects-to-p chunk hidden-chunks clouds))
+              (push chunk layer-hidden-chunks)
+              (push chunk layer-visible-chunks)))
+        (setq visible-chunks (append visible-chunks
+                                     (reverse layer-visible-chunks)))
+        (setq hidden-chunks (append hidden-chunks
+                                    (reverse layer-hidden-chunks)))))
+    ;; Let's pass VISIBLE-CHUNKS and HIDDEN-CHUNKS as initargs, and
+    ;; also the already set LAYERS and CLOUDS slots to prevent
+    ;; SHARED-INITIALIZE from re-evaluating their initforms.
+    (apply #'call-next-method dbm
+           :layers layers
+           :clouds clouds
+           :visible-chunks visible-chunks
+           :hidden-chunks hidden-chunks
+           initargs)))
+
+(defmethod initialize-instance :after ((dbm dbm) &key &allow-other-keys)
+  (setf (slot-value dbm 'clouds-up-to-layers)
+        (loop for layer-below = () then layer
+              for layer in (layers dbm)
+              collect (remove-if-not
+                       (lambda (cloud)
+                         (cloud-between-chunks-p cloud layer-below layer))
+                       (clouds dbm)))))
+
+(defun up-dbm (dbm)
+  "Do a single upward pass in DBM, performing approximate inference.
+Disregard intralayer and downward connections, double activations to
+chunks having upward connections."
+  (loop for (layer-below layer layer-above) on (layers dbm)
+        for (clouds-up-to-layer clouds-up-to-layer-above)
+        on (rest (clouds-up-to-layers dbm))
+        while layer
+        do (swap-nodes layer-below)
+        (hijack-means-to-activation layer clouds-up-to-layer)
+        ;; Double activations of chunks in LAYER that have connections
+        ;; to LAYER-ABOVE.
+        (dolist (chunk layer)
+          (when (connects-to-p chunk layer-above clouds-up-to-layer-above)
+            (matlisp:scal! #.(flt 2) (nodes chunk))))
+        (map nil #'set-chunk-mean layer)
+        (swap-nodes layer-below)))
+
+
+;;;; DBM->DBN
+
+(define-slots-not-to-be-copied 'dbm->dbn chunk
+  nodes old-nodes inputs
+  cache-static-activations-p static-activations-cached-p static-activations
+  indices-present)
+
+(defmethod copy-object-extra-initargs ((context (eql 'dbm->dbn)) (chunk chunk))
+  `(:size ,(chunk-size chunk)
+    :max-n-stripes ,(max-n-stripes chunk)))
+
+(define-slots-not-to-be-copied 'dbm->dbn temporal-chunk
+  next-node-inputs has-inputs-p)
+
+(define-slots-to-be-shallow-copied 'dbm->dbn full-cloud
+  weights)
+
+(define-slots-not-to-be-copied 'dbm->dbn bm
+  max-n-stripes)
+
+(defun copy-dbm-chunk-to-dbn (chunk)
+  (copy 'dbm->dbn chunk))
+
+;;; C1 <-W-> C2: C1 * W -> C2, C1 <- W^T * C2
+;;;
+;;; C1 <-W-> C2 <-> C3: C1 * W * 2 -> C2, C1 <- W^T * C2
+;;;
+;;; C0 <-> C1 <-W-> C2: C1 * W -> C2, C1 <- 2 * W^T * C2
+;;;
+;;; C0 <-> C1 <-W-> C2 <-> C3: C1 * W * 2 -> C2, C1 <- 2 * W^T * C2
+;;;
+;;; In short, double activation from the cloud if the target chunk has
+;;; input from another layer.
+(defun copy-dbm-cloud-to-dbn (cloud clouds layer-below layer1 layer2 layer-above)
+  (let ((chunk1 (chunk1 cloud))
+        (chunk2 (chunk2 cloud))
+        (copy (copy 'dbm->dbn cloud)))
+    (when (and (member chunk1 layer1)
+               (connects-to-p chunk1 layer-below clouds))
+      (setf (slot-value copy 'scale1) (flt 2)))
+    (when (and (member chunk2 layer2)
+               (connects-to-p chunk2 layer-above clouds))
+      (setf (slot-value copy 'scale2) (flt 2)))
+    (when (and (member chunk2 layer1)
+               (connects-to-p chunk2 layer-below clouds))
+      (setf (slot-value copy 'scale2) (flt 2)))
+    (when (and (member chunk1 layer2)
+               (connects-to-p chunk1 layer-above clouds))
+      (setf (slot-value copy 'scale1) (flt 2)))
+    copy))
+
+(defun dbm->dbn (dbm &key (rbm-class 'rbm) (dbn-class 'dbn)
+                 dbn-initargs)
+  "Convert DBM to a DBN by discarding intralayer connections and
+doubling activations of clouds where necessary. If a chunk does not
+have input from below then scale its input from above by 2; similarly,
+if a chunk does not have input from above then scale its input from
+below by 2. By default, weights are shared between clouds and their
+copies.
+
+For now, unrolling the resulting DBN to a BPN is not supported."
+  (let* ((clouds (clouds dbm))
+         (rbms (with-copying
+                 (loop
+                  for layer-below = nil then layer1
+                  for (layer1 layer2 layer-above) on (layers dbm)
+                  while layer2
+                  collect
+                  (flet ((copy-cloud (cloud)
+                           (copy-dbm-cloud-to-dbn cloud clouds
+                                                  layer-below
+                                                  layer1 layer2
+                                                  layer-above))
+                         (cloud-between-layers-p (cloud)
+                           (cloud-between-chunks-p
+                            cloud layer1 layer2)))
+                    (make-instance rbm-class
+                                   :visible-chunks (mapcar
+                                                    #'copy-dbm-chunk-to-dbn
+                                                    layer1)
+                                   :hidden-chunks (mapcar
+                                                   #'copy-dbm-chunk-to-dbn
+                                                   layer2)
+                                   :clouds (mapcar #'copy-cloud
+                                                   (remove-if-not
+                                                    #'cloud-between-layers-p
+                                                    clouds))))))))
+    (apply #'make-instance dbn-class
+           :rbms rbms
+           dbn-initargs)))
 
 
 ;;;; Restricted Boltzmann Machine
@@ -1185,7 +1472,7 @@ trainers for BMs."))
    (persistent-chains
     :type bm
     :accessor persistent-chains
-    :documentation "An BM that keeps the states of the persistent
+    :documentation "A BM that keeps the states of the persistent
 chains (each stripe is a chain), initialized from the BM being trained
 by COPY with 'PCD as the context. Suitable for training BM and
 RBM.")))
@@ -1224,18 +1511,19 @@ between 0 and 1). Repeat this N-ITERATIONS times."
                                        (flt (- 1 damping-factor)))))
       (set-hidden-mean bm)))
 
-;;; FIXME: implement SET-HIDDEN-MEAN-IN-PCD for DBM
-
 (defgeneric set-hidden-mean-in-pcd (trainer bm)
-  (:method ((trainer bm-pcd-trainer) (bm bm))
-    (settle-hidden-mean-field bm 10 (flt 0.5)))
-  (:method ((trainer bm-pcd-trainer) (rbm rbm))
-    (set-hidden-mean rbm))
   (:documentation "Called in the positive phase during PCD training.
 For an RBM it trivially calls SET-HIDDEN-MEAN, while for a BM it calls
 SETTLE-HIDDEN-MEAN-FIELD with 10 iterations and 0.5 as the damping
 factor. To change the parameters (or how the mean field is computed),
-write a specialized method."))
+write a specialized method.")
+  (:method ((trainer bm-pcd-trainer) (bm bm))
+    (settle-hidden-mean-field bm 10 (flt 0.5)))
+  (:method ((trainer bm-pcd-trainer) (dbm dbm))
+    (up-dbm dbm)
+    (settle-hidden-mean-field dbm 10 (flt 0.5)))
+  (:method ((trainer bm-pcd-trainer) (rbm rbm))
+    (set-hidden-mean rbm)))
 
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
   (setf (normal-chains trainer) bm)
@@ -1251,7 +1539,7 @@ write a specialized method."))
 
 ;;; If CLOUD is in the persistent chain, that is, it's a copy of a
 ;;; cloud in the normal BM then use the orignal as that's what the
-;;; SEGMENTED-GD-BM-TRAINER was initialized with (and they of course
+;;; SEGMENTED-GD-BM-TRAINER was initialized with (and they, of course,
 ;;; share the weights).
 (defmethod find-segment-gradient-accumulator (cloud (trainer bm-pcd-trainer))
   (if (find cloud (clouds (persistent-chains trainer)))

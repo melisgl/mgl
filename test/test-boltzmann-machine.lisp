@@ -93,11 +93,12 @@
                                  ,(make-instance hidden-type
                                                  :name 'features :size 1))
                 :clouds (if rank
-                            `((:class factored-cloud
+                            `(:merge
+                              (:class factored-cloud
                                :rank ,rank
                                :chunk1 inputs
                                :chunk2 features))
-                            nil)
+                            '(:merge))
                 :max-n-stripes max-n-stripes
                 :clamper #'clamp)))
       (train (make-instance 'counting-function-sampler
@@ -161,11 +162,12 @@
                                   (make-instance 'sigmoid-chunk :name 'features
                                                  :size 1))
                   :clouds (if rank
-                              `((:class factored-cloud
+                              `(:merge
+                                (:class factored-cloud
                                  :rank ,rank
                                  :chunk1 inputs
                                  :chunk2 features))
-                              nil)
+                              '(:merge))
                   :clamper #'clamp)))
         (train (make-instance 'counting-function-sampler
                               :max-n-samples 100000
@@ -289,8 +291,8 @@
          (rbm (make-instance 'rbm
                              :visible-chunks (list visible-chunk)
                              :hidden-chunks (list hidden-chunk)
-                             :default-clouds nil
-                             :clouds `((:class factored-cloud
+                             :clouds `(:merge
+                                       (:class factored-cloud
                                         :chunk1 inputs
                                         :chunk2 features
                                         :rank ,rank))))
@@ -406,14 +408,28 @@
                       different-slots)))))
     (nreverse different-slots)))
 
-(defun test-copy-pcd-chunk ()
+(defun set-= (list1 list2 &key key (test #'eql) (test-not nil test-not-p))
+  (if test-not-p
+      (and (null (set-difference list1 list2
+                                 :key key :test-not test-not))
+           (null (set-difference list2 list1
+                                 :key key :test-not test-not)))
+      (and (null (set-difference list1 list2
+                                 :key key :test test))
+           (null (set-difference list2 list1
+                                 :key key :test test)))))
+
+(defun names= (list1 list2)
+  (set-= list1 list2 :test #'equal))
+
+(defun test-copy-chunk (context)
   (let ((chunk (make-instance 'sigmoid-chunk
                               :name 'this-chunk
                               :size 10)))
-    (assert (equal (mapcar #'first (compare-objects chunk (copy 'pcd chunk)))
-                   '(nodes mgl-bm::old-nodes inputs)))))
+    (assert (names= (mapcar #'first (compare-objects chunk (copy context chunk)))
+                    '(nodes mgl-bm::old-nodes inputs)))))
 
-(defun test-copy-pcd-full-cloud ()
+(defun test-copy-full-cloud (context)
   (let* ((chunk1 (make-instance 'constant-chunk
                                 :name 'constant-chunk
                                 :size 1))
@@ -424,8 +440,8 @@
                                :name 'this-cloud
                                :chunk1 chunk1
                                :chunk2 chunk2)))
-    (assert (equal (mapcar #'first (compare-objects cloud (copy 'pcd cloud)))
-                   '(chunk1 chunk2)))))
+    (assert (names= (mapcar #'first (compare-objects cloud (copy context cloud)))
+                    '(chunk1 chunk2)))))
 
 (defun test-copy-pcd-rbm ()
   (let ((rbm (make-instance
@@ -441,15 +457,15 @@
                                                   :name 'features
                                                   :size 1))
               :max-n-stripes 3)))
-    (assert (equal (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
-                   '(visible-chunks hidden-chunks clouds max-n-stripes)))
+    (assert (names= (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
+                    '(visible-chunks hidden-chunks clouds max-n-stripes)))
     (dolist (cloud (clouds rbm))
       (assert (member (chunk1 cloud) (visible-chunks rbm)))
       (assert (member (chunk2 cloud) (hidden-chunks rbm))))))
 
 (defun test-copy-pcd ()
-  (test-copy-pcd-chunk)
-  (test-copy-pcd-full-cloud)
+  (test-copy-chunk 'pcd)
+  (test-copy-full-cloud 'pcd)
   (test-copy-pcd-rbm))
 
 (defun test-rbm-examples/pcd ()
@@ -494,5 +510,79 @@
   (test-copy-pcd)
   (test-rbm-examples/pcd))
 
+(defun test-dbm ()
+  (let ((dbm (make-instance 'dbm
+                            :layers (list (list (make-instance 'sigmoid-chunk
+                                                               :name 'inputs
+                                                               :size 2))
+                                          (list (make-instance 'sigmoid-chunk
+                                                               :name 'features1
+                                                               :size 1))))))
+    (assert (names= (mapcar #'name (visible-chunks dbm))
+                    '(inputs)))
+    (assert (names= (mapcar #'name (hidden-chunks dbm))
+                    '(features1)))
+    (assert (names= (mapcar #'name (clouds dbm))
+                    '((inputs features1)))))
+  (let ((dbm (make-instance 'dbm
+                            :layers (list
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'inputs
+                                                          :size 2)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant0))
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'features1
+                                                          :size 1)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant1))
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'features2
+                                                          :size 1)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant2)))
+                            :clouds '(:merge
+                                      (:chunk1 inputs
+                                       :chunk2 inputs)))))
+    (assert (names= (mapcar #'name (visible-chunks dbm))
+                    '(inputs constant0)))
+    (assert (names= (mapcar #'name (hidden-chunks dbm))
+                    '(features1 constant1 features2 constant2)))
+    (assert (names= (mapcar #'name (clouds dbm))
+                    '((inputs features1) (inputs constant1)
+                      (constant0 features1)
+                      (features1 features2) (features1 constant2)
+                      (constant1 features2) (inputs inputs))))
+    (let ((dbn (dbm->dbn dbm)))
+      (destructuring-bind (rbm0 rbm1) (rbms dbn)
+        (assert (names= (mapcar #'name (visible-chunks rbm0))
+                        '(inputs constant0)))
+        (assert (names= (mapcar #'name (hidden-chunks rbm0))
+                        '(features1 constant1)))
+        (assert (names= (mapcar #'name (clouds rbm0))
+                        '((inputs features1) (inputs constant1)
+                          (constant0 features1))))
+        (assert (every (lambda (cloud)
+                         (and (= (flt 1) (mgl-bm::scale1 cloud))
+                              (= (flt 2) (mgl-bm::scale2 cloud))))
+                       (clouds rbm0)))
+        (assert (equal (hidden-chunks rbm0)
+                       (visible-chunks rbm1)))
+        (assert (names= (mapcar #'name (hidden-chunks rbm1))
+                        '(features2 constant2)))
+        (assert (names= (mapcar #'name (clouds rbm1))
+                        '((features1 features2) (features1 constant2)
+                          (constant1 features2))))
+        (assert (every (lambda (cloud)
+                         (and (= (flt 2) (mgl-bm::scale1 cloud))
+                              (= (flt 1) (mgl-bm::scale2 cloud))))
+                       (clouds rbm1)))))))
+
+(defun test-copy-dbm->dbn ()
+  (test-copy-chunk 'dbm->dbn)
+  (test-copy-full-cloud 'dbm->dbn))
+
 (defun test-bm ()
-  (test-rbm))
+  (test-rbm)
+  (test-dbm)
+  (test-copy-dbm->dbn))

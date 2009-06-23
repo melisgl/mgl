@@ -79,7 +79,7 @@
                                 :sampler #'sample)
                  net))))
 
-(defun test-unroll ()
+(defun test-unroll-dbn ()
   (let ((rbm (make-instance 'rbm
                             :visible-chunks (list
                                              (make-instance 'constant-chunk
@@ -95,8 +95,32 @@
                                                            :size 2)))))
     (unroll-dbn (make-instance 'dbn :rbms (list rbm)))))
 
-(defun test-unroll-dbn ()
-  (test-unroll)
+(defun test-unroll-dbm ()
+  (let ((dbm (make-instance 'dbm
+                            :layers (list
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'inputs
+                                                          :size 2)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant0))
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'features1
+                                                          :size 1)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant1))
+                                     (list (make-instance 'sigmoid-chunk
+                                                          :name 'features2
+                                                          :size 1)
+                                           (make-instance 'constant-chunk
+                                                          :name 'constant2)))
+                            :clouds '(:merge
+                                      (:chunk1 inputs
+                                       :chunk2 inputs)))))
+    (unroll-dbm dbm)))
+
+(defun test-unroll ()
+  (test-unroll-dbn)
+  (test-unroll-dbm)
   #+nil
   (dolist (transposep '(nil t))
     (dolist (cg '(nil t))
