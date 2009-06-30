@@ -33,10 +33,7 @@
                                                           :name 'features2
                                                           :size 1)
                                            (make-instance 'constant-chunk
-                                                          :name 'constant2)))
-                            :clouds '(:merge
-                                      (:chunk1 inputs
-                                       :chunk2 inputs)))))
+                                                          :name 'constant2))))))
     (unroll-dbm dbm)))
 
 (defun test-unroll ()

@@ -1047,8 +1047,7 @@ respective probability distributions."
   (swap-nodes (hidden-chunks bm))
   (hijack-means-to-activation (visible-chunks bm) (clouds bm))
   (map nil #'set-chunk-mean (visible-chunks bm))
-  ;; HIJACK swapped nodes, but hiddens did not change. Simply swap
-  ;; them back.
+  ;; Hiddens did not change. Simply swap them back.
   (swap-nodes (hidden-chunks bm)))
 
 (defun set-hidden-mean (bm)
@@ -1058,8 +1057,7 @@ respective probability distributions."
   (swap-nodes (hidden-chunks bm))
   (hijack-means-to-activation (hidden-chunks bm) (clouds bm))
   (map nil #'set-chunk-mean (hidden-chunks bm))
-  ;; HIJACK swapped nodes, but visibles did not change. Simply swap
-  ;; them back.
+  ;; Visibles did not change. Simply swap them back.
   (swap-nodes (visible-chunks bm))
   (dolist (chunk (visible-chunks bm))
     (when (typep chunk 'temporal-chunk)
@@ -1167,7 +1165,6 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
                                  :key #'name :test #'equal))))))
         clouds))
 
-;;; FIXME: check that there are no clouds between non-adjacent layers.
 (defmethod initialize-instance :around ((dbm dbm) &rest initargs
                                         &key &allow-other-keys)
   ;; We need LAYERS and CLOUDS in order to infer visible/hidden
@@ -1204,15 +1201,20 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
                                      (reverse layer-visible-chunks)))
         (setq hidden-chunks (append hidden-chunks
                                     (reverse layer-hidden-chunks)))))
-    ;; Let's pass VISIBLE-CHUNKS and HIDDEN-CHUNKS as initargs, and
-    ;; also the already set LAYERS and CLOUDS slots to prevent
-    ;; SHARED-INITIALIZE from re-evaluating their initforms.
     (apply #'call-next-method dbm
-           :layers layers
            :clouds clouds
            :visible-chunks visible-chunks
            :hidden-chunks hidden-chunks
            initargs)))
+
+;;; Check that there are no clouds between non-adjacent layers. FIXME:
+;;; should intralyer connections be allowed?
+(defun check-dbm-clouds (dbm)
+  (let ((bad-clouds (set-difference (clouds dbm)
+                                    (apply #'append (clouds-up-to-layers dbm)))))
+    (when bad-clouds
+      (error "In ~A some clouds are between non-adjecent layers: ~A"
+             dbm bad-clouds))))
 
 (defmethod initialize-instance :after ((dbm dbm) &key &allow-other-keys)
   (setf (slot-value dbm 'clouds-up-to-layers)
@@ -1221,7 +1223,8 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
               collect (remove-if-not
                        (lambda (cloud)
                          (cloud-between-chunks-p cloud layer-below layer))
-                       (clouds dbm)))))
+                       (clouds dbm))))
+  (check-dbm-clouds dbm))
 
 (defun up-dbm (dbm)
   "Do a single upward pass in DBM, performing approximate inference.
@@ -1236,10 +1239,33 @@ chunks having upward connections."
         ;; Double activations of chunks in LAYER that have connections
         ;; to LAYER-ABOVE.
         (dolist (chunk layer)
-          (when (connects-to-p chunk layer-above clouds-up-to-layer-above)
+          (when (and (not (conditioning-chunk-p chunk))
+                     (connects-to-p chunk layer-above
+                                    clouds-up-to-layer-above))
             (matlisp:scal! #.(flt 2) (nodes chunk))))
         (map nil #'set-chunk-mean layer)
         (swap-nodes layer-below)))
+
+(defun down-dbm (dbm)
+  "Do a single downward pass in DBM, propagating the mean-field much
+like performing approximate inference, but in the other direction.
+Disregard intralayer and upward connections, double activations to
+chunks having downward connections."
+  (loop for (layer-above layer layer-below) on (reverse (layers dbm))
+        for (clouds-down-to-layer clouds-down-to-layer-below)
+        on (reverse (clouds-up-to-layers dbm))
+        while layer
+        do (swap-nodes layer-above)
+        (hijack-means-to-activation layer clouds-down-to-layer)
+        ;; Double activations of chunks in LAYER that have connections
+        ;; to LAYER-BELOW.
+        (dolist (chunk layer)
+          (when (and (not (conditioning-chunk-p chunk))
+                     (connects-to-p chunk layer-below
+                                    clouds-down-to-layer-below))
+            (matlisp:scal! #.(flt 2) (nodes chunk))))
+        (map nil #'set-chunk-mean layer)
+        (swap-nodes layer-above)))
 
 
 ;;;; DBM->DBN
@@ -1461,6 +1487,9 @@ trainers for BMs."))
 (define-slots-not-to-be-copied 'pcd bm
   max-n-stripes)
 
+(define-slots-not-to-be-copied 'pcd dbm
+  visible-chunks hidden-chunks)
+
 (define-slots-to-be-shallow-copied 'pcd rbm
   dbn)
 
@@ -1479,49 +1508,51 @@ RBM.")))
 
 ;;;; Damped mean field updates.
 
-(defun settle-visible-mean-field (bm n-iterations damping-factor)
+(defun settle-visible-mean-field (bm n-iterations damping-factor
+                                  &key initial-pass-done-p)
   "Set visible means, multiply them with DAMPING-FACTOR (an FLT
 between 0 and 1). Repeat this N-ITERATIONS times."
   (declare (type flt damping-factor))
-  (if (has-visible-to-visible-p bm)
-      (let ((visible-chunks (remove-if #'conditioning-chunk-p
-                                       (visible-chunks bm))))
-        (zero-chunks visible-chunks)
-        (set-visible-mean bm)
-        (loop for i below n-iterations do
-              (set-visible-mean bm)
-              (sum-nodes-and-old-nodes visible-chunks
-                                       (flt damping-factor)
-                                       (flt (- 1 damping-factor)))))
-      (set-visible-mean bm)))
+  (let ((visible-chunks (remove-if #'conditioning-chunk-p
+                                   (visible-chunks bm))))
+    (unless initial-pass-done-p
+      (zero-chunks visible-chunks)
+      (set-visible-mean bm))
+    (when (has-visible-to-visible-p bm)
+      (loop for i below n-iterations do
+            (set-visible-mean bm)
+            (sum-nodes-and-old-nodes visible-chunks
+                                     (flt damping-factor)
+                                     (flt (- 1 damping-factor)))))))
 
-(defun settle-hidden-mean-field (bm n-iterations damping-factor)
+(defun settle-hidden-mean-field (bm n-iterations damping-factor
+                                 &key initial-pass-done-p)
   "Set hidden means, multiply them with DAMPING-FACTOR (an FLT
 between 0 and 1). Repeat this N-ITERATIONS times."
   (declare (type flt damping-factor))
-  (if (has-hidden-to-hidden-p bm)
-      (let ((hidden-chunks (remove-if #'conditioning-chunk-p
-                                      (hidden-chunks bm))))
-        (zero-chunks hidden-chunks)
-        (set-hidden-mean bm)
-        (loop for i below n-iterations do
-              (set-hidden-mean bm)
-              (sum-nodes-and-old-nodes hidden-chunks 
-                                       (flt damping-factor)
-                                       (flt (- 1 damping-factor)))))
-      (set-hidden-mean bm)))
+  (let ((hidden-chunks (remove-if #'conditioning-chunk-p
+                                  (hidden-chunks bm))))
+    (unless initial-pass-done-p
+      (zero-chunks hidden-chunks)
+      (set-hidden-mean bm))
+    (when (has-hidden-to-hidden-p bm)
+      (loop for i below n-iterations do
+            (set-hidden-mean bm)
+            (sum-nodes-and-old-nodes hidden-chunks
+                                     (flt damping-factor)
+                                     (flt (- 1 damping-factor)))))))
 
 (defgeneric set-hidden-mean-in-pcd (trainer bm)
   (:documentation "Called in the positive phase during PCD training.
 For an RBM it trivially calls SET-HIDDEN-MEAN, while for a BM it calls
-SETTLE-HIDDEN-MEAN-FIELD with 10 iterations and 0.5 as the damping
+SETTLE-HIDDEN-MEAN-FIELD with 10 iterations and 0.1 as the damping
 factor. To change the parameters (or how the mean field is computed),
 write a specialized method.")
   (:method ((trainer bm-pcd-trainer) (bm bm))
-    (settle-hidden-mean-field bm 10 (flt 0.5)))
+    (settle-hidden-mean-field bm 10 (flt 0.1)))
   (:method ((trainer bm-pcd-trainer) (dbm dbm))
     (up-dbm dbm)
-    (settle-hidden-mean-field dbm 10 (flt 0.5)))
+    (settle-hidden-mean-field dbm 10 (flt 0.1) :initial-pass-done-p t))
   (:method ((trainer bm-pcd-trainer) (rbm rbm))
     (set-hidden-mean rbm)))
 

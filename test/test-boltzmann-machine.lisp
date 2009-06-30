@@ -9,10 +9,10 @@
 
 (defmethod initialize-trainer ((trainer test-pcd-trainer) rbm)
   (call-next-method)
-  (setf (max-n-stripes (mgl-bm::persistent-chains trainer))
+  (setf (max-n-stripes (persistent-chains trainer))
         (batch-size (elt (trainers trainer) 0)))
   (log-msg "Persistent chain n-stripes: ~S~%"
-           (n-stripes (mgl-bm::persistent-chains trainer))))
+           (n-stripes (persistent-chains trainer))))
 
 (defclass test-rbm (rbm)
   ((clamper :initarg :clamper :reader clamper)))
@@ -510,7 +510,7 @@
   (test-copy-pcd)
   (test-rbm-examples/pcd))
 
-(defun test-dbm ()
+(defun test-make-dbm ()
   (let ((dbm (make-instance 'dbm
                             :layers (list (list (make-instance 'sigmoid-chunk
                                                                :name 'inputs
@@ -540,10 +540,7 @@
                                                           :name 'features2
                                                           :size 1)
                                            (make-instance 'constant-chunk
-                                                          :name 'constant2)))
-                            :clouds '(:merge
-                                      (:chunk1 inputs
-                                       :chunk2 inputs)))))
+                                                          :name 'constant2))))))
     (assert (names= (mapcar #'name (visible-chunks dbm))
                     '(inputs constant0)))
     (assert (names= (mapcar #'name (hidden-chunks dbm))
@@ -552,7 +549,7 @@
                     '((inputs features1) (inputs constant1)
                       (constant0 features1)
                       (features1 features2) (features1 constant2)
-                      (constant1 features2) (inputs inputs))))
+                      (constant1 features2))))
     (let ((dbn (dbm->dbn dbm)))
       (destructuring-bind (rbm0 rbm1) (rbms dbn)
         (assert (names= (mapcar #'name (visible-chunks rbm0))
@@ -578,11 +575,67 @@
                               (= (flt 1) (mgl-bm::scale2 cloud))))
                        (clouds rbm1)))))))
 
+(defun test-dbm-up/down ()
+  (let* ((dbm-inputs (make-instance 'sigmoid-chunk
+                                    :name 'inputs
+                                    :size 2))
+         (dbm-constant1 (make-instance 'constant-chunk
+                                       :name 'constant1
+                                       :size 1))
+         (dbm-features1 (make-instance 'sigmoid-chunk
+                                       :name 'features1
+                                       :size 1))
+         (dbm-features2 (make-instance 'sigmoid-chunk
+                                       :name 'features2
+                                       :size 2))
+         (dbm (make-instance 'dbm
+                             :layers (list (list dbm-inputs)
+                                           (list dbm-constant1
+                                                 dbm-features1)
+                                           (list dbm-features2))))
+         (dbn (dbm->dbn dbm))
+         (dbn-inputs (find-chunk 'inputs dbn))
+         (dbn-features1 (find-chunk 'features1 dbn))
+         (dbn-features2 (find-chunk 'features2 dbn)))
+    (labels ((~=v (x y)
+               (when (eq x y)
+                 (error "DBM chunks ~A and DBN chunk ~A are the same." x y))
+               (unless (every (lambda (x y)
+                                (~= x y))
+                              (storage (nodes x)) (storage (nodes y)))
+                 (error "~A and ~A are different." x y)))
+             (check ()
+               (map nil #'~=v
+                    (list dbm-inputs dbm-features1 dbm-features2)
+                    (list dbn-inputs dbn-features1 dbn-features2))))
+      (replace (storage (weights (find-cloud '(inputs constant1) dbm)))
+               '(0.35d0 1.09d0))
+      (replace (storage (weights (find-cloud '(inputs features1) dbm)))
+               '(0.3d0 -0.8d0))
+      (replace (storage (weights (find-cloud '(constant1 features2) dbm)))
+               '(-0.63d0 -1.75d0))
+      (replace (storage (weights (find-cloud '(features1 features2) dbm)))
+               '(-2.3d0 -0.1d0))
+      (replace (storage (nodes dbm-inputs))
+               '(0.7d0 0.2d0))
+      (replace (storage (nodes dbn-inputs))
+               '(0.7d0 0.2d0))
+      (up-dbm dbm)
+      (map nil #'set-hidden-mean (rbms dbn))
+      (check)
+      (down-dbm dbm)
+      (down-mean-field dbn)
+      (check))))
+
 (defun test-copy-dbm->dbn ()
   (test-copy-chunk 'dbm->dbn)
   (test-copy-full-cloud 'dbm->dbn))
 
+(defun test-dbm ()
+  (test-make-dbm)
+  (test-dbm-up/down)
+  (test-copy-dbm->dbn))
+
 (defun test-bm ()
   (test-rbm)
-  (test-dbm)
-  (test-copy-dbm->dbn))
+  (test-dbm))

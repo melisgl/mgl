@@ -23,12 +23,6 @@
   (:export #:*mnist-dir*
            #:train-mnist))
 
-(cl:defpackage :mgl-example-mnist-dbm
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
-        #:mgl-unroll #:mgl-example-util)
-  (:export #:*mnist-dir*
-           #:train-mnist))
-
 (cl:defpackage #:mgl-example-movie-review
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
         #:mgl-unroll #:mgl-example-util))

@@ -256,6 +256,7 @@ interface and simple gradient descent based trainers."))
    #:layers
    #:clouds-up-to-layers
    #:up-dbm
+   #:down-dbm
    #:dbm->dbn
    ;; RBM
    #:rbm

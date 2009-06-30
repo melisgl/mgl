@@ -10,6 +10,5 @@
                              (:file "util")
                              (:file "spiral")
                              (:file "mnist")
-                             (:file "mnist-dbm")
                              (:file "movie-review"))))
   :depends-on (#:mgl #:cl-ppcre))
