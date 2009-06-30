@@ -137,8 +137,7 @@
     dbn))
 
 (defun train-spiral-bpn (dbn &key (max-n-stripes 1))
-  (multiple-value-bind (defs clamps inits) (unroll-dbn dbn)
-    (declare (ignore clamps))
+  (multiple-value-bind (defs inits) (unroll-dbn dbn)
     (print inits)
     (let ((bpn (eval (print
                       `(build-bpn (:class 'spiral-bpn
@@ -149,7 +148,9 @@
                            :x (make-instance
                                '->sum-squared-error
                                :x (lump ',(chunk-lump-name 'inputs nil))
-                               :y (lump ',(chunk-lump-name 'inputs t))))))))))
+                               :y (lump ',(chunk-lump-name
+                                           'inputs
+                                           :reconstruction))))))))))
       (initialize-bpn-from-bm bpn dbn inits)
       (train (make-sampler 50000)
              (make-instance 'spiral-bp-trainer

@@ -347,7 +347,6 @@ Networks (DBN)."))
    #:chunk-lump-name
    #:unroll-dbn
    #:unroll-dbm
-   #:clamp-indices-in-unrolled-dbn
    #:initialize-bpn-from-bm)
   (:documentation "Translating Boltzmann Machines to a Backprop
 networks, aka `unrolling'."))

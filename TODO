@@ -58,7 +58,8 @@
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values
-** TODO fix or remove missing value support
+** DONE fix or remove missing value support
+   removed
 ** DONE unroll factored clouds
 * misc
 ** DONE faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf

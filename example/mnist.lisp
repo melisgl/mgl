@@ -380,8 +380,7 @@
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
 (defun unroll-mnist-dbn (dbn)
-  (multiple-value-bind (defs clamps inits) (unroll-dbn dbn :bottom-up-only t)
-    (print clamps)
+  (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
     (print inits)
     (terpri)
     (let ((bpn (eval (print
