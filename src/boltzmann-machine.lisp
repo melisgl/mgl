@@ -1494,17 +1494,27 @@ trainers for BMs."))
   dbn)
 
 (defclass bm-pcd-trainer (segmented-gd-bm-trainer bm-mcmc-parameters)
-  ((normal-chains
+  ((n-particles
+    :type unsigned-byte
+    :initarg :n-particles
+    :reader n-particles
+    :documentation "The number of persistent chains to run. Also known
+as the number of fantasy particles.")
+   (normal-chains
     :type bm
-    :accessor normal-chains
+    :reader normal-chains
     :documentation "The BM being trained.")
    (persistent-chains
     :type bm
-    :accessor persistent-chains
+    :reader persistent-chains
     :documentation "A BM that keeps the states of the persistent
 chains (each stripe is a chain), initialized from the BM being trained
 by COPY with 'PCD as the context. Suitable for training BM and
 RBM.")))
+
+(defmethod initialize-trainer ((trainer bm-pcd-trainer) bm)
+  (call-next-method)
+  (setf (max-n-stripes (persistent-chains trainer)) (n-particles trainer)))
 
 ;;;; Damped mean field updates.
 
@@ -1557,8 +1567,8 @@ write a specialized method.")
     (set-hidden-mean rbm)))
 
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
-  (setf (normal-chains trainer) bm)
-  (setf (persistent-chains trainer) (copy 'pcd bm))
+  (setf (slot-value trainer 'normal-chains) bm)
+  (setf (slot-value trainer 'persistent-chains) (copy 'pcd bm))
   (call-next-method))
 
 (defmethod train-batch (batch (trainer bm-pcd-trainer) (bm bm))

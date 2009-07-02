@@ -271,6 +271,7 @@ interface and simple gradient descent based trainers."))
    #:rbm-cd-trainer
    ;; Persistent Contrastive Divergence (PCD) learning
    #:bm-pcd-trainer
+   #:n-particles
    #:persistent-chains
    #:pcd
    #:settle-visible-mean-field

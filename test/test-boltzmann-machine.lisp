@@ -7,13 +7,6 @@
 
 (defclass test-pcd-trainer (test-trainer bm-pcd-trainer) ())
 
-(defmethod initialize-trainer ((trainer test-pcd-trainer) rbm)
-  (call-next-method)
-  (setf (max-n-stripes (persistent-chains trainer))
-        (batch-size (elt (trainers trainer) 0)))
-  (log-msg "Persistent chain n-stripes: ~S~%"
-           (n-stripes (persistent-chains trainer))))
-
 (defclass test-rbm (rbm)
   ((clamper :initarg :clamper :reader clamper)))
 

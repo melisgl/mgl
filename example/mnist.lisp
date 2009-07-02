@@ -565,6 +565,7 @@
   (train (make-sampler *training-images*
                        :max-n (* 0 (length *training-images*)))
          (make-instance 'mnist-dbm-trainer
+                        :n-particles 100
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
