@@ -104,6 +104,7 @@
                                 (repeatedly
                                   (make-instance 'batch-gd-trainer
                                                  :learning-rate (flt 0.01)
+                                                 :momentum (flt 0.9)
                                                  :batch-size 10))))
              net)
       (bpn-error (make-instance 'counting-function-sampler
@@ -176,6 +177,7 @@
                                     ;; towards infinity.
                                     (make-instance 'batch-gd-trainer
                                                    :learning-rate (flt 0.01)
+                                                   :momentum (flt 0.9)
                                                    :weight-decay (flt 0)
                                                    :batch-size 10))))
                net)
@@ -243,6 +245,7 @@
                                   (repeatedly
                                     (make-instance 'batch-gd-trainer
                                                    :learning-rate (flt 0.1)
+                                                   :momentum (flt 0.9)
                                                    :batch-size 100))))
                net)
         (bpn-error (make-instance 'counting-function-sampler
@@ -343,6 +346,7 @@
                                   (repeatedly
                                     (make-instance 'batch-gd-trainer
                                                    :learning-rate (flt 0.01)
+                                                   :momentum (flt 0.9)
                                                    :batch-size 10))))
                net)
         (bpn-error (make-instance 'counting-function-sampler

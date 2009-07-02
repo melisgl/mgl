@@ -132,6 +132,7 @@
              (make-instance 'spiral-rbm-trainer
                             :segmenter
                             (repeatedly (make-instance 'batch-gd-trainer
+                                                       :momentum (flt 0.9)
                                                        :batch-size 100)))
              rbm))
     dbn))
@@ -158,6 +159,7 @@
                             (repeatedly
                               (make-instance 'batch-gd-trainer
                                              :learning-rate (flt 0.01)
+                                             :momentum (flt 0.9)
                                              :batch-size 100)))
              bpn))))
 

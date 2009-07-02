@@ -462,6 +462,7 @@
                       (format t "~S ~S~%" learning-rate decay)
                       (make-instance 'mr-rbm-segment-trainer
                                      :learning-rate (flt learning-rate)
+                                     :momentum (flt 0.9)
                                      :weight-decay (flt decay)
                                      :batch-size 10))))
                  rbm))
@@ -670,14 +671,14 @@
                                 (make-instance
                                  'batch-gd-trainer
                                  :learning-rate (flt 0.0002)
-                                 :weight-decay (flt 0.002)
                                  :momentum (flt 0.8)
+                                 :weight-decay (flt 0.002)
                                  :batch-size 10)
                                 (make-instance
                                  'batch-gd-trainer
                                  :learning-rate (flt 0.0002)
-                                 :weight-decay (flt 0.002)
                                  :momentum (flt 0.8)
+                                 :weight-decay (flt 0.002)
                                  :batch-size 10))))
            bpn)
     bpn))

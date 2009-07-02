@@ -241,6 +241,7 @@
                               (lambda (cloud)
                                 (make-instance 'mnist-rbm-segment-trainer
                                                :learning-rate (flt 0.1)
+                                               :momentum (flt 0.9)
                                                :weight-decay
                                                (if (bias-cloud-p cloud)
                                                    (flt 0)

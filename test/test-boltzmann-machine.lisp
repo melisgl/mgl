@@ -97,12 +97,24 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples max-n-samples
                             :sampler sampler)
-             (make-instance trainer-class
-                            :segmenter
-                            (repeatedly
-                              (make-instance 'batch-gd-trainer
-                                             :learning-rate (flt learning-rate)
-                                             :batch-size batch-size)))
+             (if (subtypep trainer-class 'bm-pcd-trainer)
+                 (make-instance
+                  trainer-class
+                  :n-particles batch-size
+                  :segmenter
+                  (repeatedly
+                    (make-instance 'batch-gd-trainer
+                                   :learning-rate (flt learning-rate)
+                                   :momentum (flt 0.9)
+                                   :batch-size batch-size)))
+                 (make-instance
+                  trainer-class
+                  :segmenter
+                  (repeatedly
+                    (make-instance 'batch-gd-trainer
+                                   :learning-rate (flt learning-rate)
+                                   :momentum (flt 0.9)
+                                   :batch-size batch-size))))
              rbm)
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples max-n-test-samples
@@ -179,6 +191,7 @@
                                              :test #'equal)
                                      (flt 2)
                                      (flt 0.1))
+                                 :momentum (flt 0.9)
                                  :batch-size 100)))
                rbm)
         (setq randomp nil)
@@ -217,6 +230,7 @@
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
+                                             :momentum (flt 0.9)
                                              :batch-size 10)))
              rbm)
       (rbm-rmse (make-instance 'counting-function-sampler
@@ -264,6 +278,7 @@
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
+                                             :momentum (flt 0.9)
                                              :batch-size 10)))
              rbm)
       (rbm-rmse (make-instance 'counting-function-sampler

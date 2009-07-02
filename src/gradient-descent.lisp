@@ -56,8 +56,9 @@ client and are used to store the sum of the computed gradient.")
    (learning-rate
     :initform #.(flt 0.1) :initarg :learning-rate :accessor learning-rate
     :documentation "This is normally divided by the number of inputs
-in the batch or the number of uses the weight in question have seen.")
-   (momentum :initform #.(flt 0.9) :initarg :momentum :accessor momentum)
+in the batch or the number of uses the weight in question has seen.")
+   (momentum
+    :initform #.(flt 0) :initarg :momentum :accessor momentum)
    (weight-decay
     :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
     :documentation "WEIGHT-DECAY * WEIGHT is added to the gradient to
