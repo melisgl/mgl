@@ -442,7 +442,7 @@ chunks that don't need activations."
       (unless (conditioning-chunk-p chunk)
         (if (static-activations-cached-p chunk)
             (copy-chunk-nodes chunk (static-activations chunk) (nodes chunk))
-            (fill-chunk chunk #.(flt 0)))))
+            (zero-chunk chunk))))
     ;; Calculate the activations coming from conditioning chunks if
     ;; they are to be cached.
     (flet ((foo (to-chunk from-chunk cloud)
@@ -450,13 +450,11 @@ chunks that don't need activations."
                         (conditioning-chunk-p from-chunk))
                (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
       (dolist (cloud clouds)
-        (cond ((and (eq (chunk1 cloud) (chunk2 cloud))
-                    (member (chunk1 cloud) chunks))
-               (foo (chunk1 cloud) (chunk2 cloud) cloud))
-              ((member (chunk1 cloud) chunks)
-               (foo (chunk1 cloud) (chunk2 cloud) cloud))
-              ((member (chunk2 cloud) chunks)
-               (foo (chunk2 cloud) (chunk1 cloud) cloud)))))
+        (when (member (chunk2 cloud) chunks)
+          (foo (chunk2 cloud) (chunk1 cloud) cloud))
+        (when (and (member (chunk1 cloud) chunks)
+                   (not (eq (chunk1 cloud) (chunk2 cloud))))
+          (foo (chunk1 cloud) (chunk2 cloud) cloud))))
     ;; Remember those.
     (dolist (chunk chunks)
       (when (to-cache-p chunk)
@@ -470,13 +468,11 @@ chunks that don't need activations."
                               (conditioning-chunk-p from-chunk)))
                (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
       (dolist (cloud clouds)
-        (cond ((and (eq (chunk1 cloud) (chunk2 cloud))
-                    (member (chunk1 cloud) chunks))
-               (foo (chunk1 cloud) (chunk2 cloud) cloud))
-              ((member (chunk1 cloud) chunks)
-               (foo (chunk1 cloud) (chunk2 cloud) cloud))
-              ((member (chunk2 cloud) chunks)
-               (foo (chunk2 cloud) (chunk1 cloud) cloud)))))))
+        (when (member (chunk2 cloud) chunks)
+          (foo (chunk2 cloud) (chunk1 cloud) cloud))
+        (when (and (member (chunk1 cloud) chunks)
+                   (not (eq (chunk1 cloud) (chunk2 cloud))))
+          (foo (chunk1 cloud) (chunk2 cloud) cloud))))))
 
 ;;; See if both ends of CLOUD are among CHUNKS.
 (defun both-cloud-ends-in-p (cloud chunks)
@@ -613,7 +609,8 @@ all transposed.")))
                   (do-cloud/chunk2 (j weight-index)
                     (incf sum (* (aref from j)
                                  (aref weights weight-index))))
-                  (incf (aref to i) (* sum scale)))))))))
+                  (incf (aref to i) (* sum scale))))))))
+  (values))
 
 (defmethod accumulate-cloud-statistics (trainer (cloud full-cloud) multiplier)
   (declare (type flt multiplier))
@@ -828,7 +825,11 @@ A*B*VISIBLE."))
 ;;;; Boltzmann Machine
 
 (defclass bm ()
-  ((visible-chunks
+  ((chunks
+    :type list :reader chunks
+    :documentation "A list of all the chunks in this BM. It's
+VISIBLE-CHUNKS and HIDDEN-CHUNKS appended.")
+   (visible-chunks
     :type list :initarg :visible-chunks :reader visible-chunks
     :documentation "A list of CHUNKs whose values come from the
 outside world: SET-INPUT sets them.")
@@ -1013,52 +1014,51 @@ merged with DEFAULT-CLOUDS. DEFAULT-CLOUDS defaults to connecting all
 visible and hidden chunks with FULL-CLOUDS without any intralayer
 connection. See MERGE-CLOUD-SPECS on the semantics of merging."
   (let* ((visible-chunks (visible-chunks bm))
-         (hidden-chunks (hidden-chunks bm))
-         (name-clashes (name-clashes (append visible-chunks hidden-chunks))))
-    (when name-clashes
-      (error "Name conflict among chunks ~S." name-clashes))
-    (unless (every (lambda (obj) (typep obj 'cloud)) (clouds bm))
-      (setf (slot-value bm 'clouds)
-            (->clouds (append visible-chunks hidden-chunks)
-                      (merge-cloud-specs (clouds bm)
-                                         (full-clouds-everywhere
-                                          visible-chunks
-                                          hidden-chunks)))))
-    ;; make sure chunks have the same MAX-N-STRIPES
-    (setf (max-n-stripes bm) (max-n-stripes bm))
-    (setf (slot-value bm 'has-visible-to-visible-p)
-          (not (not (some (lambda (cloud)
-                            (both-cloud-ends-in-p cloud visible-chunks))
-                          (clouds bm)))))
-    (setf (slot-value bm 'has-hidden-to-hidden-p)
-          (not (not (some (lambda (cloud)
-                            (both-cloud-ends-in-p cloud hidden-chunks))
-                          (clouds bm)))))))
+         (hidden-chunks (hidden-chunks bm)))
+    (setf (slot-value bm 'chunks) (append visible-chunks hidden-chunks))
+    (let ((name-clashes (name-clashes (chunks bm))))
+      (when name-clashes
+        (error "Name conflict among chunks ~S." name-clashes))
+      (unless (every (lambda (obj) (typep obj 'cloud)) (clouds bm))
+        (setf (slot-value bm 'clouds)
+              (->clouds (chunks bm)
+                        (merge-cloud-specs (clouds bm)
+                                           (full-clouds-everywhere
+                                            visible-chunks
+                                            hidden-chunks)))))
+      ;; make sure chunks have the same MAX-N-STRIPES
+      (setf (max-n-stripes bm) (max-n-stripes bm))
+      (setf (slot-value bm 'has-visible-to-visible-p)
+            (not (not (some (lambda (cloud)
+                              (both-cloud-ends-in-p cloud visible-chunks))
+                            (clouds bm)))))
+      (setf (slot-value bm 'has-hidden-to-hidden-p)
+            (not (not (some (lambda (cloud)
+                              (both-cloud-ends-in-p cloud hidden-chunks))
+                            (clouds bm))))))))
 
 (defun swap-nodes (chunks)
   (dolist (chunk chunks)
     (rotatef (slot-value chunk 'nodes)
              (slot-value chunk 'old-nodes))))
 
+(defun set-mean (chunks bm
+                 &key (other-chunks (set-difference (chunks bm) chunks)))
+  (swap-nodes (chunks bm))
+  (hijack-means-to-activation chunks (clouds bm))
+  (map nil #'set-chunk-mean chunks)
+  ;; These did not change. Simply swap them back.
+  (swap-nodes other-chunks))
+
 (defun set-visible-mean (bm)
   "Set NODES of the chunks in the visible layer to the means of their
 respective probability distributions."
-  (swap-nodes (visible-chunks bm))
-  (swap-nodes (hidden-chunks bm))
-  (hijack-means-to-activation (visible-chunks bm) (clouds bm))
-  (map nil #'set-chunk-mean (visible-chunks bm))
-  ;; Hiddens did not change. Simply swap them back.
-  (swap-nodes (hidden-chunks bm)))
+  (set-mean (visible-chunks bm) bm :other-chunks (hidden-chunks bm)))
 
 (defun set-hidden-mean (bm)
   "Set NODES of the chunks in the hidden layer to the means of their
 respective probability distributions."
-  (swap-nodes (visible-chunks bm))
-  (swap-nodes (hidden-chunks bm))
-  (hijack-means-to-activation (hidden-chunks bm) (clouds bm))
-  (map nil #'set-chunk-mean (hidden-chunks bm))
-  ;; Visibles did not change. Simply swap them back.
-  (swap-nodes (visible-chunks bm))
+  (set-mean (hidden-chunks bm) bm :other-chunks (visible-chunks bm))
   (dolist (chunk (visible-chunks bm))
     (when (typep chunk 'temporal-chunk)
       (maybe-remember chunk))))
@@ -1076,9 +1076,7 @@ chunk type and the mean that resides in NODES."
 (defmethod set-input :around (samples (bm bm))
   (setf (n-stripes bm) (length samples))
   (flet ((clear-static-activations ()
-           (dolist (chunk (visible-chunks bm))
-             (setf (static-activations-cached-p chunk) nil))
-           (dolist (chunk (hidden-chunks bm))
+           (dolist (chunk (chunks bm))
              (setf (static-activations-cached-p chunk) nil))))
     (unwind-protect
          ;; Do any clamping specific to this BM.
@@ -1286,7 +1284,7 @@ chunks having downward connections."
   weights)
 
 (define-slots-not-to-be-copied 'dbm->dbn bm
-  max-n-stripes)
+  chunks max-n-stripes)
 
 (defun copy-dbm-chunk-to-dbn (chunk)
   (copy 'dbm->dbn chunk))
@@ -1485,7 +1483,7 @@ trainers for BMs."))
   weights)
 
 (define-slots-not-to-be-copied 'pcd bm
-  max-n-stripes)
+  chunks max-n-stripes)
 
 (define-slots-not-to-be-copied 'pcd dbm
   visible-chunks hidden-chunks)
@@ -1516,11 +1514,12 @@ RBM.")))
   (call-next-method)
   (setf (max-n-stripes (persistent-chains trainer)) (n-particles trainer)))
 
-;;;; Damped mean field updates.
-
 (defun settle-visible-mean-field (bm n-iterations damping-factor
                                   &key initial-pass-done-p)
-  "Set visible means, multiply them with DAMPING-FACTOR (an FLT
+  "Unless INITIAL-PASS-DONE-P set visible means. Then if there are
+visible-to-visible connections, compute V'_{t+1}, what would normally
+be the visible means, but average it with the previous value: V_{t+1}
+= (1 - k) * V_t + k * V'{t+1} where K is DAMPING-FACTOR (an FLT
 between 0 and 1). Repeat this N-ITERATIONS times."
   (declare (type flt damping-factor))
   (let ((visible-chunks (remove-if #'conditioning-chunk-p
@@ -1532,13 +1531,16 @@ between 0 and 1). Repeat this N-ITERATIONS times."
       (loop for i below n-iterations do
             (set-visible-mean bm)
             (sum-nodes-and-old-nodes visible-chunks
-                                     (flt damping-factor)
-                                     (flt (- 1 damping-factor)))))))
+                                     (flt (- 1 damping-factor))
+                                     (flt damping-factor))))))
 
 (defun settle-hidden-mean-field (bm n-iterations damping-factor
                                  &key initial-pass-done-p)
-  "Set hidden means, multiply them with DAMPING-FACTOR (an FLT
-between 0 and 1). Repeat this N-ITERATIONS times."
+  "Unless INITIAL-PASS-DONE-P set hidden means. Then if there are
+hidden-to-hidden connections, compute V'_{t+1}, what would normally be
+the hidden means, but average it with the previous value: V_{t+1} = k
+* V_t + (1 - k) * V'{t+1} where K is DAMPING-FACTOR (an FLT between 0
+and 1). Repeat this N-ITERATIONS times."
   (declare (type flt damping-factor))
   (let ((hidden-chunks (remove-if #'conditioning-chunk-p
                                   (hidden-chunks bm))))
@@ -1549,8 +1551,8 @@ between 0 and 1). Repeat this N-ITERATIONS times."
       (loop for i below n-iterations do
             (set-hidden-mean bm)
             (sum-nodes-and-old-nodes hidden-chunks
-                                     (flt damping-factor)
-                                     (flt (- 1 damping-factor)))))))
+                                     (flt (- 1 damping-factor))
+                                     (flt damping-factor))))))
 
 (defgeneric set-hidden-mean-in-pcd (trainer bm)
   (:documentation "Called in the positive phase during PCD training.
@@ -1559,10 +1561,10 @@ SETTLE-HIDDEN-MEAN-FIELD with 10 iterations and 0.1 as the damping
 factor. To change the parameters (or how the mean field is computed),
 write a specialized method.")
   (:method ((trainer bm-pcd-trainer) (bm bm))
-    (settle-hidden-mean-field bm 10 (flt 0.1)))
+    (settle-hidden-mean-field bm 10 (flt 0.5)))
   (:method ((trainer bm-pcd-trainer) (dbm dbm))
     (up-dbm dbm)
-    (settle-hidden-mean-field dbm 10 (flt 0.1) :initial-pass-done-p t))
+    (settle-hidden-mean-field dbm 10 (flt 0.5) :initial-pass-done-p t))
   (:method ((trainer bm-pcd-trainer) (rbm rbm))
     (set-hidden-mean rbm)))
 
@@ -1595,16 +1597,23 @@ write a specialized method.")
     (sample-hidden bm))
   (accumulate-positive-phase-statistics trainer bm))
 
+(defun check-no-self-connection (bm)
+  (when (find-if (lambda (cloud)
+                   (eq (chunk1 cloud) (chunk2 cloud)))
+                 (clouds bm))
+    (error "PCD is not implemented for chunks connected to themselves.")))
+
 (defmethod negative-phase (batch (trainer bm-pcd-trainer) bm)
-  (let ((visible-sampling (visible-sampling trainer))
-        (hidden-sampling (hidden-sampling trainer)))
-    (loop repeat (n-gibbs trainer) do
-          (when hidden-sampling
-            (sample-hidden bm))
-          (set-visible-mean bm)
-          (when visible-sampling
-            (sample-visible bm))
-          (set-hidden-mean bm)))
+  (check-no-self-connection bm)
+  (loop repeat (n-gibbs trainer) do
+        (dolist (chunk (visible-chunks bm))
+          (set-mean (list chunk) bm)
+          (when (visible-sampling trainer)
+            (sample-chunk chunk)))
+        (dolist (chunk (hidden-chunks bm))
+          (set-mean (list chunk) bm)
+          (when (hidden-sampling trainer)
+            (sample-chunk chunk))))
   (accumulate-negative-phase-statistics
    trainer bm
    ;; The number of persistent chains (or fantasy particles), that is,

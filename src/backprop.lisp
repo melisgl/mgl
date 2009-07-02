@@ -62,7 +62,7 @@ lump's range (i.e. in the 0 (1- SIZE) interval). Need not be ordered.
 If not NIL the node's value is not calculated and its derivatives are
 not propagated unless it is in INDICES-TO-CALCULATE. It has no effect
 subsequent lumps: they may use values that have not been recalculated.
-The primary use-case is to temporarily mask out an uniteresting part
+The primary use-case is to temporarily mask out an uninteresting part
 of the network.")))
 
 (defun limit-stripes (lump n)

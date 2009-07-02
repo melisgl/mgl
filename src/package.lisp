@@ -239,6 +239,7 @@ interface and simple gradient descent based trainers."))
    #:rank
    ;; BM
    #:bm
+   #:chunks
    #:visible-chunks
    #:hidden-chunks
    #:find-chunk

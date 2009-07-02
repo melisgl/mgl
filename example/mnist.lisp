@@ -1,14 +1,24 @@
 ;;;; Code for the MNIST handwritten digit recognition challange.
 ;;;;
-;;;; See papers by Geoffrey Hinton:
+;;;; See papers by Geoffrey Hinton, for the DBN-to-BPN approach:
+;;;;
+;;;;   To Recognize Shapes, First Learn to Generate Images,
+;;;;   http://www.cs.toronto.edu/~hinton/absps/montrealTR.pdf
 ;;;;
 ;;;;   http://www.cs.toronto.edu/~hinton/MatlabForSciencePaper.html
 ;;;;
-;;;;   http://www.cs.toronto.edu/~hinton/absps/montrealTR.pdf
+;;;; and for the DBN-to-DBM-to-BPN one:
+;;;;
+;;;;   "Deep Boltzmann Machines",
+;;;;   http://www.cs.toronto.edu/~hinton/absps/dbm.pdf
 ;;;;
 ;;;; Download the four files from http://yann.lecun.com/exdb/mnist and
 ;;;; gunzip them. Set *MNIST-DIR* to point to their directory and call
-;;;; TRAIN-MNIST.
+;;;; TRAIN-MNIST/1 or TRAIN-MNIST/2 for DBN-to-BPN and
+;;;; DBN-to-DBM-to-BPN approaches, respectively.
+;;;;
+;;;;
+;;;; DBN-to-BPN
 ;;;;
 ;;;; A 784-500-500-2000 deep belief network is trained, then 10
 ;;;; softmax units are attached to the top layer of the
@@ -40,8 +50,11 @@
 ;;;; this case, but it's not very important as the vast majority of
 ;;;; time is spent training the whole BPN.
 ;;;;
-;;;; There is support for gradient descent training for the BPN but
-;;;; ultimately its results are worse.
+;;;;
+;;;; DBN-to-DBM-to-BPN
+;;;;
+;;;; A 784-500-1000 DBM is pretrained as a DBN then the DBM is
+;;;; translated to a BPN. It's pretty much the same training process.
 
 (in-package :mgl-example-mnist)
 
@@ -181,7 +194,7 @@
 
 (defclass mnist-rbm (rbm) ())
 
-(defmethod mgl-train:set-input (images (rbm mnist-rbm))
+(defmethod set-input (images (rbm mnist-rbm))
   (let ((inputs (find 'inputs (visible-chunks rbm)
                       :key #'name)))
     (when inputs
@@ -224,13 +237,15 @@
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defun train-mnist-dbn (dbn)
+(defun init-mnist-dbn (dbn)
   (dolist (rbm (rbms dbn))
     (do-clouds (cloud rbm)
       (if (bias-cloud-p cloud)
           (fill (storage (weights cloud)) #.(flt 0))
           (map-into (storage (weights cloud))
-                    (lambda () (flt (* 0.1 (gaussian-random-1))))))))
+                    (lambda () (flt (* 0.1 (gaussian-random-1)))))))))
+
+(defun train-mnist-dbn (dbn)
   (loop for rbm in (rbms dbn)
         for i upfrom 0 do
         (log-msg "Starting to train level ~S RBM in DBN.~%" i)
@@ -266,8 +281,10 @@
 (defun clamp-image-on-bpn (bpn stripe image)
   (let ((cache (clamping-cache bpn)))
     (loop for (lump map-nodes) in (gethash image cache) do
-          (with-stripes ((stripe lump lump-start))
+          (with-stripes ((stripe lump lump-start lump-end))
             (declare (type flt-vector map-nodes))
+            (assert (= (length map-nodes)
+                       (- lump-end lump-start)))
             (replace (storage (nodes lump)) map-nodes :start1 lump-start)))))
 
 (defmethod set-input (images (bpn mnist-bpn))
@@ -490,6 +507,7 @@
                         *dbn/1*))))
         (t
          (setq *dbn/1* (make-mnist-dbn/1))
+         (init-mnist-dbn *dbn/1*)
          (train-mnist-dbn *dbn/1*)
          (save-weights (merge-pathnames "mnist-1.dbn" *mnist-dir*) *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
@@ -529,6 +547,8 @@
     (reset-counter counter)))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
+  (log-msg "learning rate=~A~%"
+           (map 'list #'learning-rate (trainers trainer)))
   (let ((sampler (make-sampler *test-images*
                                :max-n 1000
                                #+nil
@@ -539,9 +559,9 @@
             (let ((samples (sample-batch sampler max-n-stripes)))
               (set-input samples dbm)
               (up-dbm dbm)
-              (settle-hidden-mean-field dbm 10 (flt 0.1)
+              (settle-hidden-mean-field dbm 10 (flt 0.5)
                                         :initial-pass-done-p t)
-              (settle-visible-mean-field dbm 10 (flt 0.1))
+              (settle-visible-mean-field dbm 10 (flt 0.5))
               (multiple-value-call #'add-error
                 counter
                 (reconstruction-error dbm)))))
@@ -551,23 +571,42 @@
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
-  (settle-visible-mean-field dbm 10 (flt 0.1))
+  (settle-visible-mean-field dbm 10 (flt 0.5))
   (multiple-value-call #'add-error (counter trainer)
                        (reconstruction-error dbm)))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
+(defun linear (a b x)
+  (+ a (* b x)))
+
+(defun linear-at-points (x1 y1 x2 y2 x)
+  (let ((b (/ (- y2 y1) (- x2 x1))))
+    (linear (- (* b (- x1 (/ y1 b)))) b x)))
+
+(assert (= 0 (linear-at-points 3 1 5 2 1)))
+(assert (= 1 (linear-at-points 3 1 5 2 3)))
+(assert (= 2 (linear-at-points 3 1 5 2 5)))
+(assert (= 3 (linear-at-points 3 1 5 2 7)))
+
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
-  (/ (slot-value trainer 'learning-rate)
-     (1+ (/ (n-inputs trainer)
-            (length *training-images*)))))
+  (* (slot-value trainer 'learning-rate)
+     (linear-at-points 0 1 (* 10 (length *training-images*)) 0
+                       (n-inputs trainer))))
+
+(defmethod n-gibbs ((trainer mnist-dbm-trainer))
+  (cond ((< (n-inputs trainer) 5000)
+         100)
+        (t
+         10)))
 
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 0 (length *training-images*)))
+                       :max-n (* 10 (length *training-images*)))
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
+                        :visible-sampling t
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
@@ -586,17 +625,18 @@
 
 (defun unroll-mnist-dbm (dbm)
   (multiple-value-bind (defs inits) (unroll-dbm dbm)
-    (print inits)
+    (prin1 inits)
     (terpri)
     (make-bpn dbm defs inits 'f2)))
 
 (defun collect-map-chunks-and-lumps (bpn dbm)
   (let ((chunks-and-lumps ()))
     (dolist (chunk (hidden-chunks dbm))
-      (let* ((lump-name (chunk-lump-name (name chunk) :map))
-             (lump (find-lump lump-name bpn)))
-        (when lump
-          (push (list chunk lump) chunks-and-lumps))))
+      (unless (typep chunk 'conditioning-chunk)
+        (let* ((lump-name (chunk-lump-name (name chunk) :map))
+               (lump (find-lump lump-name bpn)))
+          (when lump
+            (push (list chunk lump) chunks-and-lumps)))))
     chunks-and-lumps))
 
 (defun populate-map-cache (bpn dbm images)
@@ -608,6 +648,8 @@
             (let ((samples (sample-batch sampler max-n-stripes)))
               (set-input samples dbm)
               (up-dbm dbm)
+              (settle-hidden-mean-field dbm 10 (flt 0.5)
+                                        :initial-pass-done-p t)
               (loop for image in samples
                     for stripe upfrom 0 do
                     (let ((x ()))
@@ -631,6 +673,7 @@
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
+           (init-mnist-dbn *dbn/2*)
            (train-mnist-dbn *dbn/2*)
            (save-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*)
                          *dbn/2*))
@@ -676,5 +719,7 @@
 (train-mnist/2)
 
 (train-mnist/2 :load-dbn-p t)
+
+(train-mnist/2 :load-dbm-p t)
 
 |#

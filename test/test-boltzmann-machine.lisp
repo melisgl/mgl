@@ -466,7 +466,7 @@
                                                   :size 1))
               :max-n-stripes 3)))
     (assert (names= (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
-                    '(visible-chunks hidden-chunks clouds max-n-stripes)))
+                    '(chunks visible-chunks hidden-chunks clouds max-n-stripes)))
     (dolist (cloud (clouds rbm))
       (assert (member (chunk1 cloud) (visible-chunks rbm)))
       (assert (member (chunk2 cloud) (hidden-chunks rbm))))))

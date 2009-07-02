@@ -53,16 +53,7 @@ COPY-SLOT-FOR-PCD.")
                          ,slot-name)))))
 
 (defgeneric copy (context object)
-  (:documentation "Make a deepish copy of OBJECT suitable for use as
-the rbm with the persistent chains in PCD learning, sharing weights
-and parameters but not node values. Return the copied object, with
-node values initialized, MAX-N-STRIPES, N-STRIPES set to the number of
-persistent chains.
-
-INDICES-PRESENT must also be set up, and probably left unchanged for
-the duration of training. When using INDICES-PRESENT a large number of
-persistent chains can be required so CD learning may be a better bet.
-The same consideration applies to non-constant conditioning chunks.")
+  (:documentation "Make a deepish copy of OBJECT in CONTEXT.")
   (:method :around (context object)
            (with-copying
              (multiple-value-bind (copy existp)

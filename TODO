@@ -49,6 +49,7 @@
 ** DONE general boltzmann machines
 ** DONE deep boltzmann machines
 ** DONE initialize DBM from DBN
+** TODO implmement annealed importance sampling
 * backprop
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
