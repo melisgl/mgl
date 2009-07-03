@@ -267,6 +267,7 @@
   (let ((cache (clamping-cache bpn)))
     (loop for (lump map-nodes) in (gethash image cache) do
           (with-stripes ((stripe lump lump-start))
+            (declare (type flt-vector map-nodes))
             (replace (storage (nodes lump)) map-nodes :start1 lump-start)))))
 
 (defmethod set-input (images (bpn mnist-bpn))
