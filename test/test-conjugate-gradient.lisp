@@ -34,9 +34,10 @@
                         (expt (- (aref x (1+ i))
                                  (expt (aref x i) 2))
                               2))
-                     (expt (- 1 (aref x i)) 2)))))
+                     (expt (- 1 (aref x i)) 2))
+          of-type flt)))
 
-(defun test-resonbrock-cg ()
+(defun test-rosenbrock-cg ()
   (multiple-value-bind (best-weights best-cost)
       (cg #'rosenbrock
           (make-flt-array 100)
@@ -69,5 +70,5 @@
     (assert (= n-evaluations 5))))
 
 (defun test-cg ()
-  (test-resonbrock-cg)
+  (test-rosenbrock-cg)
   (test-cg-max-evaluations-per-line-search))
