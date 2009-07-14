@@ -1693,7 +1693,14 @@ errors with COLLECT-BATCH-ERRORS. By default, return the
 reconstruction rmse."
   (collect-batch-errors (lambda (samples)
                           (set-input samples bm)
-                          (settle-hidden-mean-field bm 10 (flt 0.5))
+                          (cond ((typep bm 'dbm)
+                                 (up-dbm bm)
+                                 (settle-hidden-mean-field
+                                  bm 10 (flt 0.5)
+                                  :initial-pass-done-p t))
+                                (t
+                                 (settle-hidden-mean-field
+                                  bm 10 (flt 0.5))))
                           (settle-visible-mean-field bm 10 (flt 0.5)))
                         sampler
                         bm
