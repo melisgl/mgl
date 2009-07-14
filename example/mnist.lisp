@@ -260,12 +260,19 @@ the index of the stripe."
       (- (max-position (storage (nodes chunk)) start end)
          start))))
 
-(defun make-reconstruction-misclassification-counters-and-measurers
+(defun make-dbn-reconstruction-misclassification-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))))
   (loop for chunk in (apply #'append
                             (mapcar #'chunks
                                     (subseq (rbms dbn)
                                             0 (1+ (position rbm (rbms dbn))))))
+        for measurer = (maybe-make-misclassification-measurer chunk)
+        when measurer
+        collect (cons (make-instance 'error-counter)
+                      measurer)))
+
+(defun make-bm-reconstruction-misclassification-counters-and-measurers (bm)
+  (loop for chunk in (chunks bm)
         for measurer = (maybe-make-misclassification-measurer chunk)
         when measurer
         collect (cons (make-instance 'error-counter)
@@ -283,7 +290,7 @@ the index of the stripe."
                                        (dbn rbm) :rbm rbm))
            (n-inputs trainer))
   (let ((counters-and-measurers
-         (make-reconstruction-misclassification-counters-and-measurers
+         (make-dbn-reconstruction-misclassification-counters-and-measurers
           (dbn rbm) :rbm rbm)))
     (when counters-and-measurers
       (let ((errors (map 'list
@@ -668,27 +675,34 @@ the index of the stripe."
     (reset-counter counter)))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (log-msg "learning rate=~A~%"
-           (map 'list #'learning-rate (trainers trainer)))
-  (let ((sampler (make-sampler *test-images*
-                               :max-n 1000
-                               #+nil
-                               (length *test-images*)))
-        (counter (make-instance 'rmse-counter)))
-    (let ((max-n-stripes (max-n-stripes dbm)))
-      (loop until (finishedp sampler) do
-            (let ((samples (sample-batch sampler max-n-stripes)))
-              (set-input samples dbm)
-              (up-dbm dbm)
-              (settle-hidden-mean-field dbm 10 (flt 0.5)
-                                        :initial-pass-done-p t)
-              (settle-visible-mean-field dbm 10 (flt 0.5))
-              (multiple-value-call #'add-error
-                counter
-                (reconstruction-error dbm)))))
-    (log-msg "DBM TEST RMSE: ~,5F (~D)~%"
-             (get-error counter)
-             (n-inputs trainer))))
+  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+           (map 'list
+                #'get-error
+                (bm-mean-field-errors (make-sampler *test-images*
+                                                    :max-n 1000
+                                                    #+nil
+                                                    (length *test-images*))
+                                      dbm))
+           (n-inputs trainer))
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (bm-mean-field-errors (make-sampler *test-images*
+                                                             :max-n 1000
+                                                             #+nil
+                                                             (length
+                                                              *test-images*)
+                                                             :omit-label-p t)
+                                               dbm
+                                               :counters-and-measurers
+                                               counters-and-measurers))))
+        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer))))))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
@@ -715,6 +729,7 @@ the index of the stripe."
      (linear-at-points 0 1 (* 10 (length *training-images*)) 0
                        (n-inputs trainer))))
 
+#+nil
 (defmethod n-gibbs ((trainer mnist-dbm-trainer))
   (cond ((< (n-inputs trainer) 5000)
          100)
@@ -867,4 +882,14 @@ the index of the stripe."
    ;; has the same weight.
    :multiplier (/ (length batch)
                   (n-stripes (persistent-chains trainer)))))
+
+(require :sb-sprof)
+
+(progn
+  (sb-sprof:reset)
+  (sb-sprof:start-profiling)
+  (sleep 10)
+  (sb-sprof:stop-profiling)
+  (sb-sprof:report :type :graph))
+
 |#
