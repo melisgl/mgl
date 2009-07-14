@@ -653,7 +653,8 @@ the index of the stripe."
   (make-instance 'mnist-dbm :max-n-stripes 100))
 
 (defmethod set-input (images (dbm mnist-dbm))
-  (clamp-striped-nodes images (mgl-bm:find-chunk 'inputs dbm)))
+  (clamp-striped-nodes images (mgl-bm:find-chunk 'inputs dbm))
+  (sample-visible dbm))
 
 (defclass mnist-dbm-trainer (mnist-logging-trainer bm-pcd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
@@ -723,7 +724,7 @@ the index of the stripe."
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 10 (length *training-images*)))
+                       :max-n (* 2 (length *training-images*)))
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
                         :visible-sampling t
@@ -735,7 +736,7 @@ the index of the stripe."
                                          :weight-decay
                                          (if (bias-cloud-p cloud)
                                              (flt 0)
-                                             (flt 0.000))
+                                             (flt 0.0002))
                                          :batch-size 100)))
          dbm))
 
@@ -797,7 +798,6 @@ the index of the stripe."
            (train-mnist-dbn *dbn/2* :n-epochs 2 :n-gibbs '(1 5)
                             :learning-rate '(0.05 0.01)
                             :decay 0.001 :visible-sampling t)
-           (train-mnist-dbn *dbn/2*)
            (save-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*)
                          *dbn/2*))
          (train-dbm ()
