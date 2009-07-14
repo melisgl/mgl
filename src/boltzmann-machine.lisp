@@ -178,6 +178,12 @@ the visible layer allows `conditional' RBMs."))
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
 
+(defgeneric make-old-nodes (chunk)
+  (:method ((chunk chunk))
+    (matlisp:copy (nodes chunk)))
+  (:method ((chunk conditioning-chunk))
+    (nodes chunk)))
+
 (defgeneric resize-chunk (chunk size max-n-stripes)
   (:method ((chunk chunk) size max-n-stripes)
     (unless (and (slot-boundp chunk 'nodes)
@@ -186,9 +192,7 @@ the visible layer allows `conditional' RBMs."))
       (setf (slot-value chunk 'nodes)
             (matlisp:make-real-matrix size max-n-stripes))
       (setf (slot-value chunk 'old-nodes)
-            (if (conditioning-chunk-p chunk)
-                (nodes chunk)
-                (matlisp:make-real-matrix size max-n-stripes)))
+            (make-old-nodes chunk))
       (fill-chunk chunk (default-value chunk) :allp t)
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
@@ -520,8 +524,10 @@ all transposed.")))
     (setf (slot-value cloud 'weights)
           (matlisp:make-real-matrix (chunk-size (chunk2 cloud))
                                     (chunk-size (chunk1 cloud))))
-    (map-into (storage (weights cloud))
-              (lambda () (flt (* 0.01 (gaussian-random-1)))))))
+    (unless (or (conditioning-chunk-p (chunk1 cloud))
+                (conditioning-chunk-p (chunk2 cloud)))
+      (map-into (storage (weights cloud))
+                (lambda () (flt (* 0.01 (gaussian-random-1))))))))
 
 (defmacro do-cloud-runs (((start end) cloud) &body body)
   "Iterate over consecutive runs of weights present in CLOUD."
@@ -694,9 +700,10 @@ the visible chunk of CLOUD-A."))
 into a product of two matrices: A*B. At activation time, HIDDEN +=
 A*B*VISIBLE."))
 
-;;; HACK: subclass CONDITIONING-CHUNK just to make OLD-NODES and NODES
-;;; the same.
-(defclass factored-cloud-shared-chunk (conditioning-chunk) ())
+(defclass factored-cloud-shared-chunk (chunk) ())
+
+(defmethod make-old-nodes ((chunk factored-cloud-shared-chunk))
+  (nodes chunk))
 
 (defmethod initialize-instance :after ((cloud factored-cloud) &key rank
                                        &allow-other-keys)
