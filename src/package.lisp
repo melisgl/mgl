@@ -115,6 +115,18 @@
    #:add-error
    #:reset-counter
    #:get-error
+   ;; Stripes
+   #:n-stripes
+   #:set-n-stripes
+   #:max-n-stripes
+   #:set-max-n-stripes
+   #:stripe-start
+   #:stripe-end
+   #:with-stripes
+   ;; Collecting errors
+   #:map-batches-for-learner
+   #:do-batches-for-learner
+   #:collect-batch-errors
    ;; Segments
    #:map-segments
    #:segment-weights
@@ -130,13 +142,6 @@
    #:segment-set->weights
    #:segment-set<-weights
    ;; Common generic functions
-   #:n-stripes
-   #:set-n-stripes
-   #:max-n-stripes
-   #:set-max-n-stripes
-   #:stripe-start
-   #:stripe-end
-   #:with-stripes
    #:name
    #:size
    #:nodes
@@ -282,11 +287,13 @@ interface and simple gradient descent based trainers."))
    #:inputs->nodes
    #:nodes->inputs
    #:reconstruction-error
+   #:make-bm-reconstruction-rmse-counters-and-measurers
+   #:bm-mean-field-errors
    ;; DBN
    #:dbn
    #:rbms
    #:down-mean-field
-   #:make-reconstruction-rmse-counters-and-measurers
+   #:make-dbn-reconstruction-rmse-counters-and-measurers
    #:dbn-mean-field-errors)
   (:documentation "Fully General Boltzmann Machines, Restricted
 Boltzmann Machines and their stacks called Deep Belief

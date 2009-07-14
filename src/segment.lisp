@@ -38,9 +38,6 @@ trainers that support partial updates.")
 (defgeneric segments (object)
   (:documentation "A list of segments associated with OBJECT. Trainers
 must implement this. It is also defined on SEGMENT-SETs."))
-
-
-;;;;
 
 (defun list-segments (segmentable)
   (let ((segments ()))

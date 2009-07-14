@@ -1677,3 +1677,25 @@ error."
                 (incf sum (expt (- x y) 2))
                 (incf n)))))))
     (values sum n)))
+
+(defun make-bm-reconstruction-rmse-counters-and-measurers (bm)
+  (list (cons (make-instance 'rmse-counter)
+              (lambda (samples)
+                (declare (ignore samples))
+                (reconstruction-error bm)))))
+
+(defun bm-mean-field-errors
+    (sampler bm &key
+     (counters-and-measurers
+      (make-bm-reconstruction-rmse-counters-and-measurers bm)))
+  "Settle the hidden and then the visible mean field and collect the
+errors with COLLECT-BATCH-ERRORS. By default, return the
+reconstruction rmse."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples bm)
+                          (settle-hidden-mean-field bm 10 (flt 0.5))
+                          (settle-visible-mean-field bm 10 (flt 0.5)))
+                        sampler
+                        bm
+                        counters-and-measurers)
+  (map 'list #'car counters-and-measurers))

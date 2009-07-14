@@ -172,6 +172,40 @@ striped objects.
      ,@body))
 
 
+;;;; Collecting errors
+
+(defun map-batches-for-learner (fn sampler learner)
+  "Call FN with batches of samples suitable for LEARNER. The number of
+samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER runs
+out."
+  (let ((max-n-stripes (max-n-stripes learner)))
+    (loop until (finishedp sampler) do
+          (funcall fn (sample-batch sampler max-n-stripes)))))
+
+(defmacro do-batches-for-learner ((samples (sampler learner)) &body body)
+  "Convenience macro over MAP-BATCHES-FOR-LEARNER."
+  `(map-batches-for-learner (lambda (,samples) ,@body) ,sampler ,learner))
+
+(defun collect-batch-errors (fn sampler learner counters-and-measurers)
+  "Sample from SAMPLER until it runs out. Call FN with each batch of samples.
+COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
+function. The function takes one parameter: a sequence of samples and
+is called after each mean field reconstruction. Measurers return two
+values: the cumulative error and the counter, suitable as the second
+and third argument to ADD-ERROR. Finally, return the counters. Return
+COUNTERS-AND-MEASURERS."
+  (do-batches-for-learner (samples (sampler learner))
+    (funcall fn samples)
+    (map nil
+         (lambda (counter-and-measurer)
+           (assert (consp counter-and-measurer))
+           (multiple-value-call
+               #'add-error (car counter-and-measurer)
+               (funcall (cdr counter-and-measurer) samples)))
+         counters-and-measurers))
+  counters-and-measurers)
+
+
 ;;;; Various accessor type generic functions shared by packages.
 
 (defgeneric name (object))

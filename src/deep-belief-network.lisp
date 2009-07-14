@@ -97,41 +97,29 @@ have unique names under EQUAL as usual."))
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) rbm)))
 
-(defun make-reconstruction-rmse-counters-and-measurers
+(defun make-dbn-reconstruction-rmse-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))))
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter)
-                        (lambda (dbn samples)
+                        (lambda (samples)
                           (declare (ignore samples))
                           (reconstruction-error (elt (rbms dbn) i)))))))
 
 (defun dbn-mean-field-errors
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
-      (make-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Sample from SAMPLER until it runs out. Set the samples as inputs
-and run the mean field up to RBM then down to the bottom.
-COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
-function. The function takes two parameters: the DBN and a sequence of
-samples and is called after each mean field reconstruction. Measurers
-return two values: the cumulative error and the counter, suitable as
-the second and third argument to ADD-ERROR. Finally, return the
-counters. By default, return the rmse at each level in the DBN."
-  (let ((max-n-stripes (max-n-stripes dbn)))
-    (loop until (finishedp sampler) do
-          (let ((samples (sample-batch sampler max-n-stripes)))
-            (set-input samples rbm)
-            (set-hidden-mean rbm)
-            (down-mean-field dbn :rbm rbm)
-            (map nil
-                 (lambda (counter-and-measurer)
-                   (assert (consp counter-and-measurer))
-                   (multiple-value-call
-                       #'add-error (car counter-and-measurer)
-                       (funcall (cdr counter-and-measurer)
-                                dbn samples)))
-                 counters-and-measurers))))
+      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+  "Run the mean field up to RBM then down to the bottom and collect
+the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
+each level in the DBN."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples rbm)
+                          (set-hidden-mean rbm)
+                          (down-mean-field dbn :rbm rbm))
+                        sampler
+                        dbn
+                        counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
 (defmethod write-weights ((dbn dbn) stream)
