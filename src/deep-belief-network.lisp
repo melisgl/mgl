@@ -40,6 +40,9 @@ have unique names under EQUAL as usual."))
   ;; make sure rbms have the same MAX-N-STRIPES
   (setf (max-n-stripes dbn) (max-n-stripes dbn)))
 
+(defmethod chunks ((dbn dbn))
+  (apply #'append (mapcar #'chunks (rbms dbn))))
+
 (defmethod find-chunk (name (dbn dbn) &key errorp)
   (dolist (rbm (rbms dbn))
     (let ((chunk (find-chunk name rbm)))
