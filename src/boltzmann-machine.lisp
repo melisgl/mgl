@@ -1361,7 +1361,9 @@ For now, unrolling the resulting DBN to a BPN is not supported."
                                                     layer1)
                                    :hidden-chunks (mapcar
                                                    #'copy-dbm-chunk-to-dbn
-                                                   layer2)
+                                                   (set-difference
+                                                    layer2
+                                                    (visible-chunks dbm)))
                                    :clouds (mapcar #'copy-cloud
                                                    (remove-if-not
                                                     #'cloud-between-layers-p
