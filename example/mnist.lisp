@@ -779,25 +779,23 @@ the index of the stripe."
   (let ((sampler (make-sampler images :max-n (length images)))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
-    (let ((max-n-stripes (max-n-stripes dbm)))
-      (loop until (finishedp sampler) do
-            (let ((samples (sample-batch sampler max-n-stripes)))
-              (set-input samples dbm)
-              (up-dbm dbm)
-              (settle-hidden-mean-field dbm 10 (flt 0.5)
-                                        :initial-pass-done-p t)
-              (loop for image in samples
-                    for stripe upfrom 0 do
-                    (let ((x ()))
-                      (loop for (chunk lump) in map-chunks-and-lumps
-                            do
-                            (with-stripes ((stripe chunk chunk-start chunk-end))
-                              (let ((xxx (make-flt-array
-                                          (- chunk-end chunk-start))))
-                                (replace xxx (storage (nodes chunk))
-                                         :start2 chunk-start :end2 chunk-end)
-                                (push (list lump xxx) x))))
-                      (setf (gethash image cache) x))))))))
+    (do-batches-for-learner (samples (sampler dbm))
+      (set-input samples dbm)
+      (up-dbm dbm)
+      (settle-hidden-mean-field dbm 10 (flt 0.5)
+                                :initial-pass-done-p t)
+      (loop for image in samples
+            for stripe upfrom 0 do
+            (let ((x ()))
+              (loop for (chunk lump) in map-chunks-and-lumps
+                    do
+                    (with-stripes ((stripe chunk chunk-start chunk-end))
+                      (let ((xxx (make-flt-array
+                                  (- chunk-end chunk-start))))
+                        (replace xxx (storage (nodes chunk))
+                                 :start2 chunk-start :end2 chunk-end)
+                        (push (list lump xxx) x))))
+              (setf (gethash image cache) x))))))
 
 (defvar *dbn/2*)
 (defvar *dbm/2*)
