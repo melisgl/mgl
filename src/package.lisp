@@ -148,7 +148,8 @@
    #:default-value
    #:group-size
    #:batch-size
-   #:n-inputs)
+   #:n-inputs
+   #:label)
   (:documentation "Generic training related interfaces and basic
 definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
@@ -253,10 +254,18 @@ interface and simple gradient descent based trainers."))
    #:do-clouds
    #:find-cloud
    ;; Operating an BM
-   #:set-visible-mean
+   #:set-visible-mean/1
+   #:set-hidden-mean/1
    #:sample-visible
-   #:set-hidden-mean
    #:sample-hidden
+   ;; Mean field
+   #:supervise-mean-field/default
+   #:default-mean-field-supervisor
+   #:settle-mean-field
+   #:settle-visible-mean-field
+   #:settle-hidden-mean-field
+   #:set-visible-mean
+   #:set-hidden-mean
    ;; DBM
    #:dbm
    #:layers
@@ -280,9 +289,6 @@ interface and simple gradient descent based trainers."))
    #:n-particles
    #:persistent-chains
    #:pcd
-   #:settle-visible-mean-field
-   #:settle-hidden-mean-field
-   #:set-hidden-mean-in-pcd
    ;; Convenience, utilities
    #:inputs->nodes
    #:nodes->inputs

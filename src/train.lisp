@@ -215,3 +215,4 @@ COUNTERS-AND-MEASURERS."
 (defgeneric group-size (object))
 (defgeneric batch-size (object))
 (defgeneric n-inputs (object))
+(defgeneric label (object))

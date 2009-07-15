@@ -1063,12 +1063,12 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
   ;; These did not change. Simply swap them back.
   (swap-nodes other-chunks))
 
-(defun set-visible-mean (bm)
+(defun set-visible-mean/1 (bm)
   "Set NODES of the chunks in the visible layer to the means of their
 respective probability distributions."
   (set-mean (visible-chunks bm) bm :other-chunks (hidden-chunks bm)))
 
-(defun set-hidden-mean (bm)
+(defun set-hidden-mean/1 (bm)
   "Set NODES of the chunks in the hidden layer to the means of their
 respective probability distributions."
   (set-mean (hidden-chunks bm) bm :other-chunks (visible-chunks bm))
@@ -1099,9 +1099,9 @@ chunk type and the mean that resides in NODES."
                (maybe-use-remembered chunk)))
            ;; STATIC-ACTIVATIONS-CACHED-P is cleared only before
            ;; (CALL-NEXT-METHOD), therefore it is expected that it
-           ;; does not activate the bm (as in SET-HIDDEN-MEAN,
-           ;; SET-VISIBLE-MEAN) before writing the final values to all
-           ;; conditioning chunks.
+           ;; does not activate the bm (as in SET-HIDDEN-MEAN/1,
+           ;; SET-VISIBLE-MEAN/1) before writing the final values to
+           ;; all conditioning chunks.
            (clear-static-activations)
            (call-next-method))
       ;; Then remember the inputs.
@@ -1389,6 +1389,117 @@ divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
     (error "An RBM cannot have hidden to hidden connections.")))
 
 
+;;;; Mean field
+
+(defun node-change (chunks)
+  "Return the sum of the absolute values of NODES - OLD-NODES over
+CHUNKS. The second value returned is the number of nodes that
+contributed to the sum."
+  (let ((sum #.(flt 0))
+        (n 0))
+    (declare (type flt sum) (type index n) (optimize (speed 3)))
+    (dolist (chunk chunks)
+      (unless (conditioning-chunk-p chunk)
+        (let ((nodes (storage (nodes chunk)))
+              (old-nodes (storage (old-nodes chunk))))
+          (do-stripes (chunk)
+            (do-chunk (i chunk)
+              (let ((x (aref nodes i))
+                    (y (aref old-nodes i)))
+                (incf sum (abs (- x y)))
+                (incf n)))))))
+    (values sum n)))
+
+(defun supervise-mean-field/default (chunks bm iteration &key
+                                     (node-change-limit #.(flt 0.0000001))
+                                     (n-undamped-iterations 100)
+                                     (n-damped-iterations 100)
+                                     (damping-factor #.(flt 0.9)))
+  "A supervisor for SETTLE-MEAN-FIELD. Return NIL if average of the
+absolute value of change in nodes is below NODE-CHANGE-LIMIT, else
+return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
+another N-DAMPED-ITERATIONS, then NIL."
+  (declare (ignore bm))
+  (cond ((< (node-change chunks) node-change-limit)
+         nil)
+        ((< iteration n-undamped-iterations)
+         #.(flt 0))
+        ((< iteration (+ n-undamped-iterations n-damped-iterations))
+         damping-factor)
+        (t
+         nil)))
+
+(defgeneric default-mean-field-supervisor (bm)
+  (:documentation "Return a function suitable as the SUPERVISOR
+argument for SETTLE-MEAN-FIELD. The default implementation ")
+  (:method ((bm bm))
+    #'supervise-mean-field/default))
+
+(defun settle-mean-field (chunks bm &key
+                          (other-chunks (set-difference (chunks bm) chunks))
+                          (supervisor (default-mean-field-supervisor bm)))
+  "Do possibly damped mean field updates on CHUNKS until convergence.
+Compute V'_{t+1}, what would normally be the means, but average it
+with the previous value: V_{t+1} = k * V_t + (1 - k) * V'{t+1} where K
+is the damping factor (an FLT between 0 and 1).
+
+Call SUPERVISOR with CHUNKS BM and the iteration. Settling is finished
+when SUPERVISOR returns NIL. If SUPERVISOR returns a non-nil value
+then it's taken to be a damping factor. For no damping return 0."
+  (loop for i upfrom 0 do
+        (format *trace-output* "i: ~S~%" i)
+        (set-mean chunks bm :other-chunks other-chunks)
+        (let ((damping-factor (funcall supervisor chunks bm i)))
+          (unless damping-factor
+            (format *trace-output* "n-iterations: ~S~%" i)
+            (return))
+          (unless (= #.(flt 0) damping-factor)
+            (sum-nodes-and-old-nodes chunks
+                                     (flt (- 1 damping-factor))
+                                     (flt damping-factor))))))
+
+(defun settle-visible-mean-field
+    (bm &key (supervisor (default-mean-field-supervisor bm)))
+  "Convenience function on top of SETTLE-MEAN-FIELD."
+  (when (has-visible-to-visible-p bm)
+    (settle-mean-field (visible-chunks bm) bm :other-chunks (hidden-chunks bm)
+                       :supervisor supervisor)))
+
+(defun settle-hidden-mean-field
+    (bm &key (supervisor (default-mean-field-supervisor bm)))
+  "Convenience function on top of SETTLE-MEAN-FIELD."
+  (when (has-hidden-to-hidden-p bm)
+    (settle-mean-field (hidden-chunks bm) bm :other-chunks (visible-chunks bm)
+                       :supervisor supervisor)))
+
+(defgeneric set-visible-mean (bm)
+  (:documentation "Like SET-VISIBLE-MEAN/1, but settle the mean field
+if there are visible-to-visible connections. For an RBM it trivially
+calls SET-VISIBLE-MEAN.")
+  (:method ((bm bm))
+    ;; It could be initialized randomly. Instead, we just leave the
+    ;; values alone. Also, SETTLE-VISIBLE-MEAN-FIELD does not do
+    ;; anything when there are no visible-to-visible connections, so
+    ;; this is fine for an RBM.
+    (set-visible-mean/1 bm)
+    (settle-visible-mean-field bm)))
+
+(defgeneric set-hidden-mean (bm)
+  (:documentation "Like SET-HIDDEN-MEAN/1, but settle the mean field
+if there are hidden-to-hidden connections. For an RBM it trivially
+calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
+  (:method ((bm bm))
+    ;; It could be initialized randomly. Instead, we just leave the
+    ;; values alone. Also, SETTLE-HIDDEN-MEAN-FIELD does not do
+    ;; anything when there are no hidden-to-hidden connections, so
+    ;; this is fine for an RBM.
+    (set-hidden-mean/1 bm)
+    (settle-hidden-mean-field bm))
+  (:method ((dbm dbm))
+    (up-dbm dbm)
+    (settle-hidden-mean-field dbm)))
+
+
 ;;;; Integration with gradient descent
 
 ;;; Base class for BM trainers with a positive and negative phase (CD
@@ -1457,7 +1568,7 @@ trainers for BMs."))
   (maybe-update-weights trainer (length batch)))
 
 (defmethod positive-phase (batch (trainer rbm-cd-trainer) (rbm rbm))
-  (set-hidden-mean rbm)
+  (set-hidden-mean/1 rbm)
   (ecase (hidden-sampling trainer)
     ((nil) (accumulate-positive-phase-statistics trainer rbm))
     ((:half-hearted)
@@ -1473,10 +1584,10 @@ trainers for BMs."))
     (loop for i below (n-gibbs trainer) do
           (when (and (not (zerop i)) hidden-sampling)
             (sample-hidden rbm))
-          (set-visible-mean rbm)
+          (set-visible-mean/1 rbm)
           (when visible-sampling
             (sample-visible rbm))
-          (set-hidden-mean rbm))
+          (set-hidden-mean/1 rbm))
     (accumulate-negative-phase-statistics trainer rbm)))
 
 
@@ -1528,61 +1639,6 @@ RBM.")))
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) bm)
   (call-next-method)
   (setf (max-n-stripes (persistent-chains trainer)) (n-particles trainer)))
-
-(defun settle-visible-mean-field (bm n-iterations damping-factor
-                                  &key initial-pass-done-p)
-  "Unless INITIAL-PASS-DONE-P set visible means. Then if there are
-visible-to-visible connections, compute V'_{t+1}, what would normally
-be the visible means, but average it with the previous value: V_{t+1}
-= (1 - k) * V_t + k * V'{t+1} where K is DAMPING-FACTOR (an FLT
-between 0 and 1). Repeat this N-ITERATIONS times."
-  (declare (type flt damping-factor))
-  (let ((visible-chunks (remove-if #'conditioning-chunk-p
-                                   (visible-chunks bm))))
-    (unless initial-pass-done-p
-      (zero-chunks visible-chunks)
-      (set-visible-mean bm))
-    (when (has-visible-to-visible-p bm)
-      (loop for i below n-iterations do
-            (set-visible-mean bm)
-            (sum-nodes-and-old-nodes visible-chunks
-                                     (flt (- 1 damping-factor))
-                                     (flt damping-factor))))))
-
-(defun settle-hidden-mean-field (bm n-iterations damping-factor
-                                 &key initial-pass-done-p)
-  "Unless INITIAL-PASS-DONE-P set hidden means. Then if there are
-hidden-to-hidden connections, compute V'_{t+1}, what would normally be
-the hidden means, but average it with the previous value: V_{t+1} = k
-* V_t + (1 - k) * V'{t+1} where K is DAMPING-FACTOR (an FLT between 0
-and 1). Repeat this N-ITERATIONS times."
-  (declare (type flt damping-factor))
-  (let ((hidden-chunks (remove-if #'conditioning-chunk-p
-                                  (hidden-chunks bm))))
-    (unless initial-pass-done-p
-      (zero-chunks hidden-chunks)
-      (set-hidden-mean bm))
-    (when (has-hidden-to-hidden-p bm)
-      (loop for i below n-iterations do
-            (set-hidden-mean bm)
-            (sum-nodes-and-old-nodes hidden-chunks
-                                     (flt (- 1 damping-factor))
-                                     (flt damping-factor))))))
-
-(defgeneric set-hidden-mean-in-pcd (trainer bm)
-  (:documentation "Called in the positive phase during PCD training.
-For an RBM it trivially calls SET-HIDDEN-MEAN, while for a BM it calls
-SETTLE-HIDDEN-MEAN-FIELD with 10 iterations and 0.1 as the damping
-factor. To change the parameters (or how the mean field is computed),
-write a specialized method.")
-  (:method ((trainer bm-pcd-trainer) (bm bm))
-    (settle-hidden-mean-field bm 10 (flt 0.5)))
-  (:method ((trainer bm-pcd-trainer) (dbm dbm))
-    (up-dbm dbm)
-    (settle-hidden-mean-field dbm 10 (flt 0.5) :initial-pass-done-p t))
-  (:method ((trainer bm-pcd-trainer) (rbm rbm))
-    (set-hidden-mean rbm)))
-
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
   (setf (slot-value trainer 'normal-chains) bm)
   (setf (slot-value trainer 'persistent-chains) (copy 'pcd bm))
@@ -1607,7 +1663,7 @@ write a specialized method.")
       (call-next-method)))
 
 (defmethod positive-phase (batch (trainer bm-pcd-trainer) (bm bm))
-  (set-hidden-mean-in-pcd trainer bm)
+  (set-hidden-mean bm)
   (when (eq t (hidden-sampling trainer))
     (sample-hidden bm))
   (accumulate-positive-phase-statistics trainer bm))
@@ -1688,20 +1744,13 @@ error."
     (sampler bm &key
      (counters-and-measurers
       (make-bm-reconstruction-rmse-counters-and-measurers bm)))
-  "Settle the hidden and then the visible mean field and collect the
+  "Set the hidden and then the visible mean field and collect the
 errors with COLLECT-BATCH-ERRORS. By default, return the
 reconstruction rmse."
   (collect-batch-errors (lambda (samples)
                           (set-input samples bm)
-                          (cond ((typep bm 'dbm)
-                                 (up-dbm bm)
-                                 (settle-hidden-mean-field
-                                  bm 10 (flt 0.5)
-                                  :initial-pass-done-p t))
-                                (t
-                                 (settle-hidden-mean-field
-                                  bm 10 (flt 0.5))))
-                          (settle-visible-mean-field bm 10 (flt 0.5)))
+                          (set-hidden-mean bm)
+                          (set-visible-mean bm))
                         sampler
                         bm
                         counters-and-measurers)
