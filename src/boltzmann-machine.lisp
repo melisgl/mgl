@@ -25,20 +25,21 @@ Swapped with NODES at times.")
 use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
 CONSTANT-CHUNKS.")
    (cache-static-activations-p
-    :initform nil
+    :initform t
     :initarg :cache-static-activations-p
     :reader cache-static-activations-p
     :documentation "Controls whether activations that do not change
 between SET-INPUT calls \(i.e. they come from conditioning chunks
 including biases) are cached.")
-   (static-activations-cached-p
-    :initform nil :accessor static-activations-cached-p)
+   (static-activations-context
+    :initform nil :accessor static-activations-context)
    (static-activations
     :type (or matlisp:real-matrix null) :reader static-activations
     :documentation "Of the same size as NODES. This is where
 activations coming from biases and conditioning chunks are between two
 SET-INPUT calls. Gets more useful with a lot of conditioning and more
-activations, for instance, with high N-GIBBS.")
+activations, for instance, in case contrastive divergence with high
+N-GIBBS or for the settling of mean field.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
@@ -434,49 +435,70 @@ OLD-NODES (of CHUNK1) to the nodes of the hidden chunk."))
 CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
 contrastive divergence."))
 
-(defun hijack-means-to-activation (chunks clouds)
+(defvar *static-activation-contexts* nil)
+
+(defmacro with-static-activations-cached ((bm static-chunks) &body body)
+  `(let ((*static-activation-contexts* (cons (list ,bm (gensym) ,static-chunks)
+                                             *static-activation-contexts*)))
+     ,@body))
+
+(defun hijack-means-to-activation (chunks clouds bm)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
 chunks that don't need activations."
-  (flet ((to-cache-p (chunk)
-           (and (cache-static-activations-p chunk)
-                (not (static-activations-cached-p chunk)))))
-    ;; Zero activations or copy cached activations coming from
-    ;; conditioning chunks.
-    (dolist (chunk chunks)
-      (unless (conditioning-chunk-p chunk)
-        (if (static-activations-cached-p chunk)
-            (copy-chunk-nodes chunk (static-activations chunk) (nodes chunk))
-            (zero-chunk chunk))))
-    ;; Calculate the activations coming from conditioning chunks if
-    ;; they are to be cached.
-    (flet ((foo (to-chunk from-chunk cloud)
-             (when (and (to-cache-p to-chunk)
-                        (conditioning-chunk-p from-chunk))
-               (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
-      (dolist (cloud clouds)
-        (when (member (chunk2 cloud) chunks)
-          (foo (chunk2 cloud) (chunk1 cloud) cloud))
-        (when (and (member (chunk1 cloud) chunks)
-                   (not (eq (chunk1 cloud) (chunk2 cloud))))
-          (foo (chunk1 cloud) (chunk2 cloud) cloud))))
-    ;; Remember those.
-    (dolist (chunk chunks)
-      (when (to-cache-p chunk)
-        (copy-chunk-nodes chunk (nodes chunk) (static-activations chunk))
-        (setf (static-activations-cached-p chunk) t)))
-    ;; By now chunks with STATIC-ACTIVATIONS-CACHED-P have the bias
-    ;; activations in NODES. Do the non-cached activations.
-    (flet ((foo (to-chunk from-chunk cloud)
-             (unless (or (conditioning-chunk-p to-chunk)
-                         (and (static-activations-cached-p to-chunk)
-                              (conditioning-chunk-p from-chunk)))
-               (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
-      (dolist (cloud clouds)
-        (when (member (chunk2 cloud) chunks)
-          (foo (chunk2 cloud) (chunk1 cloud) cloud))
-        (when (and (member (chunk1 cloud) chunks)
-                   (not (eq (chunk1 cloud) (chunk2 cloud))))
-          (foo (chunk1 cloud) (chunk2 cloud) cloud))))))
+  (destructuring-bind (static-activations-context static-chunks)
+      (or (rest (find bm *static-activation-contexts* :key #'first))
+          (list (gensym) nil))
+    ;;(format *trace-output* "~S ~S~%" static-activations-context static-chunks)
+    (labels ((cached-p (chunk)
+               (and (member chunk static-chunks)
+                    (eq static-activations-context
+                        (static-activations-context chunk))))
+             (to-cache-p (chunk)
+               (and static-activations-context
+                    (not (conditioning-chunk-p chunk))
+                    (member chunk static-chunks)
+                    (cache-static-activations-p chunk)
+                    (not (cached-p chunk)))))
+      ;; Zero activations or copy cached activations coming from
+      ;; conditioning chunks.
+      (dolist (chunk chunks)
+        (unless (conditioning-chunk-p chunk)
+          (if (cached-p chunk)
+              (progn
+                ;;(format *trace-output* "Copy act: ~A~%" chunk)
+                (copy-chunk-nodes chunk (static-activations chunk) (nodes chunk)))
+              (zero-chunk chunk))))
+      ;; Calculate the activations coming from conditioning chunks if
+      ;; they are to be cached.
+      (flet ((foo (to-chunk from-chunk cloud)
+               (when (to-cache-p to-chunk)
+                 ;;(format *trace-output* "Add static act: ~A~%" cloud)
+                 (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
+        (dolist (cloud clouds)
+          (when (member (chunk2 cloud) chunks)
+            (foo (chunk2 cloud) (chunk1 cloud) cloud))
+          (when (and (member (chunk1 cloud) chunks)
+                     (not (eq (chunk1 cloud) (chunk2 cloud))))
+            (foo (chunk1 cloud) (chunk2 cloud) cloud))))
+      ;; Remember those.
+      (dolist (chunk chunks)
+        (when (to-cache-p chunk)
+          ;;(format *trace-output* "Saveing static act: ~A~%" chunk)
+          (copy-chunk-nodes chunk (nodes chunk) (static-activations chunk))
+          (setf (static-activations-context chunk) static-activations-context)))
+      ;; By now chunks with CACHE-STATIC-ACTIVATIONS-P have activations
+      ;; from STATIC-CHUNKS in NODES. Do the non-cached activations.
+      (flet ((foo (to-chunk from-chunk cloud)
+               (unless (or (conditioning-chunk-p to-chunk)
+                           (cached-p to-chunk))
+                 ;;(format *trace-output* "Act: ~A~%" cloud)
+                 (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
+        (dolist (cloud clouds)
+          (when (member (chunk2 cloud) chunks)
+            (foo (chunk2 cloud) (chunk1 cloud) cloud))
+          (when (and (member (chunk1 cloud) chunks)
+                     (not (eq (chunk1 cloud) (chunk2 cloud))))
+            (foo (chunk1 cloud) (chunk2 cloud) cloud)))))))
 
 ;;; See if both ends of CLOUD are among CHUNKS.
 (defun both-cloud-ends-in-p (cloud chunks)
@@ -844,6 +866,11 @@ outside world: SET-INPUT sets them.")
     :type list :initarg :hidden-chunks :reader hidden-chunks
     :documentation "A list of CHUNKs that are not directly observed.
 Disjunct from VISIBLE-CHUNKS.")
+   (visible-and-conditioning-chunks
+    :type list :reader visible-and-conditioning-chunks)
+   (hidden-and-conditioning-chunks
+    :type list :reader hidden-and-conditioning-chunks)
+   (conditioning-chunks :type list :reader conditioning-chunks)
    (clouds
     :type list :initform '(:merge) :initarg :clouds :reader clouds
     :documentation "Normally, a list of CLOUDS representing the
@@ -870,8 +897,7 @@ simply leaves the default cloud specs alone."))
   (:documentation "Find the chunk in OBJECT whose name is EQUAL to
 NAME. Signal an error if not found and ERRORP.")
   (:method (name (bm bm) &key errorp)
-    (or (find name (visible-chunks bm) :key #'name :test #'equal)
-        (find name (hidden-chunks bm) :key #'name :test #'equal)
+    (or (find name (chunks bm) :key #'name :test #'equal)
         (if errorp
             (error "Cannot find chunk ~S." name)
             nil))))
@@ -884,18 +910,14 @@ NAME. Signal an error if not found and ERRORP.")
   (n-stripes (first (visible-chunks bm))))
 
 (defmethod set-n-stripes (n-stripes (bm bm))
-  (dolist (chunk (visible-chunks bm))
-    (setf (n-stripes chunk) n-stripes))
-  (dolist (chunk (hidden-chunks bm))
+  (dolist (chunk (chunks bm))
     (setf (n-stripes chunk) n-stripes))
   (do-clouds (cloud bm)
     (setf (n-stripes cloud) n-stripes)))
 
 (defmethod set-max-n-stripes (max-n-stripes (bm bm))
   (setf (slot-value bm 'max-n-stripes) max-n-stripes)
-  (dolist (chunk (visible-chunks bm))
-    (setf (max-n-stripes chunk) max-n-stripes))
-  (dolist (chunk (hidden-chunks bm))
+  (dolist (chunk (chunks bm))
     (setf (max-n-stripes chunk) max-n-stripes))
   (do-clouds (cloud bm)
     (setf (max-n-stripes cloud) max-n-stripes)))
@@ -1031,24 +1053,39 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
     (setf (slot-value bm 'chunks) (append visible-chunks hidden-chunks))
     (let ((name-clashes (name-clashes (chunks bm))))
       (when name-clashes
-        (error "Name conflict among chunks ~S." name-clashes))
-      (unless (every (lambda (obj) (typep obj 'cloud)) (clouds bm))
-        (setf (slot-value bm 'clouds)
-              (->clouds (chunks bm)
-                        (merge-cloud-specs (clouds bm)
-                                           (full-clouds-everywhere
-                                            visible-chunks
-                                            hidden-chunks)))))
-      ;; make sure chunks have the same MAX-N-STRIPES
-      (setf (max-n-stripes bm) (max-n-stripes bm))
-      (setf (slot-value bm 'has-visible-to-visible-p)
-            (not (not (some (lambda (cloud)
-                              (both-cloud-ends-in-p cloud visible-chunks))
-                            (clouds bm)))))
-      (setf (slot-value bm 'has-hidden-to-hidden-p)
-            (not (not (some (lambda (cloud)
-                              (both-cloud-ends-in-p cloud hidden-chunks))
-                            (clouds bm))))))))
+        (error "Name conflict among chunks ~S." name-clashes)))
+    (unless (every (lambda (obj) (typep obj 'cloud)) (clouds bm))
+      (setf (slot-value bm 'clouds)
+            (->clouds (chunks bm)
+                      (merge-cloud-specs (clouds bm)
+                                         (full-clouds-everywhere
+                                          visible-chunks
+                                          hidden-chunks)))))
+    ;; make sure chunks have the same MAX-N-STRIPES
+    (setf (max-n-stripes bm) (max-n-stripes bm))
+    (setf (slot-value bm 'visible-and-conditioning-chunks)
+          (append visible-chunks
+                  (remove-if-not #'conditioning-chunk-p hidden-chunks)))
+    (setf (slot-value bm 'hidden-and-conditioning-chunks)
+          (append hidden-chunks
+                  (remove-if-not #'conditioning-chunk-p visible-chunks)))
+    (setf (slot-value bm 'conditioning-chunks)
+          (append (remove-if-not #'conditioning-chunk-p visible-chunks)
+                  (remove-if-not #'conditioning-chunk-p hidden-chunks)))
+    (setf (slot-value bm 'has-visible-to-visible-p)
+          (not (not
+                (some (lambda (cloud)
+                        (both-cloud-ends-in-p cloud
+                                              (remove-if #'conditioning-chunk-p
+                                                         visible-chunks)))
+                      (clouds bm)))))
+    (setf (slot-value bm 'has-hidden-to-hidden-p)
+          (not (not
+                (some (lambda (cloud)
+                        (both-cloud-ends-in-p cloud
+                                              (remove-if #'conditioning-chunk-p
+                                                         hidden-chunks)))
+                      (clouds bm)))))))
 
 (defun swap-nodes (chunks)
   (dolist (chunk chunks)
@@ -1058,7 +1095,7 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
 (defun set-mean (chunks bm
                  &key (other-chunks (set-difference (chunks bm) chunks)))
   (swap-nodes (chunks bm))
-  (hijack-means-to-activation chunks (clouds bm))
+  (hijack-means-to-activation chunks (clouds bm) bm)
   (map nil #'set-chunk-mean chunks)
   ;; These did not change. Simply swap them back.
   (swap-nodes other-chunks))
@@ -1088,24 +1125,15 @@ chunk type and the mean that resides in NODES."
 
 (defmethod set-input :around (samples (bm bm))
   (setf (n-stripes bm) (length samples))
-  (flet ((clear-static-activations ()
-           (dolist (chunk (chunks bm))
-             (setf (static-activations-cached-p chunk) nil))))
-    (unwind-protect
-         ;; Do any clamping specific to this BM.
-         (progn
-           (dolist (chunk (visible-chunks bm))
-             (when (typep chunk 'temporal-chunk)
-               (maybe-use-remembered chunk)))
-           ;; STATIC-ACTIVATIONS-CACHED-P is cleared only before
-           ;; (CALL-NEXT-METHOD), therefore it is expected that it
-           ;; does not activate the bm (as in SET-HIDDEN-MEAN/1,
-           ;; SET-VISIBLE-MEAN/1) before writing the final values to
-           ;; all conditioning chunks.
-           (clear-static-activations)
-           (call-next-method))
-      ;; Then remember the inputs.
-      (nodes->inputs bm))))
+  (unwind-protect
+       ;; Do any clamping specific to this BM.
+       (progn
+         (dolist (chunk (visible-chunks bm))
+           (when (typep chunk 'temporal-chunk)
+             (maybe-use-remembered chunk)))
+         (call-next-method))
+    ;; Then remember the inputs.
+    (nodes->inputs bm)))
 
 (defmethod map-segments (fn (bm bm))
   (map nil (lambda (cloud)
@@ -1246,7 +1274,7 @@ chunks having upward connections."
         on (rest (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-below)
-        (hijack-means-to-activation layer clouds-up-to-layer)
+        (hijack-means-to-activation layer clouds-up-to-layer dbm)
         ;; Double activations of chunks in LAYER that have connections
         ;; to LAYER-ABOVE.
         (dolist (chunk layer)
@@ -1267,7 +1295,7 @@ chunks having downward connections."
         on (reverse (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-above)
-        (hijack-means-to-activation layer clouds-down-to-layer)
+        (hijack-means-to-activation layer clouds-down-to-layer dbm)
         ;; Double activations of chunks in LAYER that have connections
         ;; to LAYER-BELOW.
         (dolist (chunk layer)
@@ -1448,8 +1476,12 @@ is the damping factor (an FLT between 0 and 1).
 Call SUPERVISOR with CHUNKS BM and the iteration. Settling is finished
 when SUPERVISOR returns NIL. If SUPERVISOR returns a non-nil value
 then it's taken to be a damping factor. For no damping return 0."
+  (declare (ignore other-chunks))
   (loop for i upfrom 0 do
+        #+nil
         (set-mean chunks bm :other-chunks other-chunks)
+        (dolist (chunk chunks)
+          (set-mean (list chunk) bm))
         (let ((damping-factor (funcall supervisor chunks bm i)))
           (unless damping-factor
             (return))
@@ -1476,6 +1508,10 @@ then it's taken to be a damping factor. For no damping return 0."
   (:documentation "Like SET-VISIBLE-MEAN/1, but settle the mean field
 if there are visible-to-visible connections. For an RBM it trivially
 calls SET-VISIBLE-MEAN.")
+  (:method :around ((bm bm))
+           (with-static-activations-cached
+               (bm (hidden-and-conditioning-chunks bm))
+             (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
     ;; values alone. Also, SETTLE-VISIBLE-MEAN-FIELD does not do
@@ -1488,6 +1524,10 @@ calls SET-VISIBLE-MEAN.")
   (:documentation "Like SET-HIDDEN-MEAN/1, but settle the mean field
 if there are hidden-to-hidden connections. For an RBM it trivially
 calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
+  (:method :around ((bm bm))
+           (with-static-activations-cached
+               (bm (visible-and-conditioning-chunks bm))
+             (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
     ;; values alone. Also, SETTLE-HIDDEN-MEAN-FIELD does not do
@@ -1563,8 +1603,9 @@ trainers for BMs."))
 (defmethod train-batch (batch (trainer rbm-cd-trainer) (rbm rbm))
   (loop for samples in (group batch (max-n-stripes rbm))
         do (set-input samples rbm)
-        (positive-phase batch trainer rbm)
-        (negative-phase batch trainer rbm))
+        (with-static-activations-cached (rbm (conditioning-chunks rbm))
+          (positive-phase batch trainer rbm)
+          (negative-phase batch trainer rbm)))
   (maybe-update-weights trainer (length batch)))
 
 (defmethod positive-phase (batch (trainer rbm-cd-trainer) (rbm rbm))
