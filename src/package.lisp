@@ -292,6 +292,7 @@ interface and simple gradient descent based trainers."))
    ;; Convenience, utilities
    #:inputs->nodes
    #:nodes->inputs
+   #:reconstruction-rmse
    #:reconstruction-error
    #:make-bm-reconstruction-rmse-counters-and-measurers
    #:bm-mean-field-errors

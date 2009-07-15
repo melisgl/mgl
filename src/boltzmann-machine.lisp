@@ -1408,7 +1408,7 @@ contributed to the sum."
                     (y (aref old-nodes i)))
                 (incf sum (abs (- x y)))
                 (incf n)))))))
-    (values sum n)))
+    (values (/ sum n) n)))
 
 (defun supervise-mean-field/default (chunks bm iteration &key
                                      (node-change-limit #.(flt 0.0000001))
@@ -1420,14 +1420,16 @@ absolute value of change in nodes is below NODE-CHANGE-LIMIT, else
 return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
 another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
-  (cond ((< (node-change chunks) node-change-limit)
-         nil)
-        ((< iteration n-undamped-iterations)
-         #.(flt 0))
-        ((< iteration (+ n-undamped-iterations n-damped-iterations))
-         damping-factor)
-        (t
-         nil)))
+  (let ((change (node-change chunks)))
+    (format *trace-output* "n-iterations: ~S, diff: ~,8F~%" iteration change)
+    (cond ((< change node-change-limit)
+           nil)
+          ((< iteration n-undamped-iterations)
+           #.(flt 0))
+          ((< iteration (+ n-undamped-iterations n-damped-iterations))
+           damping-factor)
+          (t
+           nil))))
 
 (defgeneric default-mean-field-supervisor (bm)
   (:documentation "Return a function suitable as the SUPERVISOR
@@ -1447,11 +1449,9 @@ Call SUPERVISOR with CHUNKS BM and the iteration. Settling is finished
 when SUPERVISOR returns NIL. If SUPERVISOR returns a non-nil value
 then it's taken to be a damping factor. For no damping return 0."
   (loop for i upfrom 0 do
-        (format *trace-output* "i: ~S~%" i)
         (set-mean chunks bm :other-chunks other-chunks)
         (let ((damping-factor (funcall supervisor chunks bm i)))
           (unless damping-factor
-            (format *trace-output* "n-iterations: ~S~%" i)
             (return))
           (unless (= #.(flt 0) damping-factor)
             (sum-nodes-and-old-nodes chunks
@@ -1714,7 +1714,7 @@ called with the same parameters."
                  (copy-chunk-nodes chunk (nodes chunk) inputs))))
        (visible-chunks bm)))
 
-(defun reconstruction-error (bm)
+(defun reconstruction-rmse (chunks)
   "Return the squared norm of INPUTS - NODES not considering constant
 or conditioning chunks that aren't reconstructed in any case. The
 second value returned is the number of nodes that contributed to the
@@ -1722,7 +1722,7 @@ error."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n) (optimize (speed 3)))
-    (dolist (chunk (visible-chunks bm))
+    (dolist (chunk chunks)
       (unless (conditioning-chunk-p chunk)
         (let ((inputs (storage (inputs chunk)))
               (nodes (storage (nodes chunk))))
@@ -1733,6 +1733,13 @@ error."
                 (incf sum (expt (- x y) 2))
                 (incf n)))))))
     (values sum n)))
+
+(defun reconstruction-error (bm)
+  "Return the squared norm of INPUTS - NODES not considering constant
+or conditioning chunks that aren't reconstructed in any case. The
+second value returned is the number of nodes that contributed to the
+error."
+  (reconstruction-rmse (visible-chunks bm)))
 
 (defun make-bm-reconstruction-rmse-counters-and-measurers (bm)
   (list (cons (make-instance 'rmse-counter)
