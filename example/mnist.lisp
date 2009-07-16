@@ -216,11 +216,10 @@
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
              (or (get-error counter) #.(flt 0))
              n-inputs)
-    (reset-counter counter)))
+    (when (zerop (mod n-inputs 60000))
+      (reset-counter counter))))
 
 ;;;;;;;;;;;;;;;
-
-(defgeneric label (obj))
 
 (defun count-misclassifications (examples striped
                                  &key (label-fn #'label)
@@ -259,6 +258,18 @@ the index of the stripe."
     (with-stripes ((stripe chunk start end))
       (- (max-position (storage (nodes chunk)) start end)
          start))))
+
+(defun make-dbn-reconstruction-rmse-counters-and-measurers*
+    (dbn &key (rbm (last1 (rbms dbn))))
+  (loop for i upto (position rbm (rbms dbn))
+        collect (let ((i i))
+                  (cons (make-instance 'rmse-counter)
+                        (lambda (samples)
+                          (declare (ignore samples))
+                          (reconstruction-rmse
+                           (remove-if (lambda (chunk)
+                                        (typep chunk 'labeled))
+                                      (visible-chunks (elt (rbms dbn) i)))))))))
 
 (defun make-dbn-reconstruction-misclassification-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))))
@@ -313,7 +324,10 @@ the index of the stripe."
 (defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
   (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-error rbm)))
+                       (reconstruction-rmse
+                        (remove-if (lambda (chunk)
+                                     (typep chunk 'softmax-label-chunk))
+                                   (visible-chunks rbm)))))
 
 
 ;;;; DBN training
@@ -325,13 +339,19 @@ the index of the stripe."
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defun init-mnist-dbn (dbn)
-  (dolist (rbm (rbms dbn))
-    (do-clouds (cloud rbm)
-      (if (bias-cloud-p cloud)
-          (fill (storage (weights cloud)) #.(flt 0))
-          (map-into (storage (weights cloud))
-                    (lambda () (flt (* 0.1 (gaussian-random-1)))))))))
+(defun init-mnist-dbn (dbn &key stddev)
+  (loop for i upfrom 0
+        for rbm in (rbms dbn) do
+        (flet ((this (x)
+                 (if (listp x)
+                     (elt x i)
+                     x)))
+          (do-clouds (cloud rbm)
+            (if (bias-cloud-p cloud)
+                (fill (storage (weights cloud)) #.(flt 0))
+                (map-into (storage (weights cloud))
+                          (lambda () (flt (* (this stddev)
+                                             (gaussian-random-1))))))))))
 
 (defun train-mnist-dbn (dbn &key n-epochs n-gibbs learning-rate decay
                         visible-sampling)
@@ -539,7 +559,7 @@ the index of the stripe."
          bpn)
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 37 (length *training-images*)))
+                       :max-n (* 95 (length *training-images*)))
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size)
@@ -600,7 +620,7 @@ the index of the stripe."
                         *dbn/1*))))
         (t
          (setq *dbn/1* (make-mnist-dbn/1))
-         (init-mnist-dbn *dbn/1*)
+         (init-mnist-dbn *dbn/1* :stddev 0.1)
          (train-mnist-dbn *dbn/1* :n-epochs 50 :learning-rate 0.1
                           :decay 0.0002 :visible-sampling nil)
          (save-weights (merge-pathnames "mnist-1.dbn" *mnist-dir*) *dbn/1*)))
@@ -633,6 +653,8 @@ the index of the stripe."
 
 (defclass softmax-label-chunk* (softmax-label-chunk) ())
 
+;;; Samplers don't return examples, but a list of (SAMPLE
+;;; OMIT-LABEL-P). Work around it.
 (defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
@@ -706,7 +728,7 @@ the index of the stripe."
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
-  (settle-visible-mean-field dbm 10 (flt 0.5))
+  (set-visible-mean dbm)
   (multiple-value-call #'add-error (counter trainer)
                        (reconstruction-error dbm)))
 
@@ -725,9 +747,12 @@ the index of the stripe."
 (assert (= 3 (linear-at-points 3 1 5 2 7)))
 
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
-  (* (slot-value trainer 'learning-rate)
-     (linear-at-points 0 1 (* 10 (length *training-images*)) 0
-                       (n-inputs trainer))))
+  ;; This is adjusted for each batch. Ruslan's code adjust it per
+  ;; epoch.
+  (/ (slot-value trainer 'learning-rate)
+     (expt 1.000015 (* (/ (n-inputs trainer)
+                          (length *training-images*))
+                       600))))
 
 #+nil
 (defmethod n-gibbs ((trainer mnist-dbm-trainer))
@@ -739,7 +764,7 @@ the index of the stripe."
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 2 (length *training-images*)))
+                       :max-n (* 200 (length *training-images*)))
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
                         :visible-sampling t
@@ -747,7 +772,7 @@ the index of the stripe."
                         :segmenter
                         (lambda (cloud)
                           (make-instance 'mnist-dbm-segment-trainer
-                                         :learning-rate (flt 0.005)
+                                         :learning-rate (flt 0.001)
                                          :weight-decay
                                          (if (bias-cloud-p cloud)
                                              (flt 0)
@@ -760,7 +785,7 @@ the index of the stripe."
                    :dbn-initargs '(:max-n-stripes 100)))
 
 (defun unroll-mnist-dbm (dbm)
-  (multiple-value-bind (defs inits) (unroll-dbm dbm)
+  (multiple-value-bind (defs inits) (unroll-dbm dbm :excluded-chunks '(label))
     (prin1 inits)
     (terpri)
     (make-bpn dbm defs inits 'f2)))
@@ -779,23 +804,28 @@ the index of the stripe."
   (let ((sampler (make-sampler images :max-n (length images)))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
-    (do-batches-for-learner (samples (sampler dbm))
-      (set-input samples dbm)
-      (up-dbm dbm)
-      (settle-hidden-mean-field dbm 10 (flt 0.5)
-                                :initial-pass-done-p t)
-      (loop for image in samples
-            for stripe upfrom 0 do
-            (let ((x ()))
-              (loop for (chunk lump) in map-chunks-and-lumps
-                    do
-                    (with-stripes ((stripe chunk chunk-start chunk-end))
-                      (let ((xxx (make-flt-array
-                                  (- chunk-end chunk-start))))
-                        (replace xxx (storage (nodes chunk))
-                                 :start2 chunk-start :end2 chunk-end)
-                        (push (list lump xxx) x))))
-              (setf (gethash image cache) x))))))
+    (let ((fn (make-instance 'periodic-fn :period 1000
+                             :fn (lambda (n)
+                                   (log-msg "populated: ~S~%" n))))
+          (n 0))
+      (do-batches-for-learner (samples (sampler dbm))
+        (call-periodic-fn n fn n)
+        (set-input samples dbm)
+        (set-hidden-mean dbm)
+        (loop for image in samples
+              for stripe upfrom 0 do
+              (let ((x ()))
+                (loop for (chunk lump) in map-chunks-and-lumps
+                      do
+                      (with-stripes ((stripe chunk chunk-start chunk-end))
+                        (let ((xxx (make-flt-array
+                                    (- chunk-end chunk-start))))
+                          (replace xxx (storage (nodes chunk))
+                                   :start2 chunk-start :end2 chunk-end)
+                          (push (list lump xxx) x))))
+                (setf (gethash image cache) x)))
+        (incf n (length samples)))
+      (call-periodic-fn n fn n))))
 
 (defvar *dbn/2*)
 (defvar *dbm/2*)
@@ -807,8 +837,8 @@ the index of the stripe."
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
-           (init-mnist-dbn *dbn/2*)
-           (train-mnist-dbn *dbn/2* :n-epochs 2 :n-gibbs '(1 5)
+           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01))
+           (train-mnist-dbn *dbn/2* :n-epochs 100 :n-gibbs '(1 5)
                             :learning-rate '(0.05 0.01)
                             :decay 0.001 :visible-sampling t)
            (save-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*)
@@ -842,7 +872,7 @@ the index of the stripe."
     (log-msg "Populating MAP cache~%")
     (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
                                                      *test-images*))
-    (train-mnist-bpn *bpn/2* :batch-size 5000)
+    (train-mnist-bpn *bpn/2* :batch-size 10000)
     (save-weights (merge-pathnames "mnist-2.bpn" *mnist-dir*)
                   *bpn/2*)))
 
