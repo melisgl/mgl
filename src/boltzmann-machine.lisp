@@ -1449,7 +1449,6 @@ return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
 another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
   (let ((change (node-change chunks)))
-    (format *trace-output* "n-iterations: ~S, diff: ~,8F~%" iteration change)
     (cond ((< change node-change-limit)
            nil)
           ((< iteration n-undamped-iterations)
