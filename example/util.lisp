@@ -46,7 +46,7 @@
             (and (/= n (last-eval fn))))
     (setf (last-eval fn) n)
     (apply (fn fn) args)))
-
+
 
 ;;;; Logging trainer
 

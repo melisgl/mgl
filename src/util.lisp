@@ -178,11 +178,12 @@ N element."
         (funcall function (reverse previous-values))))))
 
 (defun break-seq (fractions seq)
-  "Split SEQ into a number of subsequences. XXX is either a positive
-integer or a list of non-negative real numbers. If XXX is a positive
-integer then return a list of that many subsequences of equal size
-\(bar rounding errors), else split SEQ into subsequences, where the
-length of subsequence I is proportional to element I of FRACTIONS:
+  "Split SEQ into a number of subsequences. FRACTIONS is either a
+positive integer or a list of non-negative real numbers. If FRACTIONS
+is a positive integer then return a list of that many subsequences of
+equal size \(bar rounding errors), else split SEQ into subsequences,
+where the length of subsequence I is proportional to element I of
+FRACTIONS:
 
   (BREAK-SEQ '(2 3) '(0 1 2 3 4 5 6 7 8 9))
     => ((0 1 2 3) (4 5 6 7 8 9))"
