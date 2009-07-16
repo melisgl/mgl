@@ -303,8 +303,13 @@ the backprop network."
                                                       visible-chunk)))))))
       (lumpies->bpn-definition lumpies))))
 
-(defun unroll-dbm (dbm)
-  (let ((lumpies '()))
+(defun unroll-dbm (dbm &key excluded-chunks)
+  (let ((excluded-chunks (mapcar (lambda (chunk)
+                                   (if (typep chunk 'chunk)
+                                       chunk
+                                       (find-chunk chunk dbm :errorp t)))
+                                 excluded-chunks))
+        (lumpies '()))
     (flet ((ensure-lumpy (depth chunk &optional kind)
              (let ((lumpy (ensure-lumpy lumpies
                                         :depth depth :chunk chunk :kind kind)))
@@ -318,7 +323,9 @@ the backprop network."
             (dolist (cloud clouds)
               (let ((lower-chunk (cloud-chunk-among-chunks cloud lower-layer))
                     (higher-chunk (cloud-chunk-among-chunks cloud higher-layer)))
-                (when (and lower-chunk higher-chunk)
+                (when (and (and lower-chunk higher-chunk)
+                           (not (member lower-chunk excluded-chunks))
+                           (not (member higher-chunk excluded-chunks)))
                   (unless (typep higher-chunk 'conditioning-chunk)
                     (add-connection cloud
                                     :from (ensure-lumpy (1+ depth) lower-chunk)
