@@ -158,6 +158,8 @@ only missing values does not change anything."))
 ;;;
 ;;;   (+ (/ ACCUMULATOR N-INPUTS)
 ;;;      (* WEIGHT-DECAY WEIGHTS))
+;;;
+;;; plus momentum, weight-penalty.
 (defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
   (when (<= (batch-size trainer)
             (incf (n-inputs-in-batch trainer) n-new-inputs))
