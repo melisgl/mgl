@@ -1565,6 +1565,57 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 (defgeneric negative-phase (batch trainer bm))
 
 
+;;;; Sparseness
+;;;;
+;;;; It cloud be implemented by remembering average means per chunk.
+;;;; However, that would run into trouble with SEGMENTED-GD-TRAINER
+;;;; having children with different batch sizes as they would require
+;;;; that the average be over different time periods. Thus, the
+;;;; average means must reside in the child trainer, at the cost of
+;;;; minor loss of performance.
+;;;;
+;;;; When to add the sparsity gradient? In the positive phase to each 
+
+;; (defclass sparse-chunk-params ()
+;;   ((target)
+;;    (cost)
+;;    (damping)
+;;    ;; The sum of the means in this batch.
+;;    (sum-means)))
+
+;; (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
+;;   ((sparse-chunk-params))
+;;   (:documentation "For the chunks with . Collect the average means
+;; over samples in a batch and adjust weights in each cloud connected to
+;; it so that the average is closer to SPARSITY-TARGET. This is
+;; implemented by keeping track of the average means of the chunks
+;; connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
+;; C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
+;; of the batch. Batch size comes from the superclass."))
+
+;; (defmethod maybe-update-weights ((trainer segmented-gd-sparse-bm-trainer)
+;;                                  n-new-inputs)
+;;   )
+
+;; (defclass cloud-sparse-chunk-trainer ()
+;;   ((chunk1-))
+;;   (:documentation "Train."))
+
+;; (defmethod maybe-update-weights ((trainer cloud-sparse-chunk-trainer)
+;;                                  n-new-inputs)
+;;   (when (<= (batch-size trainer)
+;;             (incf (n-inputs-in-batch trainer) n-new-inputs))
+;;     ))
+
+;; (defmethod accumulate-cloud-statistics ((trainer gd-trainer)
+;;                                         (cloud full-cloud)
+;;                                         multiplier
+;;                                         phase)
+;;   )
+
+
+
+
 ;;;; Common base class for MCMC based BM trainers
 
 (defclass bm-mcmc-parameters ()
