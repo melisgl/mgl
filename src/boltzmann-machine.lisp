@@ -32,7 +32,11 @@ CONSTANT-CHUNKS.")
 between SET-INPUT calls \(i.e. they come from conditioning chunks
 including biases) are cached.")
    (static-activations-context
-    :initform nil :accessor static-activations-context)
+    :initform nil :accessor static-activations-context
+    :documentation "STATIC-ACTIVATIONS depends on the values of nodes
+of the chunks that do not change during some operations. While the
+context it is guaranteed that those values do not change. This allows
+some performance gains.")
    (static-activations
     :type (or matlisp:real-matrix null) :reader static-activations
     :documentation "Of the same size as NODES. This is where
@@ -1311,7 +1315,7 @@ chunks having downward connections."
 
 (define-slots-not-to-be-copied 'dbm->dbn chunk
   nodes old-nodes inputs
-  cache-static-activations-p static-activations-cached-p static-activations
+  static-activations-context static-activations
   indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'dbm->dbn)) (chunk chunk))
@@ -1358,6 +1362,11 @@ chunks having downward connections."
       (setf (slot-value copy 'scale1) (flt 2)))
     copy))
 
+(defun stable-set-difference (list1 list2)
+  (remove-if (lambda (x)
+               (member x list2))
+             list1))
+
 (defun dbm->dbn (dbm &key (rbm-class 'rbm) (dbn-class 'dbn)
                  dbn-initargs)
   "Convert DBM to a DBN by discarding intralayer connections and
@@ -1389,7 +1398,7 @@ For now, unrolling the resulting DBN to a BPN is not supported."
                                                     layer1)
                                    :hidden-chunks (mapcar
                                                    #'copy-dbm-chunk-to-dbn
-                                                   (set-difference
+                                                   (stable-set-difference
                                                     layer2
                                                     (visible-chunks dbm)))
                                    :clouds (mapcar #'copy-cloud
@@ -1449,6 +1458,7 @@ return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
 another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
   (let ((change (node-change chunks)))
+    ;;(format *trace-output* "n-iterations: ~S, diff: ~,8F~%" iteration change)
     (cond ((< change node-change-limit)
            nil)
           ((< iteration n-undamped-iterations)
@@ -1686,7 +1696,7 @@ trainers for BMs."))
 
 (define-slots-not-to-be-copied 'pcd chunk
   nodes old-nodes inputs
-  cache-static-activations-p static-activations-cached-p static-activations
+  static-activations-context static-activations
   indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'pcd)) (chunk chunk))

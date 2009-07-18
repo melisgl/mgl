@@ -377,7 +377,7 @@
                               :hidden-bias-p t
                               :max-n-samples 100000)))
   (assert (> 0.01 (test-rbm/identity-and-xor)))
-  (assert (> 0.01 (test-rbm/identity-and-xor :rank 1)))
+  (assert (> 0.05 (test-rbm/identity-and-xor :rank 1)))
   (assert (> 0.25 (test-rbm/identity-and-xor :missingp t)))
   #+nil
   (assert (> 0.25 (test-rbm/identity-and-xor :missingp t :rank 1)))
@@ -435,7 +435,8 @@
                               :name 'this-chunk
                               :size 10)))
     (assert (names= (mapcar #'first (compare-objects chunk (copy context chunk)))
-                    '(nodes mgl-bm::old-nodes inputs)))))
+                    '(nodes mgl-bm::old-nodes inputs
+                      mgl-bm::static-activations)))))
 
 (defun test-copy-full-cloud (context)
   (let* ((chunk1 (make-instance 'constant-chunk
@@ -466,7 +467,11 @@
                                                   :size 1))
               :max-n-stripes 3)))
     (assert (names= (mapcar #'first (compare-objects rbm (copy 'pcd rbm)))
-                    '(chunks visible-chunks hidden-chunks clouds max-n-stripes)))
+                    '(chunks visible-chunks hidden-chunks
+                      mgl-bm::visible-and-conditioning-chunks
+                      mgl-bm::hidden-and-conditioning-chunks
+                      mgl-bm::conditioning-chunks
+                      clouds max-n-stripes)))
     (dolist (cloud (clouds rbm))
       (assert (member (chunk1 cloud) (visible-chunks rbm)))
       (assert (member (chunk2 cloud) (hidden-chunks rbm))))))
