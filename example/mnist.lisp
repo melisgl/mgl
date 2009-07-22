@@ -144,12 +144,14 @@
 
 ;;;; Sampling, clamping, utilities
 
-(defun make-sampler (stories &key max-n omit-label-p)
+(defun make-sampler (stories &key max-n omit-label-p sample-visible-p)
   (make-instance 'counting-function-sampler
                  :max-n-samples max-n
                  :sampler (let ((g (make-random-generator stories)))
                             (lambda ()
-                              (list (funcall g) :omit-label-p omit-label-p)))))
+                              (list (funcall g)
+                                    :omit-label-p omit-label-p
+                                    :sample-visible-p sample-visible-p)))))
 
 (defun clamp-array (image array start)
   (declare (type flt-vector array)
@@ -157,11 +159,12 @@
   (replace array (image-array image) :start1 start))
 
 (defun clamp-striped-nodes (images striped)
+  (assert (= (length images) (n-stripes striped)))
   (let ((nodes (storage (nodes striped))))
     (loop for image in images
           for stripe upfrom 0
-          do (destructuring-bind (image &key omit-label-p) image
-               (declare (ignore omit-label-p))
+          do (destructuring-bind (image &key omit-label-p sample-visible-p) image
+               (declare (ignore omit-label-p sample-visible-p))
                (with-stripes ((stripe striped start))
                  (clamp-array image nodes start))))))
 
@@ -363,7 +366,8 @@ the index of the stripe."
                      (elt x i)
                      x)))
           (train (make-sampler *training-images*
-                               :max-n (* n-epochs (length *training-images*)))
+                               :max-n (* n-epochs (length *training-images*))
+                               :sample-visible-p (this visible-sampling))
                  (make-instance 'mnist-rbm-trainer
                                 :visible-sampling (this visible-sampling)
                                 :n-gibbs (this n-gibbs)
@@ -410,8 +414,9 @@ the index of the stripe."
     (loop for image in images
           for stripe upfrom 0
           do
-          (destructuring-bind (image &key omit-label-p) image
-            (declare (ignore omit-label-p))
+          (destructuring-bind (image &key omit-label-p sample-visible-p) image
+            (assert omit-label-p)
+            (assert (not sample-visible-p))
             (clamp-image-on-bpn bpn stripe image)
             (with-stripes ((stripe inputs inputs-start)
                            (stripe expectations expectations-start
@@ -508,7 +513,8 @@ the index of the stripe."
 
 (defmethod log-test-error (trainer (bpn mnist-bpn))
   (multiple-value-bind (e ce)
-      (bpn-error (make-sampler *test-images* :max-n (length *test-images*)) bpn)
+      (bpn-error (make-sampler *test-images* :max-n (length *test-images*)
+                               :omit-label-p t) bpn)
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
              ce (n-inputs trainer))
     (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
@@ -548,7 +554,8 @@ the index of the stripe."
 (defun train-mnist-bpn (bpn &key (batch-size 1000))
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 5 (length *training-images*)))
+                       :max-n (* 5 (length *training-images*))
+                       :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size
@@ -559,14 +566,16 @@ the index of the stripe."
          bpn)
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 95 (length *training-images*)))
+                       :max-n (* 95 (length *training-images*))
+                       :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size)
          bpn)
   (log-msg "Full batches on the whole BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 1 (length *training-images*)))
+                       :max-n (* 1 (length *training-images*))
+                       :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 10)
                         :batch-size (length *training-images*))
@@ -637,24 +646,31 @@ the index of the stripe."
   (let ((nodes (storage (nodes chunk))))
     (loop for image in images
           for stripe upfrom 0
-          do (destructuring-bind (image &key omit-label-p) image
-               (unless omit-label-p
-                 (with-stripes ((stripe chunk start end))
-                   (fill nodes (flt 0) :start start :end end)
-                   (setf (aref nodes (+ start (image-label image)))
-                         #.(flt 1))))))))
+          do (destructuring-bind (image &key omit-label-p sample-visible-p)
+                 image
+               (declare (ignore sample-visible-p))
+               (with-stripes ((stripe chunk start end))
+                 (cond (omit-label-p
+                        (fill nodes #.(flt 0.1) :start start :end end))
+                       (t
+                        (fill nodes (flt 0) :start start :end end)
+                        (setf (aref nodes (+ start (image-label image)))
+                              #.(flt 1)))))))))
 
 (defmethod set-input (images (rbm mnist-rbm/2))
   (call-next-method)
-  (sample-visible rbm)
+  ;; All samples have the same SAMPLE-VISIBLE-P, look at the first
+  ;; only.
+  (when (and images (getf (rest (elt images 0)) :sample-visible-p))
+    (sample-visible rbm))
   (let ((label-chunk (find-chunk 'label rbm)))
     (when label-chunk
       (clamp-labels images label-chunk))))
 
 (defclass softmax-label-chunk* (softmax-label-chunk) ())
 
-;;; Samplers don't return examples, but a list of (SAMPLE
-;;; OMIT-LABEL-P). Work around it.
+;;; Samplers don't return examples, but a list of (SAMPLE &KEY
+;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
 (defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
@@ -683,7 +699,10 @@ the index of the stripe."
 
 (defmethod set-input (images (dbm mnist-dbm))
   (clamp-striped-nodes images (mgl-bm:find-chunk 'inputs dbm))
-  (sample-visible dbm))
+  (when (and images (getf (rest (elt images 0)) :sample-visible-p))
+    (sample-visible dbm))
+  (let ((label-chunk (find-chunk 'label dbm :errorp t)))
+    (clamp-labels images label-chunk)))
 
 (defclass mnist-dbm-trainer (mnist-logging-trainer bm-pcd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
@@ -706,6 +725,16 @@ the index of the stripe."
                                                     (length *test-images*))
                                       dbm))
            (n-inputs trainer))
+  (log-msg "DBM TEST RMSE SAMPLING: ~{~,5F~^, ~} (~D)~%"
+           (map 'list
+                #'get-error
+                (bm-mean-field-errors (make-sampler *test-images*
+                                                    :max-n 1000
+                                                    #+nil
+                                                    (length *test-images*)
+                                                    :sample-visible-p t)
+                                      dbm))
+           (n-inputs trainer))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
     (when counters-and-measurers
@@ -721,6 +750,23 @@ the index of the stripe."
                                                :counters-and-measurers
                                                counters-and-measurers))))
         (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer)))
+      (let ((errors (map 'list
+                         #'get-error
+                         (bm-mean-field-errors (make-sampler *test-images*
+                                                             :max-n 1000
+                                                             #+nil
+                                                             (length
+                                                              *test-images*)
+                                                             :omit-label-p t
+                                                             :sample-visible-p t)
+                                               dbm
+                                               :counters-and-measurers
+                                               counters-and-measurers))))
+        (log-msg "DBM TEST CLASSIFICATION ACCURACY SAMPLING: ~{~,2F%~^, ~} (~D)~%"
                  (mapcar (lambda (e)
                            (* 100 (- 1 e)))
                          errors)
@@ -764,7 +810,8 @@ the index of the stripe."
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 200 (length *training-images*)))
+                       :max-n (* 200 (length *training-images*))
+                       :sample-visible-p t)
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
                         :visible-sampling t

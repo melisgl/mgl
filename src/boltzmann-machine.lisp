@@ -454,14 +454,13 @@ chunks that don't need activations."
           (list (gensym) nil))
     ;;(format *trace-output* "~S ~S~%" static-activations-context static-chunks)
     (labels ((cached-p (chunk)
-               (and (member chunk static-chunks)
-                    (eq static-activations-context
-                        (static-activations-context chunk))))
+               (and (eq static-activations-context
+                        (static-activations-context chunk))
+                    (member chunk static-chunks)))
              (to-cache-p (chunk)
-               (and static-activations-context
+               (and (cache-static-activations-p chunk)
                     (not (conditioning-chunk-p chunk))
                     (member chunk static-chunks)
-                    (cache-static-activations-p chunk)
                     (not (cached-p chunk)))))
       ;; Zero activations or copy cached activations coming from
       ;; conditioning chunks.
@@ -470,7 +469,8 @@ chunks that don't need activations."
           (if (cached-p chunk)
               (progn
                 ;;(format *trace-output* "Copy act: ~A~%" chunk)
-                (copy-chunk-nodes chunk (static-activations chunk) (nodes chunk)))
+                (copy-chunk-nodes chunk (static-activations chunk)
+                                  (nodes chunk)))
               (zero-chunk chunk))))
       ;; Calculate the activations coming from conditioning chunks if
       ;; they are to be cached.
