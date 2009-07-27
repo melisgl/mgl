@@ -298,8 +298,8 @@ the index of the stripe."
            (map 'list
                 #'get-error
                 (dbn-mean-field-errors (make-sampler *test-images*
-                                                     :max-n 1000
-                                                     #+nil
+                                                     :max-n #+nil
+                                                     1000
                                                      (length *test-images*))
                                        (dbn rbm) :rbm rbm))
            (n-inputs trainer))
@@ -310,8 +310,8 @@ the index of the stripe."
       (let ((errors (map 'list
                          #'get-error
                          (dbn-mean-field-errors (make-sampler *test-images*
-                                                              :max-n 1000
-                                                              #+nil
+                                                              :max-n #+nil
+                                                              1000
                                                               (length
                                                                *test-images*)
                                                               :omit-label-p t)
@@ -720,19 +720,9 @@ the index of the stripe."
            (map 'list
                 #'get-error
                 (bm-mean-field-errors (make-sampler *test-images*
-                                                    :max-n 1000
-                                                    #+nil
+                                                    :max-n #+nil
+                                                    1000
                                                     (length *test-images*))
-                                      dbm))
-           (n-inputs trainer))
-  (log-msg "DBM TEST RMSE SAMPLING: ~{~,5F~^, ~} (~D)~%"
-           (map 'list
-                #'get-error
-                (bm-mean-field-errors (make-sampler *test-images*
-                                                    :max-n 1000
-                                                    #+nil
-                                                    (length *test-images*)
-                                                    :sample-visible-p t)
                                       dbm))
            (n-inputs trainer))
   (let ((counters-and-measurers
@@ -741,8 +731,8 @@ the index of the stripe."
       (let ((errors (map 'list
                          #'get-error
                          (bm-mean-field-errors (make-sampler *test-images*
-                                                             :max-n 1000
-                                                             #+nil
+                                                             :max-n #+nil
+                                                             1000
                                                              (length
                                                               *test-images*)
                                                              :omit-label-p t)
@@ -750,23 +740,6 @@ the index of the stripe."
                                                :counters-and-measurers
                                                counters-and-measurers))))
         (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
-                 (n-inputs trainer)))
-      (let ((errors (map 'list
-                         #'get-error
-                         (bm-mean-field-errors (make-sampler *test-images*
-                                                             :max-n 1000
-                                                             #+nil
-                                                             (length
-                                                              *test-images*)
-                                                             :omit-label-p t
-                                                             :sample-visible-p t)
-                                               dbm
-                                               :counters-and-measurers
-                                               counters-and-measurers))))
-        (log-msg "DBM TEST CLASSIFICATION ACCURACY SAMPLING: ~{~,2F%~^, ~} (~D)~%"
                  (mapcar (lambda (e)
                            (* 100 (- 1 e)))
                          errors)
