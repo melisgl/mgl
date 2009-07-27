@@ -166,9 +166,10 @@ Boltzmann Machine. This is an abstract base class."))
   (map nil #'zero-chunk chunks))
 
 (defun sum-chunk-nodes-and-old-nodes (chunk node-weight old-node-weight)
-  (matlisp:scal! (flt node-weight) (nodes chunk))
-  (matlisp:scal! (flt old-node-weight) (old-nodes chunk))
-  (matlisp:m+! (old-nodes chunk) (nodes chunk)))
+  (unless (eq (nodes chunk) (old-nodes chunk))
+    (matlisp:scal! (flt node-weight) (nodes chunk))
+    (matlisp:scal! (flt old-node-weight) (old-nodes chunk))
+    (matlisp:m+! (old-nodes chunk) (nodes chunk))))
 
 (defun sum-nodes-and-old-nodes (chunks node-weight old-node-weight)
   (map nil (lambda (chunk)
