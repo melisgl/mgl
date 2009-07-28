@@ -19,6 +19,10 @@ ACCUMULATOR) on each segment trained by TRAINER."))
   (:documentation "Update the weights being trained. N-NEW-INPUTS have
 been seen since the last time this was called."))
 
+(defgeneric update-weights (trainer)
+  (:documentation "Called by MAYBE-UPDATE-WEIGHTS when all weights are
+to be updated at the same time."))
+
 (defgeneric find-segment-gradient-accumulator (segment trainer)
   (:documentation "Return the start index and the accumulator
 belonging to SEGMENT in TRAINER or NIL if it is not found.")
@@ -82,7 +86,12 @@ based trainers with momentum and weight decay."))
 (defclass batch-gd-trainer (gd-trainer)
   ((n-inputs-in-batch
     :initform 0 :initarg :n-inputs-in-batch :accessor n-inputs-in-batch
-    :documentation "In-batch counter of inputs."))
+    :documentation "In-batch counter of inputs.")
+   (before-update-hook
+    :type list :initarg :before-update-hook :accessor before-update-hook
+    :documentation "A list of functions of no parameters. Each
+function is called just before UPDATE-WEIGHTS takes place. Convenient
+to hang some additional gradient accumulating code on."))
   (:documentation "Updates all weights simultaneously after chewing
 through BATCH-SIZE inputs. PER-WEIGHT-BATCH-GD-TRAINER may be a better
 choice when some weights can go unused for instance due to missing
@@ -160,40 +169,43 @@ only missing values does not change anything."))
 ;;;      (* WEIGHT-DECAY WEIGHTS))
 ;;;
 ;;; plus momentum, weight-penalty.
+(defmethod update-weights ((trainer batch-gd-trainer))
+  (let ((accumulator (storage (accumulator trainer)))
+        (weight-deltas (storage (weight-deltas trainer)))
+        (learning-rate (learning-rate trainer))
+        (n-inputs (flt (n-inputs-in-batch trainer)))
+        (momentum (momentum trainer))
+        (weight-decay (weight-decay trainer))
+        (weight-penalty (weight-penalty trainer)))
+    (declare (type flt-vector accumulator weight-deltas)
+             (type flt learning-rate n-inputs momentum
+                   weight-decay weight-penalty)
+             (optimize (speed 3) #.*no-array-bounds-check*))
+    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+        (segment-set trainer)
+      (with-segment-weights ((weights start end) segment)
+        ;; Maybe this could be done with Matlisp, but it's not a
+        ;; hotspot.
+        (do ((i start-in-segment-set (the! index (1+ i)))
+             (j start (1+ j)))
+            ((<= end j))
+          (let ((delta (+ (* momentum (aref weight-deltas i))
+                          ;; Normally we'd multiply this by LEARNING-RATE
+                          ;; here, but doing it when updating the weights
+                          ;; plays nicer with changing learning rates.
+                          (/ (aref accumulator i)
+                             n-inputs)
+                          (* weight-decay (aref weights j))
+                          weight-penalty)))
+            (setf (aref accumulator i) #.(flt 0))
+            (setf (aref weight-deltas i) delta)
+            (decf (aref weights j) (* learning-rate delta)))))
+      (setf (n-inputs-in-batch trainer) 0))))
+
 (defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
   (when (<= (batch-size trainer)
             (incf (n-inputs-in-batch trainer) n-new-inputs))
-    (let ((accumulator (storage (accumulator trainer)))
-          (weight-deltas (storage (weight-deltas trainer)))
-          (learning-rate (learning-rate trainer))
-          (n-inputs (flt (n-inputs-in-batch trainer)))
-          (momentum (momentum trainer))
-          (weight-decay (weight-decay trainer))
-          (weight-penalty (weight-penalty trainer)))
-      (declare (type flt-vector accumulator weight-deltas)
-               (type flt learning-rate n-inputs momentum
-                     weight-decay weight-penalty)
-               (optimize (speed 3) #.*no-array-bounds-check*))
-      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-          (segment-set trainer)
-        (with-segment-weights ((weights start end) segment)
-          ;; Maybe this could be done with Matlisp, but it's not a
-          ;; hotspot.
-          (do ((i start-in-segment-set (the! index (1+ i)))
-               (j start (1+ j)))
-              ((<= end j))
-            (let ((delta (+ (* momentum (aref weight-deltas i))
-                            ;; Normally we'd multiply this by LEARNING-RATE
-                            ;; here, but doing it when updating the weights
-                            ;; plays nicer with changing learning rates.
-                            (/ (aref accumulator i)
-                               n-inputs)
-                            (* weight-decay (aref weights j))
-                            weight-penalty)))
-              (setf (aref accumulator i) #.(flt 0))
-              (setf (aref weight-deltas i) delta)
-              (decf (aref weights j) (* learning-rate delta)))))
-        (setf (n-inputs-in-batch trainer) 0))))
+    (update-weights trainer))
   (incf (n-inputs trainer) n-new-inputs))
 
 (defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
@@ -367,3 +379,8 @@ not train all segments."))
 (defmethod map-segment-gradient-accumulators (fn (trainer segmented-gd-trainer))
   (dolist (trainer (trainers trainer))
     (map-segment-gradient-accumulators fn trainer)))
+
+(defun find-trainer-for-segment (segment trainer)
+  (find-if (lambda (trainer)
+             (find-segment-gradient-accumulator segment trainer))
+           (trainers trainer)))

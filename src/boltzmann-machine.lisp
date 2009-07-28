@@ -645,6 +645,53 @@ all transposed.")))
                   (incf (aref to i) (* sum scale))))))))
   (values))
 
+(defgeneric accumulate-cloud-statistics* (cloud v1 v2 multiplier
+                                                start accumulator))
+
+(defmethod accumulate-cloud-statistics* ((cloud full-cloud) v1 v2 multiplier
+                                         start accumulator)
+  (declare (type flt multiplier)
+           (type index start))
+  (if (and (zerop start)
+           (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
+                                (chunk1 cloud)))
+      (matlisp:gemm! multiplier v2 v1 (flt 1)
+                     (reshape2 accumulator
+                               (matlisp:nrows v2)
+                               (matlisp:nrows v1))
+                     :nt)
+      (let ((v1 (storage v1))
+            (v2 (storage v2))
+            (accumulator (storage accumulator)))
+        (declare (optimize (speed 3) #.*no-array-bounds-check*))
+        (cond ((= multiplier (flt 1))
+               (special-case (zerop start)
+                 (do-cloud/chunk1 (i cloud)
+                   (let ((x (aref v1 i)))
+                     (unless (zerop x)
+                       (do-cloud/chunk2 (j weight-index)
+                         (incf (aref accumulator
+                                     (the! index (+ start weight-index)))
+                               (* x (aref v2 j)))))))))
+              ((= multiplier (flt -1))
+               (special-case (zerop start)
+                 (do-cloud/chunk1 (i cloud)
+                   (let ((x (aref v1 i)))
+                     (unless (zerop x)
+                       (do-cloud/chunk2 (j weight-index)
+                         (decf (aref accumulator
+                                     (the! index (+ start weight-index)))
+                               (* x (aref v2 j)))))))))
+              (t
+               (special-case (zerop start)
+                 (do-cloud/chunk1 (i cloud)
+                   (let ((x (* multiplier (aref v1 i))))
+                     (unless (zerop x)
+                       (do-cloud/chunk2 (j weight-index)
+                         (incf (aref accumulator
+                                     (the! index (+ start weight-index)))
+                               (* x (aref v2 j)))))))))))))
+
 (defmethod accumulate-cloud-statistics (trainer (cloud full-cloud) multiplier)
   (declare (type flt multiplier))
   (with-segment-gradient-accumulator ((start accumulator)
@@ -652,45 +699,8 @@ all transposed.")))
     (when (and accumulator start)
       (let ((v1 (nodes (chunk1 cloud)))
             (v2 (nodes (chunk2 cloud))))
-        (if (and (zerop start)
-                 (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
-                                      (chunk1 cloud)))
-            (matlisp:gemm! multiplier v2 v1 (flt 1)
-                           (reshape2 accumulator
-                                     (matlisp:nrows v2)
-                                     (matlisp:nrows v1))
-                           :nt)
-            (let ((v1 (storage v1))
-                  (v2 (storage v2))
-                  (accumulator (storage accumulator)))
-              (declare (optimize (speed 3) #.*no-array-bounds-check*))
-              (cond ((= multiplier (flt 1))
-                     (special-case (zerop start)
-                       (do-cloud/chunk1 (i cloud)
-                         (let ((x (aref v1 i)))
-                           (unless (zerop x)
-                             (do-cloud/chunk2 (j weight-index)
-                               (incf (aref accumulator
-                                           (the! index (+ start weight-index)))
-                                     (* x (aref v2 j)))))))))
-                    ((= multiplier (flt -1))
-                     (special-case (zerop start)
-                       (do-cloud/chunk1 (i cloud)
-                         (let ((x (aref v1 i)))
-                           (unless (zerop x)
-                             (do-cloud/chunk2 (j weight-index)
-                               (decf (aref accumulator
-                                           (the! index (+ start weight-index)))
-                                     (* x (aref v2 j)))))))))
-                    (t
-                     (special-case (zerop start)
-                       (do-cloud/chunk1 (i cloud)
-                         (let ((x (* multiplier (aref v1 i))))
-                           (unless (zerop x)
-                             (do-cloud/chunk2 (j weight-index)
-                               (incf (aref accumulator
-                                           (the! index (+ start weight-index)))
-                                     (* x (aref v2 j))))))))))))))))
+        (accumulate-cloud-statistics* cloud v1 v2 multiplier
+                                      start accumulator)))))
 
 (defmethod map-segments (fn (cloud full-cloud))
   (funcall fn cloud))
@@ -1578,53 +1588,86 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 
 ;;;; Sparseness
 ;;;;
-;;;; It cloud be implemented by remembering average means per chunk.
+;;;; It could be implemented by remembering average means per chunk.
 ;;;; However, that would run into trouble with SEGMENTED-GD-TRAINER
 ;;;; having children with different batch sizes as they would require
 ;;;; that the average be over different time periods. Thus, the
 ;;;; average means must reside in the child trainer, at the cost of
 ;;;; minor loss of performance.
-;;;;
-;;;; When to add the sparsity gradient? In the positive phase to each 
 
-;; (defclass sparse-chunk-params ()
-;;   ((target)
-;;    (cost)
-;;    (damping)
-;;    ;; The sum of the means in this batch.
-;;    (sum-means)))
+(defclass sparse-chunk-params ()
+  ((cloud :type cloud :initarg :cloud :reader cloud)
+   (chunk :type chunk :initarg :chunk :reader chunk)
+   (sparsity-target
+    :type flt
+    :initarg :sparsity :initarg :target :initarg :sparsity-target
+    :reader sparsity-target)
+   (cost :type flt :initarg :cost :reader cost)
+   (damping :type flt :initarg :damping :reader damping)
+   (products :type flt-vector :reader products)
+   (old-products :type flt-vector :reader old-products)))
 
-;; (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
-;;   ((sparse-chunk-params))
-;;   (:documentation "For the chunks with . Collect the average means
-;; over samples in a batch and adjust weights in each cloud connected to
-;; it so that the average is closer to SPARSITY-TARGET. This is
-;; implemented by keeping track of the average means of the chunks
-;; connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
-;; C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
-;; of the batch. Batch size comes from the superclass."))
+(defun add-into (c v1 v2 &key start1)
+  (declare (type flt-vector v1 v2)
+           (type flt c)
+           (type index start1)
+           (optimize (speed 3)))
+  (loop for i upfrom start1 below (the index (+ start1 (length v2)))
+        for j below (length v2)
+        do (setf (aref v1 i) (* c (aref v2 j)))))
 
-;; (defmethod maybe-update-weights ((trainer segmented-gd-sparse-bm-trainer)
-;;                                  n-new-inputs)
-;;   )
+;;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
+;;; accumulator and zero PRODUCTS.
+(defgeneric flush-accumulator (param accumulator start)
+  (:method ((param sparse-chunk-params) accumulator start)
+    (let ((damping (damping param))
+          (cost (cost param))
+          (products (products param))
+          (old-products (old-products param)))
+      (matlisp:scal! damping old-products)
+      (matlisp:scal! (- (flt 1) damping) products)
+      (matlisp:m+! products old-products)
+      (add-into cost accumulator old-products :start1 start)
+      (fill (storage products) #.(flt 0)))))
 
-;; (defclass cloud-sparse-chunk-trainer ()
-;;   ((chunk1-))
-;;   (:documentation "Train."))
+(defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
+  ((sparse-chunk-params
+    :type list :initarg :sparse-chunk-params
+    :reader sparse-chunk-params))
+  (:documentation "For the chunks with . Collect the average means
+over samples in a batch and adjust weights in each cloud connected to
+it so that the average is closer to SPARSITY-TARGET. This is
+implemented by keeping track of the average means of the chunks
+connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
+C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
+of the batch. Batch size comes from the superclass."))
 
-;; (defmethod maybe-update-weights ((trainer cloud-sparse-chunk-trainer)
-;;                                  n-new-inputs)
-;;   (when (<= (batch-size trainer)
-;;             (incf (n-inputs-in-batch trainer) n-new-inputs))
-;;     ))
+(defmethod initialize-trainer ((trainer segmented-gd-sparse-bm-trainer)
+                               segmentable)
+  (dolist (param (sparse-chunk-params trainer))
+    (with-segment-gradient-accumulator ((start accumulator)
+                                        ((cloud param) trainer))
+      (push (lambda ()
+              (flush-accumulator param accumulator start))
+            (before-update-hook (find-trainer-for-segment (cloud param)
+                                                          trainer)))))
+  (call-next-method))
 
-;; (defmethod accumulate-cloud-statistics ((trainer gd-trainer)
-;;                                         (cloud full-cloud)
-;;                                         multiplier
-;;                                         phase)
-;;   )
-
-
+(defmethod accumulate-positive-phase-statistics
+    ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
+  (dolist (param (sparse-chunk-params trainer))
+    (let ((chunk (chunk param))
+          (cloud (cloud param)))
+      (with-segment-gradient-accumulator ((start accumulator) (cloud trainer))
+        (when (and accumulator start)
+          (replace (old-nodes chunk) (nodes chunk))
+          (matlisp:m+! (- (sparsity-target param)) (old-nodes chunk))
+          (multiple-value-bind (v1 v2)
+              (if (eq chunk (chunk1 cloud))
+                  (values (old-nodes chunk) (nodes (chunk2 cloud)))
+                  (values (nodes (chunk1 cloud)) (old-nodes chunk)))
+            (accumulate-cloud-statistics* cloud v1 v2 multiplier
+                                          start accumulator)))))))
 
 
 ;;;; Common base class for MCMC based BM trainers

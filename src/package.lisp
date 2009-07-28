@@ -162,6 +162,7 @@ and LEARNERs."))
    #:find-segment-gradient-accumulator
    #:with-segment-gradient-accumulator
    #:maybe-update-weights
+   #:update-weights
    ;; Gradient descent
    #:gd-trainer
    #:n-inputs
@@ -174,6 +175,7 @@ and LEARNERs."))
    #:batch-size
    #:batch-gd-trainer
    #:n-inputs-in-batch
+   #:before-update-hook
    #:normalized-batch-gd-trainer
    #:per-weight-batch-gd-trainer
    #:n-weight-uses-in-batch
@@ -181,7 +183,8 @@ and LEARNERs."))
    #:segmented-gd-trainer
    #:segmenter
    #:trainers
-   #:n-inputs)
+   #:n-inputs
+   #:find-trainer-for-segment)
   (:documentation "Generic, gradient based optimization related
 interface and simple gradient descent based trainers."))
 
