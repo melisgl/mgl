@@ -26,6 +26,11 @@ SEGMENT."))
               (type index ,start ,end))
      ,@body))
 
+(defun segment-size (segment)
+  (with-segment-weights ((weights start end) segment)
+    (declare (ignore weights))
+    (- end start)))
+
 (defgeneric map-segment-runs (fn segment)
   (:documentation "Call FN with start and end of intervals of
 consecutive indices that are not missing in SEGMENT. Called by
@@ -58,10 +63,8 @@ must implement this. It is also defined on SEGMENT-SETs."))
   (let ((n 0)
         (start-indices '()))
     (dolist (segment (segments segment-set))
-      (with-segment-weights ((weights start end) segment)
-        (declare (ignore weights))
-        (push n start-indices)
-        (incf n (- end start))))
+      (push n start-indices)
+      (incf n (segment-size segment)))
     (setf (slot-value segment-set 'start-indices) (reverse start-indices)
           (slot-value segment-set 'size) n)))
 

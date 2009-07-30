@@ -131,6 +131,7 @@
    #:map-segments
    #:segment-weights
    #:with-segment-weights
+   #:segment-size
    #:map-segment-runs
    #:list-segments
    ;; Segment set
