@@ -1498,8 +1498,6 @@ when SUPERVISOR returns NIL. If SUPERVISOR returns a non-nil value
 then it's taken to be a damping factor. For no damping return 0."
   (declare (ignore other-chunks))
   (loop for i upfrom 0 do
-        #+nil
-        (set-mean chunks bm :other-chunks other-chunks)
         (dolist (chunk chunks)
           (set-mean (list chunk) bm))
         (let ((damping-factor (funcall supervisor chunks bm i)))
