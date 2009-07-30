@@ -1696,6 +1696,7 @@ of the batch. Batch size comes from the superclass."))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
+  (call-next-method)
   (dolist (param (sparse-chunk-params trainer))
     (let ((chunk (chunk param))
           (cloud (cloud param)))
