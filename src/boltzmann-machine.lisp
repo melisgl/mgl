@@ -1595,7 +1595,7 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 ;;;; average means must reside in the child trainer, at the cost of
 ;;;; minor loss of performance.
 
-(defclass sparse-chunk-params ()
+(defclass sparse-chunk-param ()
   ((cloud :type cloud :initarg :cloud :reader cloud)
    (chunk :type chunk :initarg :chunk :reader chunk)
    (sparsity-target
@@ -1604,8 +1604,8 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
     :reader sparsity-target)
    (cost :type flt :initarg :cost :reader cost)
    (damping :type flt :initarg :damping :reader damping)
-   (products :type flt-vector :reader products)
-   (old-products :type flt-vector :reader old-products)))
+   (products :type flt-vector :initarg :products :reader products)
+   (old-products :type flt-vector :initarg :old-products :reader old-products)))
 
 (defun add-into (c v1 v2 &key start1)
   (declare (type flt-vector v1 v2)
@@ -1631,9 +1631,8 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
       (fill (storage products) #.(flt 0)))))
 
 (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
-  ((sparse-chunk-params
-    :type list :initarg :sparse-chunk-params
-    :reader sparse-chunk-params))
+  ((sparse-chunk-params :type list :initform () :reader sparse-chunk-params)
+   (sparser :initarg :sparser :reader sparser))
   (:documentation "For the chunks with . Collect the average means
 over samples in a batch and adjust weights in each cloud connected to
 it so that the average is closer to SPARSITY-TARGET. This is
@@ -1643,15 +1642,45 @@ C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
 of the batch. Batch size comes from the superclass."))
 
 (defmethod initialize-trainer ((trainer segmented-gd-sparse-bm-trainer)
-                               segmentable)
+                               (bm bm))
+  (call-next-method)
+  ;; For each chunk SPARSER returns some initargs for, create a
+  ;; SPARSE-CHUNK-PARAM for each cloud the chunk is in.
+  (let ((specs (remove nil
+                       (mapcar (lambda (chunk)
+                                 (unless (conditioning-chunk-p chunk)
+                                   (let ((initargs
+                                          (funcall (sparser trainer) chunk)))
+                                     (when initargs
+                                       (list* :chunk chunk initargs)))))
+                               (chunks bm)))))
+    (print specs)
+    ;; Iterate over segments (not clouds) that happens to include the
+    ;; full clouds of a factored cloud.
+    (dolist (cloud (list-segments bm))
+      (flet ((foo (chunk)
+               (let ((spec (find chunk specs :key #'second)))
+                 (when spec
+                   (push (apply #'make-instance
+                                'sparse-chunk-param
+                                :cloud cloud
+                                :products (matlisp:make-real-matrix
+                                           (segment-size cloud) 1)
+                                :old-products (matlisp:make-real-matrix
+                                               (segment-size cloud) 1)
+                                spec)
+                         (slot-value trainer 'sparse-chunk-params))))))
+        (foo (chunk1 cloud))
+        (foo (chunk2 cloud)))))
+  ;; Arrange for the sparsity gradient accumulator to be written to
+  ;; the BATCH-GD-TRAINER accumulator at the end of the batch.
   (dolist (param (sparse-chunk-params trainer))
     (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud param) trainer))
       (push (lambda ()
               (flush-accumulator param accumulator start))
             (before-update-hook (find-trainer-for-segment (cloud param)
-                                                          trainer)))))
-  (call-next-method))
+                                                          trainer))))))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
@@ -1660,7 +1689,7 @@ of the batch. Batch size comes from the superclass."))
           (cloud (cloud param)))
       (with-segment-gradient-accumulator ((start accumulator) (cloud trainer))
         (when (and accumulator start)
-          (replace (old-nodes chunk) (nodes chunk))
+          (copy-chunk-nodes chunk (nodes chunk) (old-nodes chunk))
           (matlisp:m+! (- (sparsity-target param)) (old-nodes chunk))
           (multiple-value-bind (v1 v2)
               (if (eq chunk (chunk1 cloud))
@@ -1700,7 +1729,7 @@ trainers for BMs."))
 
 ;;;; Contrastive Divergence (CD) learning for RBMs
 
-(defclass rbm-cd-trainer (segmented-gd-bm-trainer bm-mcmc-parameters)
+(defclass rbm-cd-trainer (segmented-gd-sparse-bm-trainer bm-mcmc-parameters)
   ()
   (:documentation "A contrastive divergence based trainer for RBMs."))
 
@@ -1762,7 +1791,7 @@ trainers for BMs."))
 (define-slots-to-be-shallow-copied 'pcd rbm
   dbn)
 
-(defclass bm-pcd-trainer (segmented-gd-bm-trainer bm-mcmc-parameters)
+(defclass bm-pcd-trainer (segmented-gd-sparse-bm-trainer bm-mcmc-parameters)
   ((n-particles
     :type unsigned-byte
     :initarg :n-particles

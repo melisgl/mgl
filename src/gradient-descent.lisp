@@ -88,7 +88,8 @@ based trainers with momentum and weight decay."))
     :initform 0 :initarg :n-inputs-in-batch :accessor n-inputs-in-batch
     :documentation "In-batch counter of inputs.")
    (before-update-hook
-    :type list :initarg :before-update-hook :accessor before-update-hook
+    :type list :initform () :initarg :before-update-hook
+    :accessor before-update-hook
     :documentation "A list of functions of no parameters. Each
 function is called just before UPDATE-WEIGHTS takes place. Convenient
 to hang some additional gradient accumulating code on."))
