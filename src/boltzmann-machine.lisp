@@ -1646,7 +1646,7 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 
 (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
   ((sparse-chunk-params :type list :initform () :reader sparse-chunk-params)
-   (sparser :initarg :sparser :reader sparser))
+   (sparser :initform nil :initarg :sparser :reader sparser))
   (:documentation "For the chunks with . Collect the average means
 over samples in a batch and adjust weights in each cloud connected to
 it so that the average is closer to SPARSITY-TARGET. This is
@@ -1658,46 +1658,48 @@ of the batch. Batch size comes from the superclass."))
 (defmethod initialize-trainer ((trainer segmented-gd-sparse-bm-trainer)
                                (bm bm))
   (call-next-method)
-  ;; For each chunk SPARSER returns some initargs for, create a
-  ;; SPARSE-CHUNK-PARAM for each cloud the chunk is in.
-  (let ((specs (remove nil
-                       (mapcar (lambda (chunk)
-                                 (unless (conditioning-chunk-p chunk)
-                                   (let ((initargs
-                                          (funcall (sparser trainer) chunk)))
-                                     (when initargs
-                                       (list* :chunk chunk initargs)))))
-                               (chunks bm)))))
-    ;; Iterate over segments (not clouds) that happens to include the
-    ;; full clouds of a factored cloud.
-    (dolist (cloud (list-segments bm))
-      (flet ((foo (chunk)
-               (let ((spec (find chunk specs :key #'second)))
-                 (when spec
-                   (push (apply #'make-instance
-                                'sparse-chunk-param
-                                :cloud cloud
-                                spec)
-                         (slot-value trainer 'sparse-chunk-params))))))
-        (when (find-trainer-for-segment cloud trainer)
-          (foo (chunk1 cloud))
-          (foo (chunk2 cloud))))))
-  ;; Arrange for the sparsity gradient accumulator to be written to
-  ;; the BATCH-GD-TRAINER accumulator at the end of the batch.
-  (dolist (param (sparse-chunk-params trainer))
-    (with-segment-gradient-accumulator ((start accumulator)
-                                        ((cloud param) trainer))
-      (let ((segment-trainer (find-trainer-for-segment (cloud param) trainer)))
-        (push (lambda ()
-                (flush-accumulator param accumulator start
-                                   (n-inputs-in-batch segment-trainer)))
-              (before-update-hook segment-trainer))))))
+  (when (sparser trainer)
+    ;; For each chunk SPARSER returns some initargs for, create a
+    ;; SPARSE-CHUNK-PARAM for each cloud the chunk is in.
+    (let ((specs (remove nil
+                         (mapcar (lambda (chunk)
+                                   (unless (conditioning-chunk-p chunk)
+                                     (let ((initargs
+                                            (funcall (sparser trainer) chunk)))
+                                       (when initargs
+                                         (list* :chunk chunk initargs)))))
+                                 (chunks bm)))))
+      ;; Iterate over segments (not clouds) that happens to include the
+      ;; full clouds of a factored cloud.
+      (dolist (cloud (list-segments bm))
+        (flet ((foo (chunk)
+                 (let ((spec (find chunk specs :key #'second)))
+                   (when spec
+                     (push (apply #'make-instance
+                                  'sparse-chunk-param
+                                  :cloud cloud
+                                  spec)
+                           (slot-value trainer 'sparse-chunk-params))))))
+          (when (find-trainer-for-segment cloud trainer)
+            (foo (chunk1 cloud))
+            (foo (chunk2 cloud))))))
+    ;; Arrange for the sparsity gradient accumulator to be written to
+    ;; the BATCH-GD-TRAINER accumulator at the end of the batch.
+    (dolist (param (sparse-chunk-params trainer))
+      (with-segment-gradient-accumulator ((start accumulator)
+                                          ((cloud param) trainer))
+        (let ((segment-trainer (find-trainer-for-segment (cloud param) trainer)))
+          (push (lambda ()
+                  (flush-accumulator param accumulator start
+                                     (n-inputs-in-batch segment-trainer)))
+                (before-update-hook segment-trainer)))))))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
   (dolist (param (sparse-chunk-params trainer))
     (let ((chunk (chunk param))
           (cloud (cloud param)))
+      (assert (not (eq (nodes chunk) (old-nodes chunk))))
       (copy-chunk-nodes chunk (nodes chunk) (old-nodes chunk))
       (matlisp:m+! (- (sparsity-target param)) (old-nodes chunk))
       (multiple-value-bind (v1 v2)
