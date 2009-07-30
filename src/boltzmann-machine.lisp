@@ -1822,12 +1822,10 @@ chains (each stripe is a chain), initialized from the BM being trained
 by COPY with 'PCD as the context. Suitable for training BM and
 RBM.")))
 
-(defmethod initialize-trainer ((trainer bm-pcd-trainer) bm)
-  (call-next-method)
-  (setf (max-n-stripes (persistent-chains trainer)) (n-particles trainer)))
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
   (setf (slot-value trainer 'normal-chains) bm)
   (setf (slot-value trainer 'persistent-chains) (copy 'pcd bm))
+  (setf (max-n-stripes (persistent-chains trainer)) (n-particles trainer))
   (call-next-method))
 
 (defmethod train-batch (batch (trainer bm-pcd-trainer) (bm bm))
@@ -1842,7 +1840,7 @@ RBM.")))
 ;;; SEGMENTED-GD-BM-TRAINER was initialized with (and they, of course,
 ;;; share the weights).
 (defmethod find-segment-gradient-accumulator (cloud (trainer bm-pcd-trainer))
-  (if (find cloud (clouds (persistent-chains trainer)))
+  (if (find cloud (list-segments (persistent-chains trainer)))
       (find-segment-gradient-accumulator (find-cloud (name cloud)
                                                      (normal-chains trainer))
                                          trainer)
