@@ -766,7 +766,7 @@ the index of the stripe."
 (assert (= 3 (linear-at-points 3 1 5 2 7)))
 
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
-  ;; This is adjusted for each batch. Ruslan's code adjust it per
+  ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
   (/ (slot-value trainer 'learning-rate)
      (expt 1.000015 (* (/ (n-inputs trainer)
@@ -797,7 +797,15 @@ the index of the stripe."
                                          (if (bias-cloud-p cloud)
                                              (flt 0)
                                              (flt 0.0002))
-                                         :batch-size 100)))
+                                         :batch-size 100))
+                        :sparser
+                        (lambda (chunk)
+                          (when (member (name chunk) '(f1 f2))
+                            (list :sparsity (flt (if (eq 'f2 (name chunk))
+                                                     0.1
+                                                     0.2))
+                                  :cost (flt 0.001)
+                                  :damping (flt 0.9)))))
          dbm))
 
 (defun make-mnist-dbn/2 (dbm)
