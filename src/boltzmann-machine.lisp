@@ -1607,6 +1607,17 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
    (products :type flt-vector :initarg :products :reader products)
    (old-products :type flt-vector :initarg :old-products :reader old-products)))
 
+(defmethod initialize-instance :after ((param sparse-chunk-param) &key
+                                       &allow-other-keys)
+  (unless (slot-boundp param 'products)
+    (setf (slot-value param 'products)
+          (matlisp:make-real-matrix (segment-size (cloud param)) 1)))
+  (unless (slot-boundp param 'old-products)
+    (setf (slot-value param 'old-products)
+          (matlisp:fill-matrix
+           (matlisp:make-real-matrix (segment-size (cloud param)) 1)
+           (flt (sparsity-target param))))))
+
 (defun add-into (c v1 v2 &key start1)
   (declare (type flt-vector v1 v2)
            (type flt c)
@@ -1618,16 +1629,19 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 
 ;;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
 ;;; accumulator and zero PRODUCTS.
-(defgeneric flush-accumulator (param accumulator start)
-  (:method ((param sparse-chunk-params) accumulator start)
+(defgeneric flush-accumulator (param accumulator start n-inputs-in-batch)
+  (:method ((param sparse-chunk-param) accumulator start n-inputs-in-batch)
     (let ((damping (damping param))
           (cost (cost param))
           (products (products param))
           (old-products (old-products param)))
       (matlisp:scal! damping old-products)
-      (matlisp:scal! (- (flt 1) damping) products)
+      (matlisp:scal! (/ (- (flt 1) damping) n-inputs-in-batch)
+                     products)
       (matlisp:m+! products old-products)
-      (add-into cost accumulator old-products :start1 start)
+      (add-into (* cost n-inputs-in-batch)
+                (storage accumulator) (storage old-products)
+                :start1 start)
       (fill (storage products) #.(flt 0)))))
 
 (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
@@ -1654,7 +1668,6 @@ of the batch. Batch size comes from the superclass."))
                                      (when initargs
                                        (list* :chunk chunk initargs)))))
                                (chunks bm)))))
-    (print specs)
     ;; Iterate over segments (not clouds) that happens to include the
     ;; full clouds of a factored cloud.
     (dolist (cloud (list-segments bm))
@@ -1664,39 +1677,35 @@ of the batch. Batch size comes from the superclass."))
                    (push (apply #'make-instance
                                 'sparse-chunk-param
                                 :cloud cloud
-                                :products (matlisp:make-real-matrix
-                                           (segment-size cloud) 1)
-                                :old-products (matlisp:make-real-matrix
-                                               (segment-size cloud) 1)
                                 spec)
                          (slot-value trainer 'sparse-chunk-params))))))
-        (foo (chunk1 cloud))
-        (foo (chunk2 cloud)))))
+        (when (find-trainer-for-segment cloud trainer)
+          (foo (chunk1 cloud))
+          (foo (chunk2 cloud))))))
   ;; Arrange for the sparsity gradient accumulator to be written to
   ;; the BATCH-GD-TRAINER accumulator at the end of the batch.
   (dolist (param (sparse-chunk-params trainer))
     (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud param) trainer))
-      (push (lambda ()
-              (flush-accumulator param accumulator start))
-            (before-update-hook (find-trainer-for-segment (cloud param)
-                                                          trainer))))))
+      (let ((segment-trainer (find-trainer-for-segment (cloud param) trainer)))
+        (push (lambda ()
+                (flush-accumulator param accumulator start
+                                   (n-inputs-in-batch segment-trainer)))
+              (before-update-hook segment-trainer))))))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
   (dolist (param (sparse-chunk-params trainer))
     (let ((chunk (chunk param))
           (cloud (cloud param)))
-      (with-segment-gradient-accumulator ((start accumulator) (cloud trainer))
-        (when (and accumulator start)
-          (copy-chunk-nodes chunk (nodes chunk) (old-nodes chunk))
-          (matlisp:m+! (- (sparsity-target param)) (old-nodes chunk))
-          (multiple-value-bind (v1 v2)
-              (if (eq chunk (chunk1 cloud))
-                  (values (old-nodes chunk) (nodes (chunk2 cloud)))
-                  (values (nodes (chunk1 cloud)) (old-nodes chunk)))
-            (accumulate-cloud-statistics* cloud v1 v2 multiplier
-                                          start accumulator)))))))
+      (copy-chunk-nodes chunk (nodes chunk) (old-nodes chunk))
+      (matlisp:m+! (- (sparsity-target param)) (old-nodes chunk))
+      (multiple-value-bind (v1 v2)
+          (if (eq chunk (chunk1 cloud))
+              (values (old-nodes chunk) (nodes (chunk2 cloud)))
+              (values (nodes (chunk1 cloud)) (old-nodes chunk)))
+        (accumulate-cloud-statistics* cloud v1 v2 multiplier
+                                      0 (products param))))))
 
 
 ;;;; Common base class for MCMC based BM trainers

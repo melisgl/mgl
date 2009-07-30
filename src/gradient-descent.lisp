@@ -154,6 +154,9 @@ only missing values does not change anything."))
     (do-segment-set (segment :start-in-segment-set start) segment-set
       (funcall fn segment start accumulator))))
 
+(defmethod update-weights :before ((trainer batch-gd-trainer))
+  (map nil #'funcall (before-update-hook trainer)))
+
 ;;; delta_w' += m * delta_w + df/dw
 ;;;
 ;;; w' -= learning_rate * delta_w'
