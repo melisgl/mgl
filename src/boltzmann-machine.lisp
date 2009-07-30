@@ -1614,9 +1614,7 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
           (matlisp:make-real-matrix (segment-size (cloud param)) 1)))
   (unless (slot-boundp param 'old-products)
     (setf (slot-value param 'old-products)
-          (matlisp:fill-matrix
-           (matlisp:make-real-matrix (segment-size (cloud param)) 1)
-           (flt (sparsity-target param))))))
+          (matlisp:make-real-matrix (segment-size (cloud param)) 1))))
 
 (defun add-into (c v1 v2 &key start1)
   (declare (type flt-vector v1 v2)
