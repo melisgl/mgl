@@ -162,9 +162,6 @@ Boltzmann Machine. This is an abstract base class."))
 (defun zero-chunk (chunk)
   (fill-chunk chunk #.(flt 0)))
 
-(defun zero-chunks (chunks)
-  (map nil #'zero-chunk chunks))
-
 (defun sum-chunk-nodes-and-old-nodes (chunk node-weight old-node-weight)
   (unless (eq (nodes chunk) (old-nodes chunk))
     (matlisp:scal! (flt node-weight) (nodes chunk))
@@ -1621,7 +1618,7 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
            (optimize (speed 3)))
   (loop for i upfrom start1 below (the index (+ start1 (length v2)))
         for j below (length v2)
-        do (setf (aref v1 i) (* c (aref v2 j)))))
+        do (incf (aref v1 i) (* c (aref v2 j)))))
 
 ;;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
 ;;; accumulator and zero PRODUCTS.
