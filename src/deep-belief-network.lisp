@@ -73,15 +73,14 @@ have unique names under EQUAL as usual."))
         (elt (rbms dbn) (1- pos))
         nil)))
 
-(defmethod set-input :around (samples (rbm rbm))
+(defmethod set-input :before (samples (rbm rbm))
   ;; Do SET-INPUT on the previous rbm (if any) and propagate its mean
   ;; to this one.
   (when (dbn rbm)
     (let ((prev (previous-rbm (dbn rbm) rbm)))
       (when prev
         (set-input samples prev)
-        (set-hidden-mean prev))))
-  (call-next-method))
+        (set-hidden-mean prev)))))
 
 (defmethod set-input (samples (dbn dbn))
   (set-input samples (last1 (rbms dbn))))

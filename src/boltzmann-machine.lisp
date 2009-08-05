@@ -1135,17 +1135,14 @@ chunk type and the mean that resides in NODES."
 chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (hidden-chunks bm)))
 
-(defmethod set-input :around (samples (bm bm))
+(defmethod set-input :before (samples (bm bm))
   (setf (n-stripes bm) (length samples))
-  (unwind-protect
-       ;; Do any clamping specific to this BM.
-       (progn
-         (dolist (chunk (visible-chunks bm))
-           (when (typep chunk 'temporal-chunk)
-             (maybe-use-remembered chunk)))
-         (call-next-method))
-    ;; Then remember the inputs.
-    (nodes->inputs bm)))
+  (dolist (chunk (visible-chunks bm))
+    (when (typep chunk 'temporal-chunk)
+      (maybe-use-remembered chunk))))
+
+(defmethod set-input :after (samples (bm bm))
+  (nodes->inputs bm))
 
 (defmethod map-segments (fn (bm bm))
   (map nil (lambda (cloud)
