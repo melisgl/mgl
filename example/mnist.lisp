@@ -204,18 +204,6 @@
 
 (defclass mnist-rbm (rbm) ())
 
-(defun xxx (m)
-  (matlisp:norm
-   (matlisp:reshape m
-                    (* (matlisp:nrows m)
-                       (matlisp:ncols m))
-                    1)
-   2))
-
-;; (xxx (matlisp:make-real-matrix #((1 2 3) (4 5 6))))
-;; (sqrt (loop for x in '(1 2 3 4 5 6)
-;;             sum (expt x 2)))
-
 (defmethod set-input (images (rbm mnist-rbm))
   (let ((inputs (find 'inputs (visible-chunks rbm)
                       :key #'name)))
@@ -232,8 +220,6 @@
         (funcall x trainer))))
 
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
-  (dolist (cloud (clouds rbm))
-    (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
   (let ((counter (counter trainer))
         (n-inputs (n-inputs trainer)))
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
@@ -417,8 +403,6 @@ the index of the stripe."
                  (if (listp x)
                      (elt x i)
                      x)))
-          (dolist (cloud (clouds rbm))
-            (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
           (train (make-sampler *training-images*
                                :max-n (* n-epochs (length *training-images*))
                                :sample-visible-p (this visible-sampling))
@@ -724,42 +708,7 @@ the index of the stripe."
   ;; All samples have the same SAMPLE-VISIBLE-P, look at the first
   ;; only.
   (when (and images (getf (rest (elt images 0)) :sample-visible-p))
-    #+nil
-    (log-msg "Sampling ~A ~A~%" rbm (position rbm (rbms (dbn rbm))))
-    (when (find 'inputs (visible-chunks rbm) :key #'name :test #'equal)
-      (log-msg "DATA_L0^2: ~A~%"
-               (expt (matlisp:norm
-                      (matlisp:reshape (nodes (find-chunk 'inputs rbm))
-                                       (* (matlisp:nrows
-                                           (nodes (find-chunk 'inputs rbm)))
-                                          (matlisp:ncols
-                                           (nodes (find-chunk 'inputs rbm))))
-                                       1)
-                      2)
-                     2)))
-    (when (find 'f1 (visible-chunks rbm) :key #'name :test #'equal)
-      (log-msg "DATA^2: ~A~%"
-               (expt (matlisp:norm
-                      (matlisp:reshape (nodes (find-chunk 'f1 rbm))
-                                       (* (matlisp:nrows
-                                           (nodes (find-chunk 'f1 rbm)))
-                                          (matlisp:ncols
-                                           (nodes (find-chunk 'f1 rbm))))
-                                       1)
-                      2)
-                     2)))
-    (sample-visible rbm)
-    (when (find 'f1 (visible-chunks rbm) :key #'name :test #'equal)
-      (log-msg "S DATA^2: ~A~%"
-               (expt (matlisp:norm
-                      (matlisp:reshape (nodes (find-chunk 'f1 rbm))
-                                       (* (matlisp:nrows
-                                           (nodes (find-chunk 'f1 rbm)))
-                                          (matlisp:ncols
-                                           (nodes (find-chunk 'f1 rbm))))
-                                       1)
-                      2)
-                     2))))
+    (sample-visible rbm))
   (let ((label-chunk (find-chunk 'label rbm)))
     (when label-chunk
       (clamp-labels images label-chunk))))
@@ -805,8 +754,6 @@ the index of the stripe."
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (dolist (cloud (clouds dbm))
-    (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
   (let ((counter (counter trainer))
         (n-inputs (n-inputs trainer)))
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
@@ -816,35 +763,34 @@ the index of the stripe."
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (describe-trainer trainer)
-  (unless (zerop (n-inputs trainer))
-    (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
-             (map 'list
-                  #'get-error
-                  (bm-mean-field-errors (make-sampler *test-images*
-                                                      :max-n #+nil
-                                                      1000
-                                                      (length *test-images*))
-                                        dbm))
-             (n-inputs trainer))
-    (let ((counters-and-measurers
-           (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-      (when counters-and-measurers
-        (let ((errors (map 'list
-                           #'get-error
-                           (bm-mean-field-errors (make-sampler *test-images*
-                                                               :max-n #+nil
-                                                               1000
-                                                               (length
-                                                                *test-images*)
-                                                               :omit-label-p t)
-                                                 dbm
-                                                 :counters-and-measurers
-                                                 counters-and-measurers))))
-          (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                   (mapcar (lambda (e)
-                             (* 100 (- 1 e)))
-                           errors)
-                   (n-inputs trainer)))))))
+  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+           (map 'list
+                #'get-error
+                (bm-mean-field-errors (make-sampler *test-images*
+                                                    :max-n #+nil
+                                                    1000
+                                                    (length *test-images*))
+                                      dbm))
+           (n-inputs trainer))
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (bm-mean-field-errors (make-sampler *test-images*
+                                                             :max-n #+nil
+                                                             1000
+                                                             (length
+                                                              *test-images*)
+                                                             :omit-label-p t)
+                                               dbm
+                                               :counters-and-measurers
+                                               counters-and-measurers))))
+        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer))))))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
@@ -857,17 +803,17 @@ the index of the stripe."
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
-(defun linear (a b x)
-  (+ a (* b x)))
+;; (defun linear (a b x)
+;;   (+ a (* b x)))
 
-(defun linear-at-points (x1 y1 x2 y2 x)
-  (let ((b (/ (- y2 y1) (- x2 x1))))
-    (linear (- (* b (- x1 (/ y1 b)))) b x)))
+;; (defun linear-at-points (x1 y1 x2 y2 x)
+;;   (let ((b (/ (- y2 y1) (- x2 x1))))
+;;     (linear (- (* b (- x1 (/ y1 b)))) b x)))
 
-(assert (= 0 (linear-at-points 3 1 5 2 1)))
-(assert (= 1 (linear-at-points 3 1 5 2 3)))
-(assert (= 2 (linear-at-points 3 1 5 2 5)))
-(assert (= 3 (linear-at-points 3 1 5 2 7)))
+;; (assert (= 0 (linear-at-points 3 1 5 2 1)))
+;; (assert (= 1 (linear-at-points 3 1 5 2 3)))
+;; (assert (= 2 (linear-at-points 3 1 5 2 5)))
+;; (assert (= 3 (linear-at-points 3 1 5 2 7)))
 
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
@@ -982,12 +928,10 @@ the index of the stripe."
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
-           (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
-           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 1)
-           ;;(init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
+           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
            (train-mnist-dbn
             *dbn/2*
-            :start-level 1
+            :start-level 0
             :n-epochs 100
             :n-gibbs (list 1
                            (lambda (trainer)
@@ -1037,15 +981,6 @@ the index of the stripe."
                   *bpn/2*)))
 
 #|
-
-(save-weights (merge-pathnames "mnist-2-2.dbn" *mnist-dir*)
-              *dbn/2*)
-
-(let ((dbn (make-mnist-dbn/2 (make-mnist-dbm))))
-  (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) dbn)
-  (dolist (rbm (rbms dbn))
-    (dolist (cloud (clouds rbm))
-      (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))))
 
 (train-mnist/1)
 
