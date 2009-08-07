@@ -227,8 +227,9 @@
              n-inputs)
     (when (zerop (mod n-inputs 60000))
       (reset-counter counter))))
+
 
-;;;;;;;;;;;;;;;
+;;;; Label utilities
 
 (defun count-misclassifications (examples striped
                                  &key (label-fn #'label)
@@ -238,6 +239,7 @@ examples. The length of EXAMPLES must be equal to the number of
 stripes in STRIPED. LABEL-FN takes an example and returns its label
 that compared by EQL to what STRIPE-LABEL-FN returns for STRIPED and
 the index of the stripe."
+  (assert (= (length examples) (n-stripes striped)))
   (let ((n 0))
     (loop for example in examples
           for stripe upfrom 0
@@ -252,6 +254,9 @@ the index of the stripe."
 (defclass softmax-label-chunk (softmax-chunk labeled) ())
 
 (defgeneric maybe-make-misclassification-measurer (obj)
+  (:documentation "Return a function of one parameter that it is
+invoked when OBJ has the label(s) computed and it counts
+misclassifications.")
   (:method (obj)
     (values nil nil))
   (:method ((labeled labeled))
@@ -262,14 +267,18 @@ the index of the stripe."
   (position (loop for i upfrom start below end maximizing (aref array i))
             array :start start :end end))
 
-(defgeneric stripe-label (obj stripe)
+(defgeneric stripe-label (striped stripe)
+  (:documentation "Return the label of STRIPE in STRIPED. Typically
+computed by finding the label with the maximum propability.")
   (:method ((chunk softmax-label-chunk) stripe)
     (with-stripes ((stripe chunk start end))
       (- (max-position (storage (nodes chunk)) start end)
          start))))
 
-(defun make-dbn-reconstruction-rmse-counters-and-measurers*
+(defun make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
     (dbn &key (rbm (last1 (rbms dbn))))
+  "Like MAKE-DBN-RECONSTRUCTION-RMSE-COUNTERS-AND-MEASURERS but don't
+count reconstruction error of labels."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter)
@@ -280,23 +289,31 @@ the index of the stripe."
                                         (typep chunk 'labeled))
                                       (visible-chunks (elt (rbms dbn) i)))))))))
 
-(defun make-dbn-reconstruction-misclassification-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))))
-  (loop for chunk in (apply #'append
-                            (mapcar #'chunks
-                                    (subseq (rbms dbn)
-                                            0 (1+ (position rbm (rbms dbn))))))
+(defun make-chunk-reconstruction-misclassification-counters-and-measurers
+    (chunks)
+  (loop for chunk in chunks
         for measurer = (maybe-make-misclassification-measurer chunk)
         when measurer
         collect (cons (make-instance 'error-counter)
                       measurer)))
 
+(defun make-dbn-reconstruction-misclassification-counters-and-measurers
+    (dbn &key (rbm (last1 (rbms dbn))))
+  "Return a list of counter, measurer conses to keep track of
+misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-misclassification-counters-and-measurers
+   (apply #'append
+          (mapcar #'chunks
+                  (subseq (rbms dbn)
+                          0 (1+ (position rbm (rbms dbn))))))))
+
 (defun make-bm-reconstruction-misclassification-counters-and-measurers (bm)
-  (loop for chunk in (chunks bm)
-        for measurer = (maybe-make-misclassification-measurer chunk)
-        when measurer
-        collect (cons (make-instance 'error-counter)
-                      measurer)))
+  "Return a list of counter, measurer conses to keep track of
+misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-misclassification-counters-and-measurers
+   (chunks bm)))
+
+
 ;;;;;;;;;;
 
 (defgeneric describe-trainer (trainer))
@@ -321,6 +338,7 @@ the index of the stripe."
       (log-msg "Cloud: ~S~%" (mgl-rbm:name cloud))
       (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
     (describe-trainer trainer)))
+
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (describe-trainer trainer)
