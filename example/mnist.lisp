@@ -192,10 +192,10 @@
 (defclass mnist-logging-trainer (logging-trainer) ())
 
 (defmethod log-training-period ((trainer mnist-logging-trainer) learner)
-  1000)
+  10000)
 
 (defmethod log-test-period ((trainer mnist-logging-trainer) learner)
-  10000 #+nil(length *training-images*))
+  (length *training-images*))
 
 
 ;;;; DBN
@@ -203,6 +203,18 @@
 (defclass mnist-dbn (dbn) ())
 
 (defclass mnist-rbm (rbm) ())
+
+(defun xxx (m)
+  (matlisp:norm
+   (matlisp:reshape m
+                    (* (matlisp:nrows m)
+                       (matlisp:ncols m))
+                    1)
+   2))
+
+;; (xxx (matlisp:make-real-matrix #((1 2 3) (4 5 6))))
+;; (sqrt (loop for x in '(1 2 3 4 5 6)
+;;             sum (expt x 2)))
 
 (defmethod set-input (images (rbm mnist-rbm))
   (let ((inputs (find 'inputs (visible-chunks rbm)
@@ -213,7 +225,15 @@
 (defclass mnist-rbm-trainer (mnist-logging-trainer rbm-cd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
+(defmethod n-gibbs ((trainer mnist-rbm-trainer))
+  (let ((x (slot-value trainer 'n-gibbs)))
+    (if (integerp x)
+        x
+        (funcall x trainer))))
+
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
+  (dolist (cloud (clouds rbm))
+    (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
   (let ((counter (counter trainer))
         (n-inputs (n-inputs trainer)))
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
@@ -293,7 +313,31 @@ the index of the stripe."
                       measurer)))
 ;;;;;;;;;;
 
+(defgeneric describe-trainer (trainer))
+
+(defmethod describe-trainer ((trainer mgl-gd:gd-trainer))
+  (log-msg "  n-inputs=~S, learning-rate=~,2E~%"
+           (mgl-gd:n-inputs trainer)
+           (mgl-gd:learning-rate trainer))
+  (log-msg "  batch-size=~A, momentum=~,2E~%"
+           (mgl-gd:batch-size trainer)
+           (mgl-gd:momentum trainer))
+  (log-msg "  weight-decay=~,2E, weight-penalty=~,2E,~%"
+           (mgl-gd:weight-decay trainer)
+           (mgl-gd:weight-penalty trainer)))
+
+(defmethod describe-trainer ((trainer mgl-bm::segmented-gd-bm-trainer))
+  (log-msg "n-gibbs: ~S~%" (mgl-rbm:n-gibbs trainer))
+  (log-msg "visible-sampling: ~S~%" (mgl-rbm:visible-sampling trainer))
+  (log-msg "hidden-sampling: ~S~%" (mgl-rbm:hidden-sampling trainer))
+  (dolist (trainer (mgl-gd:trainers trainer))
+    (mgl-train:do-segment-set (cloud) (mgl-train:segment-set trainer) 
+      (log-msg "Cloud: ~S~%" (mgl-rbm:name cloud))
+      (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
+    (describe-trainer trainer)))
+
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
+  (describe-trainer trainer)
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
@@ -329,7 +373,7 @@ the index of the stripe."
   (multiple-value-call #'add-error (counter trainer)
                        (reconstruction-rmse
                         (remove-if (lambda (chunk)
-                                     (typep chunk 'softmax-label-chunk))
+                                     (typep chunk 'labeled))
                                    (visible-chunks rbm)))))
 
 
@@ -337,14 +381,20 @@ the index of the stripe."
 
 (defclass mnist-rbm-segment-trainer (batch-gd-trainer) ())
 
+(defmethod learning-rate ((trainer mnist-rbm-segment-trainer))
+  (let ((x (slot-value trainer 'learning-rate)))
+    (if (numberp x)
+        x
+        (funcall x trainer))))
+
 (defmethod momentum ((trainer mnist-rbm-segment-trainer))
-  (if (< (n-inputs trainer) 300000)
+  (if (< (n-inputs trainer) (* 5 (length *training-images*)))
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defun init-mnist-dbn (dbn &key stddev)
-  (loop for i upfrom 0
-        for rbm in (rbms dbn) do
+(defun init-mnist-dbn (dbn &key stddev (start-level 0))
+  (loop for i upfrom start-level
+        for rbm in (subseq (rbms dbn) start-level) do
         (flet ((this (x)
                  (if (listp x)
                      (elt x i)
@@ -352,19 +402,23 @@ the index of the stripe."
           (do-clouds (cloud rbm)
             (if (bias-cloud-p cloud)
                 (fill (storage (weights cloud)) #.(flt 0))
-                (map-into (storage (weights cloud))
-                          (lambda () (flt (* (this stddev)
-                                             (gaussian-random-1))))))))))
+                (progn
+                  (log-msg "init: ~A ~A~%" cloud (this stddev))
+                  (map-into (storage (weights cloud))
+                            (lambda () (flt (* (this stddev)
+                                               (gaussian-random-1)))))))))))
 
 (defun train-mnist-dbn (dbn &key n-epochs n-gibbs learning-rate decay
-                        visible-sampling)
-  (loop for rbm in (rbms dbn)
-        for i upfrom 0 do
+                        visible-sampling (start-level 0))
+  (loop for rbm in (subseq (rbms dbn) start-level)
+        for i upfrom start-level do
         (log-msg "Starting to train level ~S RBM in DBN.~%" i)
         (flet ((this (x)
                  (if (listp x)
                      (elt x i)
                      x)))
+          (dolist (cloud (clouds rbm))
+            (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
           (train (make-sampler *training-images*
                                :max-n (* n-epochs (length *training-images*))
                                :sample-visible-p (this visible-sampling))
@@ -375,7 +429,7 @@ the index of the stripe."
                                 (lambda (cloud)
                                   (make-instance 'mnist-rbm-segment-trainer
                                                  :learning-rate
-                                                 (flt (this learning-rate))
+                                                 (this learning-rate)
                                                  :weight-decay
                                                  (if (bias-cloud-p cloud)
                                                      (flt 0)
@@ -657,12 +711,55 @@ the index of the stripe."
                         (setf (aref nodes (+ start (image-label image)))
                               #.(flt 1)))))))))
 
+(defun strip-sample-visible (samples)
+  (mapcar (lambda (sample)
+            (destructuring-bind (image &key omit-label-p sample-visible-p)
+                sample
+              (declare (ignore sample-visible-p))
+              (list image :omit-label-p omit-label-p)))
+          samples))
+
 (defmethod set-input (images (rbm mnist-rbm/2))
-  (call-next-method)
+  (call-next-method (strip-sample-visible images) rbm)
   ;; All samples have the same SAMPLE-VISIBLE-P, look at the first
   ;; only.
   (when (and images (getf (rest (elt images 0)) :sample-visible-p))
-    (sample-visible rbm))
+    #+nil
+    (log-msg "Sampling ~A ~A~%" rbm (position rbm (rbms (dbn rbm))))
+    (when (find 'inputs (visible-chunks rbm) :key #'name :test #'equal)
+      (log-msg "DATA_L0^2: ~A~%"
+               (expt (matlisp:norm
+                      (matlisp:reshape (nodes (find-chunk 'inputs rbm))
+                                       (* (matlisp:nrows
+                                           (nodes (find-chunk 'inputs rbm)))
+                                          (matlisp:ncols
+                                           (nodes (find-chunk 'inputs rbm))))
+                                       1)
+                      2)
+                     2)))
+    (when (find 'f1 (visible-chunks rbm) :key #'name :test #'equal)
+      (log-msg "DATA^2: ~A~%"
+               (expt (matlisp:norm
+                      (matlisp:reshape (nodes (find-chunk 'f1 rbm))
+                                       (* (matlisp:nrows
+                                           (nodes (find-chunk 'f1 rbm)))
+                                          (matlisp:ncols
+                                           (nodes (find-chunk 'f1 rbm))))
+                                       1)
+                      2)
+                     2)))
+    (sample-visible rbm)
+    (when (find 'f1 (visible-chunks rbm) :key #'name :test #'equal)
+      (log-msg "S DATA^2: ~A~%"
+               (expt (matlisp:norm
+                      (matlisp:reshape (nodes (find-chunk 'f1 rbm))
+                                       (* (matlisp:nrows
+                                           (nodes (find-chunk 'f1 rbm)))
+                                          (matlisp:ncols
+                                           (nodes (find-chunk 'f1 rbm))))
+                                       1)
+                      2)
+                     2))))
   (let ((label-chunk (find-chunk 'label rbm)))
     (when label-chunk
       (clamp-labels images label-chunk))))
@@ -708,6 +805,8 @@ the index of the stripe."
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
+  (dolist (cloud (clouds dbm))
+    (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))
   (let ((counter (counter trainer))
         (n-inputs (n-inputs trainer)))
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
@@ -716,40 +815,45 @@ the index of the stripe."
     (reset-counter counter)))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
-           (map 'list
-                #'get-error
-                (bm-mean-field-errors (make-sampler *test-images*
-                                                    :max-n #+nil
-                                                    1000
-                                                    (length *test-images*))
-                                      dbm))
-           (n-inputs trainer))
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (bm-mean-field-errors (make-sampler *test-images*
-                                                             :max-n #+nil
-                                                             1000
-                                                             (length
-                                                              *test-images*)
-                                                             :omit-label-p t)
-                                               dbm
-                                               :counters-and-measurers
-                                               counters-and-measurers))))
-        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
-                 (n-inputs trainer))))))
+  (describe-trainer trainer)
+  (unless (zerop (n-inputs trainer))
+    (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+             (map 'list
+                  #'get-error
+                  (bm-mean-field-errors (make-sampler *test-images*
+                                                      :max-n #+nil
+                                                      1000
+                                                      (length *test-images*))
+                                        dbm))
+             (n-inputs trainer))
+    (let ((counters-and-measurers
+           (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+      (when counters-and-measurers
+        (let ((errors (map 'list
+                           #'get-error
+                           (bm-mean-field-errors (make-sampler *test-images*
+                                                               :max-n #+nil
+                                                               1000
+                                                               (length
+                                                                *test-images*)
+                                                               :omit-label-p t)
+                                                 dbm
+                                                 :counters-and-measurers
+                                                 counters-and-measurers))))
+          (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                   (mapcar (lambda (e)
+                             (* 100 (- 1 e)))
+                           errors)
+                   (n-inputs trainer)))))))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
   (set-visible-mean dbm)
   (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-error dbm)))
+                       (reconstruction-rmse
+                        (remove-if (lambda (chunk)
+                                     (typep chunk 'labeled))
+                                   (visible-chunks dbm)))))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
@@ -780,10 +884,15 @@ the index of the stripe."
         (t
          10)))
 
+(defmethod momentum ((trainer mnist-dbm-segment-trainer))
+  (if (< (n-inputs trainer) (* 5 (length *training-images*)))
+      #.(flt 0.5)
+      #.(flt 0.9)))
+
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 200 (length *training-images*))
+                       :max-n (* 0 (length *training-images*))
                        :sample-visible-p t)
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
@@ -799,13 +908,19 @@ the index of the stripe."
                                              (flt 0.0002))
                                          :batch-size 100))
                         :sparser
-                        (lambda (chunk)
-                          (when (member (name chunk) '(f1 f2))
-                            (list :sparsity (flt (if (eq 'f2 (name chunk))
-                                                     0.1
-                                                     0.2))
-                                  :cost (flt 0.001)
-                                  :damping (flt 0.9)))))
+                        (lambda (cloud chunk)
+                          (when (and (member (name chunk) '(f1 f2))
+                                     (not (equal 'label (name (chunk1 cloud))))
+                                     (not (equal 'label (name (chunk2 cloud)))))
+                            (make-instance
+                             'sparsity-gradient-source
+                             :cloud cloud
+                             :chunk chunk
+                             :sparsity (flt (if (eq 'f2 (name chunk))
+                                                0.1
+                                                0.2))
+                             :cost (flt 0.001)
+                             :damping (flt 0.9)))))
          dbm))
 
 (defun make-mnist-dbn/2 (dbm)
@@ -829,7 +944,9 @@ the index of the stripe."
     chunks-and-lumps))
 
 (defun populate-map-cache (bpn dbm images)
-  (let ((sampler (make-sampler images :max-n (length images)))
+  (let ((sampler (make-sampler images :max-n (length images)
+                               :sample-visible-p nil
+                               :omit-label-p t))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
     (let ((fn (make-instance 'periodic-fn :period 1000
@@ -865,10 +982,25 @@ the index of the stripe."
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
-           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01))
-           (train-mnist-dbn *dbn/2* :n-epochs 100 :n-gibbs '(1 5)
-                            :learning-rate '(0.05 0.01)
-                            :decay 0.001 :visible-sampling t)
+           (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
+           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 1)
+           ;;(init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
+           (train-mnist-dbn
+            *dbn/2*
+            :start-level 1
+            :n-epochs 100
+            :n-gibbs (list 1
+                           (lambda (trainer)
+                             (ceiling (1+ (n-inputs trainer))
+                                      (* 20 (length *training-images*)))))
+            :learning-rate
+            (list (flt 0.05)
+                  (lambda (trainer)
+                    (/ (flt 0.05)
+                       (ceiling (1+ (n-inputs trainer))
+                                (* 20 (length *training-images*))))))
+            :decay 0.001
+            :visible-sampling t)
            (save-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*)
                          *dbn/2*))
          (train-dbm ()
@@ -905,6 +1037,15 @@ the index of the stripe."
                   *bpn/2*)))
 
 #|
+
+(save-weights (merge-pathnames "mnist-2-2.dbn" *mnist-dir*)
+              *dbn/2*)
+
+(let ((dbn (make-mnist-dbn/2 (make-mnist-dbm))))
+  (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) dbn)
+  (dolist (rbm (rbms dbn))
+    (dolist (cloud (clouds rbm))
+      (log-msg "~A: ~A~%" cloud (xxx (weights cloud))))))
 
 (train-mnist/1)
 
