@@ -280,6 +280,9 @@ interface and simple gradient descent based trainers."))
    ;; RBM
    #:rbm
    #:dbn
+   ;; Sparsity
+   #:sparser
+   #:sparsity-gradient-source
    ;; Stuff common to trainers
    #:visible-sampling
    #:hidden-sampling
