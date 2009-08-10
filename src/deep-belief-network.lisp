@@ -98,6 +98,8 @@ have unique names under EQUAL as usual."))
 
 (defun make-dbn-reconstruction-rmse-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))))
+  "Return a list of counter, measurer conses to keep track of
+reconstruction rmse suitable for BM-MEAN-FIELD-ERRORS."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter)
