@@ -781,6 +781,11 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (describe-trainer trainer)
+  (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
+                                         (floor (n-inputs trainer)
+                                                (length *training-images*)))
+                                 *mnist-dir*)
+                *dbm/2*)
   (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
@@ -790,6 +795,26 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                                                     (length *test-images*))
                                       dbm))
            (n-inputs trainer))
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (bm-mean-field-errors (make-sampler *test-images*
+                                                             :max-n
+                                                             10000
+                                                             #+nil
+                                                             (length
+                                                              *training-images*)
+                                                             :omit-label-p t)
+                                               dbm
+                                               :counters-and-measurers
+                                               counters-and-measurers))))
+        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer)))))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
     (when counters-and-measurers
@@ -836,6 +861,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
+  ;; FIXME: min 0.0001
   (/ (slot-value trainer 'learning-rate)
      (expt 1.000015 (* (/ (n-inputs trainer)
                           (length *training-images*))
@@ -856,7 +882,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 0 (length *training-images*))
+                       :max-n (* 200 (length *training-images*))
                        :sample-visible-p t)
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
@@ -864,13 +890,15 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
-                          (make-instance 'mnist-dbm-segment-trainer
-                                         :learning-rate (flt 0.001)
-                                         :weight-decay
-                                         (if (bias-cloud-p cloud)
-                                             (flt 0)
-                                             (flt 0.0002))
-                                         :batch-size 100))
+                          (when (or t (equal 'label (name (chunk1 cloud)))
+                                    (equal 'label (name (chunk2 cloud))))
+                            (make-instance 'mnist-dbm-segment-trainer
+                                           :learning-rate (flt 0.001)
+                                           :weight-decay
+                                           (if (bias-cloud-p cloud)
+                                               (flt 0)
+                                               (flt 0.0002))
+                                           :batch-size 100)))
                         :sparser
                         (lambda (cloud chunk)
                           (when (and (member (name chunk) '(f1 f2))
