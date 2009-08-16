@@ -310,6 +310,8 @@
          (v (nodes visible-chunk))
          (h (nodes hidden-chunk))
          (trainer (make-instance 'rbm-cd-trainer
+                                 :visible-sampling t
+                                 :hidden-sampling t
                                  :segmenter
                                  (repeatedly
                                    (make-instance 'batch-gd-trainer)))))
@@ -435,7 +437,7 @@
                               :name 'this-chunk
                               :size 10)))
     (assert (names= (mapcar #'first (compare-objects chunk (copy context chunk)))
-                    '(nodes mgl-bm::old-nodes inputs
+                    '(nodes mgl-bm::means mgl-bm::old-nodes inputs
                       mgl-bm::static-activations)))))
 
 (defun test-copy-full-cloud (context)

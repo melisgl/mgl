@@ -19,6 +19,10 @@ network is used.")
     :documentation "The previous value of each node. Used to provide
 parallel computation semanctics when there are intralayer connections.
 Swapped with NODES at times.")
+   (means
+    :type (or matlisp:real-matrix null) :reader means
+    :documentation "Saved values of the means (see SET-MEAN) last
+computed.")
    (inputs
     :type (or matlisp:real-matrix null) :reader inputs
     :documentation "This is where SET-INPUT saves the input for later
@@ -49,12 +53,7 @@ N-GIBBS or for the settling of mean field.")
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
 layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that if
-it is non-NIL then N-STRIPES must be 1.")
-   (default-value
-    :initform #.(flt 0) :initarg :default-value :type flt
-    :reader default-value
-    :documentation "Upon creation or resizing, the chunk's nodes get
-filled with this value."))
+it is non-NIL then N-STRIPES must be 1."))
   (:documentation "A chunk is a set of nodes of the same type in a
 Boltzmann Machine. This is an abstract base class."))
 
@@ -181,7 +180,7 @@ the visible layer allows `conditional' RBMs."))
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
 
-(defgeneric make-old-nodes (chunk)
+(defgeneric copy-nodes (chunk)
   (:method ((chunk chunk))
     (matlisp:copy (nodes chunk)))
   (:method ((chunk conditioning-chunk))
@@ -194,9 +193,10 @@ the visible layer allows `conditional' RBMs."))
                  (= max-n-stripes (chunk-max-n-stripes chunk)))
       (setf (slot-value chunk 'nodes)
             (matlisp:make-real-matrix size max-n-stripes))
+      (setf (slot-value chunk 'means)
+            (copy-nodes chunk))
       (setf (slot-value chunk 'old-nodes)
-            (make-old-nodes chunk))
-      (fill-chunk chunk (default-value chunk) :allp t)
+            (copy-nodes chunk))
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
                 nil
@@ -208,6 +208,7 @@ the visible layer allows `conditional' RBMs."))
 
 (defmethod set-n-stripes (n-stripes (chunk chunk))
   (set-ncols (nodes chunk) n-stripes)
+  (set-ncols (means chunk) n-stripes)
   (set-ncols (old-nodes chunk) n-stripes)
   (when (inputs chunk)
     (set-ncols (inputs chunk) n-stripes))
@@ -223,13 +224,13 @@ the visible layer allows `conditional' RBMs."))
   (resize-chunk chunk size max-n-stripes))
 
 (defclass constant-chunk (conditioning-chunk)
-  ((default-value :initform #.(flt 1)))
+  ((default-value :initform #.(flt 1) :reader default-value))
   (:documentation "A special kind of CONDITIONING-CHUNK whose NODES
 are always DEFAULT-VALUE. This conveniently allows biases in the
 opposing layer."))
 
-(defmethod initialize-instance :after ((chunk constant-chunk)
-                                       &key &allow-other-keys)
+(defmethod resize-chunk ((chunk constant-chunk) size max-n-stripes)
+  (call-next-method)
   (fill-chunk chunk (default-value chunk) :allp t))
 
 (defclass sigmoid-chunk (chunk) ()
@@ -294,14 +295,15 @@ are remembered."))
           (matlisp:make-real-matrix size max-n-stripes))))
 
 (defun copy-chunk-nodes (chunk from to)
-  (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
-      (matlisp:copy! from to)
-      (let ((from (storage from))
-            (to (storage to)))
-        (declare (optimize (speed 3)))
-        (do-stripes (chunk)
-          (do-chunk (i chunk)
-            (setf (aref to i) (aref from i)))))))
+  (unless (eq from to)
+    (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
+        (matlisp:copy! from to)
+        (let ((from (storage from))
+              (to (storage to)))
+          (declare (optimize (speed 3)))
+          (do-stripes (chunk)
+            (do-chunk (i chunk)
+              (setf (aref to i) (aref from i))))))))
 
 (defun maybe-remember (chunk)
   (unless (has-inputs-p chunk)
@@ -316,9 +318,19 @@ are remembered."))
     (copy-chunk-nodes chunk (next-node-inputs chunk) (nodes chunk))
     (setf (slot-value chunk 'has-inputs-p) nil)))
 
+(defun nodes->means (chunk)
+  (let ((means (means chunk)))
+    (when means
+      (copy-chunk-nodes chunk (nodes chunk) means))))
+
+(defun visible-nodes->means (bm)
+  (mapc #'nodes->means (visible-chunks bm)))
+
 (defgeneric set-chunk-mean (chunk)
   (:documentation "Set NODES of CHUNK to the means of the probability
 distribution. When called NODES contains the activations.")
+  (:method :after ((chunk chunk))
+           (nodes->means chunk))
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
     (let ((nodes (storage (nodes chunk))))
@@ -432,7 +444,7 @@ of CHUNK2 and _add_ them to NODES of CHUNK2. If REVERSEP then swap the
 roles of the chunks. In the simplest case it adds weights (of CLOUD) *
 OLD-NODES (of CHUNK1) to the nodes of the hidden chunk."))
 
-(defgeneric accumulate-cloud-statistics (trainer cloud multiplier)
+(defgeneric accumulate-cloud-statistics (trainer bm cloud multiplier)
   (:documentation "Take the accumulator of TRAINER that corresponds to
 CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
 contrastive divergence."))
@@ -689,16 +701,6 @@ all transposed.")))
                                      (the! index (+ start weight-index)))
                                (* x (aref v2 j)))))))))))))
 
-(defmethod accumulate-cloud-statistics (trainer (cloud full-cloud) multiplier)
-  (declare (type flt multiplier))
-  (with-segment-gradient-accumulator ((start accumulator)
-                                      (cloud trainer))
-    (when (and accumulator start)
-      (let ((v1 (nodes (chunk1 cloud)))
-            (v2 (nodes (chunk2 cloud))))
-        (accumulate-cloud-statistics* cloud v1 v2 multiplier
-                                      start accumulator)))))
-
 (defmethod map-segments (fn (cloud full-cloud))
   (funcall fn cloud))
 
@@ -736,7 +738,7 @@ A*B*VISIBLE."))
 
 (defclass factored-cloud-shared-chunk (chunk) ())
 
-(defmethod make-old-nodes ((chunk factored-cloud-shared-chunk))
+(defmethod copy-nodes ((chunk factored-cloud-shared-chunk))
   (nodes chunk))
 
 (defmethod initialize-instance :after ((cloud factored-cloud) &key rank
@@ -778,77 +780,13 @@ A*B*VISIBLE."))
 
 (defmethod activate-cloud ((cloud factored-cloud) reversep)
   ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
-  (fill-chunk (factored-cloud-shared-chunk cloud) #.(flt 0))
+  (zero-chunk (factored-cloud-shared-chunk cloud))
   (cond ((not reversep)
          (activate-cloud (cloud-b cloud) reversep)
          (activate-cloud (cloud-a cloud) reversep))
         (t
          (activate-cloud (cloud-a cloud) reversep)
          (activate-cloud (cloud-b cloud) reversep))))
-
-(defmethod accumulate-cloud-statistics (trainer (cloud factored-cloud)
-                                        multiplier)
-  (declare (type flt multiplier))
-  (let* ((chunk1 (chunk1 cloud))
-         (v (nodes chunk1))
-         (h (nodes (chunk2 cloud)))
-         (a (weights (cloud-a cloud)))
-         (b (weights (cloud-b cloud)))
-         (n-stripes (n-stripes (chunk1 cloud)))
-         (c (matlisp:nrows b))
-         (shared (factored-cloud-shared-chunk cloud))
-         (v* (storage v))
-         (shared* (storage (nodes shared))))
-    (check-stripes chunk1)
-    (with-segment-gradient-accumulator ((start accumulator)
-                                        ((cloud-a cloud) trainer))
-      (when (and accumulator start)
-        ;; dCD/dA ~= h*v'*B'
-        (let ((x (reshape2 (nodes shared) n-stripes c)))
-          (if (and (zerop start)
-                   (null (indices-present chunk1)))
-              (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
-              (let ((b* (storage b)))
-                (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                (matlisp:fill-matrix x (flt 0))
-                (do-stripes (chunk1)
-                  (do-chunk (i chunk1)
-                    (let ((v*i (aref v* i)))
-                      (unless (zerop v*i)
-                        (loop for j of-type index upfrom 0 below c
-                              for bi of-type index
-                              upfrom (the! index (* i c)) do
-                              (incf (aref shared* j)
-                                    (* v*i (aref b* bi))))))))))
-          (matlisp:gemm! multiplier h x
-                         (flt 1) (reshape2 accumulator
-                                           (matlisp:nrows a)
-                                           (matlisp:ncols a))))))
-    (with-segment-gradient-accumulator ((start accumulator)
-                                        ((cloud-b cloud) trainer))
-      (when (and accumulator start)
-        ;; dCD/dB ~= A'*h*v'
-        (let ((x (reshape2 (nodes shared) c n-stripes)))
-          (matlisp:gemm! (flt 1) a h (flt 0) x :tn)
-          (if (and (zerop start)
-                   (null (indices-present (chunk1 cloud))))
-              (matlisp:gemm! multiplier x v
-                             (flt 1) (reshape2 accumulator
-                                               (matlisp:nrows b)
-                                               (matlisp:ncols b))
-                             :nt)
-              (let ((acc* (storage accumulator)))
-                (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                (do-stripes (chunk1)
-                  (do-chunk (i chunk1)
-                    (let ((v*i (* multiplier (aref v* i))))
-                      (unless (zerop v*i)
-                        (loop for j of-type index upfrom 0 below c
-                              for acc-i of-type index
-                              upfrom (the! index
-                                           (+ start (the! index (* i c)))) do
-                              (incf (aref acc* acc-i)
-                                    (* v*i (aref shared* j)))))))))))))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
@@ -1142,7 +1080,8 @@ chunk type and the mean that resides in NODES."
       (maybe-use-remembered chunk))))
 
 (defmethod set-input :after (samples (bm bm))
-  (nodes->inputs bm))
+  (nodes->inputs bm)
+  (visible-nodes->means bm))
 
 (defmethod map-segments (fn (bm bm))
   (map nil (lambda (cloud)
@@ -1319,7 +1258,7 @@ chunks having downward connections."
 ;;;; DBM->DBN
 
 (define-slots-not-to-be-copied 'dbm->dbn chunk
-  nodes old-nodes inputs
+  nodes means old-nodes inputs
   static-activations-context static-activations
   indices-present)
 
@@ -1558,15 +1497,101 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 ;;; and PCD).
 (defclass segmented-gd-bm-trainer (segmented-gd-trainer) ())
 
+;;; Return the node vector for calculating cloud statistics.
+(defun means-or-samples (trainer bm chunk)
+  (if (member chunk (visible-chunks bm))
+      (if (eq t (visible-sampling trainer))
+          (nodes chunk)
+          (means chunk))
+      (if (eq t (hidden-sampling trainer))
+          (nodes chunk)
+          (means chunk))))
+
+(defmethod accumulate-cloud-statistics ((trainer segmented-gd-bm-trainer)
+                                        (bm bm) (cloud full-cloud) multiplier)
+  (declare (type flt multiplier))
+  (with-segment-gradient-accumulator ((start accumulator)
+                                      (cloud trainer))
+    (when (and accumulator start)
+      (let ((v1 (means-or-samples trainer bm (chunk1 cloud)))
+            (v2 (means-or-samples trainer bm (chunk2 cloud))))
+        (accumulate-cloud-statistics* cloud v1 v2 multiplier
+                                      start accumulator)))))
+
+(defmethod accumulate-cloud-statistics ((trainer segmented-gd-bm-trainer)
+                                        (bm bm) (cloud factored-cloud)
+                                        multiplier)
+  (declare (type flt multiplier))
+  (let* ((chunk1 (chunk1 cloud))
+         (v (means-or-samples trainer bm chunk1))
+         (h (means-or-samples trainer bm (chunk2 cloud)))
+         (a (weights (cloud-a cloud)))
+         (b (weights (cloud-b cloud)))
+         (n-stripes (n-stripes (chunk1 cloud)))
+         (c (matlisp:nrows b))
+         (shared (factored-cloud-shared-chunk cloud))
+         (v* (storage v))
+         (shared* (storage (nodes shared))))
+    (check-stripes chunk1)
+    (with-segment-gradient-accumulator ((start accumulator)
+                                        ((cloud-a cloud) trainer))
+      (when (and accumulator start)
+        ;; dCD/dA ~= h*v'*B'
+        (let ((x (reshape2 (nodes shared) n-stripes c)))
+          (if (and (zerop start)
+                   (null (indices-present chunk1)))
+              (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
+              (let ((b* (storage b)))
+                (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                (matlisp:fill-matrix x (flt 0))
+                (do-stripes (chunk1)
+                  (do-chunk (i chunk1)
+                    (let ((v*i (aref v* i)))
+                      (unless (zerop v*i)
+                        (loop for j of-type index upfrom 0 below c
+                              for bi of-type index
+                              upfrom (the! index (* i c)) do
+                              (incf (aref shared* j)
+                                    (* v*i (aref b* bi))))))))))
+          (matlisp:gemm! multiplier h x
+                         (flt 1) (reshape2 accumulator
+                                           (matlisp:nrows a)
+                                           (matlisp:ncols a))))))
+    (with-segment-gradient-accumulator ((start accumulator)
+                                        ((cloud-b cloud) trainer))
+      (when (and accumulator start)
+        ;; dCD/dB ~= A'*h*v'
+        (let ((x (reshape2 (nodes shared) c n-stripes)))
+          (matlisp:gemm! (flt 1) a h (flt 0) x :tn)
+          (if (and (zerop start)
+                   (null (indices-present (chunk1 cloud))))
+              (matlisp:gemm! multiplier x v
+                             (flt 1) (reshape2 accumulator
+                                               (matlisp:nrows b)
+                                               (matlisp:ncols b))
+                             :nt)
+              (let ((acc* (storage accumulator)))
+                (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                (do-stripes (chunk1)
+                  (do-chunk (i chunk1)
+                    (let ((v*i (* multiplier (aref v* i))))
+                      (unless (zerop v*i)
+                        (loop for j of-type index upfrom 0 below c
+                              for acc-i of-type index
+                              upfrom (the! index
+                                           (+ start (the! index (* i c)))) do
+                              (incf (aref acc* acc-i)
+                                    (* v*i (aref shared* j)))))))))))))))
+
 (defgeneric accumulate-positive-phase-statistics (trainer bm &key multiplier)
   (:method ((trainer segmented-gd-bm-trainer) bm &key (multiplier (flt 1)))
     (do-clouds (cloud bm)
-      (accumulate-cloud-statistics trainer cloud (flt (* -1 multiplier))))))
+      (accumulate-cloud-statistics trainer bm cloud (flt (* -1 multiplier))))))
 
 (defgeneric accumulate-negative-phase-statistics (trainer bm &key multiplier)
   (:method ((trainer segmented-gd-bm-trainer) bm &key (multiplier (flt 1)))
     (do-clouds (cloud bm)
-      (accumulate-cloud-statistics trainer cloud (flt multiplier)))))
+      (accumulate-cloud-statistics trainer bm cloud (flt multiplier)))))
 
 (defmethod train (sampler (trainer segmented-gd-bm-trainer) (bm bm))
   (while (not (finishedp sampler))
@@ -1715,7 +1740,8 @@ the learning or the mean field is used instead.")
     :documentation "Controls whether and how hidden nodes are sampled
 during the learning or mean field is used instead. :HALF-HEARTED, the
 default value, samples the hiddens but uses the hidden means to
-calculate the effect of the positive phase on the gradient.")
+calculate the effect of the positive and negative phases on the
+gradient.")
    (n-gibbs
     :type (integer 1)
     :initform 1
@@ -1742,14 +1768,9 @@ trainers for BMs."))
 
 (defmethod positive-phase (batch (trainer rbm-cd-trainer) (rbm rbm))
   (set-hidden-mean/1 rbm)
-  (ecase (hidden-sampling trainer)
-    ((nil) (accumulate-positive-phase-statistics trainer rbm))
-    ((:half-hearted)
-     (accumulate-positive-phase-statistics trainer rbm)
-     (sample-hidden rbm))
-    ((t)
-     (sample-hidden rbm)
-     (accumulate-positive-phase-statistics trainer rbm))))
+  (when (hidden-sampling trainer)
+    (sample-hidden rbm))
+  (accumulate-positive-phase-statistics trainer rbm))
 
 (defmethod negative-phase (batch (trainer rbm-cd-trainer) (rbm rbm))
   (let ((visible-sampling (visible-sampling trainer))
@@ -1767,7 +1788,7 @@ trainers for BMs."))
 ;;;; Persistent Contrastive Divergence (PCD) learning
 
 (define-slots-not-to-be-copied 'pcd chunk
-  nodes old-nodes inputs
+  nodes means old-nodes inputs
   static-activations-context static-activations
   indices-present)
 
