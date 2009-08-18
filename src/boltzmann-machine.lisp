@@ -1595,7 +1595,10 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 
 (defmethod train (sampler (trainer segmented-gd-bm-trainer) (bm bm))
   (while (not (finishedp sampler))
-    (train-batch (sample-batch sampler (n-inputs-until-update trainer))
+    (train-batch (sample-batch sampler
+                               (if (trainers trainer)
+                                   (n-inputs-until-update trainer)
+                                   (max-n-stripes bm)))
                  trainer bm)))
 
 (defgeneric positive-phase (batch trainer bm))
