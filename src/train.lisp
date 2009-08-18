@@ -186,6 +186,16 @@ out."
   "Convenience macro over MAP-BATCHES-FOR-LEARNER."
   `(map-batches-for-learner (lambda (,samples) ,@body) ,sampler ,learner))
 
+(defun apply-counters-and-measurers (samples counters-and-measurers)
+  (map nil
+       (lambda (counter-and-measurer)
+         (assert (consp counter-and-measurer))
+         (multiple-value-call
+             #'add-error (car counter-and-measurer)
+             (funcall (cdr counter-and-measurer) samples)))
+       counters-and-measurers)
+  counters-and-measurers)
+
 (defun collect-batch-errors (fn sampler learner counters-and-measurers)
   "Sample from SAMPLER until it runs out. Call FN with each batch of samples.
 COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
@@ -196,13 +206,7 @@ and third argument to ADD-ERROR. Finally, return the counters. Return
 COUNTERS-AND-MEASURERS."
   (do-batches-for-learner (samples (sampler learner))
     (funcall fn samples)
-    (map nil
-         (lambda (counter-and-measurer)
-           (assert (consp counter-and-measurer))
-           (multiple-value-call
-               #'add-error (car counter-and-measurer)
-               (funcall (cdr counter-and-measurer) samples)))
-         counters-and-measurers))
+    (apply-counters-and-measurers samples counters-and-measurers))
   counters-and-measurers)
 
 
