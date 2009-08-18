@@ -377,8 +377,10 @@ not train all segments."))
   (incf (n-inputs segmented-gd-trainer) n-new-inputs))
 
 (defmethod n-inputs-until-update ((trainer segmented-gd-trainer))
-  (loop for child-trainer in (trainers trainer)
-        minimizing (n-inputs-until-update child-trainer)))
+  (if (trainers trainer)
+      (loop for child-trainer in (trainers trainer)
+            minimizing (n-inputs-until-update child-trainer))
+      nil))
 
 (defmethod map-segment-gradient-accumulators (fn (trainer segmented-gd-trainer))
   (dolist (trainer (trainers trainer))
