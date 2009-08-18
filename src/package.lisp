@@ -126,6 +126,7 @@
    ;; Collecting errors
    #:map-batches-for-learner
    #:do-batches-for-learner
+   #:apply-counters-and-measurers
    #:collect-batch-errors
    ;; Segments
    #:map-segments
