@@ -269,7 +269,7 @@ misclassifications.")
 
 (defgeneric stripe-label (striped stripe)
   (:documentation "Return the label of STRIPE in STRIPED. Typically
-computed by finding the label with the maximum propability.")
+computed by finding the label with the maximum probability.")
   (:method ((chunk softmax-label-chunk) stripe)
     (with-stripes ((stripe chunk start end))
       (- (max-position (storage (nodes chunk)) start end)
@@ -699,6 +699,10 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defclass mnist-rbm/2 (mnist-rbm) ())
 
 (defun clamp-labels (images chunk)
+  (setf (indices-present chunk)
+        (if (and images (getf (rest (elt images 0)) :omit-label-p))
+            (make-array 0 :element-type 'index)
+            nil))
   (let ((nodes (storage (nodes chunk))))
     (loop for image in images
           for stripe upfrom 0
@@ -706,12 +710,10 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                  image
                (declare (ignore sample-visible-p))
                (with-stripes ((stripe chunk start end))
-                 (cond (omit-label-p
-                        (fill nodes #.(flt 0.1) :start start :end end))
-                       (t
-                        (fill nodes (flt 0) :start start :end end)
-                        (setf (aref nodes (+ start (image-label image)))
-                              #.(flt 1)))))))))
+                 (unless omit-label-p
+                   (fill nodes (flt 0) :start start :end end)
+                   (setf (aref nodes (+ start (image-label image)))
+                         #.(flt 1))))))))
 
 (defun strip-sample-visible (samples)
   (mapcar (lambda (sample)
@@ -756,7 +758,13 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                                            :size 1000))))
    (clouds :initform '(:merge
                        (:chunk1 c0 :chunk2 label :class nil)
-                       (:chunk1 inputs :chunk2 label :class nil)))))
+                       (:chunk1 inputs :chunk2 label :class nil)))
+   (training-classification-counters-and-measurers
+    :reader training-classification-counters-and-measurers)))
+
+(defmethod initialize-instance :after ((dbm mnist-dbm) &key &allow-other-keys)
+  (setf (slot-value dbm 'training-classification-counters-and-measurers)
+        (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
 
 (defun make-mnist-dbm ()
   (make-instance 'mnist-dbm :max-n-stripes 100))
@@ -777,7 +785,29 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
              (or (get-error counter) #.(flt 0))
              n-inputs)
-    (reset-counter counter)))
+    (reset-counter counter))
+  (dolist (counter-and-measurer
+            (training-classification-counters-and-measurers dbm))
+    (let ((counter (car counter-and-measurer)))
+      (let ((n-inputs (n-inputs trainer)))
+        (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,5F (~D)~%"
+                 (or (get-error counter) #.(flt 0))
+                 n-inputs)
+        (reset-counter counter)))))
+
+(defun mnist-dbm-mean-field-errors
+    (sampler bm &key
+     (counters-and-measurers
+      (make-bm-reconstruction-rmse-counters-and-measurers bm)))
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples bm)
+                          (set-hidden-mean bm)
+                          (setf (indices-present (find-chunk 'label bm)) nil)
+                          (set-visible-mean bm))
+                        sampler
+                        bm
+                        counters-and-measurers)
+  (map 'list #'car counters-and-measurers))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (describe-trainer trainer)
@@ -786,31 +816,23 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                                                 (length *training-images*)))
                                  *mnist-dir*)
                 *dbm/2*)
-  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
-           (map 'list
-                #'get-error
-                (bm-mean-field-errors (make-sampler *test-images*
-                                                    :max-n #+nil
-                                                    1000
-                                                    (length *test-images*))
-                                      dbm))
-           (n-inputs trainer))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
-                         (bm-mean-field-errors (make-sampler *test-images*
-                                                             :max-n
-                                                             10000
-                                                             #+nil
-                                                             (length
-                                                              *training-images*)
-                                                             :omit-label-p t)
-                                               dbm
-                                               :counters-and-measurers
-                                               counters-and-measurers))))
-        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                         (mnist-dbm-mean-field-errors
+                          (make-sampler *training-images*
+                                        :max-n
+                                        1000
+                                        #+nil
+                                        (length
+                                         *training-images*)
+                                        :omit-label-p nil)
+                          dbm
+                          :counters-and-measurers
+                          counters-and-measurers))))
+        (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
                  (mapcar (lambda (e)
                            (* 100 (- 1 e)))
                          errors)
@@ -820,15 +842,46 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
-                         (bm-mean-field-errors (make-sampler *test-images*
-                                                             :max-n #+nil
-                                                             1000
-                                                             (length
-                                                              *test-images*)
-                                                             :omit-label-p t)
-                                               dbm
-                                               :counters-and-measurers
-                                               counters-and-measurers))))
+                         (mnist-dbm-mean-field-errors
+                          (make-sampler *training-images*
+                                        :max-n
+                                        1000
+                                        #+nil
+                                        (length
+                                         *training-images*)
+                                        :omit-label-p t)
+                          dbm
+                          :counters-and-measurers
+                          counters-and-measurers))))
+        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer)))))
+  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+           (map 'list
+                #'get-error
+                (mnist-dbm-mean-field-errors (make-sampler *test-images*
+                                                           :max-n #+nil
+                                                           (length *test-images*)
+                                                           1000)
+                                             dbm))
+           (n-inputs trainer))
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (mnist-dbm-mean-field-errors
+                          (make-sampler *test-images*
+                                        :max-n #+nil
+                                        (length
+                                         *test-images*)
+                                        1000
+                                        :omit-label-p t)
+                          dbm
+                          :counters-and-measurers
+                          counters-and-measurers))))
         (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
                  (mapcar (lambda (e)
                            (* 100 (- 1 e)))
@@ -838,6 +891,9 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
   (set-visible-mean dbm)
+  (apply-counters-and-measurers
+   batch
+   (training-classification-counters-and-measurers dbm))
   (multiple-value-call #'add-error (counter trainer)
                        (reconstruction-rmse
                         (remove-if (lambda (chunk)
@@ -890,7 +946,8 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
-                          (when (or t (equal 'label (name (chunk1 cloud)))
+                          (when nil #+nil
+                                (or (equal 'label (name (chunk1 cloud)))
                                     (equal 'label (name (chunk2 cloud))))
                             (make-instance 'mnist-dbm-segment-trainer
                                            :learning-rate (flt 0.001)
