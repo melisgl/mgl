@@ -102,6 +102,7 @@ Boltzmann Machine. This is an abstract base class."))
 (defun check-stripes (chunk)
   (let ((indices-present (indices-present chunk)))
     (assert (or (null indices-present)
+                (zerop (length indices-present))
                 (= 1 (chunk-n-stripes chunk))))))
 
 (defun use-blas-on-chunk-p (cost chunk)
