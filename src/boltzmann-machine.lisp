@@ -29,7 +29,7 @@ computed.")
 use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
 CONSTANT-CHUNKS.")
    (cache-static-activations-p
-    :initform t
+    :initform nil
     :initarg :cache-static-activations-p
     :reader cache-static-activations-p
     :documentation "Controls whether activations that do not change
@@ -457,7 +457,7 @@ contrastive divergence."))
                                              *static-activation-contexts*)))
      ,@body))
 
-(defun hijack-means-to-activation (chunks clouds bm)
+(defun hijack-means-to-activation (chunks clouds bm &key addp)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
 chunks that don't need activations."
   (destructuring-bind (static-activations-context static-chunks)
@@ -475,14 +475,15 @@ chunks that don't need activations."
                     (not (cached-p chunk)))))
       ;; Zero activations or copy cached activations coming from
       ;; conditioning chunks.
-      (dolist (chunk chunks)
-        (unless (conditioning-chunk-p chunk)
-          (if (cached-p chunk)
-              (progn
-                ;;(format *trace-output* "Copy act: ~A~%" chunk)
-                (copy-chunk-nodes chunk (static-activations chunk)
-                                  (nodes chunk)))
-              (zero-chunk chunk))))
+      (unless addp
+        (dolist (chunk chunks)
+          (unless (conditioning-chunk-p chunk)
+            (if (cached-p chunk)
+                (progn
+                  ;;(format *trace-output* "Copy act: ~A~%" chunk)
+                  (copy-chunk-nodes chunk (static-activations chunk)
+                                    (nodes chunk)))
+                (zero-chunk chunk)))))
       ;; Calculate the activations coming from conditioning chunks if
       ;; they are to be cached.
       (flet ((foo (to-chunk from-chunk cloud)
@@ -1214,6 +1215,17 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
                        (clouds dbm))))
   (check-dbm-clouds dbm))
 
+(defun conditioning-cloud-p (cloud)
+  (or (conditioning-chunk-p (chunk1 cloud))
+      (conditioning-chunk-p (chunk2 cloud))))
+
+(defun conditioning-clouds-to (chunks clouds)
+  (remove-if-not (lambda (cloud)
+                   (and (conditioning-cloud-p cloud)
+                        (or (member (chunk1 cloud) chunks)
+                            (member (chunk2 cloud) chunks))))
+                 clouds))
+
 (defun up-dbm (dbm)
   "Do a single upward pass in DBM, performing approximate inference.
 Disregard intralayer and downward connections, double activations to
@@ -1223,16 +1235,29 @@ chunks having upward connections."
         on (rest (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-below)
-        (hijack-means-to-activation layer clouds-up-to-layer dbm)
-        ;; Double activations of chunks in LAYER that have connections
-        ;; to LAYER-ABOVE.
-        (dolist (chunk layer)
-          (when (and (not (conditioning-chunk-p chunk))
-                     (connects-to-p chunk layer-above
-                                    clouds-up-to-layer-above))
-            (matlisp:scal! #.(flt 2) (nodes chunk))))
-        (map nil #'set-chunk-mean layer)
-        (swap-nodes layer-below)))
+        (let* ((layer*
+                (set-difference layer (visible-and-conditioning-chunks dbm)))
+               (layer-above*
+                (set-difference layer-above
+                                (visible-and-conditioning-chunks dbm)))
+               (conditioning-clouds
+                (conditioning-clouds-to layer* clouds-up-to-layer))
+               (conditioning-clouds-above
+                (conditioning-clouds-to layer* clouds-up-to-layer-above)))
+          (hijack-means-to-activation layer* (set-difference clouds-up-to-layer
+                                                             conditioning-clouds)
+                                      dbm)
+          ;; Double activations of chunks in LAYER that have non-bias
+          ;; connections to LAYER-ABOVE.
+          (dolist (chunk layer*)
+            (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
+              (matlisp:scal! #.(flt 2) (nodes chunk))))
+          (hijack-means-to-activation layer* conditioning-clouds dbm
+                                      :addp t)
+          (hijack-means-to-activation layer* conditioning-clouds-above dbm
+                                      :addp t)
+          (map nil #'set-chunk-mean layer)
+          (swap-nodes layer-below))))
 
 (defun down-dbm (dbm)
   "Do a single downward pass in DBM, propagating the mean-field much
@@ -1440,7 +1465,8 @@ then it's taken to be a damping factor. For no damping return 0."
           (unless (= #.(flt 0) damping-factor)
             (sum-nodes-and-old-nodes chunks
                                      (flt (- 1 damping-factor))
-                                     (flt damping-factor))))))
+                                     (flt damping-factor)))))
+  (map nil #'nodes->means chunks))
 
 (defun settle-visible-mean-field
     (bm &key (supervisor (default-mean-field-supervisor bm)))
