@@ -144,14 +144,16 @@
    #:segment-set->weights
    #:segment-set<-weights
    ;; Common generic functions
+   #:batch-size
+   #:cost
+   #:group-size
+   #:default-value
+   #:label
+   #:n-inputs
+   #:nodes
    #:name
    #:size
-   #:nodes
-   #:default-value
-   #:group-size
-   #:batch-size
-   #:n-inputs
-   #:label)
+   #:target)
   (:documentation "Generic training related interfaces and basic
 definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
@@ -284,6 +286,9 @@ interface and simple gradient descent based trainers."))
    ;; Sparsity
    #:sparser
    #:sparsity-gradient-source
+   #:target
+   #:cost
+   #:damping
    ;; Stuff common to trainers
    #:visible-sampling
    #:hidden-sampling

@@ -305,7 +305,7 @@ lumps. Return the first one that TRAINER trains."
                        (member lump (segments trainer)))
                      (lumps bpn)))))
 
-(defun cost (bpn)
+(defmethod cost (bpn)
   "Return the sum of costs for all active stripes. The cost of a
 stripe is the IMPORTANCE weighted sum of the error nodes. The second
 value is the number of stripes."
