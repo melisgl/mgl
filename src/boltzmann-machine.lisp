@@ -439,11 +439,17 @@ imposed by the type of boltzmann machine the cloud is part of."))
 (defmethod set-n-stripes (n-stripes (cloud cloud)))
 (defmethod set-max-n-stripes (max-n-stripes (cloud cloud)))
 
-(defgeneric activate-cloud (cloud reversep)
-  (:documentation "From OLD-NODES of CHUNK1 calculate the activations
-of CHUNK2 and _add_ them to NODES of CHUNK2. If REVERSEP then swap the
-roles of the chunks. In the simplest case it adds weights (of CLOUD) *
-OLD-NODES (of CHUNK1) to the nodes of the hidden chunk."))
+(defun activate-cloud (cloud reversep &key (from-fn #'old-nodes) (to-fn #'nodes))
+  "From CHUNK1 calculate the activations of CHUNK2 and _add_ them to
+CHUNK2. If REVERSEP then swap the roles of the chunks. FROM-FN and
+TO-FN are the accessors to use to get the nodes value arrays (one of
+#'NODES, #'OLD-NODES, #'MEANS. In the simplest case it adds
+weights (of CLOUD) * OLD-NODES (of CHUNK1) to the nodes of the hidden
+chunk."
+  (activate-cloud* cloud reversep from-fn to-fn))
+
+(defgeneric activate-cloud* (cloud reversep from-fn to-fn)
+  (:documentation "Like ACTIVATE-CLOUD but without keyword parameters."))
 
 (defgeneric accumulate-cloud-statistics (trainer bm cloud multiplier)
   (:documentation "Take the accumulator of TRAINER that corresponds to
@@ -524,7 +530,7 @@ chunks that don't need activations."
 (defgeneric zero-weight-to-self (cloud)
   (:documentation "In a BM W_{i,i} is always zero."))
 
-(defmethod activate-cloud :before (cloud reversep)
+(defmethod activate-cloud* :before (cloud reversep from-fn to-fn)
   (zero-weight-to-self cloud))
 
 ;;; Return the chunk of CLOUD that's among CHUNKS and the other chunk
@@ -613,14 +619,14 @@ all transposed.")))
       (loop for i below (chunk-size (chunk1 cloud)) do
             (setf (matlisp:matrix-ref weights i i) #.(flt 0))))))
 
-(defmethod activate-cloud ((cloud full-cloud) reversep)
-  (declare (optimize (speed 3) #.*no-array-bounds-check*))
+(defmethod activate-cloud* ((cloud full-cloud) reversep from-fn to-fn)
   (if (not reversep)
       (let ((weights (weights cloud))
-            (from (old-nodes (chunk1 cloud)))
-            (to (nodes (chunk2 cloud)))
+            (from (funcall from-fn (chunk1 cloud)))
+            (to (funcall to-fn (chunk2 cloud)))
             (scale (scale2 cloud)))
-        (declare (type flt scale))
+        (declare (type flt scale)
+                 (optimize (speed 3) #.*no-array-bounds-check*))
         (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
                                  (chunk1 cloud))
             (matlisp:gemm! scale weights from (flt 1) to)
@@ -636,10 +642,11 @@ all transposed.")))
                       (incf (aref to j)
                             (* x (aref weights weight-index))))))))))
       (let ((weights (weights cloud))
-            (from (old-nodes (chunk2 cloud)))
-            (to (nodes (chunk1 cloud)))
+            (from (funcall from-fn (chunk2 cloud)))
+            (to (funcall to-fn (chunk1 cloud)))
             (scale (scale1 cloud)))
-        (declare (type flt scale))
+        (declare (type flt scale)
+                 (optimize (speed 3) #.*no-array-bounds-check*))
         (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
                                  (chunk1 cloud))
             (matlisp:gemm! scale weights from (flt 1) to :tn)
@@ -780,15 +787,15 @@ A*B*VISIBLE."))
   (when (eq (chunk1 cloud) (chunk2 cloud))
     (error "ZERO-WEIGHT-TO-SELF not implemented for FACTORED-CLOUD")))
 
-(defmethod activate-cloud ((cloud factored-cloud) reversep)
+(defmethod activate-cloud* ((cloud factored-cloud) reversep from-fn to-fn)
   ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
   (zero-chunk (factored-cloud-shared-chunk cloud))
   (cond ((not reversep)
-         (activate-cloud (cloud-b cloud) reversep)
-         (activate-cloud (cloud-a cloud) reversep))
+         (activate-cloud* (cloud-b cloud) reversep from-fn #'nodes)
+         (activate-cloud* (cloud-a cloud) reversep #'nodes to-fn))
         (t
-         (activate-cloud (cloud-a cloud) reversep)
-         (activate-cloud (cloud-b cloud) reversep))))
+         (activate-cloud* (cloud-a cloud) reversep from-fn #'nodes)
+         (activate-cloud* (cloud-b cloud) reversep #'nodes to-fn))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
