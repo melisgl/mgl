@@ -1235,6 +1235,23 @@ chunks having upward connections."
         on (rest (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-below)
+        ;; This is an alternative implementation that doubles the
+        ;; biases from below.
+        #+nil
+        (let* ((layer*
+                (set-difference layer (visible-and-conditioning-chunks dbm)))
+               (layer-above*
+                (set-difference layer-above
+                                (visible-and-conditioning-chunks dbm))))
+          (hijack-means-to-activation layer* clouds-up-to-layer
+                                      dbm)
+          ;; Double activations of chunks in LAYER that have non-bias
+          ;; connections to LAYER-ABOVE.
+          (dolist (chunk layer*)
+            (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
+              (matlisp:scal! #.(flt 2) (nodes chunk))))
+          (map nil #'set-chunk-mean layer*)
+          (swap-nodes layer-below))
         (let* ((layer*
                 (set-difference layer (visible-and-conditioning-chunks dbm)))
                (layer-above*
@@ -1252,11 +1269,14 @@ chunks having upward connections."
           (dolist (chunk layer*)
             (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
               (matlisp:scal! #.(flt 2) (nodes chunk))))
+          ;; Activations from conditioning chunks are not doubled.
+          ;; Normally, there are biases both in the layer below and
+          ;; above, while non-bias conditioning chunks are visible.
           (hijack-means-to-activation layer* conditioning-clouds dbm
                                       :addp t)
           (hijack-means-to-activation layer* conditioning-clouds-above dbm
                                       :addp t)
-          (map nil #'set-chunk-mean layer)
+          (map nil #'set-chunk-mean layer*)
           (swap-nodes layer-below))))
 
 (defun down-dbm (dbm)
@@ -1647,7 +1667,7 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
    (sparsity-target
     :type flt
     :initarg :sparsity :initarg :target :initarg :sparsity-target
-    :reader sparsity-target)
+    :reader sparsity-target :reader target)
    (cost :type flt :initarg :cost :reader cost)
    (damping :type flt :initarg :damping :reader damping)
    (products :type flt-vector :initarg :products :reader products)
