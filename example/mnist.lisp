@@ -243,9 +243,9 @@ the index of the stripe."
   (let ((n 0))
     (loop for example in examples
           for stripe upfrom 0
-          do  (unless (= (funcall label-fn example)
-                         (funcall stripe-label-fn striped stripe))
-                (incf n)))
+          do (unless (= (funcall label-fn example)
+                        (funcall stripe-label-fn striped stripe))
+               (incf n)))
     (values n (length examples))))
 
 (defclass labeled () ()
@@ -338,10 +338,63 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
       (log-msg "Cloud: ~S~%" (mgl-rbm:name cloud))
       (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
     (describe-trainer trainer)))
+
+(defmethod describe-sparsity-gradient-source
+    ((sparsity mgl-bm::sparsity-gradient-source))
+  (log-msg "Sparsity:~%")
+  (log-msg "  cloud: ~S, chunk: ~S~%"
+           (name (cloud sparsity)) (name (chunk sparsity)))
+  (log-msg "  target: ~,5E, cost: ~,5E, damping: ~,5E~%"
+           (target sparsity) (cost sparsity) (damping sparsity)))
+  
+(defmethod describe-trainer ((trainer mgl-bm::segmented-gd-sparse-bm-trainer))
+  (call-next-method)
+  (map nil #'describe-sparsity-gradient-source
+       (mgl-bm::sparsity-gradient-sources trainer)))
 
+(defun dbn-mean-field-errors
+    (sampler dbn &key (rbm (last1 (rbms dbn)))
+     (counters-and-measurers
+      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+  "Run the mean field up to RBM then down to the bottom and collect
+the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
+each level in the DBN."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples rbm)
+                          (set-hidden-mean rbm)
+                          (when (find-chunk 'label rbm)
+                            (setf (indices-present (find-chunk 'label rbm)) nil))
+                          (down-mean-field dbn :rbm rbm))
+                        sampler
+                        dbn
+                        counters-and-measurers)
+  (map 'list #'car counters-and-measurers))
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (describe-trainer trainer)
+  (map nil #'xxx (clouds rbm))
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers
+          (dbn rbm))))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (dbn-mean-field-errors
+                          (make-sampler (subseq *training-images* 0 10000)
+                                        :max-n
+                                        10000
+                                        #+nil
+                                        (length
+                                         *training-images*)
+                                        :omit-label-p nil)
+                          (dbn rbm)
+                          :counters-and-measurers
+                          counters-and-measurers))))
+        (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+                 (mapcar (lambda (e)
+                           (* 100 (- 1 e)))
+                         errors)
+                 (n-inputs trainer)))))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
@@ -790,8 +843,10 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
             (training-classification-counters-and-measurers dbm))
     (let ((counter (car counter-and-measurer)))
       (let ((n-inputs (n-inputs trainer)))
-        (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,5F (~D)~%"
-                 (or (get-error counter) #.(flt 0))
+        (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2F (~D)~%"
+                 (funcall (lambda (e)
+                            (* 100 (- 1 e)))
+                          (or (get-error counter) #.(flt 0)))
                  n-inputs)
         (reset-counter counter)))))
 
@@ -811,6 +866,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (describe-trainer trainer)
+  (map nil #'xxx (clouds dbm))
   (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
                                          (floor (n-inputs trainer)
                                                 (length *training-images*)))
@@ -822,7 +878,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
       (let ((errors (map 'list
                          #'get-error
                          (mnist-dbm-mean-field-errors
-                          (make-sampler *training-images*
+                          (make-sampler (subseq *training-images* 0 1000)
                                         :max-n
                                         1000
                                         #+nil
@@ -843,7 +899,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
       (let ((errors (map 'list
                          #'get-error
                          (mnist-dbm-mean-field-errors
-                          (make-sampler *training-images*
+                          (make-sampler (subseq *training-images* 0 1000)
                                         :max-n
                                         1000
                                         #+nil
@@ -887,6 +943,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                            (* 100 (- 1 e)))
                          errors)
                  (n-inputs trainer))))))
+
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
@@ -946,19 +1003,19 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
-                          (when nil #+nil
-                                (or (equal 'label (name (chunk1 cloud)))
-                                    (equal 'label (name (chunk2 cloud))))
-                            (make-instance 'mnist-dbm-segment-trainer
-                                           :learning-rate (flt 0.001)
-                                           :weight-decay
-                                           (if (bias-cloud-p cloud)
-                                               (flt 0)
-                                               (flt 0.0002))
-                                           :batch-size 100)))
+                          (when t #+nil (or (equal 'label (name (chunk1 cloud)))
+                                            (equal 'label (name (chunk2 cloud))))
+                                (make-instance 'mnist-dbm-segment-trainer
+                                               :learning-rate (flt 0.001)
+                                               :weight-decay
+                                               (if (bias-cloud-p cloud)
+                                                   (flt 0)
+                                                   (flt 0.0002))
+                                               :batch-size 100)))
                         :sparser
                         (lambda (cloud chunk)
-                          (when (and (member (name chunk) '(f1 f2))
+                          (when (and nil
+                                     (member (name chunk) '(f1 f2))
                                      (not (equal 'label (name (chunk1 cloud))))
                                      (not (equal 'label (name (chunk2 cloud)))))
                             (make-instance
@@ -1025,16 +1082,26 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defvar *dbm/2*)
 (defvar *bpn/2*)
 
+(defun xxx (cloud)
+  (log-msg "~A norm: ~,5F~%"
+           cloud
+           (matlisp:norm (reshape2 (weights cloud)
+                                   (matlisp:number-of-elements (weights cloud))
+                                   1)
+                         2)))
+
 (defun train-mnist/2 (&key load-dbn-p load-dbm-p)
   (unless (boundp '*training-images*)
     (setq *training-images* (load-training)))
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
-           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
+           (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
+           ;;(init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
+           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 1)
            (train-mnist-dbn
             *dbn/2*
-            :start-level 0
+            :start-level 1
             :n-epochs 100
             :n-gibbs (list 1
                            (lambda (trainer)
@@ -1062,6 +1129,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
            (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
            (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
            (log-msg "Loaded DBN~%")
+           #+nil
            (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
                     (map 'list
                          #'get-error
@@ -1069,6 +1137,28 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                           (make-sampler *test-images*
                                         :max-n (length *test-images*))
                           *dbn/2*)))
+           #+nil
+           (let ((counters-and-measurers
+                  (make-bm-reconstruction-misclassification-counters-and-measurers
+                   *dbn/2*)))
+             (when counters-and-measurers
+               (let ((errors (map 'list
+                                  #'get-error
+                                  (dbn-mean-field-errors
+                                   (make-sampler (subseq *training-images* 0 10000)
+                                                 :max-n
+                                                 10000
+                                                 #+nil
+                                                 (length
+                                                  *training-images*)
+                                                 :omit-label-p nil)
+                                   *dbn/2*
+                                   :counters-and-measurers
+                                   counters-and-measurers))))
+                 (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
+                          (mapcar (lambda (e)
+                                    (* 100 (- 1 e)))
+                                  errors)))))
            (train-dbm))
           (t
            (setq *dbm/2* (make-mnist-dbm))
@@ -1083,6 +1173,29 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
     (save-weights (merge-pathnames "mnist-2.bpn" *mnist-dir*)
                   *bpn/2*)))
 
+(defmethod negative-phase (batch (trainer bm-pcd-trainer) bm)
+  (mgl-bm::check-no-self-connection bm)
+  (flet ((foo (chunk)
+           (mgl-bm::set-mean (list chunk) bm)
+           (sample-chunk chunk)))
+    (loop for i below (n-gibbs trainer) do
+          (sample-chunk (find-chunk 'f1 bm))
+          (foo (find-chunk 'inputs bm))
+          (foo (find-chunk 'f2 bm))
+          (foo (find-chunk 'label bm))
+          (mgl-bm::set-mean (list (find-chunk 'f1 bm)) bm))
+    ;;(mgl-bm::set-mean (list (find-chunk 'f2 bm)) bm)
+;;     (dolist (chunk (hidden-chunks bm))
+;;       (mgl-bm::set-mean (list chunk) bm))
+    (mgl-bm::accumulate-negative-phase-statistics
+     trainer bm
+     ;; The number of persistent chains (or fantasy particles), that
+     ;; is, N-STRIPES of PERSISTENT-CHAINS is not necessarily the same
+     ;; as the batch size. Normalize so that positive and negative
+     ;; phase has the same weight.
+     :multiplier (/ (length batch)
+                    (n-stripes (persistent-chains trainer))))))
+
 #|
 
 (train-mnist/1)
@@ -1095,29 +1208,6 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 
 (train-mnist/2 :load-dbm-p t)
 
-(defmethod negative-phase (batch (trainer bm-pcd-trainer) bm)
-  (check-no-self-connection bm)
-  (loop repeat (n-gibbs trainer) do
-        (dolist (chunk (elt (layers bm) 0))
-          (sample-chunk chunk))
-        (dolist (chunk (elt (layers bm) 2))
-          (sample-chunk chunk))
-        (dolist (chunk (elt (layers bm) 1))
-          (set-mean (list chunk) bm)
-          (sample-chunk chunk))
-        (dolist (chunk (elt (layers bm) 0))
-          (set-mean (list chunk) bm))
-        (dolist (chunk (elt (layers bm) 2))
-          (set-mean (list chunk) bm)))
-  (accumulate-negative-phase-statistics
-   trainer bm
-   ;; The number of persistent chains (or fantasy particles), that is,
-   ;; N-STRIPES of PERSISTENT-CHAINS is not necessarily the same as
-   ;; the batch size. Normalize so that positive and negative phase
-   ;; has the same weight.
-   :multiplier (/ (length batch)
-                  (n-stripes (persistent-chains trainer)))))
-
 (require :sb-sprof)
 
 (progn
@@ -1127,4 +1217,46 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (sb-sprof:stop-profiling)
   (sb-sprof:report :type :graph))
 
+(let ((counters-and-measurers
+                  (make-bm-reconstruction-misclassification-counters-and-measurers
+                   *dbn/2*)))
+             (when counters-and-measurers
+               (let ((errors (map 'list
+                                  #'get-error
+                                  (dbn-mean-field-errors
+                                   (make-sampler (subseq *training-images* 0 1000)
+                                                 :max-n
+                                                 1000
+                                                 #+nil
+                                                 (length
+                                                  *training-images*)
+                                                 :omit-label-p nil)
+                                   *dbn/2*
+                                   :counters-and-measurers
+                                   counters-and-measurers))))
+                 (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
+                          (mapcar (lambda (e)
+                                    (* 100 (- 1 e)))
+                                  errors)))))
+
+(let ((counters-and-measurers
+       (make-bm-reconstruction-misclassification-counters-and-measurers *dbm/2*)))
+  (when counters-and-measurers
+    (let ((errors (map 'list
+                       #'get-error
+                       (mnist-dbm-mean-field-errors
+                        (make-sampler (subseq *training-images* 0 10000)
+                                      :max-n
+                                      10000
+                                      #+nil
+                                      (length
+                                       *training-images*)
+                                      :omit-label-p nil)
+                        *dbm/2*
+                        :counters-and-measurers
+                        counters-and-measurers))))
+      (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
+               (mapcar (lambda (e)
+                         (* 100 (- 1 e)))
+                       errors)))))
 |#
