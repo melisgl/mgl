@@ -992,6 +992,15 @@ each level in the DBN."
       #.(flt 0.5)
       #.(flt 0.9)))
 
+(defmethod initialize-trainer ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
+  (call-next-method)
+  (set-input (sample-batch (make-sampler *training-images*
+                                         :max-n (length *training-images*)
+                                         :sample-visible-p t)
+                           (n-particles trainer))
+             (persistent-chains trainer))
+  (up-dbm (persistent-chains trainer)))
+
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
@@ -1184,9 +1193,7 @@ each level in the DBN."
           (foo (find-chunk 'f2 bm))
           (foo (find-chunk 'label bm))
           (mgl-bm::set-mean (list (find-chunk 'f1 bm)) bm))
-    ;;(mgl-bm::set-mean (list (find-chunk 'f2 bm)) bm)
-;;     (dolist (chunk (hidden-chunks bm))
-;;       (mgl-bm::set-mean (list chunk) bm))
+    (mgl-bm::set-mean* (list (find-chunk 'f2 bm)) bm)
     (mgl-bm::accumulate-negative-phase-statistics
      trainer bm
      ;; The number of persistent chains (or fantasy particles), that
