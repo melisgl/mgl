@@ -1061,6 +1061,20 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
   ;; These did not change. Simply swap them back.
   (swap-nodes other-chunks))
 
+(defun swap-nodes* (chunks)
+  (dolist (chunk chunks)
+    (rotatef (slot-value chunk 'old-nodes)
+             (slot-value chunk 'means))))
+
+;;; This is broken if there are connections among CHUNKS.
+(defun set-mean* (chunks bm
+                  &key (other-chunks (set-difference (chunks bm) chunks)))
+  (swap-nodes* (chunks bm))
+  (hijack-means-to-activation chunks (clouds bm) bm)
+  (map nil #'set-chunk-mean chunks)
+  ;; These did not change. Simply swap them back.
+  (swap-nodes* other-chunks))
+
 (defun set-visible-mean/1 (bm)
   "Set NODES of the chunks in the visible layer to the means of their
 respective probability distributions."
