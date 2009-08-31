@@ -12,22 +12,22 @@ probability distribution is calculated from the activation and finally
 \(optionally) a sample is taken from the probability distribution. All
 these values are stored in this vector. This is also where SET-INPUT
 is supposed to clamp the values. Note that not only the values in the
-matrix but also the matrix object itself can change when the owning
-network is used.")
+matrix but also the matrix object itself can change when the network
+is used.")
    (old-nodes
     :type matlisp:real-matrix :reader old-nodes
     :documentation "The previous value of each node. Used to provide
-parallel computation semanctics when there are intralayer connections.
-Swapped with NODES at times.")
+parallel computation semantics when there are intralayer connections.
+Swapped with NODES or MEANS at times.")
    (means
     :type (or matlisp:real-matrix null) :reader means
     :documentation "Saved values of the means (see SET-MEAN) last
 computed.")
    (inputs
     :type (or matlisp:real-matrix null) :reader inputs
-    :documentation "This is where SET-INPUT saves the input for later
-use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is NIL in
-CONSTANT-CHUNKS.")
+    :documentation "This is where the after method of SET-INPUT saves
+the input for later use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is
+NIL in CONDITIONING-CHUNKS.")
    (cache-static-activations-p
     :initform nil
     :initarg :cache-static-activations-p
@@ -255,7 +255,7 @@ when changing the number of stripes.")
     :initform (error "GROUP-SIZE must be specified.")
     :initarg :group-size
     :reader group-size))
-  (:documentation "Means are normalized to SCALE within groups of
+  (:documentation "Means are normalized to SCALE within node groups of
 GROUP-SIZE."))
 
 (defmethod resize-chunk ((chunk normalized-group-chunk) size max-n-stripes)
@@ -439,7 +439,8 @@ imposed by the type of boltzmann machine the cloud is part of."))
 (defmethod set-n-stripes (n-stripes (cloud cloud)))
 (defmethod set-max-n-stripes (max-n-stripes (cloud cloud)))
 
-(defun activate-cloud (cloud reversep &key (from-fn #'old-nodes) (to-fn #'nodes))
+(defun activate-cloud (cloud reversep &key
+                       (from-fn #'old-nodes) (to-fn #'nodes))
   "From CHUNK1 calculate the activations of CHUNK2 and _add_ them to
 CHUNK2. If REVERSEP then swap the roles of the chunks. FROM-FN and
 TO-FN are the accessors to use to get the nodes value arrays (one of
@@ -465,7 +466,8 @@ contrastive divergence."))
 
 (defun hijack-means-to-activation (chunks clouds bm &key addp)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
-chunks that don't need activations."
+chunks that don't need activations. If ADDP don't zero NODES first,
+but add to it."
   (destructuring-bind (static-activations-context static-chunks)
       (or (rest (find bm *static-activation-contexts* :key #'first))
           (list (gensym) nil))
@@ -930,7 +932,7 @@ NAME. Signal an error if not found and ERRORP.")
                     :test #'equal)))
 
 (defun full-clouds-everywhere (visible-chunks hidden-chunks)
-  "Return a list of cloud specifications suitable for instantiating an
+  "Return a list of cloud specifications suitable for instantiating a
 BM. Put a cloud between each pair of visible and hidden chunks unless
 they are both conditioning chunks. The names of the clouds are two
 element lists of the names of the visible and hidden chunks."
@@ -1115,8 +1117,8 @@ chunk type and the mean that resides in NODES."
 of chunks. The layers partition the set of all chunks in the BM.
 Chunks with no connections to layers below are visible (including
 constant and conditioning) chunks. The layered structure is used in
-the single, bottom-up approximate inference pass. When instantiating a
-DBM, VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred from LAYERS and
+the single, bottom-up, approximate inference pass. When instantiating
+a DBM, VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred from LAYERS and
 CLOUDS.")
    (clouds-up-to-layers
     :type list :reader clouds-up-to-layers
@@ -1426,9 +1428,9 @@ divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
 ;;;; Mean field
 
 (defun node-change (chunks)
-  "Return the sum of the absolute values of NODES - OLD-NODES over
+  "Return the average of the absolute values of NODES - OLD-NODES over
 CHUNKS. The second value returned is the number of nodes that
-contributed to the sum."
+contributed to the average."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n) (optimize (speed 3)))
@@ -1449,8 +1451,8 @@ contributed to the sum."
                                      (n-undamped-iterations 100)
                                      (n-damped-iterations 100)
                                      (damping-factor #.(flt 0.9)))
-  "A supervisor for SETTLE-MEAN-FIELD. Return NIL if average of the
-absolute value of change in nodes is below NODE-CHANGE-LIMIT, else
+  "A supervisor for SETTLE-MEAN-FIELD. Return NIL if the average of
+the absolute value of change in nodes is below NODE-CHANGE-LIMIT, else
 return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
 another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
@@ -1797,13 +1799,16 @@ the learning or the mean field is used instead.")
 during the learning or mean field is used instead. :HALF-HEARTED, the
 default value, samples the hiddens but uses the hidden means to
 calculate the effect of the positive and negative phases on the
-gradient.")
+gradient. The default should almost always be preferable to T, as it
+is a less noisy estimate.")
    (n-gibbs
     :type (integer 1)
     :initform 1
     :initarg :n-gibbs
     :accessor n-gibbs
-    :documentation "The number of steps of Gibbs sampling to perform."))
+    :documentation "The number of steps of Gibbs sampling to perform.
+This is how many full (HIDDEN -> VISIBLE -> HIDDEN) steps are taken
+for CD learning, and how many times each chunk is sampled for PCD."))
   (:documentation "Paramaters for Markov Chain Monte Carlo based
 trainers for BMs."))
 
@@ -1884,7 +1889,8 @@ as the number of fantasy particles.")
     :documentation "A BM that keeps the states of the persistent
 chains (each stripe is a chain), initialized from the BM being trained
 by COPY with 'PCD as the context. Suitable for training BM and
-RBM.")))
+RBM."))
+  (:documentation "Persistent Contrastive Divergence trainer."))
 
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
   (setf (slot-value trainer 'normal-chains) bm)
