@@ -903,9 +903,9 @@ stable. See <http://groups.google.com/group/comp.ai.neural-nets/msg/a7594ebea01f
 It has two parameters X and TARGET. In the transfer phase it computes
 the EXP of each input node and normalizes them as if by
 NORMALIZED-LUMP. These intermediate values are placed into SOFTMAX.
-The value node node K is nodes_k = - target_k * ln(softmax_k). Since
-the sum of this is cross entropy: - sum_k target_k * ln(softmax_k),
-simply plug this lump into an ERROR-NODE.
+The value node K is nodes_k = - target_k * ln(softmax_k). Since the
+sum of this is cross entropy: - sum_k target_k * ln(softmax_k), simply
+plug this lump into an ERROR-NODE.
 
 In the derive phase it computes the cross entropy error of the
 normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
