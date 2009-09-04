@@ -63,6 +63,9 @@
 ** DONE fix or remove missing value support
    removed
 ** DONE unroll factored clouds
+** TODO flip chunk
+   When an input chunk is to be reconstructed it should go above the
+   layer in the bpn instead of below it where it is in the BM.
 * misc
 ** DONE faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
 Doesn't seem to speed up things.
