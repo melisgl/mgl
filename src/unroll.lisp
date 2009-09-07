@@ -223,15 +223,16 @@ the `end' lump.")
                  (push-all chunk-inits inits))))))
     (values (reverse defs) inits)))
 
-(defun add-connection (cloud &key from to)
+(defun maybe-add-connection (cloud &key from to)
   (assert (> (lumpy-depth from) (lumpy-depth to)))
   (assert (not (member from (lumpy-incomings to)
                        :key #'incoming-from-lumpy)))
-  (push (make-incoming :from-lumpy from
-                       :cloud cloud
-                       :transposep (eq (lumpy-chunk from)
-                                       (chunk2 cloud)))
-        (lumpy-incomings to)))
+  (unless (typep (lumpy-chunk to) 'conditioning-chunk)
+    (push (make-incoming :from-lumpy from
+                         :cloud cloud
+                         :transposep (eq (lumpy-chunk from)
+                                         (chunk2 cloud)))
+          (lumpy-incomings to))))
 
 (defun ensure-lumpy (lumpies &key depth chunk kind)
   (or (find-lumpy lumpies :depth depth :chunk chunk :kind kind)
@@ -282,10 +283,10 @@ the backprop network."
                      (cloud-chunk-among-chunks cloud (visible-chunks rbm)))
                     (hidden-chunk
                      (cloud-chunk-among-chunks cloud (hidden-chunks rbm))))
-                (unless (typep hidden-chunk 'conditioning-chunk)
-                  (add-connection cloud
-                                  :from (ensure-lumpy (1+ depth) visible-chunk)
-                                  :to (ensure-lumpy depth hidden-chunk)))
+                (maybe-add-connection
+                 cloud
+                 :from (ensure-lumpy (1+ depth) visible-chunk)
+                 :to (ensure-lumpy depth hidden-chunk))
                 (unless (or (typep visible-chunk 'conditioning-chunk)
                             bottom-up-only)
                   ;; If the chunk does not need activations then it is
@@ -296,20 +297,16 @@ the backprop network."
                          (if (typep hidden-chunk 'conditioning-chunk)
                              depth
                              (- depth))))
-                    (add-connection cloud
-                                    :from (ensure-lumpy hidden-depth
-                                                        hidden-chunk)
-                                    :to (ensure-lumpy (- (1+ depth))
-                                                      visible-chunk)))))))
+                    (maybe-add-connection cloud
+                                          :from (ensure-lumpy hidden-depth
+                                                              hidden-chunk)
+                                          :to (ensure-lumpy (- (1+ depth))
+                                                            visible-chunk)))))))
       (lumpies->bpn-definition lumpies))))
 
-(defun unroll-dbm (dbm &key excluded-chunks)
-  (let ((excluded-chunks (mapcar (lambda (chunk)
-                                   (if (typep chunk 'chunk)
-                                       chunk
-                                       (find-chunk chunk dbm :errorp t)))
-                                 excluded-chunks))
-        (lumpies '()))
+(defun unroll-dbm (dbm &key (chunks (chunks dbm)) (map chunks)
+                   (reconstruction ()))
+  (let ((lumpies '()))
     (flet ((ensure-lumpy (depth chunk &optional kind)
              (let ((lumpy (ensure-lumpy lumpies
                                         :depth depth :chunk chunk :kind kind)))
@@ -318,30 +315,45 @@ the backprop network."
       (loop for (lower-layer higher-layer) on (layers dbm)
             while higher-layer
             for clouds in (rest (clouds-up-to-layers dbm))
-            for depth downfrom (1- (length (layers dbm)))
+            for lower-depth downfrom (1- (length (layers dbm)))
             do
             (dolist (cloud clouds)
               (let ((lower-chunk (cloud-chunk-among-chunks cloud lower-layer))
-                    (higher-chunk (cloud-chunk-among-chunks cloud higher-layer)))
-                (when (and (and lower-chunk higher-chunk)
-                           (not (member lower-chunk excluded-chunks))
-                           (not (member higher-chunk excluded-chunks)))
-                  (unless (typep higher-chunk 'conditioning-chunk)
-                    (add-connection cloud
-                                    :from (ensure-lumpy (1+ depth) lower-chunk)
-                                    :to (ensure-lumpy depth higher-chunk)))
-                  (unless (typep lower-chunk 'conditioning-chunk)
-                    ;; Add the marginals of the approximate posterior as
-                    ;; an input.
-                    (let ((lower-lumpy (ensure-lumpy (1+ depth) lower-chunk)))
-                      ;; If it has no connections from below then it's
-                      ;; an input, so don't add the :MAP connection.
-                      (when (lumpy-incomings lower-lumpy)
-                        (add-connection cloud
-                                        :from (ensure-lumpy (+ 2 depth)
-                                                            higher-chunk
-                                                            :map)
-                                        :to lower-lumpy))))))))
+                    (higher-chunk (cloud-chunk-among-chunks cloud higher-layer))
+                    (higher-depth (1- lower-depth)))
+                (when (and lower-chunk higher-chunk)
+                  ;; Normal and :MAP lumpies.
+                  (when (and (member lower-chunk chunks)
+                             (member higher-chunk chunks))
+                    (maybe-add-connection
+                     cloud
+                     :from (ensure-lumpy lower-depth lower-chunk)
+                     :to (ensure-lumpy higher-depth higher-chunk))
+                    (when (member lower-chunk map)
+                      ;; Add the marginals of the approximate
+                      ;; posterior as an input.
+                      (let ((lower-lumpy (ensure-lumpy lower-depth lower-chunk)))
+                        ;; If it has no connections from below then
+                        ;; it's an input, so don't add the :MAP
+                        ;; connection.
+                        (when (lumpy-incomings lower-lumpy)
+                          (maybe-add-connection
+                           cloud
+                           :from (ensure-lumpy (1+ lower-depth) higher-chunk
+                                               :map)
+                           :to lower-lumpy)))))
+                  ;; :RECONSTRUCTION lumpies (higher -> lower).
+                  (when (and (or (member higher-chunk reconstruction)
+                                 (zerop higher-depth))
+                             (member lower-chunk reconstruction))
+                    (maybe-add-connection
+                     cloud
+                     :from (ensure-lumpy (- higher-depth) higher-chunk
+                                         (if (zerop higher-depth)
+                                             nil
+                                             :reconstruction))
+                     :to (ensure-lumpy (- lower-depth) lower-chunk
+                                       :reconstruction)))))))
       (lumpies->bpn-definition lumpies))))
 
 (defgeneric initialize-from-cloud (bpn cloud args)
