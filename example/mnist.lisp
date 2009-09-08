@@ -567,7 +567,7 @@ each level in the DBN."
     (values (get-error counter)
             (get-error ce-counter))))
 
-(defun make-bpn (bm defs inits chunk-name)
+(defun make-bpn (bm defs chunk-name)
   (let ((bpn (eval (print
                     `(build-bpn (:class 'mnist-bpn :max-n-stripes 1000)
                        ,@defs
@@ -584,7 +584,8 @@ each level in the DBN."
                         (activation-lump :weights prediction-weights
                                          :x (lump
                                              ',(chunk-lump-name chunk-name
-                                                                nil))))
+                                                                nil))
+                                         :transpose-weights-p t))
                        (prediction-activations
                         (->+ :args (list prediction-activations0
                                          prediction-biases)))
@@ -594,9 +595,6 @@ each level in the DBN."
                          :x prediction-activations
                          :target expectations))
                        (my-error (error-node :x predictions)))))))
-    (initialize-bpn-from-bm bpn bm inits)
-    (init-weights 'prediction-weights bpn 0.1)
-    (init-weights 'prediction-biases bpn 0.1)
     bpn))
 
 
@@ -715,7 +713,11 @@ each level in the DBN."
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
     (print inits)
     (terpri)
-    (make-bpn dbn defs inits 'f3)))
+    (let ((bpn (make-bpn dbn defs 'f3)))
+      (initialize-bpn-from-bm bpn dbn inits)
+      (init-weights 'prediction-weights bpn 0.1)
+      (init-weights 'prediction-biases bpn 0.1)
+      bpn)))
 
 (defvar *dbn/1*)
 (defvar *bpn/1*)
@@ -1042,20 +1044,30 @@ each level in the DBN."
   (mgl-bm:dbm->dbn dbm :dbn-class 'mnist-dbn :rbm-class 'mnist-rbm/2
                    :dbn-initargs '(:max-n-stripes 100)))
 
-(defun unroll-mnist-dbm (dbm)
-  (multiple-value-bind (defs inits) (unroll-dbm dbm :excluded-chunks '(label))
+(defun unroll-mnist-dbm (dbm &key use-label-weights)
+  (multiple-value-bind (defs inits)
+      (unroll-dbm dbm :chunks (remove 'label (chunks dbm) :key #'name))
     (prin1 inits)
     (terpri)
-    (make-bpn dbm defs inits 'f2)))
+    (let ((bpn (make-bpn dbm defs 'f2)))
+      (initialize-bpn-from-bm bpn dbm
+                              (if use-label-weights
+                                  (list*
+                                   '(:cloud-name (label c2)
+                                     :weight-name prediction-biases)
+                                   '(:cloud-name (label f2)
+                                     :weight-name prediction-weights)
+                                   inits)
+                                  inits))
+      bpn)))
 
 (defun collect-map-chunks-and-lumps (bpn dbm)
   (let ((chunks-and-lumps ()))
     (dolist (chunk (hidden-chunks dbm))
-      (unless (typep chunk 'conditioning-chunk)
-        (let* ((lump-name (chunk-lump-name (name chunk) :map))
-               (lump (find-lump lump-name bpn)))
-          (when lump
-            (push (list chunk lump) chunks-and-lumps)))))
+      (let* ((lump-name (chunk-lump-name (name chunk) :map))
+             (lump (find-lump lump-name bpn)))
+        (when lump
+          (push (list chunk lump) chunks-and-lumps))))
     chunks-and-lumps))
 
 (defun populate-map-cache (bpn dbm images)
