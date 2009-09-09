@@ -227,7 +227,7 @@ the `end' lump.")
   (assert (> (lumpy-depth from) (lumpy-depth to)))
   (assert (not (member from (lumpy-incomings to)
                        :key #'incoming-from-lumpy)))
-  (assert (not (typep (chunk to) 'conditioning-chunk)))
+  (assert (not (typep (lumpy-chunk to) 'conditioning-chunk)))
   (push (make-incoming :from-lumpy from
                        :cloud cloud
                        :transposep (eq (lumpy-chunk from)
