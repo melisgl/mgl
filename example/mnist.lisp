@@ -339,6 +339,8 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
       (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
     (describe-trainer trainer)))
 
+(defgeneric describe-sparsity-gradient-source (sparsity))
+
 (defmethod describe-sparsity-gradient-source
     ((sparsity mgl-bm::sparsity-gradient-source))
   (log-msg "Sparsity:~%")
@@ -352,7 +354,8 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (map nil #'describe-sparsity-gradient-source
        (mgl-bm::sparsity-gradient-sources trainer)))
 
-(defun dbn-mean-field-errors
+
+(defun dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
       (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
@@ -379,7 +382,7 @@ each level in the DBN."
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
-                         (dbn-mean-field-errors
+                         (dbn-mean-field-errors*
                           (make-sampler (subseq *training-images* 0 10000)
                                         :max-n
                                         10000
@@ -398,11 +401,11 @@ each level in the DBN."
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
-                (dbn-mean-field-errors (make-sampler *test-images*
-                                                     :max-n #+nil
-                                                     1000
-                                                     (length *test-images*))
-                                       (dbn rbm) :rbm rbm))
+                (dbn-mean-field-errors* (make-sampler *test-images*
+                                                      :max-n #+nil
+                                                      1000
+                                                      (length *test-images*))
+                                        (dbn rbm) :rbm rbm))
            (n-inputs trainer))
   (let ((counters-and-measurers
          (make-dbn-reconstruction-misclassification-counters-and-measurers
@@ -410,15 +413,15 @@ each level in the DBN."
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
-                         (dbn-mean-field-errors (make-sampler *test-images*
-                                                              :max-n #+nil
-                                                              1000
-                                                              (length
-                                                               *test-images*)
-                                                              :omit-label-p t)
-                                                (dbn rbm) :rbm rbm
-                                                :counters-and-measurers
-                                                counters-and-measurers))))
+                         (dbn-mean-field-errors* (make-sampler *test-images*
+                                                               :max-n #+nil
+                                                               1000
+                                                               (length
+                                                                *test-images*)
+                                                               :omit-label-p t)
+                                                 (dbn rbm) :rbm rbm
+                                                 :counters-and-measurers
+                                                 counters-and-measurers))))
         (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
                  (mapcar (lambda (e)
                            (* 100 (- 1 e)))
@@ -567,7 +570,7 @@ each level in the DBN."
     (values (get-error counter)
             (get-error ce-counter))))
 
-(defun make-bpn (bm defs chunk-name)
+(defun make-bpn (defs chunk-name)
   (let ((bpn (eval (print
                     `(build-bpn (:class 'mnist-bpn :max-n-stripes 1000)
                        ,@defs
@@ -713,7 +716,7 @@ each level in the DBN."
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
     (print inits)
     (terpri)
-    (let ((bpn (make-bpn dbn defs 'f3)))
+    (let ((bpn (make-bpn defs 'f3)))
       (initialize-bpn-from-bm bpn dbn inits)
       (init-weights 'prediction-weights bpn 0.1)
       (init-weights 'prediction-biases bpn 0.1)
@@ -734,7 +737,7 @@ each level in the DBN."
          (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
                   (map 'list
                        #'get-error
-                       (dbn-mean-field-errors
+                       (dbn-mean-field-errors*
                         (make-sampler *test-images*
                                       :max-n (length *test-images*))
                         *dbn/1*))))
@@ -976,11 +979,12 @@ each level in the DBN."
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
-  ;; FIXME: min 0.0001
   (/ (slot-value trainer 'learning-rate)
-     (expt 1.000015 (* (/ (n-inputs trainer)
-                          (length *training-images*))
-                       600))))
+     (min (flt 10)
+          (expt 1.000015
+                (* (/ (n-inputs trainer)
+                      (length *training-images*))
+                   600)))))
 
 #+nil
 (defmethod n-gibbs ((trainer mnist-dbm-trainer))
@@ -1025,8 +1029,7 @@ each level in the DBN."
                                                :batch-size 100)))
                         :sparser
                         (lambda (cloud chunk)
-                          (when (and nil
-                                     (member (name chunk) '(f1 f2))
+                          (when (and (member (name chunk) '(f1 f2))
                                      (not (equal 'label (name (chunk1 cloud))))
                                      (not (equal 'label (name (chunk2 cloud)))))
                             (make-instance
@@ -1049,7 +1052,7 @@ each level in the DBN."
       (unroll-dbm dbm :chunks (remove 'label (chunks dbm) :key #'name))
     (prin1 inits)
     (terpri)
-    (let ((bpn (make-bpn dbm defs 'f2)))
+    (let ((bpn (make-bpn defs 'f2)))
       (initialize-bpn-from-bm bpn dbm
                               (if use-label-weights
                                   (list*
@@ -1154,7 +1157,7 @@ each level in the DBN."
            (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
                     (map 'list
                          #'get-error
-                         (dbn-mean-field-errors
+                         (dbn-mean-field-errors*
                           (make-sampler *test-images*
                                         :max-n (length *test-images*))
                           *dbn/2*)))
@@ -1165,7 +1168,7 @@ each level in the DBN."
              (when counters-and-measurers
                (let ((errors (map 'list
                                   #'get-error
-                                  (dbn-mean-field-errors
+                                  (dbn-mean-field-errors*
                                    (make-sampler (subseq *training-images* 0 10000)
                                                  :max-n
                                                  10000
@@ -1186,7 +1189,7 @@ each level in the DBN."
            (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
            (train-dbn)
            (train-dbm)))
-    (setq *bpn/2* (unroll-mnist-dbm *dbm/2*))
+    (setq *bpn/2* (unroll-mnist-dbm *dbm/2* :use-label-weights t))
     (log-msg "Populating MAP cache~%")
     (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
                                                      *test-images*))
@@ -1194,7 +1197,7 @@ each level in the DBN."
     (save-weights (merge-pathnames "mnist-2.bpn" *mnist-dir*)
                   *bpn/2*)))
 
-(defmethod negative-phase (batch (trainer bm-pcd-trainer) bm)
+(defmethod negative-phase (batch (trainer mnist-dbm-trainer) bm)
   (mgl-bm::check-no-self-connection bm)
   (flet ((foo (chunk)
            (mgl-bm::set-mean (list chunk) bm)
@@ -1242,7 +1245,7 @@ each level in the DBN."
              (when counters-and-measurers
                (let ((errors (map 'list
                                   #'get-error
-                                  (dbn-mean-field-errors
+                                  (dbn-mean-field-errors*
                                    (make-sampler (subseq *training-images* 0 1000)
                                                  :max-n
                                                  1000
