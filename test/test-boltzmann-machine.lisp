@@ -437,8 +437,7 @@
                               :name 'this-chunk
                               :size 10)))
     (assert (names= (mapcar #'first (compare-objects chunk (copy context chunk)))
-                    '(nodes mgl-bm::means mgl-bm::old-nodes inputs
-                      mgl-bm::static-activations)))))
+                    '(nodes mgl-bm::means mgl-bm::old-nodes inputs)))))
 
 (defun test-copy-full-cloud (context)
   (let* ((chunk1 (make-instance 'constant-chunk
@@ -451,8 +450,15 @@
                                :name 'this-cloud
                                :chunk1 chunk1
                                :chunk2 chunk2)))
+    ;; These start with NIL and are lazily set up.
+    (setf (slot-value cloud 'mgl-bm::cached-activations1) t)
+    (setf (slot-value cloud 'mgl-bm::cached-activations2) t)
     (assert (names= (mapcar #'first (compare-objects cloud (copy context cloud)))
-                    '(chunk1 chunk2)))))
+                    '(chunk1 chunk2
+                      mgl-bm::cached-version1
+                      mgl-bm::cached-version2
+                      mgl-bm::cached-activations1
+                      mgl-bm::cached-activations2)))))
 
 (defun test-copy-pcd-rbm ()
   (let ((rbm (make-instance

@@ -28,26 +28,6 @@ computed.")
     :documentation "This is where the after method of SET-INPUT saves
 the input for later use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is
 NIL in CONDITIONING-CHUNKS.")
-   (cache-static-activations-p
-    :initform nil
-    :initarg :cache-static-activations-p
-    :reader cache-static-activations-p
-    :documentation "Controls whether activations that do not change
-between SET-INPUT calls \(i.e. they come from conditioning chunks
-including biases) are cached.")
-   (static-activations-context
-    :initform nil :accessor static-activations-context
-    :documentation "STATIC-ACTIVATIONS depends on the values of nodes
-of the chunks that do not change during some operations. While the
-context it is guaranteed that those values do not change. This allows
-some performance gains.")
-   (static-activations
-    :type (or matlisp:real-matrix null) :reader static-activations
-    :documentation "Of the same size as NODES. This is where
-activations coming from biases and conditioning chunks are between two
-SET-INPUT calls. Gets more useful with a lot of conditioning and more
-activations, for instance, in case contrastive divergence with high
-N-GIBBS or for the settling of mean field.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
@@ -201,11 +181,7 @@ the visible layer allows `conditional' RBMs."))
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
                 nil
-                (matlisp:make-real-matrix size max-n-stripes)))
-      (setf (slot-value chunk 'static-activations)
-            (if (cache-static-activations-p chunk)
-                (matlisp:make-real-matrix size max-n-stripes)
-                nil)))))
+                (matlisp:make-real-matrix size max-n-stripes))))))
 
 (defmethod set-n-stripes (n-stripes (chunk chunk))
   (set-ncols (nodes chunk) n-stripes)
@@ -305,6 +281,17 @@ are remembered."))
           (do-stripes (chunk)
             (do-chunk (i chunk)
               (setf (aref to i) (aref from i))))))))
+
+(defun add-chunk-nodes (chunk from to)
+  (unless (eq from to)
+    (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
+        (matlisp:m+! from to)
+        (let ((from (storage from))
+              (to (storage to)))
+          (declare (optimize (speed 3)))
+          (do-stripes (chunk)
+            (do-chunk (i chunk)
+              (incf (aref to i) (aref from i))))))))
 
 (defun maybe-remember (chunk)
   (unless (has-inputs-p chunk)
@@ -414,6 +401,22 @@ whose means are in NODES.")
 
 ;;;; Cloud
 
+(defvar *versions* ())
+
+(defun version (obj)
+  (or (cdr (find obj *versions* :key #'car))
+      ;; FIXME: #.
+      (gensym)))
+
+(defmacro with-versions ((version objects) &body body)
+  (let ((%version (gensym)))
+    `(let* ((,%version ,version)
+            (*versions* (append (mapcar (lambda (object)
+                                          (cons object ,%version))
+                                        ,objects)
+                                *versions*)))
+       ,@body)))
+
 (defclass cloud ()
   ((name :initarg :name :reader name)
    (chunk1 :type chunk :initarg :chunk1 :reader chunk1)
@@ -425,7 +428,15 @@ coming from this cloud multiplied by SCALE1.")
    (scale2
     :type flt :initform #.(flt 1) :initarg :scale2 :reader scale2
     :documentation "When CHUNK2 is being activated count activations
-coming from this cloud multiplied by SCALE2."))
+coming from this cloud multiplied by SCALE2.")
+   (cached-version1 :initform (gensym) :accessor cached-version1)
+   (cached-version2 :initform (gensym) :accessor cached-version2)
+   (cached-activations1
+    :initform nil
+    :type (or matlisp:real-matrix null) :reader cached-activations1)
+   (cached-activations2
+    :initform nil
+    :type (or matlisp:real-matrix null) :reader cached-activations2))
   (:documentation "A set of connections between two chunks. The chunks
 may be the same, be both visible or both hidden subject to constraints
 imposed by the type of boltzmann machine the cloud is part of."))
@@ -447,9 +458,15 @@ TO-FN are the accessors to use to get the nodes value arrays (one of
 #'NODES, #'OLD-NODES, #'MEANS. In the simplest case it adds
 weights (of CLOUD) * OLD-NODES (of CHUNK1) to the nodes of the hidden
 chunk."
-  (activate-cloud* cloud reversep from-fn to-fn))
+  (activate-cloud* cloud reversep
+                   (funcall from-fn (if reversep
+                                        (chunk2 cloud)
+                                        (chunk1 cloud)))
+                   (funcall to-fn (if reversep
+                                      (chunk1 cloud)
+                                      (chunk2 cloud)))))
 
-(defgeneric activate-cloud* (cloud reversep from-fn to-fn)
+(defgeneric activate-cloud* (cloud reversep from-matrix to-matrix)
   (:documentation "Like ACTIVATE-CLOUD but without keyword parameters."))
 
 (defgeneric accumulate-cloud-statistics (trainer bm cloud multiplier)
@@ -457,72 +474,24 @@ chunk."
 CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
 contrastive divergence."))
 
-(defvar *static-activation-contexts* nil)
-
-(defmacro with-static-activations-cached ((bm static-chunks) &body body)
-  `(let ((*static-activation-contexts* (cons (list ,bm (gensym) ,static-chunks)
-                                             *static-activation-contexts*)))
-     ,@body))
-
-(defun hijack-means-to-activation (chunks clouds bm &key addp)
+(defun hijack-means-to-activation (chunks clouds &key addp)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
 chunks that don't need activations. If ADDP don't zero NODES first,
 but add to it."
-  (destructuring-bind (static-activations-context static-chunks)
-      (or (rest (find bm *static-activation-contexts* :key #'first))
-          (list (gensym) nil))
-    ;;(format *trace-output* "~S ~S~%" static-activations-context static-chunks)
-    (labels ((cached-p (chunk)
-               (and (eq static-activations-context
-                        (static-activations-context chunk))
-                    (member chunk static-chunks)))
-             (to-cache-p (chunk)
-               (and (cache-static-activations-p chunk)
-                    (not (conditioning-chunk-p chunk))
-                    (member chunk static-chunks)
-                    (not (cached-p chunk)))))
-      ;; Zero activations or copy cached activations coming from
-      ;; conditioning chunks.
-      (unless addp
-        (dolist (chunk chunks)
-          (unless (conditioning-chunk-p chunk)
-            (if (cached-p chunk)
-                (progn
-                  ;;(format *trace-output* "Copy act: ~A~%" chunk)
-                  (copy-chunk-nodes chunk (static-activations chunk)
-                                    (nodes chunk)))
-                (zero-chunk chunk)))))
-      ;; Calculate the activations coming from conditioning chunks if
-      ;; they are to be cached.
-      (flet ((foo (to-chunk from-chunk cloud)
-               (when (to-cache-p to-chunk)
-                 ;;(format *trace-output* "Add static act: ~A~%" cloud)
-                 (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
-        (dolist (cloud clouds)
-          (when (member (chunk2 cloud) chunks)
-            (foo (chunk2 cloud) (chunk1 cloud) cloud))
-          (when (and (member (chunk1 cloud) chunks)
-                     (not (eq (chunk1 cloud) (chunk2 cloud))))
-            (foo (chunk1 cloud) (chunk2 cloud) cloud))))
-      ;; Remember those.
-      (dolist (chunk chunks)
-        (when (to-cache-p chunk)
-          ;;(format *trace-output* "Saveing static act: ~A~%" chunk)
-          (copy-chunk-nodes chunk (nodes chunk) (static-activations chunk))
-          (setf (static-activations-context chunk) static-activations-context)))
-      ;; By now chunks with CACHE-STATIC-ACTIVATIONS-P have activations
-      ;; from STATIC-CHUNKS in NODES. Do the non-cached activations.
-      (flet ((foo (to-chunk from-chunk cloud)
-               (unless (or (conditioning-chunk-p to-chunk)
-                           (cached-p to-chunk))
-                 ;;(format *trace-output* "Act: ~A~%" cloud)
-                 (activate-cloud cloud (eq (chunk2 cloud) from-chunk)))))
-        (dolist (cloud clouds)
-          (when (member (chunk2 cloud) chunks)
-            (foo (chunk2 cloud) (chunk1 cloud) cloud))
-          (when (and (member (chunk1 cloud) chunks)
-                     (not (eq (chunk1 cloud) (chunk2 cloud))))
-            (foo (chunk1 cloud) (chunk2 cloud) cloud)))))))
+  ;; Zero activations or copy cached activations coming from
+  ;; conditioning chunks.
+  (unless addp
+    (dolist (chunk chunks)
+      (unless (conditioning-chunk-p chunk)
+        (zero-chunk chunk))))
+  (dolist (cloud clouds)
+    (when (and (member (chunk2 cloud) chunks)
+               (not (conditioning-chunk-p (chunk2 cloud))))
+      (activate-cloud cloud nil))
+    (when (and (member (chunk1 cloud) chunks)
+               (not (eq (chunk1 cloud) (chunk2 cloud)))
+               (not (conditioning-chunk-p (chunk1 cloud))))
+      (activate-cloud cloud t))))
 
 ;;; See if both ends of CLOUD are among CHUNKS.
 (defun both-cloud-ends-in-p (cloud chunks)
@@ -532,8 +501,47 @@ but add to it."
 (defgeneric zero-weight-to-self (cloud)
   (:documentation "In a BM W_{i,i} is always zero."))
 
-(defmethod activate-cloud* :before (cloud reversep from-fn to-fn)
+(defmethod activate-cloud* :before (cloud reversep from-matrix to-matrix)
   (zero-weight-to-self cloud))
+
+(defun reshape-or-create (mat prototype)
+  (let ((m (matlisp:nrows prototype))
+        (n (matlisp:ncols prototype)))
+    (if (and mat (<= (* m n) (length (storage mat))))
+        (reshape2 mat m n)
+        (matlisp:make-real-matrix m n))))
+
+(defmethod activate-cloud* :around (cloud reversep from-matrix to-matrix)
+  (let ((chunk1 (chunk1 cloud))
+        (chunk2 (chunk2 cloud)))
+    (cond (reversep
+           (let ((version (version chunk2)))
+             (unless (eq version (cached-version1 cloud))
+               (setf (slot-value cloud 'cached-activations1)
+                     (reshape-or-create (cached-activations1 cloud)
+                                        (nodes chunk1)))
+               (matlisp:fill-matrix (cached-activations1 cloud)
+                                    #.(flt 0))
+               (call-next-method cloud reversep from-matrix
+                                 (cached-activations1 cloud))
+               (setf (cached-version1 cloud) version)))
+           (add-chunk-nodes (chunk1 cloud)
+                            (cached-activations1 cloud)
+                            to-matrix))
+          (t
+           (let ((version (version chunk1)))
+             (unless (eq version (cached-version2 cloud))
+               (setf (slot-value cloud 'cached-activations2)
+                     (reshape-or-create (cached-activations2 cloud)
+                                        (nodes chunk2)))
+               (matlisp:fill-matrix (cached-activations2 cloud)
+                                    #.(flt 0))
+               (call-next-method cloud reversep from-matrix
+                                 (cached-activations2 cloud))
+               (setf (cached-version2 cloud) version)))
+           (add-chunk-nodes (chunk2 cloud)
+                            (cached-activations2 cloud)
+                            to-matrix)))))
 
 ;;; Return the chunk of CLOUD that's among CHUNKS and the other chunk
 ;;; of CLOUD as the second value.
@@ -621,11 +629,9 @@ all transposed.")))
       (loop for i below (chunk-size (chunk1 cloud)) do
             (setf (matlisp:matrix-ref weights i i) #.(flt 0))))))
 
-(defmethod activate-cloud* ((cloud full-cloud) reversep from-fn to-fn)
+(defmethod activate-cloud* ((cloud full-cloud) reversep from to)
   (if (not reversep)
       (let ((weights (weights cloud))
-            (from (funcall from-fn (chunk1 cloud)))
-            (to (funcall to-fn (chunk2 cloud)))
             (scale (scale2 cloud)))
         (declare (type flt scale)
                  (optimize (speed 3) #.*no-array-bounds-check*))
@@ -644,8 +650,6 @@ all transposed.")))
                       (incf (aref to j)
                             (* x (aref weights weight-index))))))))))
       (let ((weights (weights cloud))
-            (from (funcall from-fn (chunk2 cloud)))
-            (to (funcall to-fn (chunk1 cloud)))
             (scale (scale1 cloud)))
         (declare (type flt scale)
                  (optimize (speed 3) #.*no-array-bounds-check*))
@@ -789,15 +793,16 @@ A*B*VISIBLE."))
   (when (eq (chunk1 cloud) (chunk2 cloud))
     (error "ZERO-WEIGHT-TO-SELF not implemented for FACTORED-CLOUD")))
 
-(defmethod activate-cloud* ((cloud factored-cloud) reversep from-fn to-fn)
+(defmethod activate-cloud* ((cloud factored-cloud) reversep from to)
   ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
   (zero-chunk (factored-cloud-shared-chunk cloud))
-  (cond ((not reversep)
-         (activate-cloud* (cloud-b cloud) reversep from-fn #'nodes)
-         (activate-cloud* (cloud-a cloud) reversep #'nodes to-fn))
-        (t
-         (activate-cloud* (cloud-a cloud) reversep from-fn #'nodes)
-         (activate-cloud* (cloud-b cloud) reversep #'nodes to-fn))))
+  (let ((nodes (nodes (factored-cloud-shared-chunk cloud))))
+    (cond ((not reversep)
+           (activate-cloud* (cloud-b cloud) reversep from nodes)
+           (activate-cloud* (cloud-a cloud) reversep nodes to))
+          (t
+           (activate-cloud* (cloud-a cloud) reversep from nodes)
+           (activate-cloud* (cloud-b cloud) reversep nodes to)))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
@@ -1056,7 +1061,7 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
 (defun set-mean (chunks bm
                  &key (other-chunks (set-difference (chunks bm) chunks)))
   (swap-nodes (chunks bm))
-  (hijack-means-to-activation chunks (clouds bm) bm)
+  (hijack-means-to-activation chunks (clouds bm))
   (map nil #'set-chunk-mean chunks)
   ;; These did not change. Simply swap them back.
   (swap-nodes other-chunks))
@@ -1070,7 +1075,7 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
 (defun set-mean* (chunks bm
                   &key (other-chunks (set-difference (chunks bm) chunks)))
   (swap-nodes* (chunks bm))
-  (hijack-means-to-activation chunks (clouds bm) bm)
+  (hijack-means-to-activation chunks (clouds bm))
   (map nil #'set-chunk-mean chunks)
   ;; These did not change. Simply swap them back.
   (swap-nodes* other-chunks))
@@ -1266,8 +1271,7 @@ chunks having upward connections."
                (layer-above*
                 (set-difference layer-above
                                 (visible-and-conditioning-chunks dbm))))
-          (hijack-means-to-activation layer* clouds-up-to-layer
-                                      dbm)
+          (hijack-means-to-activation layer* clouds-up-to-layer)
           ;; Double activations of chunks in LAYER that have non-bias
           ;; connections to LAYER-ABOVE.
           (dolist (chunk layer*)
@@ -1284,9 +1288,9 @@ chunks having upward connections."
                 (conditioning-clouds-to layer* clouds-up-to-layer))
                (conditioning-clouds-above
                 (conditioning-clouds-to layer* clouds-up-to-layer-above)))
-          (hijack-means-to-activation layer* (set-difference clouds-up-to-layer
-                                                             conditioning-clouds)
-                                      dbm)
+          (hijack-means-to-activation layer*
+                                      (set-difference clouds-up-to-layer
+                                                      conditioning-clouds))
           ;; Double activations of chunks in LAYER that have non-bias
           ;; connections to LAYER-ABOVE.
           (dolist (chunk layer*)
@@ -1295,10 +1299,8 @@ chunks having upward connections."
           ;; Activations from conditioning chunks are not doubled.
           ;; Normally, there are biases both in the layer below and
           ;; above, while non-bias conditioning chunks are visible.
-          (hijack-means-to-activation layer* conditioning-clouds dbm
-                                      :addp t)
-          (hijack-means-to-activation layer* conditioning-clouds-above dbm
-                                      :addp t)
+          (hijack-means-to-activation layer* conditioning-clouds :addp t)
+          (hijack-means-to-activation layer* conditioning-clouds-above :addp t)
           (map nil #'set-chunk-mean layer*)
           (swap-nodes layer-below))))
 
@@ -1312,7 +1314,7 @@ chunks having downward connections."
         on (reverse (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-above)
-        (hijack-means-to-activation layer clouds-down-to-layer dbm)
+        (hijack-means-to-activation layer clouds-down-to-layer)
         ;; Double activations of chunks in LAYER that have connections
         ;; to LAYER-BELOW.
         (dolist (chunk layer)
@@ -1327,9 +1329,7 @@ chunks having downward connections."
 ;;;; DBM->DBN
 
 (define-slots-not-to-be-copied 'dbm->dbn chunk
-  nodes means old-nodes inputs
-  static-activations-context static-activations
-  indices-present)
+  nodes means old-nodes inputs indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'dbm->dbn)) (chunk chunk))
   `(:size ,(chunk-size chunk)
@@ -1337,6 +1337,10 @@ chunks having downward connections."
 
 (define-slots-not-to-be-copied 'dbm->dbn temporal-chunk
   next-node-inputs has-inputs-p)
+
+(define-slots-not-to-be-copied 'dbm->dbn cloud
+  cached-version1 cached-version2
+  cached-activations1 cached-activations2)
 
 (define-slots-to-be-shallow-copied 'dbm->dbn full-cloud
   weights)
@@ -1530,8 +1534,7 @@ then it's taken to be a damping factor. For no damping return 0."
 if there are visible-to-visible connections. For an RBM it trivially
 calls SET-VISIBLE-MEAN.")
   (:method :around ((bm bm))
-           (with-static-activations-cached
-               (bm (hidden-and-conditioning-chunks bm))
+           (with-versions ((gensym) (hidden-and-conditioning-chunks bm))
              (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
@@ -1546,8 +1549,7 @@ calls SET-VISIBLE-MEAN.")
 if there are hidden-to-hidden connections. For an RBM it trivially
 calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
   (:method :around ((bm bm))
-           (with-static-activations-cached
-               (bm (visible-and-conditioning-chunks bm))
+           (with-versions ((gensym) (visible-and-conditioning-chunks bm))
              (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
@@ -1920,7 +1922,7 @@ trainers for BMs."))
 (defmethod train-batch (batch (trainer rbm-cd-trainer) (rbm rbm))
   (loop for samples in (group batch (max-n-stripes rbm))
         do (set-input samples rbm)
-        (with-static-activations-cached (rbm (conditioning-chunks rbm))
+        (with-versions ((gensym) (conditioning-chunks rbm))
           (positive-phase batch trainer rbm)
           (negative-phase batch trainer rbm)))
   (maybe-update-weights trainer (length batch)))
@@ -1947,9 +1949,7 @@ trainers for BMs."))
 ;;;; Persistent Contrastive Divergence (PCD) learning
 
 (define-slots-not-to-be-copied 'pcd chunk
-  nodes means old-nodes inputs
-  static-activations-context static-activations
-  indices-present)
+  nodes means old-nodes inputs indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'pcd)) (chunk chunk))
   `(:size ,(chunk-size chunk)
@@ -1957,6 +1957,10 @@ trainers for BMs."))
 
 (define-slots-not-to-be-copied 'pcd temporal-chunk
   next-node-inputs has-inputs-p)
+
+(define-slots-not-to-be-copied 'pcd cloud
+  cached-version1 cached-version2
+  cached-activations1 cached-activations2)
 
 (define-slots-to-be-shallow-copied 'pcd full-cloud
   weights)
