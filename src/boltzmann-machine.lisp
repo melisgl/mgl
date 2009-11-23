@@ -1692,18 +1692,61 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
     :initarg :sparsity :initarg :target :initarg :sparsity-target
     :reader sparsity-target :reader target)
    (cost :type flt :initarg :cost :reader cost)
-   (damping :type flt :initarg :damping :reader damping)
-   (products :type flt-vector :initarg :products :reader products)
-   (old-products :type flt-vector :initarg :old-products :reader old-products)))
+   (damping :type flt :initarg :damping :reader damping)))
 
-(defmethod initialize-instance :after ((sparsity sparsity-gradient-source) &key
-                                       &allow-other-keys)
+(defclass normal-sparsity-gradient-source (sparsity-gradient-source)
+  ((products :type flt-vector :initarg :products :reader products)
+   (old-products :type flt-vector :initarg :old-products :reader old-products))
+  (:documentation "Keep track of how much pairs of nodes connected by
+CLOUD are simultaneously active. If a node in CHUNK deviates from the
+target sparsity, that is, its average activation is different from the
+target, then decrease or increase the weight to nodes to which it's
+connected by CLOUD in such a way that it will be closer to the target.
+Smooth the empirical estimates in simultaneous activations in PRODUCTS
+by DAMPING."))
+
+(defclass cheating-sparsity-gradient-source (sparsity-gradient-source)
+  ((sum1 :type flt-vector :initarg :sum1 :reader sum1)
+   (old-sum1 :type flt-vector :initarg :old-sum1 :reader old-sum1)
+   (sum2 :type flt-vector :initarg :sum2 :reader sum2))
+  (:documentation "Like NORMAL-SPARSITY-GRADIENT-SOURCE, but it needs less
+memory because it only tracks average activation levels of nodes
+independently (as opposed to simultaneous activations) and thus it may
+not produce the wrong gradient an example for which is when two
+connected nodes are on a lot, but never at the same time. Clearly, it
+makes little sense to change the weight but this is exactly what
+happens."))
+
+(defun other-chunk (cloud chunk)
+  (cond ((eq chunk (chunk1 cloud))
+         (chunk2 cloud))
+        ((eq chunk (chunk2 cloud))
+         (chunk1 cloud))
+        (t
+         (assert nil))))
+
+(defmethod initialize-instance :after ((sparsity normal-sparsity-gradient-source)
+                                       &key &allow-other-keys)
   (unless (slot-boundp sparsity 'products)
     (setf (slot-value sparsity 'products)
           (matlisp:make-real-matrix (segment-size (cloud sparsity)) 1)))
   (unless (slot-boundp sparsity 'old-products)
     (setf (slot-value sparsity 'old-products)
           (matlisp:make-real-matrix (segment-size (cloud sparsity)) 1))))
+
+(defmethod initialize-instance :after ((sparsity cheating-sparsity-gradient-source)
+                                       &key &allow-other-keys)
+  (unless (slot-boundp sparsity 'sum1)
+    (setf (slot-value sparsity 'sum1)
+          (matlisp:make-real-matrix (size (chunk sparsity)) 1)))
+  (unless (slot-boundp sparsity 'old-sum1)
+    (setf (slot-value sparsity 'old-sum1)
+          (matlisp:make-real-matrix (size (chunk sparsity)) 1)))
+  (unless (slot-boundp sparsity 'sum2)
+    (setf (slot-value sparsity 'sum2)
+          (matlisp:make-real-matrix (size (other-chunk (cloud sparsity)
+                                                       (chunk sparsity)))
+                                    1))))
 
 (defun add-into (c v1 v2 &key start1)
   (declare (type flt-vector v1 v2)
@@ -1714,10 +1757,10 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
         for j below (length v2)
         do (incf (aref v1 i) (* c (aref v2 j)))))
 
-;;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
-;;; accumulator and zero PRODUCTS.
 (defgeneric flush-accumulator (sparsity accumulator start n-inputs-in-batch)
-  (:method ((sparsity sparsity-gradient-source)
+  ;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
+  ;; accumulator and zero PRODUCTS.
+  (:method ((sparsity normal-sparsity-gradient-source)
             accumulator start n-inputs-in-batch)
     (let ((damping (damping sparsity))
           (cost (cost sparsity))
@@ -1730,7 +1773,31 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
       (add-into (* cost n-inputs-in-batch)
                 (storage accumulator) (storage old-products)
                 :start1 start)
-      (fill (storage products) #.(flt 0)))))
+      (fill (storage products) #.(flt 0))))
+  ;; Add DAMPING * OLD-SUM1 + (1 - DAMPING) * SUM1 to the accumulator
+  ;; and zero SUM1.
+  (:method ((sparsity cheating-sparsity-gradient-source)
+            accumulator start n-inputs-in-batch)
+    (let ((damping (damping sparsity))
+          (cost (cost sparsity))
+          (sum1 (sum1 sparsity))
+          (old-sum1 (old-sum1 sparsity))
+          (sum2 (sum2 sparsity))
+          (target (sparsity-target sparsity)))
+      (matlisp:scal! damping old-sum1)
+      (matlisp:scal! (/ (- (flt 1) damping) n-inputs-in-batch)
+                     sum1)
+      (matlisp:m+! sum1 old-sum1)
+      (assert (zerop start))
+      (matlisp:copy! old-sum1 sum1)
+      (matlisp:m+! sum1 (- target))
+      (matlisp:gemm! cost sum1 sum2
+                     (flt 1) (reshape2 accumulator
+                                       (matlisp:nrows old-sum1)
+                                       (matlisp:nrows sum2))
+                     :nt)
+      (fill (storage sum1) #.(flt 0))
+      (fill (storage sum2) #.(flt 0)))))
 
 (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
   ((sparsity-gradient-sources
@@ -1778,10 +1845,8 @@ of the batch. Batch size comes from the superclass."))
                                      (n-inputs-in-batch segment-trainer)))
                 (before-update-hook segment-trainer)))))))
 
-(defmethod accumulate-positive-phase-statistics
-    ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
-  (call-next-method)
-  (dolist (sparsity (sparsity-gradient-sources trainer))
+(defgeneric accumulate-sparsity-statistics (sparsity multiplier)
+  (:method ((sparsity normal-sparsity-gradient-source) multiplier)
     (let ((chunk (chunk sparsity))
           (cloud (cloud sparsity)))
       (assert (not (eq (nodes chunk) (old-nodes chunk))))
@@ -1792,7 +1857,26 @@ of the batch. Batch size comes from the superclass."))
               (values (old-nodes chunk) (nodes (chunk2 cloud)))
               (values (nodes (chunk1 cloud)) (old-nodes chunk)))
         (accumulate-cloud-statistics* cloud v1 v2 multiplier
-                                      0 (products sparsity))))))
+                                      0 (products sparsity)))))
+  (:method ((sparsity cheating-sparsity-gradient-source) multiplier)
+    (let* ((chunk (chunk sparsity))
+           (cloud (cloud sparsity))
+           (other-chunk (other-chunk cloud chunk)))
+      ;; FIXME: MULTIPLIER?
+      (matlisp:gemm! (flt 1) (nodes chunk)
+                     (matlisp:ones (n-stripes chunk) 1)
+                     (flt 1)
+                     (sum1 sparsity))
+      (matlisp:gemm! (flt 1) (nodes other-chunk)
+                     (matlisp:ones (n-stripes other-chunk) 1)
+                     (flt 1)
+                     (sum2 sparsity)) :n)))
+
+(defmethod accumulate-positive-phase-statistics
+    ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
+  (call-next-method)
+  (dolist (sparsity (sparsity-gradient-sources trainer))
+    (accumulate-sparsity-statistics sparsity multiplier)))
 
 
 ;;;; Common base class for MCMC based BM trainers

@@ -286,6 +286,8 @@ interface and simple gradient descent based trainers."))
    ;; Sparsity
    #:sparser
    #:sparsity-gradient-source
+   #:normal-sparsity-gradient-source
+   #:cheating-sparsity-gradient-source
    #:target
    #:cost
    #:damping

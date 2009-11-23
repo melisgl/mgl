@@ -342,8 +342,8 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defgeneric describe-sparsity-gradient-source (sparsity))
 
 (defmethod describe-sparsity-gradient-source
-    ((sparsity mgl-bm::sparsity-gradient-source))
-  (log-msg "Sparsity:~%")
+    ((sparsity mgl-bm:sparsity-gradient-source))
+  (log-msg "Sparsity: ~A~%" sparsity)
   (log-msg "  cloud: ~S, chunk: ~S~%"
            (name (cloud sparsity)) (name (chunk sparsity)))
   (log-msg "  target: ~,5E, cost: ~,5E, damping: ~,5E~%"
@@ -1033,7 +1033,7 @@ each level in the DBN."
                                      (not (equal 'label (name (chunk1 cloud))))
                                      (not (equal 'label (name (chunk2 cloud)))))
                             (make-instance
-                             'sparsity-gradient-source
+                             'normal-sparsity-gradient-source
                              :cloud cloud
                              :chunk chunk
                              :sparsity (flt (if (eq 'f2 (name chunk))
