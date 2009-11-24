@@ -1153,36 +1153,6 @@ each level in the DBN."
            (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
            (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
            (log-msg "Loaded DBN~%")
-           #+nil
-           (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
-                    (map 'list
-                         #'get-error
-                         (dbn-mean-field-errors*
-                          (make-sampler *test-images*
-                                        :max-n (length *test-images*))
-                          *dbn/2*)))
-           #+nil
-           (let ((counters-and-measurers
-                  (make-bm-reconstruction-misclassification-counters-and-measurers
-                   *dbn/2*)))
-             (when counters-and-measurers
-               (let ((errors (map 'list
-                                  #'get-error
-                                  (dbn-mean-field-errors*
-                                   (make-sampler (subseq *training-images* 0 10000)
-                                                 :max-n
-                                                 10000
-                                                 #+nil
-                                                 (length
-                                                  *training-images*)
-                                                 :omit-label-p nil)
-                                   *dbn/2*
-                                   :counters-and-measurers
-                                   counters-and-measurers))))
-                 (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
-                          (mapcar (lambda (e)
-                                    (* 100 (- 1 e)))
-                                  errors)))))
            (train-dbm))
           (t
            (setq *dbm/2* (make-mnist-dbm))
@@ -1239,46 +1209,4 @@ each level in the DBN."
   (sb-sprof:stop-profiling)
   (sb-sprof:report :type :graph))
 
-(let ((counters-and-measurers
-                  (make-bm-reconstruction-misclassification-counters-and-measurers
-                   *dbn/2*)))
-             (when counters-and-measurers
-               (let ((errors (map 'list
-                                  #'get-error
-                                  (dbn-mean-field-errors*
-                                   (make-sampler (subseq *training-images* 0 1000)
-                                                 :max-n
-                                                 1000
-                                                 #+nil
-                                                 (length
-                                                  *training-images*)
-                                                 :omit-label-p nil)
-                                   *dbn/2*
-                                   :counters-and-measurers
-                                   counters-and-measurers))))
-                 (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
-                          (mapcar (lambda (e)
-                                    (* 100 (- 1 e)))
-                                  errors)))))
-
-(let ((counters-and-measurers
-       (make-bm-reconstruction-misclassification-counters-and-measurers *dbm/2*)))
-  (when counters-and-measurers
-    (let ((errors (map 'list
-                       #'get-error
-                       (mnist-dbm-mean-field-errors
-                        (make-sampler (subseq *training-images* 0 10000)
-                                      :max-n
-                                      10000
-                                      #+nil
-                                      (length
-                                       *training-images*)
-                                      :omit-label-p nil)
-                        *dbm/2*
-                        :counters-and-measurers
-                        counters-and-measurers))))
-      (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~}~%"
-               (mapcar (lambda (e)
-                         (* 100 (- 1 e)))
-                       errors)))))
 |#
