@@ -70,11 +70,13 @@ Boltzmann Machine. This is an abstract base class."))
   (* (1+ stripe) (chunk-size chunk)))
 
 (defmethod print-object ((chunk chunk) stream)
-  (print-unreadable-object (chunk stream :type t :identity t)
-    (format stream "~S ~S(~S/~S)" (ignore-errors (name chunk))
-            (ignore-errors (chunk-size chunk))
-            (ignore-errors (chunk-n-stripes chunk))
-            (ignore-errors (chunk-max-n-stripes chunk))))
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (chunk stream :type t :identity t)
+      (format stream "~S ~:_~S(~S/~S)"
+              (ignore-errors (name chunk))
+              (ignore-errors (chunk-size chunk))
+              (ignore-errors (chunk-n-stripes chunk))
+              (ignore-errors (chunk-max-n-stripes chunk)))))
   chunk)
 
 ;;; Currently the lisp code handles only the single stripe case and
@@ -442,9 +444,10 @@ may be the same, be both visible or both hidden subject to constraints
 imposed by the type of boltzmann machine the cloud is part of."))
 
 (defmethod print-object ((cloud cloud) stream)
-  (print-unreadable-object (cloud stream :type t :identity t)
-    (when (slot-boundp cloud 'name)
-      (format stream "~S" (name cloud))))
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (cloud stream :type t :identity t)
+      (when (slot-boundp cloud 'name)
+        (format stream "~S" (name cloud)))))
   cloud)
 
 (defmethod set-n-stripes (n-stripes (cloud cloud)))
