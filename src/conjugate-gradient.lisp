@@ -312,11 +312,11 @@ playing much with RHO."
 ;;;; Trainer
 
 (defclass cg-trainer ()
-  ((batch-size
+  ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
+   (batch-size
     :initarg :batch-size :accessor batch-size
     :documentation "After having gone through BATCH-SIZE number of
 inputs weights are updated.")
-   (n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (cg-args :initform '() :initarg :cg-args :accessor cg-args)
    (segment-filter
     :initform (constantly t)
@@ -334,6 +334,9 @@ uninteresting segments. Called from INITIALIZE-TRAINER.")
 leave the derivatives."))
   (:documentation "Updates all weights simultaneously after chewing
 through BATCH-SIZE inputs."))
+
+(define-descriptions (trainer cg-trainer)
+  n-inputs batch-size cg-args segment-set)
 
 (defmethod n-inputs-until-update ((trainer cg-trainer))
   ;; deal with varying batch size gracefully

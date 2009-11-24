@@ -314,47 +314,6 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
    (chunks bm)))
 
 
-;;;;;;;;;;
-
-(defgeneric describe-trainer (trainer))
-
-(defmethod describe-trainer ((trainer mgl-gd:gd-trainer))
-  (log-msg "  n-inputs=~S, learning-rate=~,2E~%"
-           (mgl-gd:n-inputs trainer)
-           (mgl-gd:learning-rate trainer))
-  (log-msg "  batch-size=~A, momentum=~,2E~%"
-           (mgl-gd:batch-size trainer)
-           (mgl-gd:momentum trainer))
-  (log-msg "  weight-decay=~,2E, weight-penalty=~,2E,~%"
-           (mgl-gd:weight-decay trainer)
-           (mgl-gd:weight-penalty trainer)))
-
-(defmethod describe-trainer ((trainer mgl-bm::segmented-gd-bm-trainer))
-  (log-msg "n-gibbs: ~S~%" (mgl-rbm:n-gibbs trainer))
-  (log-msg "visible-sampling: ~S~%" (mgl-rbm:visible-sampling trainer))
-  (log-msg "hidden-sampling: ~S~%" (mgl-rbm:hidden-sampling trainer))
-  (dolist (trainer (mgl-gd:trainers trainer))
-    (mgl-train:do-segment-set (cloud) (mgl-train:segment-set trainer)
-      (log-msg "Cloud: ~S~%" (mgl-rbm:name cloud))
-      (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
-    (describe-trainer trainer)))
-
-(defgeneric describe-sparsity-gradient-source (sparsity))
-
-(defmethod describe-sparsity-gradient-source
-    ((sparsity mgl-bm:sparsity-gradient-source))
-  (log-msg "Sparsity: ~A~%" sparsity)
-  (log-msg "  cloud: ~S, chunk: ~S~%"
-           (name (cloud sparsity)) (name (chunk sparsity)))
-  (log-msg "  target: ~,5E, cost: ~,5E, damping: ~,5E~%"
-           (target sparsity) (cost sparsity) (damping sparsity)))
-
-(defmethod describe-trainer ((trainer mgl-bm::segmented-gd-sparse-bm-trainer))
-  (call-next-method)
-  (map nil #'describe-sparsity-gradient-source
-       (mgl-bm::sparsity-gradient-sources trainer)))
-
-
 (defun dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
@@ -374,7 +333,11 @@ each level in the DBN."
   (map 'list #'car counters-and-measurers))
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
-  (describe-trainer trainer)
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe rbm))
+    (describe trainer)
+    (map nil #'describe (trainers trainer)))
   (map nil #'xxx (clouds rbm))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers
@@ -622,6 +585,10 @@ each level in the DBN."
     (reset-counter counter)))
 
 (defmethod log-test-error (trainer (bpn mnist-bpn))
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe bpn))
+    (describe trainer))
   (multiple-value-bind (e ce)
       (bpn-error (make-sampler *test-images* :max-n (length *test-images*)
                                :omit-label-p t) bpn)
@@ -754,6 +721,10 @@ each level in the DBN."
 
 ;;;; Code for the DBN to DBM to BPN approach (paper [2])
 
+(defvar *dbn/2*)
+(defvar *dbm/2*)
+(defvar *bpn/2*)
+
 (defclass mnist-rbm/2 (mnist-rbm) ())
 
 (defun clamp-labels (images chunk)
@@ -870,7 +841,11 @@ each level in the DBN."
   (map 'list #'car counters-and-measurers))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (describe-trainer trainer)
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe dbm))
+    (describe trainer)
+    (map nil #'describe (trainers trainer)))
   (map nil #'xxx (clouds dbm))
   (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
                                          (floor (n-inputs trainer)
@@ -948,7 +923,6 @@ each level in the DBN."
                            (* 100 (- 1 e)))
                          errors)
                  (n-inputs trainer))))))
-
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
@@ -1101,10 +1075,6 @@ each level in the DBN."
                 (setf (gethash image cache) x)))
         (incf n (length samples)))
       (call-periodic-fn n fn n))))
-
-(defvar *dbn/2*)
-(defvar *dbm/2*)
-(defvar *bpn/2*)
 
 (defun xxx (cloud)
   (log-msg "~A norm: ~,5F~%"

@@ -58,6 +58,12 @@ must implement this. It is also defined on SEGMENT-SETs."))
    (size :reader segment-set-size))
   (:documentation "It's like a concatenation of segments."))
 
+(defmethod print-object ((set segment-set) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (set stream :type t :identity t)
+      (format stream "~A" (segments set))))
+  set)
+
 (defmethod initialize-instance :after ((segment-set segment-set)
                                        &key &allow-other-keys)
   (let ((n 0)

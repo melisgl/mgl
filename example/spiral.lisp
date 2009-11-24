@@ -60,6 +60,11 @@
     (reset-counter counter)))
 
 (defmethod log-test-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe rbm)
+      (describe trainer)
+      (map nil #'describe (trainers trainer))))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
@@ -94,6 +99,11 @@
     (values (get-error counter) counter)))
 
 (defmethod log-test-error (trainer (bpn spiral-bpn))
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe bpn)
+      (describe trainer)
+      (map nil #'describe (trainers trainer))))
   (log-msg "BPN TEST RMSE: ~,5F (~D)~%"
            (bpn-rmse (make-sampler 1000) bpn) (n-inputs trainer)))
 

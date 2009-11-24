@@ -71,13 +71,16 @@ Boltzmann Machine. This is an abstract base class."))
 
 (defmethod print-object ((chunk chunk) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (chunk stream :type t :identity t)
+    (print-unreadable-object (chunk stream :type t)
       (format stream "~S ~:_~S(~S/~S)"
               (ignore-errors (name chunk))
               (ignore-errors (chunk-size chunk))
               (ignore-errors (chunk-n-stripes chunk))
               (ignore-errors (chunk-max-n-stripes chunk)))))
   chunk)
+
+(define-descriptions (chunk chunk)
+  name size n-stripes max-n-stripes)
 
 ;;; Currently the lisp code handles only the single stripe case and
 ;;; blas cannot deal with no missing values.
@@ -208,6 +211,9 @@ the visible layer allows `conditional' RBMs."))
 are always DEFAULT-VALUE. This conveniently allows biases in the
 opposing layer."))
 
+(define-descriptions (chunk conditioning-chunk :inheritp t)
+  default-value)
+
 (defmethod resize-chunk ((chunk constant-chunk) size max-n-stripes)
   (call-next-method)
   (fill-chunk chunk (default-value chunk) :allp t))
@@ -235,6 +241,9 @@ when changing the number of stripes.")
     :reader group-size))
   (:documentation "Means are normalized to SCALE within node groups of
 GROUP-SIZE."))
+
+(define-descriptions (chunk normalized-group-chunk :inheritp t)
+  scale group-size)
 
 (defmethod resize-chunk ((chunk normalized-group-chunk) size max-n-stripes)
   (call-next-method)
@@ -445,10 +454,13 @@ imposed by the type of boltzmann machine the cloud is part of."))
 
 (defmethod print-object ((cloud cloud) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (cloud stream :type t :identity t)
+    (print-unreadable-object (cloud stream :type t)
       (when (slot-boundp cloud 'name)
-        (format stream "~S" (name cloud)))))
+        (format stream "~S" (ignore-errors (name cloud))))))
   cloud)
+
+(define-descriptions (cloud cloud)
+  name chunk1 chunk2)
 
 (defmethod set-n-stripes (n-stripes (cloud cloud)))
 (defmethod set-max-n-stripes (max-n-stripes (cloud cloud)))
@@ -861,6 +873,9 @@ list is instantiated. The default cloud spec list is what
 FULL-CLOUDS-EVERYWHERE returns for VISIBLE-CHUNKS and HIDDEN-CHUNKS.
 See MERGE-CLOUD-SPECS for the gory details. The initform, '(:MERGE),
 simply leaves the default cloud specs alone."))
+
+(define-descriptions (bm bm)
+  visible-chunks hidden-chunks clouds n-stripes max-n-stripes)
 
 (defgeneric find-chunk (name object &key errorp)
   (:documentation "Find the chunk in OBJECT whose name is EQUAL to
@@ -1439,6 +1454,9 @@ RBM when trained with PCD behaves the same as a BM with the same
 chunks, clouds but it can also be trained by contrastive
 divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
 
+(define-descriptions (rbm rbm :inheritp t)
+  dbn)
+
 (defmethod initialize-instance :after ((rbm rbm) &key &allow-other-keys)
   (when (has-visible-to-visible-p rbm)
     (error "An RBM cannot have visible to visible connections."))
@@ -1699,6 +1717,17 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
    (cost :type flt :initarg :cost :reader cost)
    (damping :type flt :initarg :damping :reader damping)))
 
+(defmethod print-object ((sparsity sparsity-gradient-source) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (sparsity stream :type t :identity t)
+      (format stream "~S ~:_~S"
+              (ignore-errors (name (cloud sparsity)))
+              (ignore-errors (name (chunk sparsity))))))
+  sparsity)
+
+(define-descriptions (sparsity sparsity-gradient-source)
+  cloud chunk target cost damping)
+
 (defclass normal-sparsity-gradient-source (sparsity-gradient-source)
   ((products :type flt-vector :initarg :products :reader products)
    (old-products :type flt-vector :initarg :old-products :reader old-products))
@@ -1816,6 +1845,9 @@ implemented by keeping track of the average means of the chunks
 connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
 C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
 of the batch. Batch size comes from the superclass."))
+
+(define-descriptions (trainer segmented-gd-sparse-bm-trainer :inheritp t)
+  sparsity-gradient-sources)
 
 (defun map-sparser (trainer bm)
   (let ((sparsities ()))

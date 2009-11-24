@@ -86,7 +86,7 @@ of the network.")))
 
 (defmethod print-object ((lump lump) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (lump stream :type t :identity t)
+    (print-unreadable-object (lump stream :type t)
       (format stream "~S ~:_~S ~:_~S" (name lump) :size
               (if (slot-boundp lump 'size)
                   (size lump)
@@ -180,6 +180,9 @@ of the network.")))
         (format stream "~S ~:_~S ~:_~S ~:_~S" :n-stripes (n-stripes bpn)
                 :max-n-stripes (max-n-stripes bpn)))))
   bpn)
+
+(define-descriptions (bpn bpn)
+  lumps n-stripes max-n-stripes)
 
 (defmethod n-stripes ((bpn bpn))
   (n-stripes (aref (lumps bpn) 0)))

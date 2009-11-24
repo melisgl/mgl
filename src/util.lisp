@@ -552,3 +552,54 @@ possible.")
                           (when (< (1+ i) n-columns)
                             (format stream " | "))))
             (terpri stream)))))
+
+
+;;;; DESCRIBE customization
+
+(defmacro with-safe-printing (&body body)
+  `(multiple-value-bind (v e)
+       (ignore-errors (progn ,@body))
+     (if e
+         "<<error during printing>>"
+         v)))
+
+(defun format-pair (name value stream)
+  (pprint-newline :mandatory stream)
+  (format stream "~A = ~S " name value))
+
+(defun pprint-descriptions (class descriptions stream)
+  (pprint-indent :block 2 stream)
+  (pprint-newline :mandatory stream)
+  (pprint-logical-block (stream ())
+    (format stream "~A description:" class)
+    (pprint-indent :block 2 stream)
+    (map nil (lambda (description)
+               (format-pair (first description)
+                            (second description)
+                            stream))
+         descriptions))
+  (pprint-indent :block 0 stream)
+  (pprint-newline :mandatory stream))
+
+(defun ->description (object description)
+  (if (symbolp description)
+      `(list ',description
+        (with-safe-printing (,description ,object)))
+      `(list ',(first description)
+        (with-safe-printing
+          ,(second description)))))
+
+(defmacro define-descriptions ((object class &key inheritp)
+                               &body descriptions)
+  (let ((%stream (gensym)))
+    `(defmethod describe-object ((,object ,class) ,%stream)
+       (pprint-logical-block (,%stream ())
+         (if (and (next-method-p) ,inheritp)
+             (call-next-method)
+             (print-unreadable-object (,object ,%stream :type t :identity t)))
+         (pprint-descriptions ',class
+                              (list ,@(mapcar (lambda (description)
+                                                (->description object
+                                                               description))
+                                              descriptions))
+                              ,%stream)))))

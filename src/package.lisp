@@ -62,6 +62,8 @@
    #:read-weights
    ;; Printing
    #:print-table
+   ;; Describe customization
+   #:define-descriptions
    ;; Copy
    #:with-copying
    #:copy-object-extra-initargs

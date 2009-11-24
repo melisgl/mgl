@@ -83,6 +83,16 @@ descriptions."))
   (:documentation "This is the common base class of gradient descent
 based trainers with momentum and weight decay."))
 
+(defmethod print-object ((trainer gd-trainer) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (trainer stream :type t :identity t)
+      (format stream "~S" (segment-set trainer))))
+  trainer)
+
+(define-descriptions (trainer gd-trainer)
+  n-inputs segment-set learning-rate momentum weight-decay weight-penalty
+  batch-size)
+
 (defclass batch-gd-trainer (gd-trainer)
   ((n-inputs-in-batch
     :initform 0 :initarg :n-inputs-in-batch :accessor n-inputs-in-batch
@@ -346,6 +356,9 @@ INITIALIZE-TRAINER with the list segments mapped to it.")
 other trainers. Useful to delegate training of different segments to
 different trainers (capable of working with segmantables) or simply to
 not train all segments."))
+
+(define-descriptions (trainer segmented-gd-trainer)
+  n-inputs trainers segments)
 
 (defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
   (let ((segmenter (segmenter trainer))
