@@ -334,7 +334,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (log-msg "visible-sampling: ~S~%" (mgl-rbm:visible-sampling trainer))
   (log-msg "hidden-sampling: ~S~%" (mgl-rbm:hidden-sampling trainer))
   (dolist (trainer (mgl-gd:trainers trainer))
-    (mgl-train:do-segment-set (cloud) (mgl-train:segment-set trainer) 
+    (mgl-train:do-segment-set (cloud) (mgl-train:segment-set trainer)
       (log-msg "Cloud: ~S~%" (mgl-rbm:name cloud))
       (log-msg "  Trainer: ~A~%"  (class-name (class-of trainer))))
     (describe-trainer trainer)))
@@ -348,7 +348,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
            (name (cloud sparsity)) (name (chunk sparsity)))
   (log-msg "  target: ~,5E, cost: ~,5E, damping: ~,5E~%"
            (target sparsity) (cost sparsity) (damping sparsity)))
-  
+
 (defmethod describe-trainer ((trainer mgl-bm::segmented-gd-sparse-bm-trainer))
   (call-next-method)
   (map nil #'describe-sparsity-gradient-source

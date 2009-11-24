@@ -711,7 +711,7 @@ computed."))
               (loop for li upfrom ls below le
                     for xi upfrom xs below xe
                     do (setf (aref l* li) (sigmoid (aref x* xi)))))))))
-    
+
 (defmethod derive-lump ((lump ->sigmoid))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
@@ -747,7 +747,7 @@ computed."))
               (loop for li upfrom ls below le
                     for xi upfrom xs below xe
                     do (setf (aref l* li) (exp (aref x* xi)))))))))
-    
+
 (defmethod derive-lump ((lump ->exp))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))

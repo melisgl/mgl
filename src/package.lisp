@@ -53,7 +53,7 @@
    #:reshape2
    #:set-ncols
    #:sum-elements
-   ;; I/O 
+   ;; I/O
    #:read-single-float-vector
    #:write-single-float-vector
    #:read-double-float-vector

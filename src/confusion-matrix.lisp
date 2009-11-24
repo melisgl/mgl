@@ -119,7 +119,7 @@ TARGET."
                                                    matrix target prediction)))
                               (list (->% (confusion-matrix-recall matrix
                                                                   target)))))
-           ("Precision" 
+           ("Precision"
             ,@(loop for prediction in all-classes
                     collect (->% (confusion-matrix-precision matrix prediction)))
             ""))
