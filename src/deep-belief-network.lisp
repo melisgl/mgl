@@ -96,17 +96,6 @@ have unique names under EQUAL as usual."))
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) rbm)))
 
-(defun make-dbn-reconstruction-rmse-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))))
-  "Return a list of counter, measurer conses to keep track of
-reconstruction rmse suitable for BM-MEAN-FIELD-ERRORS."
-  (loop for i upto (position rbm (rbms dbn))
-        collect (let ((i i))
-                  (cons (make-instance 'rmse-counter)
-                        (lambda (samples)
-                          (declare (ignore samples))
-                          (reconstruction-error (elt (rbms dbn) i)))))))
-
 (defun dbn-mean-field-errors
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
@@ -122,6 +111,42 @@ each level in the DBN."
                         dbn
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
+
+(defun make-dbn-reconstruction-rmse-counters-and-measurers
+    (dbn &key (rbm (last1 (rbms dbn))))
+  "Return a list of counter, measurer conses to keep track of
+reconstruction rmse suitable for BM-MEAN-FIELD-ERRORS."
+  (loop for i upto (position rbm (rbms dbn))
+        collect (let ((i i))
+                  (cons (make-instance 'rmse-counter)
+                        (lambda (samples)
+                          (declare (ignore samples))
+                          (reconstruction-error (elt (rbms dbn) i)))))))
+
+(defun make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
+    (dbn &key (rbm (last1 (rbms dbn))))
+  "Like MAKE-DBN-RECONSTRUCTION-RMSE-COUNTERS-AND-MEASURERS but don't
+count reconstruction error of labels (that is, those chunks that
+inherit from LABELED)."
+  (loop for i upto (position rbm (rbms dbn))
+        collect (let ((i i))
+                  (cons (make-instance 'rmse-counter)
+                        (lambda (samples)
+                          (declare (ignore samples))
+                          (reconstruction-rmse
+                           (remove-if (lambda (chunk)
+                                        (typep chunk 'labeled))
+                                      (visible-chunks (elt (rbms dbn) i)))))))))
+
+(defun make-dbn-reconstruction-misclassification-counters-and-measurers
+    (dbn &key (rbm (last1 (rbms dbn))))
+  "Return a list of counter, measurer conses to keep track of
+misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-misclassification-counters-and-measurers
+   (apply #'append
+          (mapcar #'chunks
+                  (subseq (rbms dbn)
+                          0 (1+ (position rbm (rbms dbn))))))))
 
 (defmethod write-weights ((dbn dbn) stream)
   (dolist (rbm (rbms dbn))

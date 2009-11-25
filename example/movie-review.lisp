@@ -176,10 +176,6 @@
   (setf (aref array (+ start (if (minusp label) 0 1)))
         #.(flt 1)))
 
-(defun max-position (array start end)
-  (position (loop for i upfrom start below end maximizing (aref array i))
-            array :start start :end end))
-
 (defun decode-label (array start end)
   (declare (type flt-vector array))
   (ecase (- (max-position array start end) start)

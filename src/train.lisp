@@ -210,7 +210,7 @@ COUNTERS-AND-MEASURERS."
   counters-and-measurers)
 
 
-;;;; Various accessor type generic functions shared by packages.
+;;;; Various accessor type generic functions shared by packages
 
 (defgeneric name (object))
 (defgeneric size (object))
@@ -219,4 +219,3 @@ COUNTERS-AND-MEASURERS."
 (defgeneric group-size (object))
 (defgeneric batch-size (object))
 (defgeneric n-inputs (object))
-(defgeneric label (object))

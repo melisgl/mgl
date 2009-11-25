@@ -105,6 +105,10 @@ propagate to the two branches allowing them to be more optimized."
     (setq end (min (length sequence) end)))
   (subseq sequence start end))
 
+(defun max-position (seq start end)
+  (position (loop for i upfrom start below end maximizing (elt seq i))
+            seq :start start :end end))
+
 (defun hash-table->alist (hash-table)
   (let ((r ()))
     (maphash (lambda (key value)

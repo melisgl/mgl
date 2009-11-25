@@ -162,6 +162,7 @@
                                :y (lump ',(chunk-lump-name
                                            'inputs
                                            :reconstruction))))))))))
+      (terpri)
       (initialize-bpn-from-bm bpn dbn inits)
       (train (make-sampler 50000)
              (make-instance 'spiral-bp-trainer

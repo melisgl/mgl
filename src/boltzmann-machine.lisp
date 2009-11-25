@@ -2153,3 +2153,27 @@ reconstruction rmse."
                         bm
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
+
+
+;;;; Classification
+
+(defclass softmax-label-chunk (softmax-chunk labeled) ())
+
+(defmethod stripe-label ((chunk softmax-label-chunk) stripe)
+  (with-stripes ((stripe chunk start end))
+    (- (max-position (storage (nodes chunk)) start end)
+       start)))
+
+(defun make-chunk-reconstruction-misclassification-counters-and-measurers
+    (chunks)
+  (loop for chunk in chunks
+        for measurer = (maybe-make-misclassification-measurer chunk)
+        when measurer
+        collect (cons (make-instance 'error-counter)
+                      measurer)))
+
+(defun make-bm-reconstruction-misclassification-counters-and-measurers (bm)
+  "Return a list of counter, measurer conses to keep track of
+misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-misclassification-counters-and-measurers
+   (chunks bm)))

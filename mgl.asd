@@ -28,6 +28,7 @@
                              (:file "feature")
                              (:file "train")
                              (:file "segment")
+                             (:file "classification")
                              (:file "gradient-descent")
                              (:file "conjugate-gradient")
                              (:file "boltzmann-machine")

@@ -24,6 +24,7 @@
    #:push-all
    #:group
    #:subseq*
+   #:max-position
    #:hash-table->alist
    #:alist->hash-table
    #:hash-table->vector
@@ -155,7 +156,12 @@
    #:nodes
    #:name
    #:size
-   #:target)
+   #:target
+   ;; Classification
+   #:label
+   #:labeled
+   #:stripe-label
+   #:maybe-make-misclassification-measurer)
   (:documentation "Generic training related interfaces and basic
 definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
@@ -313,12 +319,17 @@ interface and simple gradient descent based trainers."))
    #:reconstruction-error
    #:make-bm-reconstruction-rmse-counters-and-measurers
    #:bm-mean-field-errors
+   ;; Classification
+   #:softmax-label-chunk
+   #:make-bm-reconstruction-misclassification-counters-and-measurers
    ;; DBN
    #:dbn
    #:rbms
    #:down-mean-field
+   #:dbn-mean-field-errors
    #:make-dbn-reconstruction-rmse-counters-and-measurers
-   #:dbn-mean-field-errors)
+   #:make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
+   #:make-dbn-reconstruction-misclassification-counters-and-measurers)
   (:documentation "Fully General Boltzmann Machines, Restricted
 Boltzmann Machines and their stacks called Deep Belief
 Networks (DBN)."))
