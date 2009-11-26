@@ -57,6 +57,12 @@ to cause a change in the learner being trained."))
 and say FINISHEDP if it's not less than MAX-N-INPUTS (that is
 optional)."))
 
+(defmethod print-object ((sampler counting-sampler) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (sampler stream :type t :identity t)
+      (format stream "~S/~S" (n-samples sampler) (max-n-samples sampler))))
+  sampler)
+
 (defmethod finishedp ((sampler counting-sampler))
   (let ((max-n-samples (max-n-samples sampler)))
     (and max-n-samples
