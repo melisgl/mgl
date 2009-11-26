@@ -388,3 +388,123 @@ was returned by UNROLL-DBN or UNROLL-DBM."
       (destructuring-bind (&key cloud-name) known
         (let ((cloud (find-cloud cloud-name bm :errorp t)))
           (initialize-from-cloud bpn cloud unknown))))))
+
+
+;;;; SET-INPUT support for BPN converted from a DBM with MAP lumps
+
+(defun collect-map-chunks-and-lumps (bpn dbm)
+  "Return a list of chunk, lump sublists. Elements are MAP lumps in
+BPN and the corresponding chunk in DBM."
+  (let ((chunks-and-lumps ()))
+    (dolist (chunk (hidden-chunks dbm))
+      (let* ((lump-name (chunk-lump-name (name chunk) :map))
+             (lump (find-lump lump-name bpn)))
+        (when lump
+          (push (list chunk lump) chunks-and-lumps))))
+    chunks-and-lumps))
+
+(defun make-seq-sampler (seq)
+  "A simple sampler that returns elements of SEQ once, in order."
+  (make-instance 'counting-function-sampler
+                 :max-n-samples (length seq)
+                 :sampler (make-seq-generator seq)))
+
+(defclass bpn-clamping-cache ()
+  ((clamping-cache
+    :initform (make-hash-table)
+    :reader clamping-cache)
+   (populate-key
+    :initform #'identity
+    :initarg :populate-key
+    :reader populate-key)
+   (populate-convert-to-dbm-sample-fn
+    :initform #'identity
+    :initarg :populate-convert-to-dbm-sample-fn
+    :reader populate-convert-to-dbm-sample-fn)
+   (populate-map-cache-lazily-from-dbm
+    :initform nil
+    :type (or null dbm)
+    :initarg :populate-map-cache-lazily-from-dbm
+    :reader populate-map-cache-lazily-from-dbm)
+   (populate-periodic-fn
+    :initform nil
+    :initarg :populate-periodic-fn
+    :reader populate-periodic-fn))
+  (:documentation "This slot is a sample -> (lump array)* list hash
+table. Inherit from this and set input will clamp the arrays to the
+respective lumps for the right sample."))
+
+(defun populate-map-cache (bpn dbm samples &key (key (populate-key bpn))
+                           (convert-to-dbm-sample-fn
+                            (populate-convert-to-dbm-sample-fn bpn))
+                           (if-exists :skip)
+                           (periodic-fn (populate-periodic-fn bpn)))
+  "Populate the CLAMPING-CACHE of the MAP lumps of BPN unrolled from
+DBM. The values for the MAP lumps are taken from mean field of the
+correspending chunk of the DBM. What happens when the cache already
+has an entry for a sample is determined by IF-EXISTS: if :SKIP, the
+default, the cache is unchanged; if :SUPERSEDE, the cache entry is
+replaced by the calculated contents; if :APPEND, the new (lump array)
+entries are appended to the existing ones; if :ERROR, an error is
+signalled."
+  (let ((sampler (make-seq-sampler samples))
+        (cache (clamping-cache bpn))
+        (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
+    (do-batches-for-learner (samples (sampler dbm))
+      (when periodic-fn
+        (call-periodic-fn (hash-table-count cache) periodic-fn
+                          (hash-table-count cache)))
+      (cond ((eq if-exists :skip)
+             (setq samples
+                   (remove-if (lambda (sample)
+                                (gethash (funcall key sample) cache))
+                              samples)))
+            ((eq if-exists :error)
+             (when (some (lambda (sample)
+                           (gethash (funcall key sample) cache))
+                         samples)
+               (error "Cache entry already exists."))))
+      (when samples
+        (set-input (map 'list convert-to-dbm-sample-fn samples) dbm)
+        (set-hidden-mean dbm)
+        (loop for sample in samples
+              for stripe upfrom 0 do
+              (let ((k (funcall key sample))
+                    (x ()))
+                (loop for (chunk lump) in map-chunks-and-lumps
+                      do
+                      (with-stripes
+                          ((stripe chunk chunk-start chunk-end))
+                        (let ((xxx (make-flt-array
+                                    (- chunk-end chunk-start))))
+                          (replace xxx (storage (nodes chunk))
+                                   :start2 chunk-start :end2 chunk-end)
+                          (push (list lump xxx) x))))
+                (setf (gethash k cache)
+                      (ecase if-exists
+                        ((:skip :supersede) x)
+                        ((:append) (append (gethash k cache) x))))))))
+    (when periodic-fn
+      (call-periodic-fn (hash-table-count cache) periodic-fn
+                        (hash-table-count cache)))))
+
+(defun clamp-cached-entry-on-bpn (bpn stripe sample)
+  (let ((cache (clamping-cache bpn)))
+    (loop for (lump map-nodes) in (gethash sample cache) do
+          (unless (nth-value 1 (gethash sample cache))
+            (error "No clamping cache entry for ~S" sample))
+          (with-stripes ((stripe lump lump-start lump-end))
+            (declare (type flt-vector map-nodes))
+            (assert (= (length map-nodes)
+                       (- lump-end lump-start)))
+            (replace (storage (nodes lump))
+                     map-nodes
+                     :start1 lump-start)))))
+
+(defmethod set-input :before (samples (bpn bpn-clamping-cache))
+  (when (populate-map-cache-lazily-from-dbm bpn)
+    (populate-map-cache bpn (populate-map-cache-lazily-from-dbm bpn) samples
+                        :if-exists :skip))
+  (loop for stripe upfrom 0
+        for sample in samples
+        do (clamp-cached-entry-on-bpn bpn stripe sample)))

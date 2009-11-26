@@ -31,10 +31,16 @@
    #:reverse-hash-table
    #:repeatedly
    #:nshuffle-vector
+   #:make-seq-generator
    #:make-random-generator
    #:make-n-gram-mappee
    #:break-seq
    #:stratified-split
+   ;; Periodic fn
+   #:periodic-fn
+   #:call-periodic-fn
+   #:call-periodic-fn!
+   #:last-eval
    ;; Math
    #:sigmoid
    #:try-chance
@@ -392,6 +398,12 @@ Networks (DBN)."))
    #:chunk-lump-name
    #:unroll-dbn
    #:unroll-dbm
-   #:initialize-bpn-from-bm)
+   #:initialize-bpn-from-bm
+   ;; SET-INPUT support for BPN converted from a DBM with MAP lumps
+   #:bpn-clamping-cache
+   #:clamping-cache
+   #:populate-key
+   #:populate-map-cache-lazily-from-dbm
+   #:populate-map-cache)
   (:documentation "Translating Boltzmann Machines to a Backprop
 networks, aka `unrolling'."))

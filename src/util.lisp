@@ -155,6 +155,17 @@ its keys. HASH-TABLE better be a bijection."
              (rotatef (aref vector idx) (aref vector other))))
   vector)
 
+(defun make-seq-generator (vector)
+  "Return a function that returns elements of VECTOR in order without
+end. When there are no more elements, start over."
+  (let ((vector (copy-seq (coerce vector 'vector)))
+        (l (length vector))
+        (n 0))
+    (lambda ()
+      (prog1
+          (aref vector n)
+        (setf n (mod (1+ n) l))))))
+
 (defun make-random-generator (vector)
   "Return a function that returns elements of VECTOR in random order
 without end. When there are no more elements, start over with a
@@ -249,6 +260,30 @@ classes the same."
                                (mapcar (lambda (splits)
                                          (elt splits i))
                                        per-key-splits)))))))
+
+
+;;;; Periodic functions
+
+(defclass periodic-fn ()
+  ((period :initarg :period :reader period)
+   (fn :initarg :fn :reader fn)
+   (last-eval :initform nil :initarg :last-eval :accessor last-eval)))
+
+(defun call-periodic-fn (n fn &rest args)
+  (let ((period (period fn)))
+    (when (typep period '(or symbol function))
+      (setq period (apply period args)))
+    (when (or (null (last-eval fn))
+              (and (/= (floor n period)
+                       (floor (last-eval fn) period))))
+      (setf (last-eval fn) n)
+      (apply (fn fn) args))))
+
+(defun call-periodic-fn! (n fn &rest args)
+  (when (or (null (last-eval fn))
+            (and (/= n (last-eval fn))))
+    (setf (last-eval fn) n)
+    (apply (fn fn) args)))
 
 
 ;;;; Math

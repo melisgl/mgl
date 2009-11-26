@@ -24,30 +24,6 @@
     (apply #'format s format args)))
 
 
-;;;; PERIODIC-FN
-
-(defclass periodic-fn ()
-  ((period :initarg :period :reader period)
-   (fn :initarg :fn :reader fn)
-   (last-eval :initform nil :initarg :last-eval :accessor last-eval)))
-
-(defun call-periodic-fn (n fn &rest args)
-  (let ((period (period fn)))
-    (when (typep period '(or symbol function))
-      (setq period (apply period args)))
-    (when (or (null (last-eval fn))
-              (and (/= (floor n period)
-                       (floor (last-eval fn) period))))
-      (setf (last-eval fn) n)
-      (apply (fn fn) args))))
-
-(defun call-periodic-fn! (n fn &rest args)
-  (when (or (null (last-eval fn))
-            (and (/= n (last-eval fn))))
-    (setf (last-eval fn) n)
-    (apply (fn fn) args)))
-
-
 ;;;; Logging trainer
 
 (defgeneric log-training-error (trainer learner))
@@ -56,30 +32,34 @@
 (defgeneric log-test-period (trainer learner))
 
 (defclass logging-trainer ()
-  ((log-training-fn :initform (make-instance 'periodic-fn
+  ((log-training-fn :initform (make-instance 'mgl-util:periodic-fn
                                              :period 'log-training-period
                                              :fn 'log-training-error)
                     :reader log-training-fn)
-   (log-test-fn :initform (make-instance 'periodic-fn
+   (log-test-fn :initform (make-instance 'mgl-util:periodic-fn
                                          :period 'log-test-period
                                          :fn 'log-test-error)
                 :reader log-test-fn)))
 
 (defmethod mgl-train:train-batch :after
     (samples (trainer logging-trainer) learner)
-  (call-periodic-fn (mgl-train:n-inputs trainer) (log-training-fn trainer)
-                    trainer learner)
-  (call-periodic-fn (mgl-train:n-inputs trainer) (log-test-fn trainer)
-                    trainer learner))
+  (mgl-util:call-periodic-fn (mgl-train:n-inputs trainer)
+                             (log-training-fn trainer)
+                             trainer learner)
+  (mgl-util:call-periodic-fn (mgl-train:n-inputs trainer)
+                             (log-test-fn trainer)
+                             trainer learner))
 
 (defmethod mgl-train:train :before (sampler (trainer logging-trainer) learner)
-  (setf (last-eval (log-training-fn trainer))
+  (setf (mgl-util:last-eval (log-training-fn trainer))
         (mgl-train:n-inputs trainer))
-  (call-periodic-fn! (mgl-train:n-inputs trainer)
+  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
                      (log-test-fn trainer) trainer learner))
 
 (defmethod mgl-train:train :after (sampler (trainer logging-trainer) learner)
-  (call-periodic-fn! (mgl-train:n-inputs trainer) (log-training-fn trainer)
-                     trainer learner)
-  (call-periodic-fn! (mgl-train:n-inputs trainer) (log-test-fn trainer)
-                     trainer learner))
+  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
+                              (log-training-fn trainer)
+                              trainer learner)
+  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
+                              (log-test-fn trainer)
+                              trainer learner))

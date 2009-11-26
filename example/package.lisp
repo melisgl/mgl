@@ -3,10 +3,6 @@
   (:export #:*example-dir*
            #:time->string
            #:log-msg
-           #:periodic-fn
-           #:call-periodic-fn
-           #:call-periodic-fn!
-           #:last-eval
            #:logging-trainer
            #:log-training-error
            #:log-training-period

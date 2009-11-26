@@ -117,26 +117,36 @@
             'vector)))
 
 (defun load-training (&optional (mnist-dir *mnist-dir*))
-  (map 'vector
-       (lambda (label array)
-         (make-image :label label :array array))
-       (with-open-file (s (merge-pathnames "train-labels-idx1-ubyte" mnist-dir)
-                        :element-type 'unsigned-byte)
-         (read-image-labels s))
-       (with-open-file (s (merge-pathnames "train-images-idx3-ubyte" mnist-dir)
-                        :element-type 'unsigned-byte)
-         (read-image-arrays s))))
+  (log-msg "Loading training images~%")
+  (prog1
+      (map 'vector
+           (lambda (label array)
+             (make-image :label label :array array))
+           (with-open-file (s (merge-pathnames "train-labels-idx1-ubyte"
+                                               mnist-dir)
+                            :element-type 'unsigned-byte)
+             (read-image-labels s))
+           (with-open-file (s (merge-pathnames "train-images-idx3-ubyte"
+                                               mnist-dir)
+                            :element-type 'unsigned-byte)
+             (read-image-arrays s)))
+    (log-msg "Loading training images done~%")))
 
 (defun load-test (&optional (mnist-dir *mnist-dir*))
-  (map 'vector
-       (lambda (label array)
-         (make-image :label label :array array))
-       (with-open-file (s (merge-pathnames "t10k-labels-idx1-ubyte" mnist-dir)
-                        :element-type 'unsigned-byte)
-         (read-image-labels s))
-       (with-open-file (s (merge-pathnames "t10k-images-idx3-ubyte" mnist-dir)
-                        :element-type 'unsigned-byte)
-         (read-image-arrays s))))
+  (log-msg "Loading test images~%")
+  (prog1
+      (map 'vector
+           (lambda (label array)
+             (make-image :label label :array array))
+           (with-open-file (s (merge-pathnames "t10k-labels-idx1-ubyte"
+                                               mnist-dir)
+                            :element-type 'unsigned-byte)
+             (read-image-labels s))
+           (with-open-file (s (merge-pathnames "t10k-images-idx3-ubyte"
+                                               mnist-dir)
+                            :element-type 'unsigned-byte)
+             (read-image-arrays s)))
+    (log-msg "Loading test images done~%")))
 
 (defvar *training-images*)
 (defvar *test-images*)
@@ -376,25 +386,7 @@ each level in the DBN."
 
 ;;;; BPN
 
-(defclass mnist-bpn (bpn)
-  ;; This slot is an image -> (lump array)* list hash table. When the
-  ;; image is clamped in SET-INPUT onto the visible units, the the
-  ;; arrays are copied over the nodes of the respective lumps. This is
-  ;; not used for the DBN-to-BPN approach, but the DBN-to-DBM-to-BPN
-  ;; one stores the marginals of the approximate posteriors (:MAP
-  ;; lumps, in the unrolled network) here.
-  ((clamping-cache
-    :initform (make-hash-table :test #'eq)
-    :reader clamping-cache)))
-
-(defun clamp-image-on-bpn (bpn stripe image)
-  (let ((cache (clamping-cache bpn)))
-    (loop for (lump map-nodes) in (gethash image cache) do
-          (with-stripes ((stripe lump lump-start lump-end))
-            (declare (type flt-vector map-nodes))
-            (assert (= (length map-nodes)
-                       (- lump-end lump-start)))
-            (replace (storage (nodes lump)) map-nodes :start1 lump-start)))))
+(defclass mnist-bpn (bpn) ())
 
 (defmethod set-input (images (bpn mnist-bpn))
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
@@ -407,7 +399,6 @@ each level in the DBN."
           (destructuring-bind (image &key omit-label-p sample-visible-p) image
             (assert omit-label-p)
             (assert (not sample-visible-p))
-            (clamp-image-on-bpn bpn stripe image)
             (with-stripes ((stripe inputs inputs-start)
                            (stripe expectations expectations-start
                                    expectations-end))
@@ -448,9 +439,11 @@ each level in the DBN."
     (values (get-error counter)
             (get-error ce-counter))))
 
-(defun make-bpn (defs chunk-name)
+(defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn (eval (print
-                    `(build-bpn (:class 'mnist-bpn :max-n-stripes 1000)
+                    `(build-bpn (:class ',class
+                                        :max-n-stripes 1000
+                                        :initargs ',initargs)
                        ,@defs
                        ;; Add expectations
                        (expectations (input-lump :size 10))
@@ -521,21 +514,14 @@ each level in the DBN."
     (multiple-value-call #'add-error counter (classification-error bpn))))
 
 (defmethod train-batch :around (batch (trainer mnist-cg-bp-trainer) bpn)
-  (let ((ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (loop for samples in (group batch (max-n-stripes bpn)) do
-          (set-input samples bpn)
-          (forward-bpn bpn)
-          (multiple-value-call #'add-error ce-counter (cost bpn))
-          (multiple-value-call #'add-error counter (classification-error bpn)))
-    (multiple-value-bind (best-w best-f
-                                 n-line-searches n-succesful-line-searches
-                                 n-evaluations)
-        (call-next-method)
-      (declare (ignore best-w))
-      (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%" best-f n-evaluations)
-      (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
-               n-line-searches n-succesful-line-searches))))
+  (multiple-value-bind (best-w best-f
+                               n-line-searches n-succesful-line-searches
+                               n-evaluations)
+      (call-next-method)
+    (declare (ignore best-w))
+    (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%" best-f n-evaluations)
+    (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
+             n-line-searches n-succesful-line-searches)))
 
 (defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)
@@ -598,7 +584,7 @@ each level in the DBN."
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
     (print inits)
     (terpri)
-    (let ((bpn (make-bpn defs 'f3)))
+    (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
       (initialize-bpn-from-bm bpn dbn inits)
       (init-weights 'prediction-weights bpn 0.1)
       (init-weights 'prediction-biases bpn 0.1)
@@ -641,6 +627,7 @@ each level in the DBN."
 (defvar *bpn/2*)
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
+(defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
 
 (defun clamp-labels (images chunk)
   (setf (indices-present chunk)
@@ -936,12 +923,12 @@ each level in the DBN."
   (mgl-bm:dbm->dbn dbm :dbn-class 'mnist-dbn :rbm-class 'mnist-rbm/2
                    :dbn-initargs '(:max-n-stripes 100)))
 
-(defun unroll-mnist-dbm (dbm &key use-label-weights)
+(defun unroll-mnist-dbm (dbm &key use-label-weights initargs)
   (multiple-value-bind (defs inits)
       (unroll-dbm dbm :chunks (remove 'label (chunks dbm) :key #'name))
     (prin1 inits)
     (terpri)
-    (let ((bpn (make-bpn defs 'f2)))
+    (let ((bpn (make-bpn defs 'f2 :class 'mnist-bpn/2 :initargs initargs)))
       (initialize-bpn-from-bm bpn dbm
                               (if use-label-weights
                                   (list*
@@ -952,44 +939,6 @@ each level in the DBN."
                                    inits)
                                   inits))
       bpn)))
-
-(defun collect-map-chunks-and-lumps (bpn dbm)
-  (let ((chunks-and-lumps ()))
-    (dolist (chunk (hidden-chunks dbm))
-      (let* ((lump-name (chunk-lump-name (name chunk) :map))
-             (lump (find-lump lump-name bpn)))
-        (when lump
-          (push (list chunk lump) chunks-and-lumps))))
-    chunks-and-lumps))
-
-(defun populate-map-cache (bpn dbm images)
-  (let ((sampler (make-sampler images :max-n (length images)
-                               :sample-visible-p nil
-                               :omit-label-p t))
-        (cache (clamping-cache bpn))
-        (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
-    (let ((fn (make-instance 'periodic-fn :period 1000
-                             :fn (lambda (n)
-                                   (log-msg "populated: ~S~%" n))))
-          (n 0))
-      (do-batches-for-learner (samples (sampler dbm))
-        (call-periodic-fn n fn n)
-        (set-input samples dbm)
-        (set-hidden-mean dbm)
-        (loop for image in samples
-              for stripe upfrom 0 do
-              (let ((x ()))
-                (loop for (chunk lump) in map-chunks-and-lumps
-                      do
-                      (with-stripes ((stripe chunk chunk-start chunk-end))
-                        (let ((xxx (make-flt-array
-                                    (- chunk-end chunk-start))))
-                          (replace xxx (storage (nodes chunk))
-                                   :start2 chunk-start :end2 chunk-end)
-                          (push (list lump xxx) x))))
-                (setf (gethash image cache) x)))
-        (incf n (length samples)))
-      (call-periodic-fn n fn n))))
 
 (defun xxx (cloud)
   (log-msg "~A norm: ~,5F~%"
@@ -1044,10 +993,30 @@ each level in the DBN."
            (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
            (train-dbn)
            (train-dbm)))
-    (setq *bpn/2* (unroll-mnist-dbm *dbm/2* :use-label-weights t))
-    (log-msg "Populating MAP cache~%")
-    (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
-                                                     *test-images*))
+    (setq *bpn/2*
+          (unroll-mnist-dbm
+           *dbm/2*
+           :use-label-weights t
+           :initargs
+           ;; We are playing games with wrapping image objects in
+           ;; lists when sampling, so let the map cache know what's
+           ;; the key in the cache and what to pass to the dbm. We
+           ;; carefully omit labels.
+           (list :populate-key #'first
+                 :populate-convert-to-dbm-sample-fn (lambda (sample)
+                                                      (list (first sample)
+                                                            :sample-visible-p nil
+                                                            :omit-label-p t))
+                 :populate-map-cache-lazily-from-dbm *dbm/2*
+                 :populate-periodic-fn
+                 (make-instance 'periodic-fn :period 1000
+                                :fn (lambda (n)
+                                      (log-msg "populated: ~S~%" n))))))
+    (unless (populate-map-cache-lazily-from-dbm *bpn/2*)
+      (log-msg "Populating MAP cache~%")
+      (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
+                                                       *test-images*)
+                          :if-exists :error))
     (train-mnist-bpn *bpn/2* :batch-size 10000)
     (save-weights (merge-pathnames "mnist-2.bpn" *mnist-dir*)
                   *bpn/2*)))
