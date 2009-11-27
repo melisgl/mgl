@@ -10,7 +10,10 @@
            #:log-test-period
            #:tack-cross-entropy-softmax-error-on
            #:load-weights
-           #:save-weights))
+           #:save-weights
+           #:maximally-likely-node
+           #:maximally-likely-in-cross-entropy-softmax-lump
+           #:cross-entropy-softmax-max-likelihood-classification-error))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp

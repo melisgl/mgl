@@ -243,7 +243,7 @@
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (let ((counter (counter trainer))
         (n-inputs (n-inputs trainer)))
-    (log-msg "TRAINING RMSE: ~,5F (~D)~%"
+    (log-msg "TRAINING RMSE: ~,5E (~D)~%"
              (or (get-error counter) #.(flt 0))
              n-inputs)
     (reset-counter counter)))
@@ -286,7 +286,7 @@ each level in the DBN."
   (call-next-method)
   (log-dbn-classification-accuracy rbm (make-training-sampler)
                                    "TRAINING RECONSTRUCTION")
-  (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
+  (log-msg "DBN TEST RMSE: ~{~,5E~^, ~}~%"
            (map 'list
                 #'get-error
                 (dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm)))
@@ -387,32 +387,18 @@ each level in the DBN."
                           (+ expectations-start (image-label image)))
                     #.(flt 1)))))))
 
-(defun bpn-decode-digit (bpn lump-name)
-  (let* ((predictions (find-lump lump-name bpn :errorp t))
-         (nodes (storage (if (eq 'expectations lump-name)
-                             (nodes predictions)
-                             (softmax predictions)))))
-    (loop for stripe below (n-stripes predictions)
-          collect (with-stripes ((stripe predictions start end))
-                    (- (max-position nodes start end)
-                       start)))))
-
 (defun classification-error (bpn)
-  (values (- (n-stripes bpn)
-             (loop for p in (bpn-decode-digit bpn 'predictions)
-                   for e in (bpn-decode-digit bpn 'expectations)
-                   count (= p e)))
-          (n-stripes bpn)))
+  (cross-entropy-softmax-max-likelihood-classification-error
+   (find-lump 'predictions bpn :errorp t)))
 
 (defun bpn-error (sampler bpn)
   (let ((counter (make-instance 'error-counter))
-        (ce-counter (make-instance 'error-counter))
-        (n-stripes (max-n-stripes bpn)))
-    (loop until (finishedp sampler) do
-          (set-input (sample-batch sampler n-stripes) bpn)
-          (forward-bpn bpn)
-          (multiple-value-call #'add-error ce-counter (cost bpn))
-          (multiple-value-call #'add-error counter (classification-error bpn)))
+        (ce-counter (make-instance 'error-counter)))
+    (do-batches-for-learner (samples (sampler bpn))
+      (set-input samples bpn)
+      (forward-bpn bpn)
+      (multiple-value-call #'add-error ce-counter (cost bpn))
+      (multiple-value-call #'add-error counter (classification-error bpn)))
     (values (get-error counter)
             (get-error ce-counter))))
 
@@ -439,8 +425,9 @@ each level in the DBN."
 (defmethod log-training-error (trainer (bpn mnist-bpn))
   (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
-    (log-msg "CROSS ENTROPY ERROR: ~,5G~%"
-             (or (get-error ce-counter) #.(flt 0)))
+    (log-msg "CROSS ENTROPY ERROR: ~,5E (~D)~%"
+             (or (get-error ce-counter) #.(flt 0))
+             (n-inputs trainer))
     (log-msg "CLASSIFICATION ACCURACY: ~?~%" *percent-format*
              (list (->percent (or (get-error counter) #.(flt 0)))))
     (reset-counter ce-counter)
@@ -450,7 +437,7 @@ each level in the DBN."
   (call-next-method)
   (multiple-value-bind (e ce)
       (bpn-error (make-test-sampler :omit-label-p t) bpn)
-    (log-msg "TEST CROSS ENTROPY ERROR: ~,5G~%" ce)
+    (log-msg "TEST CROSS ENTROPY ERROR: ~,5E~%" ce)
     (log-msg "TEST CLASSIFICATION ACCURACY: ~?~%" *percent-format*
              (list (->percent e)))))
 
@@ -556,7 +543,7 @@ each level in the DBN."
          (setq *dbn/1* (make-mnist-dbn/1))
          (load-weights *mnist-1-dbn-filename* *dbn/1*)
          (log-msg "Loaded DBN~%")
-         (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
+         (log-msg "DBN TEST RMSE: ~{~,5E~^, ~}~%"
                   (map 'list
                        #'get-error
                        (dbn-mean-field-errors* (make-test-sampler)
@@ -673,12 +660,13 @@ each level in the DBN."
 
 (defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (let ((counter (counter trainer)))
-    (log-msg "TRAINING RMSE: ~,5G~%" (or (get-error counter) #.(flt 0)))
+    (log-msg "TRAINING RMSE: ~,5E (~D)~%" (or (get-error counter) #.(flt 0))
+             (n-inputs trainer))
     (reset-counter counter))
   (dolist (counter-and-measurer
             (training-classification-counters-and-measurers dbm))
     (let ((counter (car counter-and-measurer)))
-      (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2G~%"
+      (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2F~%"
                (->percent (or (get-error counter) #.(flt 0))))
       (reset-counter counter))))
 
@@ -724,7 +712,7 @@ each level in the DBN."
                                    "TRAINING")
   ;; This is too time consuming.
   #+nil
-  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~}~%"
+  (log-msg "DBM TEST RMSE: ~{~,5E~^, ~}~%"
            (map 'list
                 #'get-error
                 (mnist-dbm-mean-field-errors (make-test-sampler) dbm)))

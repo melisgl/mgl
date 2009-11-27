@@ -99,3 +99,20 @@
                    :if-does-not-exist :create :if-exists :supersede)
     (mgl-util:write-weights obj stream)))
 
+(defun maximally-likely-node (striped stripe &key (nodes (nodes striped)))
+  (with-stripes ((stripe striped start end))
+    (- (max-position (storage nodes) start end)
+       start)))
+
+(defun maximally-likely-in-cross-entropy-softmax-lump (lump stripe)
+  (values (maximally-likely-node lump stripe :nodes (softmax lump))
+          (maximally-likely-node (target lump) stripe)))
+
+(defun cross-entropy-softmax-max-likelihood-classification-error (lump)
+  "A measurer that return the number of misclassifications."
+  (values (loop for stripe below (n-stripes lump)
+                count (multiple-value-bind (prediction target)
+                          (maximally-likely-in-cross-entropy-softmax-lump
+                           lump stripe)
+                        (/= prediction target)))
+          (n-stripes lump)))

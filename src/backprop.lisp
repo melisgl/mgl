@@ -891,10 +891,10 @@ value is computed as the sum of nodes in the X parameter lump."))
 
 (defclass cross-entropy-softmax-lump (lump)
   ((group-size :initarg :group-size :reader group-size)
-   (x :initarg :x :reader x :documentation "This is input lump.")
+   (x :initarg :x :reader x :documentation "This is the input lump.")
    (softmax
     :reader softmax
-    :documentation "A lump of the same size as X, EXP'ed and
+    :documentation "A matrix of the same size as X, EXP'ed and
 normalized in groups of GROUP-SIZE.")
    (target
     :initarg :target :reader target
