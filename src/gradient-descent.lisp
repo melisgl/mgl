@@ -365,8 +365,9 @@ not train all segments."))
   n-inputs trainers segments)
 
 (defmethod describe-object :after ((trainer segmented-gd-trainer) stream)
-  (dolist (trainer (trainers trainer))
-    (describe trainer stream)))
+  (when (slot-boundp trainer 'trainers)
+    (dolist (trainer (trainers trainer))
+      (describe trainer stream))))
 
 (defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
   (let ((segmenter (segmenter trainer))

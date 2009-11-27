@@ -1979,11 +1979,14 @@ This is how many full (HIDDEN -> VISIBLE -> HIDDEN) steps are taken
 for CD learning, and how many times each chunk is sampled for PCD."))
   (:documentation "Paramaters for Markov Chain Monte Carlo based
 trainers for BMs."))
+
+(define-descriptions (bm bm-mcmc-parameters :inheritp t)
+  visible-sampling hidden-sampling n-gibbs)
 
 
 ;;;; Contrastive Divergence (CD) learning for RBMs
 
-(defclass rbm-cd-trainer (segmented-gd-sparse-bm-trainer bm-mcmc-parameters)
+(defclass rbm-cd-trainer (bm-mcmc-parameters segmented-gd-sparse-bm-trainer)
   ()
   (:documentation "A contrastive divergence based trainer for RBMs."))
 
@@ -2042,7 +2045,7 @@ trainers for BMs."))
 (define-slots-to-be-shallow-copied 'pcd rbm
   dbn)
 
-(defclass bm-pcd-trainer (segmented-gd-sparse-bm-trainer bm-mcmc-parameters)
+(defclass bm-pcd-trainer (bm-mcmc-parameters segmented-gd-sparse-bm-trainer)
   ((n-particles
     :type unsigned-byte
     :initarg :n-particles
