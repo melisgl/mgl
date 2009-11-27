@@ -595,10 +595,16 @@ all transposed.")))
                 2))
 
 (defun format-full-cloud-norm (cloud)
-  (format nil "~,5F" (full-cloud-norm cloud)))
+  (format nil "~,5E" (full-cloud-norm cloud)))
 
 (define-descriptions (cloud full-cloud :inheritp t)
-  (norm (format-full-cloud-norm cloud)))
+  (norm (format-full-cloud-norm cloud) "~A"))
+
+(defmethod print-object ((cloud full-cloud) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (cloud stream :type t)
+      (format stream "~S ~:_~A" :norm (format-full-cloud-norm cloud))))
+  cloud)
 
 (defmethod initialize-instance :after ((cloud full-cloud)
                                        &key &allow-other-keys)
@@ -780,8 +786,16 @@ into a product of two matrices: A*B. At activation time, HIDDEN +=
 A*B*VISIBLE."))
 
 (define-descriptions (cloud factored-cloud :inheritp t)
-  (cloud-a-norm (format-full-cloud-norm (cloud-a cloud)))
-  (cloud-b-norm (format-full-cloud-norm (cloud-b cloud))))
+  (cloud-a-norm (format-full-cloud-norm (cloud-a cloud)) "~A")
+  (cloud-b-norm (format-full-cloud-norm (cloud-b cloud)) "~A"))
+
+(defmethod print-object ((cloud factored-cloud) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (cloud stream :type t)
+      (format stream "~S ~:_(~A,~A)" :norm
+              (format-full-cloud-norm (cloud-a cloud))
+              (format-full-cloud-norm (cloud-b cloud)))))
+  cloud)
 
 (defclass factored-cloud-shared-chunk (chunk) ())
 
