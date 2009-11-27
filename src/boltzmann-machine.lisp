@@ -587,15 +587,16 @@ hidden + weights * visible. Visible = visible + weights^T * hidden.
 Looking directly at the underlying Lisp array \(MATLISP::STORE), it's
 all transposed.")))
 
+(defun norm (matrix)
+  (sqrt (let ((store (storage matrix)))
+          (loop for i below (matlisp:number-of-elements matrix)
+                sum (expt (aref store i) 2)))))
+
 (defun full-cloud-norm (cloud)
-  (matlisp:norm (reshape2 (weights cloud)
-                          (matlisp:number-of-elements
-                           (weights cloud))
-                          1)
-                2))
+  (norm (weights cloud)))
 
 (defun format-full-cloud-norm (cloud)
-  (format nil "~,5E" (full-cloud-norm cloud)))
+  (format nil "~,5G" (full-cloud-norm cloud)))
 
 (define-descriptions (cloud full-cloud :inheritp t)
   (norm (format-full-cloud-norm cloud) "~A"))
@@ -603,6 +604,8 @@ all transposed.")))
 (defmethod print-object ((cloud full-cloud) stream)
   (pprint-logical-block (stream ())
     (print-unreadable-object (cloud stream :type t)
+      (when (slot-boundp cloud 'name)
+        (format stream "~S ~:_" (ignore-errors (name cloud))))
       (format stream "~S ~:_~A" :norm (format-full-cloud-norm cloud))))
   cloud)
 

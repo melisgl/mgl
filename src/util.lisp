@@ -602,9 +602,11 @@ possible.")
          "<<error during printing>>"
          v)))
 
-(defun format-pair (name value stream)
+(defun format-description (description stream)
   (pprint-newline :mandatory stream)
-  (format stream "~A = ~S " name value))
+  (destructuring-bind (name value &optional (format "~S"))
+      description
+    (format stream "~A = ~? " name format (list value))))
 
 (defun pprint-descriptions (class descriptions stream)
   (pprint-indent :block 2 stream)
@@ -613,9 +615,7 @@ possible.")
     (format stream "~A description:" class)
     (pprint-indent :block 2 stream)
     (map nil (lambda (description)
-               (format-pair (first description)
-                            (second description)
-                            stream))
+               (format-description description stream))
          descriptions))
   (pprint-indent :block 0 stream)
   (pprint-newline :mandatory stream))
@@ -625,8 +625,8 @@ possible.")
       `(list ',description
         (with-safe-printing (,description ,object)))
       `(list ',(first description)
-        (with-safe-printing
-          ,(second description)))))
+        (with-safe-printing ,(second description))
+        ,@(cddr description))))
 
 (defmacro define-descriptions ((object class &key inheritp)
                                &body descriptions)

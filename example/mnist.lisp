@@ -297,7 +297,6 @@ each level in the DBN."
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
-  (map nil #'xxx (clouds rbm))
   (log-dbn-classification-accuracy rbm (make-training-sampler)
                                    "TRAINING RECONSTRUCTION")
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
@@ -761,7 +760,6 @@ each level in the DBN."
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (call-next-method)
-  (map nil #'xxx (clouds dbm))
   (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
                                          (floor (n-inputs trainer)
                                                 (length *training-images*)))
@@ -894,14 +892,6 @@ each level in the DBN."
                                   inits))
       bpn)))
 
-(defun xxx (cloud)
-  (log-msg "~A norm: ~,5F~%"
-           cloud
-           (matlisp:norm (reshape2 (weights cloud)
-                                   (matlisp:number-of-elements (weights cloud))
-                                   1)
-                         2)))
-
 (defun train-mnist/2 (&key load-dbn-p load-dbm-p)
   (unless (boundp '*training-images*)
     (setq *training-images* (load-training)))
@@ -1011,5 +1001,8 @@ each level in the DBN."
   (sleep 10)
   (sb-sprof:stop-profiling)
   (sb-sprof:report :type :graph))
+
+(describe *dbm/2*)
+(map nil #'print (clouds *dbm/2*))
 
 |#
