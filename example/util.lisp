@@ -66,10 +66,11 @@
 
 ;;;; Misc
 
-(defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key (prefix ""))
+(defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key
+                                            (prefix '||))
   (flet ((foo (symbol)
            (intern (format nil "~A~A" prefix (symbol-name symbol))
-                   (symbol-package symbol))))
+                   (symbol-package prefix))))
     `((,(foo 'expectations) (input-lump :size ,n-classes))
       (,(foo 'prediction-weights) (weight-lump
                                    :size (* (size (lump ',lump-name))

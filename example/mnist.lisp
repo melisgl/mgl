@@ -423,7 +423,8 @@ each level in the DBN."
                     ,@defs
                     ,@(tack-cross-entropy-softmax-error-on
                        10
-                       (chunk-lump-name chunk-name nil)))))
+                       (chunk-lump-name chunk-name nil)
+                       :prefix '||))))
     (log-msg "~%~S~%" bpn-def)
     (eval bpn-def)))
 
