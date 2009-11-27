@@ -352,7 +352,7 @@ each level in the DBN."
                                 (lambda (cloud)
                                   (make-instance 'mnist-rbm-segment-trainer
                                                  :learning-rate
-                                                 (this learning-rate)
+                                                 (flt (this learning-rate))
                                                  :weight-decay
                                                  (if (conditioning-cloud-p cloud)
                                                      (flt 0)
