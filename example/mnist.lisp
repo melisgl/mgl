@@ -911,7 +911,7 @@ each level in the DBN."
            (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
            (train-mnist-dbn
             *dbn/2*
-            :start-level 1
+            :start-level 0
             :n-epochs 100
             :n-gibbs (list 1
                            (lambda (trainer)
