@@ -228,7 +228,8 @@
   (let ((*print-level* nil))
     (when (zerop (n-inputs trainer))
       (describe learner))
-    (describe trainer)))
+    (describe trainer))
+  (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
 
 
 ;;;; DBN
@@ -258,8 +259,7 @@
     (log-msg "TRAINING RMSE: ~,5F (~D)~%"
              (or (get-error counter) #.(flt 0))
              n-inputs)
-    (when (zerop (mod n-inputs 60000))
-      (reset-counter counter))))
+    (reset-counter counter)))
 
 (defun dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
@@ -470,16 +470,12 @@ each level in the DBN."
    (counter :initform (make-instance 'error-counter) :reader counter)))
 
 (defmethod log-training-error (trainer (bpn mnist-bpn))
-  (let ((n-inputs (n-inputs trainer))
-        (ce-counter (cross-entropy-counter trainer))
+  (let ((ce-counter (cross-entropy-counter trainer))
         (counter (counter trainer)))
-    (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
-             (or (get-error ce-counter) #.(flt 0))
-             n-inputs)
-    (log-msg "CLASSIFICATION ACCURACY: ~? (~D)~%"
-             *percent-format*
-             (->percent (or (get-error counter) #.(flt 0)))
-             n-inputs)
+    (log-msg "CROSS ENTROPY ERROR: ~,5G~%"
+             (or (get-error ce-counter) #.(flt 0)))
+    (log-msg "CLASSIFICATION ACCURACY: ~?~%" *percent-format*
+             (->percent (or (get-error counter) #.(flt 0))))
     (reset-counter ce-counter)
     (reset-counter counter)))
 
@@ -487,10 +483,9 @@ each level in the DBN."
   (call-next-method)
   (multiple-value-bind (e ce)
       (bpn-error (make-test-sampler :omit-label-p t) bpn)
-    (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
-             ce (n-inputs trainer))
-    (log-msg "TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
-             *percent-format* (->percent e) (n-inputs trainer))))
+    (log-msg "TEST CROSS ENTROPY ERROR: ~,5G~%" ce)
+    (log-msg "TEST CLASSIFICATION ACCURACY: ~?~%" *percent-format*
+             (->percent e) (n-inputs trainer))))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
@@ -714,20 +709,15 @@ each level in the DBN."
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (let ((counter (counter trainer))
-        (n-inputs (n-inputs trainer)))
-    (log-msg "TRAINING RMSE: ~,5F (~D)~%"
-             (or (get-error counter) #.(flt 0))
-             n-inputs)
+  (let ((counter (counter trainer)))
+    (log-msg "TRAINING RMSE: ~,5G~%" (or (get-error counter) #.(flt 0)))
     (reset-counter counter))
   (dolist (counter-and-measurer
             (training-classification-counters-and-measurers dbm))
     (let ((counter (car counter-and-measurer)))
-      (let ((n-inputs (n-inputs trainer)))
-        (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2F (~D)~%"
-                 (->percent (or (get-error counter) #.(flt 0)))
-                 n-inputs)
-        (reset-counter counter)))))
+      (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2G~%"
+               (->percent (or (get-error counter) #.(flt 0))))
+      (reset-counter counter))))
 
 (defun mnist-dbm-mean-field-errors
     (sampler bm &key
@@ -792,18 +782,6 @@ each level in the DBN."
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
-;; (defun linear (a b x)
-;;   (+ a (* b x)))
-
-;; (defun linear-at-points (x1 y1 x2 y2 x)
-;;   (let ((b (/ (- y2 y1) (- x2 x1))))
-;;     (linear (- (* b (- x1 (/ y1 b)))) b x)))
-
-;; (assert (= 0 (linear-at-points 3 1 5 2 1)))
-;; (assert (= 1 (linear-at-points 3 1 5 2 3)))
-;; (assert (= 2 (linear-at-points 3 1 5 2 5)))
-;; (assert (= 3 (linear-at-points 3 1 5 2 7)))
-
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
@@ -813,13 +791,6 @@ each level in the DBN."
                 (* (/ (n-inputs trainer)
                       (length *training-images*))
                    600)))))
-
-#+nil
-(defmethod n-gibbs ((trainer mnist-dbm-trainer))
-  (cond ((< (n-inputs trainer) 5000)
-         100)
-        (t
-         10)))
 
 (defmethod momentum ((trainer mnist-dbm-segment-trainer))
   (if (< (n-inputs trainer) (* 5 (length *training-images*)))
