@@ -257,6 +257,7 @@ interface and simple gradient descent based trainers."))
    #:name
    #:chunk1
    #:chunk2
+   #:conditioning-cloud-p
    #:cloud-chunk-among-chunks
    #:full-cloud
    #:weights

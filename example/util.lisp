@@ -64,7 +64,7 @@
                      trainer learner))
 
 
-;;;; Building bpns
+;;;; Misc
 
 (defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key (prefix ""))
   (flet ((foo (symbol)
@@ -88,3 +88,13 @@
         :x ,(foo 'prediction-activations)
         :target ,(foo 'expectations)))
       (,(foo 'ce-error) (error-node :x ,(foo 'predictions))))))
+
+(defun load-weights (filename obj)
+  (with-open-file (stream filename)
+    (mgl-util:read-weights obj stream)))
+
+(defun save-weights (filename obj)
+  (with-open-file (stream filename :direction :output
+                   :if-does-not-exist :create :if-exists :supersede)
+    (mgl-util:write-weights obj stream)))
+

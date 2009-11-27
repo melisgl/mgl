@@ -188,19 +188,6 @@
                (with-stripes ((stripe striped start))
                  (clamp-array image nodes start))))))
 
-(defun bias-cloud-p (cloud)
-  (or (typep (chunk1 cloud) 'constant-chunk)
-      (typep (chunk2 cloud) 'constant-chunk)))
-
-(defun load-weights (filename obj)
-  (with-open-file (stream filename)
-    (mgl-util:read-weights obj stream)))
-
-(defun save-weights (filename obj)
-  (with-open-file (stream filename :direction :output
-                   :if-does-not-exist :create :if-exists :supersede)
-    (mgl-util:write-weights obj stream)))
-
 (defun layers->rbms (layers &key (class 'rbm))
   (loop for (v h) on layers
         when h
@@ -338,7 +325,7 @@ each level in the DBN."
                      (elt x i)
                      x)))
           (do-clouds (cloud rbm)
-            (if (bias-cloud-p cloud)
+            (if (conditioning-cloud-p cloud)
                 (fill (storage (weights cloud)) #.(flt 0))
                 (progn
                   (log-msg "init: ~A ~A~%" cloud (this stddev))
@@ -367,7 +354,7 @@ each level in the DBN."
                                                  :learning-rate
                                                  (this learning-rate)
                                                  :weight-decay
-                                                 (if (bias-cloud-p cloud)
+                                                 (if (conditioning-cloud-p cloud)
                                                      (flt 0)
                                                      (flt (this decay)))
                                                  :batch-size 100)))
@@ -430,15 +417,15 @@ each level in the DBN."
             (get-error ce-counter))))
 
 (defun make-bpn (defs chunk-name &key class initargs)
-  (let ((bpn (eval (print
-                    `(build-bpn (:class ',class
-                                        :max-n-stripes 1000
-                                        :initargs ',initargs)
-                       ,@defs
-                       ,@(tack-cross-entropy-softmax-error-on
-                          10
-                          (chunk-lump-name chunk-name nil)))))))
-    bpn))
+  (let ((bpn-def `(build-bpn (:class ',class
+                                     :max-n-stripes 1000
+                                     :initargs ',initargs)
+                    ,@defs
+                    ,@(tack-cross-entropy-softmax-error-on
+                       10
+                       (chunk-lump-name chunk-name nil)))))
+    (log-msg "~%~S~%" bpn-def)
+    (eval bpn-def)))
 
 
 ;;;; BPN training
@@ -543,8 +530,7 @@ each level in the DBN."
 
 (defun unroll-mnist-dbn/1 (dbn)
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
-    (print inits)
-    (terpri)
+    (log-msg "inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
       (initialize-bpn-from-bm bpn dbn inits)
       (init-weights 'prediction-weights bpn 0.1)
@@ -572,14 +558,12 @@ each level in the DBN."
          (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
                   (map 'list
                        #'get-error
-                       (dbn-mean-field-errors*
-                        (make-sampler *test-images*
-                                      :max-n (length *test-images*))
-                        *dbn/1*))))
+                       (dbn-mean-field-errors* (make-test-sampler)
+                                               *dbn/1*))))
         (t
          (setq *dbn/1* (make-mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
-         (train-mnist-dbn *dbn/1* :n-epochs 50 :learning-rate 0.1
+         (train-mnist-dbn *dbn/1* :n-epochs 50 :n-gibbs 1 :learning-rate 0.1
                           :decay 0.0002 :visible-sampling nil)
          (save-weights *mnist-1-dbn-filename* *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
@@ -800,7 +784,7 @@ each level in the DBN."
                                 (make-instance 'mnist-dbm-segment-trainer
                                                :learning-rate (flt 0.001)
                                                :weight-decay
-                                               (if (bias-cloud-p cloud)
+                                               (if (conditioning-cloud-p cloud)
                                                    (flt 0)
                                                    (flt 0.0002))
                                                :batch-size 100)))
@@ -827,8 +811,7 @@ each level in the DBN."
 (defun unroll-mnist-dbm (dbm &key use-label-weights initargs)
   (multiple-value-bind (defs inits)
       (unroll-dbm dbm :chunks (remove 'label (chunks dbm) :key #'name))
-    (prin1 inits)
-    (terpri)
+    (log-msg "inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f2 :class 'mnist-bpn/2 :initargs initargs)))
       (initialize-bpn-from-bm bpn dbm
                               (if use-label-weights

@@ -465,6 +465,10 @@ imposed by the type of boltzmann machine the cloud is part of."))
 (defmethod set-n-stripes (n-stripes (cloud cloud)))
 (defmethod set-max-n-stripes (max-n-stripes (cloud cloud)))
 
+(defun conditioning-cloud-p (cloud)
+  (or (conditioning-chunk-p (chunk1 cloud))
+      (conditioning-chunk-p (chunk2 cloud))))
+
 (defun activate-cloud (cloud reversep &key
                        (from-fn #'old-nodes) (to-fn #'nodes))
   "From CHUNK1 calculate the activations of CHUNK2 and _add_ them to
@@ -596,7 +600,7 @@ all transposed.")))
   (norm (weights cloud)))
 
 (defun format-full-cloud-norm (cloud)
-  (format nil "~,5G" (full-cloud-norm cloud)))
+  (format nil "~,5E" (full-cloud-norm cloud)))
 
 (define-descriptions (cloud full-cloud :inheritp t)
   (norm (format-full-cloud-norm cloud) "~A"))
@@ -1295,10 +1299,6 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
                        (clouds dbm))))
   (check-dbm-clouds dbm))
 
-(defun conditioning-cloud-p (cloud)
-  (or (conditioning-chunk-p (chunk1 cloud))
-      (conditioning-chunk-p (chunk2 cloud))))
-
 (defun conditioning-clouds-to (chunks clouds)
   (remove-if-not (lambda (cloud)
                    (and (conditioning-cloud-p cloud)
@@ -1530,7 +1530,6 @@ return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
 another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
   (let ((change (node-change chunks)))
-    ;;(format *trace-output* "n-iterations: ~S, diff: ~,8F~%" iteration change)
     (cond ((< change node-change-limit)
            nil)
           ((< iteration n-undamped-iterations)

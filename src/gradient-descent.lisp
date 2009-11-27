@@ -91,10 +91,10 @@ based trainers with momentum and weight decay."))
 
 (define-descriptions (trainer gd-trainer)
   n-inputs segment-set
-  (learning-rate (learning-rate trainer) "~,5G")
-  (momentum (momentum trainer) "~,5G")
-  (weight-decay (weight-decay trainer) "~,5G")
-  (weight-penalty (weight-penalty trainer) "~,5G")
+  (learning-rate (learning-rate trainer) "~,5E")
+  (momentum (momentum trainer) "~,5E")
+  (weight-decay (weight-decay trainer) "~,5E")
+  (weight-penalty (weight-penalty trainer) "~,5E")
   batch-size)
 
 (defclass batch-gd-trainer (gd-trainer)
