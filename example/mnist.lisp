@@ -435,30 +435,9 @@ each level in the DBN."
                                         :max-n-stripes 1000
                                         :initargs ',initargs)
                        ,@defs
-                       ;; Add expectations
-                       (expectations (input-lump :size 10))
-                       ;; Add a softmax layer. Oh, the pain.
-                       (prediction-weights
-                        (weight-lump
-                         :size (* (size (lump ',(chunk-lump-name chunk-name
-                                                                 nil)))
-                                  10)))
-                       (prediction-biases (weight-lump :size 10))
-                       (prediction-activations0
-                        (activation-lump :weights prediction-weights
-                                         :x (lump
-                                             ',(chunk-lump-name chunk-name
-                                                                nil))
-                                         :transpose-weights-p t))
-                       (prediction-activations
-                        (->+ :args (list prediction-activations0
-                                         prediction-biases)))
-                       (predictions
-                        (cross-entropy-softmax-lump
-                         :group-size 10
-                         :x prediction-activations
-                         :target expectations))
-                       (my-error (error-node :x predictions)))))))
+                       ,@(tack-cross-entropy-softmax-error-on
+                          10
+                          (chunk-lump-name chunk-name nil)))))))
     bpn))
 
 
@@ -475,17 +454,17 @@ each level in the DBN."
     (log-msg "CROSS ENTROPY ERROR: ~,5G~%"
              (or (get-error ce-counter) #.(flt 0)))
     (log-msg "CLASSIFICATION ACCURACY: ~?~%" *percent-format*
-             (->percent (or (get-error counter) #.(flt 0))))
+             (list (->percent (or (get-error counter) #.(flt 0)))))
     (reset-counter ce-counter)
     (reset-counter counter)))
 
-(defmethod log-test-error (trainer (bpn mnist-bpn))
+(defmethod log-test-error ((trainer mnist-cg-bp-trainer) (bpn mnist-bpn))
   (call-next-method)
   (multiple-value-bind (e ce)
       (bpn-error (make-test-sampler :omit-label-p t) bpn)
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5G~%" ce)
     (log-msg "TEST CLASSIFICATION ACCURACY: ~?~%" *percent-format*
-             (->percent e) (n-inputs trainer))))
+             (list (->percent e)))))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
@@ -622,7 +601,6 @@ each level in the DBN."
 
 (defparameter *mnist-2-bpn-filename*
   (merge-pathnames "mnist-2.bpn" *mnist-dir*))
-
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
 (defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())

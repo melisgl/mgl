@@ -1,5 +1,5 @@
 (cl:defpackage :mgl-example-util
-  (:use #:common-lisp)
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bm #:mgl-bp)
   (:export #:*example-dir*
            #:time->string
            #:log-msg
@@ -7,7 +7,8 @@
            #:log-training-error
            #:log-training-period
            #:log-test-error
-           #:log-test-period))
+           #:log-test-period
+           #:tack-cross-entropy-softmax-error-on))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp

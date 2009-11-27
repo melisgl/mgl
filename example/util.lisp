@@ -32,34 +32,59 @@
 (defgeneric log-test-period (trainer learner))
 
 (defclass logging-trainer ()
-  ((log-training-fn :initform (make-instance 'mgl-util:periodic-fn
+  ((log-training-fn :initform (make-instance 'periodic-fn
                                              :period 'log-training-period
                                              :fn 'log-training-error)
                     :reader log-training-fn)
-   (log-test-fn :initform (make-instance 'mgl-util:periodic-fn
+   (log-test-fn :initform (make-instance 'periodic-fn
                                          :period 'log-test-period
                                          :fn 'log-test-error)
                 :reader log-test-fn)))
 
-(defmethod mgl-train:train-batch :after
-    (samples (trainer logging-trainer) learner)
-  (mgl-util:call-periodic-fn (mgl-train:n-inputs trainer)
-                             (log-training-fn trainer)
-                             trainer learner)
-  (mgl-util:call-periodic-fn (mgl-train:n-inputs trainer)
-                             (log-test-fn trainer)
-                             trainer learner))
+(defmethod train-batch :after (samples (trainer logging-trainer) learner)
+  (call-periodic-fn (n-inputs trainer)
+                    (log-training-fn trainer)
+                    trainer learner)
+  (call-periodic-fn (n-inputs trainer)
+                    (log-test-fn trainer)
+                    trainer learner))
 
-(defmethod mgl-train:train :before (sampler (trainer logging-trainer) learner)
-  (setf (mgl-util:last-eval (log-training-fn trainer))
-        (mgl-train:n-inputs trainer))
-  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
+(defmethod train :before (sampler (trainer logging-trainer) learner)
+  (setf (last-eval (log-training-fn trainer))
+        (n-inputs trainer))
+  (call-periodic-fn! (n-inputs trainer)
                      (log-test-fn trainer) trainer learner))
 
-(defmethod mgl-train:train :after (sampler (trainer logging-trainer) learner)
-  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
-                              (log-training-fn trainer)
-                              trainer learner)
-  (mgl-util:call-periodic-fn! (mgl-train:n-inputs trainer)
-                              (log-test-fn trainer)
-                              trainer learner))
+(defmethod train :after (sampler (trainer logging-trainer) learner)
+  (call-periodic-fn! (n-inputs trainer)
+                     (log-training-fn trainer)
+                     trainer learner)
+  (call-periodic-fn! (n-inputs trainer)
+                     (log-test-fn trainer)
+                     trainer learner))
+
+
+;;;; Building bpns
+
+(defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key (prefix ""))
+  (flet ((foo (symbol)
+           (intern (format nil "~A~A" prefix (symbol-name symbol))
+                   (symbol-package symbol))))
+    `((,(foo 'expectations) (input-lump :size ,n-classes))
+      (,(foo 'prediction-weights) (weight-lump
+                                   :size (* (size (lump ',lump-name))
+                                            ,n-classes)))
+      (,(foo 'prediction-biases) (weight-lump :size ,n-classes))
+      (,(foo 'prediction-activations0)
+       (activation-lump :weights ,(foo 'prediction-weights)
+        :x (lump ',lump-name)
+        :transpose-weights-p t))
+      (,(foo 'prediction-activations)
+       (->+ :args (list ,(foo 'prediction-activations0)
+                        ,(foo 'prediction-biases))))
+      (,(foo 'predictions)
+       (cross-entropy-softmax-lump
+        :group-size ,n-classes
+        :x ,(foo 'prediction-activations)
+        :target ,(foo 'expectations)))
+      (,(foo 'ce-error) (error-node :x ,(foo 'predictions))))))
