@@ -360,6 +360,10 @@ not train all segments."))
 (define-descriptions (trainer segmented-gd-trainer)
   n-inputs trainers segments)
 
+(defmethod describe-object :after ((trainer segmented-gd-trainer) stream)
+  (dolist (trainer (trainers trainer))
+    (describe trainer stream)))
+
 (defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
   (let ((segmenter (segmenter trainer))
         (trainer-segments (make-hash-table :test 'eq)))

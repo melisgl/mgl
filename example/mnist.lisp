@@ -264,62 +264,49 @@ each level in the DBN."
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
-(defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe rbm))
-    (describe trainer)
-    (map nil #'describe (trainers trainer)))
-  (map nil #'xxx (clouds rbm))
+(defun log-dbn-mean-field-classification-accuracy (rbm sampler name)
   (let ((counters-and-measurers
          (make-dbn-reconstruction-misclassification-counters-and-measurers
           (dbn rbm) :rbm rbm)))
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
-                         (dbn-mean-field-errors*
-                          (make-sampler (subseq *training-images* 0 10000)
-                                        :max-n
-                                        10000
-                                        #+nil
-                                        (length
-                                         *training-images*)
-                                        :omit-label-p nil)
-                          (dbn rbm)
-                          :counters-and-measurers
-                          counters-and-measurers))))
-        (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~? (~D)~%"
+                         (dbn-mean-field-errors* sampler
+                                                 (dbn rbm)
+                                                 :counters-and-measurers
+                                                 counters-and-measurers))))
+        (log-msg "DBN ~A CLASSIFICATION ACCURACY: ~?~%"
+                 name
                  *list-of-percents-format*
-                 (mapcar #'->percent errors)
-                 (n-inputs trainer)))))
+                 (mapcar #'->percent errors))))))
+
+(defmethod log-test-error ((trainer mnist-logging-trainer) learner)
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe learner))
+    (describe trainer)))
+
+(defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
+  (call-next-method)
+  (map nil #'xxx (clouds rbm))
+  (log-dbn-mean-field-classification-accuracy
+   rbm
+   (make-sampler (subseq *training-images* 0 10000)
+                 :max-n 10000
+                 :omit-label-p nil)
+   "TRAINING RECONSTRUCTION")
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
                 (dbn-mean-field-errors* (make-sampler *test-images*
-                                                      :max-n #+nil
-                                                      1000
+                                                      :max-n
                                                       (length *test-images*))
                                         (dbn rbm) :rbm rbm))
            (n-inputs trainer))
-  (let ((counters-and-measurers
-         (make-dbn-reconstruction-misclassification-counters-and-measurers
-          (dbn rbm) :rbm rbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (dbn-mean-field-errors* (make-sampler *test-images*
-                                                               :max-n #+nil
-                                                               1000
-                                                               (length
-                                                                *test-images*)
-                                                               :omit-label-p t)
-                                                 (dbn rbm) :rbm rbm
-                                                 :counters-and-measurers
-                                                 counters-and-measurers))))
-        (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
-                 *list-of-percents-format*
-                 (mapcar #'->percent errors)
-                 (n-inputs trainer))))))
+  (log-dbn-mean-field-classification-accuracy
+   rbm
+   (make-sampler *test-images* :max-n (length *test-images*) :omit-label-p t)
+   "TEST"))
 
 (defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
@@ -499,10 +486,7 @@ each level in the DBN."
     (reset-counter counter)))
 
 (defmethod log-test-error (trainer (bpn mnist-bpn))
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe bpn))
-    (describe trainer))
+  (call-next-method)
   (multiple-value-bind (e ce)
       (bpn-error (make-sampler *test-images* :max-n (length *test-images*)
                                :omit-label-p t) bpn)
@@ -747,11 +731,7 @@ each level in the DBN."
   (map 'list #'car counters-and-measurers))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe dbm))
-    (describe trainer)
-    (map nil #'describe (trainers trainer)))
+  (call-next-method)
   (map nil #'xxx (clouds dbm))
   (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
                                          (floor (n-inputs trainer)
