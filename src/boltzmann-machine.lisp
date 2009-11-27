@@ -587,6 +587,19 @@ hidden + weights * visible. Visible = visible + weights^T * hidden.
 Looking directly at the underlying Lisp array \(MATLISP::STORE), it's
 all transposed.")))
 
+(defun full-cloud-norm (cloud)
+  (matlisp:norm (reshape2 (weights cloud)
+                          (matlisp:number-of-elements
+                           (weights cloud))
+                          1)
+                2))
+
+(defun format-full-cloud-norm (cloud)
+  (format nil "~,5F" (full-cloud-norm cloud)))
+
+(define-descriptions (cloud full-cloud :inheritp t)
+  (norm (format-full-cloud-norm cloud)))
+
 (defmethod initialize-instance :after ((cloud full-cloud)
                                        &key &allow-other-keys)
   (unless (slot-boundp cloud 'weights)
@@ -765,6 +778,10 @@ the visible chunk of CLOUD-A."))
   (:documentation "Like FULL-CLOUD but the weight matrix is factored
 into a product of two matrices: A*B. At activation time, HIDDEN +=
 A*B*VISIBLE."))
+
+(define-descriptions (cloud factored-cloud :inheritp t)
+  (cloud-a-norm (format-full-cloud-norm (cloud-a cloud)))
+  (cloud-b-norm (format-full-cloud-norm (cloud-b cloud))))
 
 (defclass factored-cloud-shared-chunk (chunk) ())
 
