@@ -272,8 +272,8 @@ each level in the DBN."
     (map nil #'describe (trainers trainer)))
   (map nil #'xxx (clouds rbm))
   (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers
-          (dbn rbm))))
+         (make-dbn-reconstruction-misclassification-counters-and-measurers
+          (dbn rbm) :rbm rbm)))
     (when counters-and-measurers
       (let ((errors (map 'list
                          #'get-error
