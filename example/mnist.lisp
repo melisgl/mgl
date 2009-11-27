@@ -199,6 +199,13 @@
 
 ;;;; Logging
 
+(defun ->percent (x)
+  (* 100 (- 1 x)))
+
+(defparameter *percent-format* "~,2F%")
+(defparameter *list-of-percents-format*
+  (format nil "~~{~A~~^, ~~}" *percent-format*))
+
 (defclass mnist-logging-trainer (logging-trainer) ())
 
 (defmethod log-training-period ((trainer mnist-logging-trainer) learner)
@@ -257,9 +264,6 @@ each level in the DBN."
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
-(defun ->percent (x)
-  (* 100 (- 1 x)))
-
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (let ((*print-level* nil))
     (when (zerop (n-inputs trainer))
@@ -284,7 +288,8 @@ each level in the DBN."
                           (dbn rbm)
                           :counters-and-measurers
                           counters-and-measurers))))
-        (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+        (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~? (~D)~%"
+                 *list-of-percents-format*
                  (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
@@ -311,7 +316,8 @@ each level in the DBN."
                                                  (dbn rbm) :rbm rbm
                                                  :counters-and-measurers
                                                  counters-and-measurers))))
-        (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+        (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
+                 *list-of-percents-format*
                  (mapcar #'->percent errors)
                  (n-inputs trainer))))))
 
@@ -485,7 +491,8 @@ each level in the DBN."
     (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
              (or (get-error ce-counter) #.(flt 0))
              n-inputs)
-    (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
+    (log-msg "CLASSIFICATION ACCURACY: ~? (~D)~%"
+             *percent-format*
              (->percent (or (get-error counter) #.(flt 0)))
              n-inputs)
     (reset-counter ce-counter)
@@ -501,8 +508,8 @@ each level in the DBN."
                                :omit-label-p t) bpn)
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
              ce (n-inputs trainer))
-    (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-             (->percent e) (n-inputs trainer))))
+    (log-msg "TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
+             *percent-format* (->percent e) (n-inputs trainer))))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
@@ -767,7 +774,8 @@ each level in the DBN."
                           dbm
                           :counters-and-measurers
                           counters-and-measurers))))
-        (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+        (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~? (~D)~%"
+                 *list-of-percents-format*
                  (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (let ((counters-and-measurers
@@ -786,7 +794,8 @@ each level in the DBN."
                           dbm
                           :counters-and-measurers
                           counters-and-measurers))))
-        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~? (~D)~%"
+                 *list-of-percents-format*
                  (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
@@ -813,7 +822,8 @@ each level in the DBN."
                           dbm
                           :counters-and-measurers
                           counters-and-measurers))))
-        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
+        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
+                 *list-of-percents-format*
                  (mapcar #'->percent errors)
                  (n-inputs trainer))))))
 
