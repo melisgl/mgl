@@ -278,7 +278,7 @@ each level in the DBN."
         (log-msg "DBN ~A CLASSIFICATION ACCURACY: ~?~%"
                  name
                  *list-of-percents-format*
-                 (mapcar #'->percent errors))))))
+                 (list (mapcar #'->percent errors)))))))
 
 (defmethod log-test-error ((trainer mnist-logging-trainer) learner)
   (let ((*print-level* nil))
@@ -756,7 +756,7 @@ each level in the DBN."
                           counters-and-measurers))))
         (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~? (~D)~%"
                  *list-of-percents-format*
-                 (mapcar #'->percent errors)
+                 (list (mapcar #'->percent errors))
                  (n-inputs trainer)))))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
@@ -776,7 +776,7 @@ each level in the DBN."
                           counters-and-measurers))))
         (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~? (~D)~%"
                  *list-of-percents-format*
-                 (mapcar #'->percent errors)
+                 (list (mapcar #'->percent errors))
                  (n-inputs trainer)))))
   (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
@@ -804,7 +804,7 @@ each level in the DBN."
                           counters-and-measurers))))
         (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
                  *list-of-percents-format*
-                 (mapcar #'->percent errors)
+                 (list (mapcar #'->percent errors))
                  (n-inputs trainer))))))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
