@@ -581,6 +581,12 @@ each level in the DBN."
 (defvar *dbn/1*)
 (defvar *bpn/1*)
 
+(defparameter *mnist-1-dbn-filename*
+  (merge-pathnames "mnist-1.dbn" *mnist-dir*))
+
+(defparameter *mnist-1-bpn-filename*
+  (merge-pathnames "mnist-1.bpn" *mnist-dir*))
+
 (defun train-mnist/1 (&key load-dbn-p)
   (unless (boundp '*training-images*)
     (setq *training-images* (load-training)))
@@ -588,7 +594,7 @@ each level in the DBN."
     (setq *test-images* (load-test)))
   (cond (load-dbn-p
          (setq *dbn/1* (make-mnist-dbn/1))
-         (load-weights (merge-pathnames "mnist-1.dbn" *mnist-dir*) *dbn/1*)
+         (load-weights *mnist-1-dbn-filename* *dbn/1*)
          (log-msg "Loaded DBN~%")
          (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
                   (map 'list
@@ -602,10 +608,10 @@ each level in the DBN."
          (init-mnist-dbn *dbn/1* :stddev 0.1)
          (train-mnist-dbn *dbn/1* :n-epochs 50 :learning-rate 0.1
                           :decay 0.0002 :visible-sampling nil)
-         (save-weights (merge-pathnames "mnist-1.dbn" *mnist-dir*) *dbn/1*)))
+         (save-weights *mnist-1-dbn-filename* *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
   (train-mnist-bpn *bpn/1*)
-  (save-weights (merge-pathnames "mnist-1.bpn" *mnist-dir*) *bpn/1*))
+  (save-weights *mnist-1-bpn-filename* *bpn/1*))
 
 
 ;;;; Code for the DBN to DBM to BPN approach (paper [2])
@@ -613,6 +619,16 @@ each level in the DBN."
 (defvar *dbn/2*)
 (defvar *dbm/2*)
 (defvar *bpn/2*)
+
+(defparameter *mnist-2-dbn-filename*
+  (merge-pathnames "mnist-2.dbn" *mnist-dir*))
+
+(defparameter *mnist-2-dbm-filename*
+  (merge-pathnames "mnist-2.dbm" *mnist-dir*))
+
+(defparameter *mnist-2-bpn-filename*
+  (merge-pathnames "mnist-2.bpn" *mnist-dir*))
+
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
 (defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
@@ -909,19 +925,17 @@ each level in the DBN."
                                 (* 20 (length *training-images*))))))
             :decay 0.001
             :visible-sampling t)
-           (save-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*)
-                         *dbn/2*))
+           (save-weights *mnist-2-dbn-filename* *dbn/2*))
          (train-dbm ()
            (train-mnist-dbm *dbm/2*)
-           (save-weights (merge-pathnames "mnist-2.dbm" *mnist-dir*)
-                         *dbm/2*)))
+           (save-weights *mnist-2-dbm-filename* *dbm/2*)))
     (cond (load-dbm-p
            (setq *dbm/2* (make-mnist-dbm))
-           (load-weights (merge-pathnames "mnist-2.dbm" *mnist-dir*) *dbm/2*))
+           (load-weights *mnist-2-dbm-filename* *dbm/2*))
           (load-dbn-p
            (setq *dbm/2* (make-mnist-dbm))
            (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
-           (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
+           (load-weights *mnist-2-dbn-filename* *dbn/2*)
            (log-msg "Loaded DBN~%")
            (train-dbm))
           (t
@@ -954,8 +968,7 @@ each level in the DBN."
                                                        *test-images*)
                           :if-exists :error))
     (train-mnist-bpn *bpn/2* :batch-size 10000)
-    (save-weights (merge-pathnames "mnist-2.bpn" *mnist-dir*)
-                  *bpn/2*)))
+    (save-weights *mnist-2-bpn-filename* *bpn/2*)))
 
 (defmethod negative-phase (batch (trainer mnist-dbm-trainer) bm)
   (mgl-bm::check-no-self-connection bm)
