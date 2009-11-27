@@ -892,9 +892,7 @@ each level in the DBN."
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (flet ((train-dbn ()
-           (load-weights (merge-pathnames "mnist-2.dbn" *mnist-dir*) *dbn/2*)
-           ;;(init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
-           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 1)
+           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
            (train-mnist-dbn
             *dbn/2*
             :start-level 1
