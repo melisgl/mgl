@@ -163,6 +163,16 @@
                                     :omit-label-p omit-label-p
                                     :sample-visible-p sample-visible-p)))))
 
+(defun make-training-sampler (&key omit-label-p)
+  (make-sampler (subseq *training-images* 0 1000)
+                :max-n 1000
+                :omit-label-p omit-label-p))
+
+(defun make-test-sampler (&key omit-label-p)
+  (make-sampler *test-images*
+                :max-n (length *test-images*)
+                :omit-label-p omit-label-p))
+
 (defun clamp-array (image array start)
   (declare (type flt-vector array)
            (optimize (speed 3)))
@@ -213,6 +223,12 @@
 
 (defmethod log-test-period ((trainer mnist-logging-trainer) learner)
   (length *training-images*))
+
+(defmethod log-test-error ((trainer mnist-logging-trainer) learner)
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe learner))
+    (describe trainer)))
 
 
 ;;;; DBN
@@ -244,7 +260,6 @@
              n-inputs)
     (when (zerop (mod n-inputs 60000))
       (reset-counter counter))))
-
 
 (defun dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
@@ -264,7 +279,7 @@ each level in the DBN."
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
-(defun log-dbn-mean-field-classification-accuracy (rbm sampler name)
+(defun log-dbn-classification-accuracy (rbm sampler name)
   (let ((counters-and-measurers
          (make-dbn-reconstruction-misclassification-counters-and-measurers
           (dbn rbm) :rbm rbm)))
@@ -280,33 +295,17 @@ each level in the DBN."
                  *list-of-percents-format*
                  (list (mapcar #'->percent errors)))))))
 
-(defmethod log-test-error ((trainer mnist-logging-trainer) learner)
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe learner))
-    (describe trainer)))
-
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
   (map nil #'xxx (clouds rbm))
-  (log-dbn-mean-field-classification-accuracy
-   rbm
-   (make-sampler (subseq *training-images* 0 10000)
-                 :max-n 10000
-                 :omit-label-p nil)
-   "TRAINING RECONSTRUCTION")
-  (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+  (log-dbn-classification-accuracy rbm (make-training-sampler)
+                                   "TRAINING RECONSTRUCTION")
+  (log-msg "DBN TEST RMSE: ~{~,5F~^, ~}~%"
            (map 'list
                 #'get-error
-                (dbn-mean-field-errors* (make-sampler *test-images*
-                                                      :max-n
-                                                      (length *test-images*))
-                                        (dbn rbm) :rbm rbm))
-           (n-inputs trainer))
-  (log-dbn-mean-field-classification-accuracy
-   rbm
-   (make-sampler *test-images* :max-n (length *test-images*) :omit-label-p t)
-   "TEST"))
+                (dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm)))
+  (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
+                                   "TEST"))
 
 (defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
@@ -488,8 +487,7 @@ each level in the DBN."
 (defmethod log-test-error (trainer (bpn mnist-bpn))
   (call-next-method)
   (multiple-value-bind (e ce)
-      (bpn-error (make-sampler *test-images* :max-n (length *test-images*)
-                               :omit-label-p t) bpn)
+      (bpn-error (make-test-sampler :omit-label-p t) bpn)
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
              ce (n-inputs trainer))
     (log-msg "TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
@@ -730,6 +728,21 @@ each level in the DBN."
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
+(defun log-dbm-classification-accuracy (dbm sampler name)
+  (let ((counters-and-measurers
+         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+    (when counters-and-measurers
+      (let ((errors (map 'list
+                         #'get-error
+                         (mnist-dbm-mean-field-errors sampler
+                                                      dbm
+                                                      :counters-and-measurers
+                                                      counters-and-measurers))))
+        (log-msg "DBM ~A CLASSIFICATION ACCURACY: ~?~%"
+                 name
+                 *list-of-percents-format*
+                 (list (mapcar #'->percent errors)))))))
+
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (call-next-method)
   (map nil #'xxx (clouds dbm))
@@ -737,75 +750,19 @@ each level in the DBN."
                                          (floor (n-inputs trainer)
                                                 (length *training-images*)))
                                  *mnist-dir*)
-                *dbm/2*)
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (mnist-dbm-mean-field-errors
-                          (make-sampler (subseq *training-images* 0 1000)
-                                        :max-n
-                                        1000
-                                        #+nil
-                                        (length
-                                         *training-images*)
-                                        :omit-label-p nil)
-                          dbm
-                          :counters-and-measurers
-                          counters-and-measurers))))
-        (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~? (~D)~%"
-                 *list-of-percents-format*
-                 (list (mapcar #'->percent errors))
-                 (n-inputs trainer)))))
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (mnist-dbm-mean-field-errors
-                          (make-sampler (subseq *training-images* 0 1000)
-                                        :max-n
-                                        1000
-                                        #+nil
-                                        (length
-                                         *training-images*)
-                                        :omit-label-p t)
-                          dbm
-                          :counters-and-measurers
-                          counters-and-measurers))))
-        (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~? (~D)~%"
-                 *list-of-percents-format*
-                 (list (mapcar #'->percent errors))
-                 (n-inputs trainer)))))
-  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
+                dbm)
+  (log-dbm-classification-accuracy dbm (make-training-sampler)
+                                   "TRAINING RECONSTRUCTION")
+  (log-dbm-classification-accuracy dbm (make-training-sampler :omit-label-p t)
+                                   "TRAINING")
+  ;; This is too time consuming.
+  #+nil
+  (log-msg "DBM TEST RMSE: ~{~,5F~^, ~}~%"
            (map 'list
                 #'get-error
-                (mnist-dbm-mean-field-errors (make-sampler *test-images*
-                                                           :max-n #+nil
-                                                           (length *test-images*)
-                                                           1000)
-                                             dbm))
-           (n-inputs trainer))
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (mnist-dbm-mean-field-errors
-                          (make-sampler *test-images*
-                                        :max-n #+nil
-                                        (length
-                                         *test-images*)
-                                        1000
-                                        :omit-label-p t)
-                          dbm
-                          :counters-and-measurers
-                          counters-and-measurers))))
-        (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~? (~D)~%"
-                 *list-of-percents-format*
-                 (list (mapcar #'->percent errors))
-                 (n-inputs trainer))))))
+                (mnist-dbm-mean-field-errors (make-test-sampler) dbm)))
+  (log-dbm-classification-accuracy dbm (make-test-sampler :omit-label-p t)
+                                   "TEST"))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
