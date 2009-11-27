@@ -257,6 +257,9 @@ each level in the DBN."
                         counters-and-measurers)
   (map 'list #'car counters-and-measurers))
 
+(defun ->percent (x)
+  (* 100 (- 1 x)))
+
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (let ((*print-level* nil))
     (when (zerop (n-inputs trainer))
@@ -282,9 +285,7 @@ each level in the DBN."
                           :counters-and-measurers
                           counters-and-measurers))))
         (log-msg "DBN TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
+                 (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
@@ -311,9 +312,7 @@ each level in the DBN."
                                                  :counters-and-measurers
                                                  counters-and-measurers))))
         (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
+                 (mapcar #'->percent errors)
                  (n-inputs trainer))))))
 
 (defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
@@ -487,7 +486,7 @@ each level in the DBN."
              (or (get-error ce-counter) #.(flt 0))
              n-inputs)
     (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-             (* 100 (- 1 (or (get-error counter) #.(flt 0))))
+             (->percent (or (get-error counter) #.(flt 0)))
              n-inputs)
     (reset-counter ce-counter)
     (reset-counter counter)))
@@ -503,7 +502,7 @@ each level in the DBN."
     (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
              ce (n-inputs trainer))
     (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-             (* 100 (- 1 e)) (n-inputs trainer))))
+             (->percent e) (n-inputs trainer))))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
@@ -722,9 +721,7 @@ each level in the DBN."
     (let ((counter (car counter-and-measurer)))
       (let ((n-inputs (n-inputs trainer)))
         (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2F (~D)~%"
-                 (funcall (lambda (e)
-                            (* 100 (- 1 e)))
-                          (or (get-error counter) #.(flt 0)))
+                 (->percent (or (get-error counter) #.(flt 0)))
                  n-inputs)
         (reset-counter counter)))))
 
@@ -771,9 +768,7 @@ each level in the DBN."
                           :counters-and-measurers
                           counters-and-measurers))))
         (log-msg "DBM TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
+                 (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
@@ -792,9 +787,7 @@ each level in the DBN."
                           :counters-and-measurers
                           counters-and-measurers))))
         (log-msg "DBM TRAINING CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
+                 (mapcar #'->percent errors)
                  (n-inputs trainer)))))
   (log-msg "DBM TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
@@ -821,9 +814,7 @@ each level in the DBN."
                           :counters-and-measurers
                           counters-and-measurers))))
         (log-msg "DBM TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
+                 (mapcar #'->percent errors)
                  (n-inputs trainer))))))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
