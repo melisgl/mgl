@@ -1009,3 +1009,14 @@ target_k if target sums to 1."))
                                 (if (= ti tj)
                                     #.(flt 1)
                                     #.(flt 0)))))))))))))
+
+
+;;;; Utilities
+
+(defun collect-bpn-errors (sampler bpn &key counters-and-measurers)
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples bpn)
+                          (forward-bpn bpn))
+                        sampler
+                        bpn
+                        counters-and-measurers))

@@ -1,5 +1,16 @@
 (in-package :mgl-train)
 
+;;;; Various accessor type generic functions shared by packages
+
+(defgeneric name (object))
+(defgeneric size (object))
+(defgeneric nodes (object))
+(defgeneric default-value (object))
+(defgeneric group-size (object))
+(defgeneric batch-size (object))
+(defgeneric n-inputs (object))
+
+
 ;;;; Interface
 
 (defgeneric sample (sampler)
@@ -84,7 +95,16 @@ SAMPLER runs out."
 
 ;;;; Error counter
 
-(defclass error-counter ()
+(defclass counter ()
+  ((name :initform () :initarg :name :reader name)))
+
+(defmethod initialize-instance :after ((counter counter) &key
+                                       (prepend-name nil prepend-name-p)
+                                       &allow-other-keys)
+  (when prepend-name-p
+    (push prepend-name (slot-value counter 'name))))
+
+(defclass error-counter (counter)
   ((sum-errors
     :initform #.(flt 0) :reader sum-errors
     :documentation "The sum of errors.")
@@ -93,7 +113,26 @@ SAMPLER runs out."
     :documentation "The total number of observations whose errors
 contributed to SUM-ERROR.")))
 
-(defclass rmse-counter (error-counter) ())
+(defgeneric print-counter (counter stream))
+
+(defmethod print-counter ((counter error-counter) stream)
+  (multiple-value-bind (e c) (get-error counter)
+    (if e
+        (format stream "~,5E (~D)" e c)
+        (format stream "~A (~D)" e c))))
+
+(defclass misclassification-counter (error-counter)
+  ((name :initform '("classification accuracy"))))
+
+(defmethod print-counter ((counter misclassification-counter) stream)
+  (multiple-value-bind (e c) (get-error counter)
+    (if e
+        (format stream "~,2F% (~D)"
+                (* 100 (- 1 e)) c)
+        (format stream "~A (~D)" e c))))
+
+(defclass rmse-counter (error-counter)
+  ((name :initform '("rmse"))))
 
 (defgeneric add-error (counter err n)
   (:documentation "Add ERR to SUM-ERROR and N to N-SUM-ERRORS.")
@@ -119,6 +158,18 @@ contributed to SUM-ERROR.")))
       (if e
           (values (sqrt e) n)
           nil))))
+
+(defmethod print-object ((counter counter) stream)
+  (pprint-logical-block (stream ())
+    (flet ((foo ()
+             (when (slot-boundp counter 'name)
+               (format stream "~{~A~^ ~:_~}: ~:_" (name counter)))
+             (print-counter counter stream)))
+      (if *print-escape*
+          (print-unreadable-object (counter stream :type t)
+            (foo))
+          (foo))))
+  counter)
 
 
 ;;;; Stripes
@@ -192,14 +243,16 @@ out."
   "Convenience macro over MAP-BATCHES-FOR-LEARNER."
   `(map-batches-for-learner (lambda (,samples) ,@body) ,sampler ,learner))
 
-(defun apply-counters-and-measurers (samples counters-and-measurers)
+(defun add-measured-error (counter-and-measurer &rest args)
+  (multiple-value-call #'add-error
+    (car counter-and-measurer)
+    (apply (cdr counter-and-measurer) args)))
+
+(defun apply-counters-and-measurers (counters-and-measurers &rest args)
   "Add the errors measured by the measurers to the counters."
   (map nil
        (lambda (counter-and-measurer)
-         (assert (consp counter-and-measurer))
-         (multiple-value-call
-             #'add-error (car counter-and-measurer)
-             (funcall (cdr counter-and-measurer) samples)))
+         (apply #'add-measured-error counter-and-measurer args))
        counters-and-measurers)
   counters-and-measurers)
 
@@ -213,16 +266,5 @@ argument to ADD-ERROR. Finally, return the counters. Return
 COUNTERS-AND-MEASURERS."
   (do-batches-for-learner (samples (sampler learner))
     (funcall fn samples)
-    (apply-counters-and-measurers samples counters-and-measurers))
-  counters-and-measurers)
-
-
-;;;; Various accessor type generic functions shared by packages
-
-(defgeneric name (object))
-(defgeneric size (object))
-(defgeneric nodes (object))
-(defgeneric default-value (object))
-(defgeneric group-size (object))
-(defgeneric batch-size (object))
-(defgeneric n-inputs (object))
+    (apply-counters-and-measurers counters-and-measurers samples learner))
+  (map 'list #'car counters-and-measurers))

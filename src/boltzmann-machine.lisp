@@ -2169,12 +2169,13 @@ error."
   (reconstruction-rmse (visible-chunks bm)))
 
 (defun make-bm-reconstruction-rmse-counters-and-measurers (bm)
+  (declare (ignore bm))
   (list (cons (make-instance 'rmse-counter)
-              (lambda (samples)
+              (lambda (samples bm)
                 (declare (ignore samples))
                 (reconstruction-error bm)))))
 
-(defun bm-mean-field-errors
+(defun collect-bm-mean-field-errors
     (sampler bm &key
      (counters-and-measurers
       (make-bm-reconstruction-rmse-counters-and-measurers bm)))
@@ -2187,8 +2188,7 @@ reconstruction rmse."
                           (set-visible-mean bm))
                         sampler
                         bm
-                        counters-and-measurers)
-  (map 'list #'car counters-and-measurers))
+                        counters-and-measurers))
 
 
 ;;;; Classification
@@ -2205,8 +2205,10 @@ reconstruction rmse."
   (loop for chunk in chunks
         for measurer = (maybe-make-misclassification-measurer chunk)
         when measurer
-        collect (cons (make-instance 'error-counter)
-                      measurer)))
+        collect
+        (cons (make-instance 'misclassification-counter
+                             :prepend-name (format nil "chunk ~A" (name chunk)))
+              measurer)))
 
 (defun make-bm-reconstruction-misclassification-counters-and-measurers (bm)
   "Return a list of counter, measurer conses to keep track of

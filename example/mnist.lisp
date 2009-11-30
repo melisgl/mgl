@@ -232,7 +232,9 @@
       (clamp-striped-nodes images inputs))))
 
 (defclass mnist-rbm-trainer (mnist-logging-trainer rbm-cd-trainer)
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+  ((counter
+    :initform (make-instance 'rmse-counter :prepend-name "training")
+    :reader counter)))
 
 (defmethod n-gibbs ((trainer mnist-rbm-trainer))
   (let ((x (slot-value trainer 'n-gibbs)))
@@ -241,20 +243,16 @@
         (funcall x trainer))))
 
 (defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
-  (let ((counter (counter trainer))
-        (n-inputs (n-inputs trainer)))
-    (log-msg "TRAINING RMSE: ~,5E (~D)~%"
-             (or (get-error counter) #.(flt 0))
-             n-inputs)
-    (reset-counter counter)))
+  (log-msg "n-inputs: ~D~%" (n-inputs trainer))
+  (log-msg "~A~%" (counter trainer))
+  (reset-counter (counter trainer)))
 
-(defun dbn-mean-field-errors*
+(defun collect-dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
       (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Run the mean field up to RBM then down to the bottom and collect
-the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
-each level in the DBN."
+  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct the LABEL chunk
+even if it's missing in the input."
   (collect-batch-errors (lambda (samples)
                           (set-input samples rbm)
                           (set-hidden-mean rbm)
@@ -263,35 +261,29 @@ each level in the DBN."
                           (down-mean-field dbn :rbm rbm))
                         sampler
                         dbn
-                        counters-and-measurers)
-  (map 'list #'car counters-and-measurers))
+                        counters-and-measurers))
 
 (defun log-dbn-classification-accuracy (rbm sampler name)
   (let ((counters-and-measurers
          (make-dbn-reconstruction-misclassification-counters-and-measurers
           (dbn rbm) :rbm rbm)))
-    (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (dbn-mean-field-errors* sampler
-                                                 (dbn rbm)
-                                                 :counters-and-measurers
-                                                 counters-and-measurers))))
-        (log-msg "DBN ~A CLASSIFICATION ACCURACY: ~?~%"
-                 name
-                 *list-of-percents-format*
-                 (list (mapcar #'->percent errors)))))))
+    (map nil (lambda (counter)
+               (log-msg "~A ~:_~A~%" name counter))
+         (collect-dbn-mean-field-errors*
+          sampler
+          (dbn rbm)
+          :counters-and-measurers
+          counters-and-measurers))))
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
   (log-dbn-classification-accuracy rbm (make-training-sampler)
-                                   "TRAINING RECONSTRUCTION")
-  (log-msg "DBN TEST RMSE: ~{~,5E~^, ~}~%"
-           (map 'list
-                #'get-error
-                (dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm)))
+                                   "dbn training reconstruction")
+  (map nil (lambda (counter)
+             (log-msg "dbn test ~:_~A~%" counter))
+       (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
   (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
-                                   "TEST"))
+                                   "dbn test"))
 
 (defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
   (call-next-method)
@@ -352,7 +344,7 @@ each level in the DBN."
                                 (lambda (cloud)
                                   (make-instance 'mnist-rbm-segment-trainer
                                                  :learning-rate
-                                                 (flt (this learning-rate))
+                                                 (this learning-rate)
                                                  :weight-decay
                                                  (if (conditioning-cloud-p cloud)
                                                      (flt 0)
@@ -392,15 +384,17 @@ each level in the DBN."
    (find-lump 'predictions bpn :errorp t)))
 
 (defun bpn-error (sampler bpn)
-  (let ((counter (make-instance 'error-counter))
-        (ce-counter (make-instance 'error-counter)))
-    (do-batches-for-learner (samples (sampler bpn))
-      (set-input samples bpn)
-      (forward-bpn bpn)
-      (multiple-value-call #'add-error ce-counter (cost bpn))
-      (multiple-value-call #'add-error counter (classification-error bpn)))
-    (values (get-error counter)
-            (get-error ce-counter))))
+  (collect-bpn-errors
+   sampler bpn
+   :counters-and-measurers
+   (list (cons (make-instance 'misclassification-counter)
+               (lambda (samples bpn)
+                 (declare (ignore samples))
+                 (classification-error bpn)))
+         (cons (make-instance 'error-counter :name '("cross entropy"))
+               (lambda (samples bpn)
+                 (declare (ignore samples))
+                 (cost bpn))))))
 
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
@@ -418,28 +412,25 @@ each level in the DBN."
 ;;;; BPN training
 
 (defclass mnist-cg-bp-trainer (mnist-logging-trainer cg-bp-trainer)
-  ((cross-entropy-counter :initform (make-instance 'error-counter)
-                          :reader cross-entropy-counter)
-   (counter :initform (make-instance 'error-counter) :reader counter)))
+  ((cross-entropy-counter
+    :initform (make-instance 'error-counter :name '("training cross entropy"))
+    :reader cross-entropy-counter)
+   (counter
+    :initform (make-instance 'misclassification-counter :prepend-name "training")
+    :reader counter)))
 
 (defmethod log-training-error (trainer (bpn mnist-bpn))
-  (let ((ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (log-msg "CROSS ENTROPY ERROR: ~,5E (~D)~%"
-             (or (get-error ce-counter) #.(flt 0))
-             (n-inputs trainer))
-    (log-msg "CLASSIFICATION ACCURACY: ~?~%" *percent-format*
-             (list (->percent (or (get-error counter) #.(flt 0)))))
-    (reset-counter ce-counter)
-    (reset-counter counter)))
+  (log-msg "n-inputs: ~S~%" (n-inputs trainer))
+  (log-msg "~A~%" (cross-entropy-counter trainer))
+  (log-msg "~A~%" (counter trainer))
+  (reset-counter (cross-entropy-counter trainer))
+  (reset-counter (counter trainer)))
 
 (defmethod log-test-error ((trainer mnist-cg-bp-trainer) (bpn mnist-bpn))
   (call-next-method)
-  (multiple-value-bind (e ce)
-      (bpn-error (make-test-sampler :omit-label-p t) bpn)
-    (log-msg "TEST CROSS ENTROPY ERROR: ~,5E~%" ce)
-    (log-msg "TEST CLASSIFICATION ACCURACY: ~?~%" *percent-format*
-             (list (->percent e)))))
+  (map nil (lambda (counter)
+             (log-msg "test ~:_~A~%" counter))
+       (bpn-error (make-test-sampler :omit-label-p t) bpn)))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
@@ -455,8 +446,8 @@ each level in the DBN."
                                n-evaluations)
       (call-next-method)
     (declare (ignore best-w))
-    (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%" best-f n-evaluations)
-    (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
+    (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%" best-f n-evaluations)
+    (log-msg "n-line-searches: ~S (succesful ~S)~%"
              n-line-searches n-succesful-line-searches)))
 
 (defun init-weights (name bpn deviation)
@@ -543,15 +534,14 @@ each level in the DBN."
          (setq *dbn/1* (make-mnist-dbn/1))
          (load-weights *mnist-1-dbn-filename* *dbn/1*)
          (log-msg "Loaded DBN~%")
-         (log-msg "DBN TEST RMSE: ~{~,5E~^, ~}~%"
-                  (map 'list
-                       #'get-error
-                       (dbn-mean-field-errors* (make-test-sampler)
-                                               *dbn/1*))))
+         (map nil (lambda (counter)
+                    (log-msg "dbn test ~:_~A~%" counter))
+              (collect-dbn-mean-field-errors* (make-test-sampler) *dbn/1*)))
         (t
          (setq *dbn/1* (make-mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
-         (train-mnist-dbn *dbn/1* :n-epochs 50 :n-gibbs 1 :learning-rate 0.1
+         (train-mnist-dbn *dbn/1* :n-epochs 50 :n-gibbs 1
+                          :learning-rate (flt 0.1)
                           :decay 0.0002 :visible-sampling nil)
          (save-weights *mnist-1-dbn-filename* *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
@@ -619,8 +609,8 @@ each level in the DBN."
 (defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
-      (lambda (examples)
-        (funcall measurer (mapcar #'first examples))))))
+      (lambda (examples learner)
+        (funcall measurer (mapcar #'first examples) learner)))))
 
 (defclass mnist-dbm (dbm)
   ((layers :initform (list
@@ -643,7 +633,10 @@ each level in the DBN."
 
 (defmethod initialize-instance :after ((dbm mnist-dbm) &key &allow-other-keys)
   (setf (slot-value dbm 'training-classification-counters-and-measurers)
-        (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
+        (make-bm-reconstruction-misclassification-counters-and-measurers dbm))
+  (dolist (counter-and-measurer
+            (training-classification-counters-and-measurers dbm))
+    (push "training" (slot-value (car counter-and-measurer) 'name))))
 
 (defun make-mnist-dbm ()
   (make-instance 'mnist-dbm :max-n-stripes 100))
@@ -656,21 +649,22 @@ each level in the DBN."
     (clamp-labels images label-chunk)))
 
 (defclass mnist-dbm-trainer (mnist-logging-trainer bm-pcd-trainer)
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+  ((counter
+    :initform (make-instance 'rmse-counter
+                             :prepend-name "dbm training reconstruction")
+    :reader counter)))
 
 (defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (let ((counter (counter trainer)))
-    (log-msg "TRAINING RMSE: ~,5E (~D)~%" (or (get-error counter) #.(flt 0))
-             (n-inputs trainer))
-    (reset-counter counter))
+  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
+  (log-msg "~A~%" (counter trainer))
+  (reset-counter (counter trainer))
   (dolist (counter-and-measurer
             (training-classification-counters-and-measurers dbm))
     (let ((counter (car counter-and-measurer)))
-      (log-msg "TRAINING RECONSTRUCTION CLASSIFICATION ACCURACY: ~,2F~%"
-               (->percent (or (get-error counter) #.(flt 0))))
+      (log-msg "~A~%" counter)
       (reset-counter counter))))
 
-(defun mnist-dbm-mean-field-errors
+(defun collect-mnist-dbm-mean-field-errors
     (sampler bm &key
      (counters-and-measurers
       (make-bm-reconstruction-rmse-counters-and-measurers bm)))
@@ -681,23 +675,16 @@ each level in the DBN."
                           (set-visible-mean bm))
                         sampler
                         bm
-                        counters-and-measurers)
-  (map 'list #'car counters-and-measurers))
+                        counters-and-measurers))
 
 (defun log-dbm-classification-accuracy (dbm sampler name)
   (let ((counters-and-measurers
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
     (when counters-and-measurers
-      (let ((errors (map 'list
-                         #'get-error
-                         (mnist-dbm-mean-field-errors sampler
-                                                      dbm
-                                                      :counters-and-measurers
-                                                      counters-and-measurers))))
-        (log-msg "DBM ~A CLASSIFICATION ACCURACY: ~?~%"
-                 name
-                 *list-of-percents-format*
-                 (list (mapcar #'->percent errors)))))))
+      (map nil (lambda (counter)
+                 (log-msg "dbm ~:_~A ~:_~A~%" name counter))
+           (collect-mnist-dbm-mean-field-errors
+            sampler dbm :counters-and-measurers counters-and-measurers)))))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (call-next-method)
@@ -707,17 +694,16 @@ each level in the DBN."
                                  *mnist-dir*)
                 dbm)
   (log-dbm-classification-accuracy dbm (make-training-sampler)
-                                   "TRAINING RECONSTRUCTION")
+                                   "training reconstruction")
   (log-dbm-classification-accuracy dbm (make-training-sampler :omit-label-p t)
-                                   "TRAINING")
+                                   "training")
   ;; This is too time consuming.
   #+nil
-  (log-msg "DBM TEST RMSE: ~{~,5E~^, ~}~%"
-           (map 'list
-                #'get-error
-                (mnist-dbm-mean-field-errors (make-test-sampler) dbm)))
+  (map nil (lambda (counter)
+             (log-msg "dbm test ~:_~A~%" counter))
+       (collect-mnist-dbm-mean-field-errors (make-test-sampler) dbm))
   (log-dbm-classification-accuracy dbm (make-test-sampler :omit-label-p t)
-                                   "TEST"))
+                                   "test"))
 
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)

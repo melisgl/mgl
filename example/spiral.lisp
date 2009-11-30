@@ -68,7 +68,8 @@
   (log-msg "DBN TEST RMSE: ~{~,5F~^, ~} (~D)~%"
            (map 'list
                 #'get-error
-                (dbn-mean-field-errors (make-sampler 1000) (dbn rbm) :rbm rbm))
+                (collect-dbn-mean-field-errors (make-sampler 1000)
+                                               (dbn rbm) :rbm rbm))
            (n-inputs trainer)))
 
 (defmethod negative-phase :around (batch trainer (rbm spiral-rbm))

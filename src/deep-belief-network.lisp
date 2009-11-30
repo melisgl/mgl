@@ -96,7 +96,7 @@ have unique names under EQUAL as usual."))
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) rbm)))
 
-(defun dbn-mean-field-errors
+(defun collect-dbn-mean-field-errors
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
       (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
@@ -109,8 +109,7 @@ each level in the DBN."
                           (down-mean-field dbn :rbm rbm))
                         sampler
                         dbn
-                        counters-and-measurers)
-  (map 'list #'car counters-and-measurers))
+                        counters-and-measurers))
 
 (defun make-dbn-reconstruction-rmse-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))))
@@ -118,8 +117,9 @@ each level in the DBN."
 reconstruction rmse suitable for BM-MEAN-FIELD-ERRORS."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
-                  (cons (make-instance 'rmse-counter)
-                        (lambda (samples)
+                  (cons (make-instance 'rmse-counter
+                                       :prepend-name (format nil "level ~A" i))
+                        (lambda (samples dbn)
                           (declare (ignore samples))
                           (reconstruction-error (elt (rbms dbn) i)))))))
 
@@ -131,7 +131,7 @@ inherit from LABELED)."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter)
-                        (lambda (samples)
+                        (lambda (samples dbn)
                           (declare (ignore samples))
                           (reconstruction-rmse
                            (remove-if (lambda (chunk)

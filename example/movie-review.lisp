@@ -397,7 +397,7 @@
     (log-msg "DBN TEST RMSE: ~{~,3E~^, ~} (~D)~%"
              (map 'list
                   #'get-error
-                  (dbn-mean-field-errors
+                  (collect-dbn-mean-field-errors
                    (make-sampler *test-stories*
                                  :omit-label-p t
                                  :max-n (length *test-stories*))

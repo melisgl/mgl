@@ -16,12 +16,16 @@
   (merge-pathnames "mgl-example.log" *example-dir*))
 
 (defun log-msg (format &rest args)
-  (format *trace-output* "~&~A: " (time->string))
-  (apply #'format *trace-output* format args)
+  (pprint-logical-block (*trace-output* nil)
+    (format *trace-output* "~A: " (time->string))
+    (pprint-logical-block (*trace-output* nil)
+      (apply #'format *trace-output* format args)))
   (with-open-file (s *log-file* :direction :output
                    :if-exists :append :if-does-not-exist :create)
-    (format s "~A: " (time->string))
-    (apply #'format s format args)))
+    (pprint-logical-block (s nil)
+      (format s "~A: " (time->string))
+      (pprint-logical-block (s nil)
+        (apply #'format s format args)))))
 
 
 ;;;; Logging trainer

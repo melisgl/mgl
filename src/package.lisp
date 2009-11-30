@@ -117,7 +117,9 @@
    #:counting-function-sampler
    #:sample-batch
    ;; Error counter
+   #:counter
    #:error-counter
+   #:misclassification-counter
    #:rmse-counter
    #:sum-errors
    #:n-sum-errors
@@ -333,7 +335,7 @@ interface and simple gradient descent based trainers."))
    #:dbn
    #:rbms
    #:down-mean-field
-   #:dbn-mean-field-errors
+   #:collect-dbn-mean-field-errors
    #:make-dbn-reconstruction-rmse-counters-and-measurers
    #:make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
    #:make-dbn-reconstruction-misclassification-counters-and-measurers)
@@ -390,7 +392,9 @@ Networks (DBN)."))
    #:->cross-entropy
    #:cross-entropy-softmax-lump
    #:softmax
-   #:target)
+   #:target
+   ;; Utilities
+   #:collect-bpn-errors)
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll
