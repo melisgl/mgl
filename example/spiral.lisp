@@ -37,55 +37,34 @@
 
 ;;;; Progress reporting
 
-(defclass spiral-logging-trainer (logging-trainer) ())
+(defclass spiral-base-trainer (base-trainer) ())
 
-(defmethod log-training-period ((trainer spiral-logging-trainer) learner)
-  100)
-
-(defmethod log-test-period ((trainer spiral-logging-trainer) learner)
+(defmethod log-training-period ((trainer spiral-base-trainer) learner)
   1000)
 
-(defmethod log-test-error ((trainer spiral-logging-trainer) learner)
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe learner)
-      (describe trainer)))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
+(defmethod log-test-period ((trainer spiral-base-trainer) learner)
+  10000)
 
 
 ;;;; DBN training
 
-(defclass spiral-rbm-trainer (spiral-logging-trainer rbm-cd-trainer)
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+(defclass spiral-rbm-trainer (spiral-base-trainer rbm-cd-trainer) ())
 
-(defmethod log-training-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
-  (log-msg "n-inputs: ~D~%" (n-inputs trainer))
-  (log-msg "~A~%" (counter trainer))
-  (reset-counter (counter trainer)))
+(defmethod initialize-trainer ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
+  (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters
+         "dbn train: training"
+         (make-bm-reconstruction-rmse-counters-and-measurers rbm))))
 
 (defmethod log-test-error ((trainer spiral-rbm-trainer) (rbm spiral-rbm))
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "dbn test ~:_~A~%" counter))
        (collect-dbn-mean-field-errors (make-sampler 1000) (dbn rbm) :rbm rbm)))
-
-(defmethod negative-phase :around (batch trainer (rbm spiral-rbm))
-  (call-next-method)
-  (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-error rbm)))
 
 
 ;;;; BPN training
-
-(defclass spiral-bp-trainer (spiral-logging-trainer bp-trainer)
-  ((counter
-    :initform (make-instance 'rmse-counter :prepend-name "training")
-    :reader counter)))
-
-(defmethod log-training-error (trainer (bpn spiral-bpn))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer))
-  (log-msg "~A~%" (counter trainer))
-  (reset-counter (counter trainer)))
 
 (defun bpn-rmse (bpn)
   ;; rmse is over 3 nodes, cost returns the number of stripes
@@ -100,13 +79,25 @@
                                     (declare (ignore samples))
                                     (bpn-rmse bpn))))))
 
-(defmethod log-test-error (trainer (bpn spiral-bpn))
-  (call-next-method)
-  (log-msg "bpn test ~:_ ~A~%" (bpn-error (make-sampler 1000) bpn)))
+(defclass spiral-bp-trainer (spiral-base-trainer bp-trainer) ())
 
-(defmethod train-batch :around (batch (trainer spiral-bp-trainer) bpn)
+(defun make-bpn-counters-and-measurers ()
+  (list (cons (make-instance 'rmse-counter)
+              (lambda (samples bpn)
+                (declare (ignore samples))
+                (bpn-rmse bpn)))))
+
+(defmethod initialize-trainer ((trainer spiral-bp-trainer) (bpn spiral-bpn))
   (call-next-method)
-  (multiple-value-call #'add-error (counter trainer) (bpn-rmse bpn)))
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters "bpn train: training"
+                                  (make-bpn-counters-and-measurers))))
+
+(defmethod log-test-error ((trainer spiral-bp-trainer) (bpn spiral-bpn))
+  (call-next-method)
+  (map nil (lambda (counter)
+             (log-msg "bpn test: test ~:_~A~%" counter))
+       (bpn-error (make-sampler 1000) bpn)))
 
 
 ;;;; Training

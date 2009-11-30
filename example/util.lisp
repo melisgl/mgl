@@ -68,6 +68,59 @@
                      trainer learner))
 
 
+;;;; BASE-TRAINER
+
+(defclass base-trainer (logging-trainer)
+  ((training-counters-and-measurers :reader training-counters-and-measurers)))
+
+(defmethod log-test-error ((trainer base-trainer) learner)
+  (let ((*print-level* nil))
+    (when (zerop (n-inputs trainer))
+      (describe learner))
+    (describe trainer))
+  (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
+
+(defmethod log-training-error ((trainer base-trainer) learner)
+  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
+  (dolist (counter-and-measurer (training-counters-and-measurers trainer))
+    (let ((counter (car counter-and-measurer)))
+      (log-msg "~A~%" counter)
+      (reset-counter counter))))
+
+(defmethod negative-phase :around (batch (trainer base-trainer) (bm bm))
+  (call-next-method)
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                batch bm))
+
+(defmethod positive-phase :around (batch (trainer base-trainer) (dbm dbm))
+  (call-next-method)
+  (set-visible-mean dbm)
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                batch dbm))
+
+(defmethod compute-derivatives :around (samples (trainer base-trainer) (bpn bpn))
+  (call-next-method)
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                samples bpn))
+
+(defmethod train-batch :around (batch (trainer base-trainer) (bpn bpn))
+  (if (typep trainer 'cg-bp-trainer)
+      (let ((result (multiple-value-list (call-next-method))))
+        (destructuring-bind (best-w best-f n-line-searches
+                                    n-succesful-line-searches n-evaluations)
+            result
+          (declare (ignore best-w))
+          (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%" best-f n-evaluations)
+          (log-msg "n-line-searches: ~S (succesful ~S)~%"
+                   n-line-searches n-succesful-line-searches))
+        result)
+      (call-next-method)))
+
+(defun prepend-name-to-counters (name counters-and-measurers)
+  (dolist (counter-and-measurer counters-and-measurers counters-and-measurers)
+    (push name (slot-value (car counter-and-measurer) 'name))))
+
+
 ;;;; Misc
 
 (defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key

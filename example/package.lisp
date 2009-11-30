@@ -8,6 +8,9 @@
            #:log-training-period
            #:log-test-error
            #:log-test-period
+           #:base-trainer
+           #:training-counters-and-measurers
+           #:prepend-name-to-counters
            #:tack-cross-entropy-softmax-error-on
            #:load-weights
            #:save-weights

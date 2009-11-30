@@ -196,34 +196,13 @@
 
 ;;;; Logging
 
-(defclass mnist-logging-trainer (logging-trainer) ())
+(defclass mnist-base-trainer (base-trainer) ())
 
-(defmethod log-training-period ((trainer mnist-logging-trainer) learner)
+(defmethod log-training-period ((trainer mnist-base-trainer) learner)
   (min 10000 (length *training-images*)))
 
-(defmethod log-test-period ((trainer mnist-logging-trainer) learner)
+(defmethod log-test-period ((trainer mnist-base-trainer) learner)
   (length *training-images*))
-
-(defmethod log-test-error ((trainer mnist-logging-trainer) learner)
-  (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
-      (describe learner))
-    (describe trainer))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
-
-(defclass mnist-base-trainer (mnist-logging-trainer)
-  ((training-counters-and-measurers :reader training-counters-and-measurers)))
-
-(defmethod log-training-error ((trainer mnist-base-trainer) learner)
-  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
-  (dolist (counter-and-measurer (training-counters-and-measurers trainer))
-    (let ((counter (car counter-and-measurer)))
-      (log-msg "~A~%" counter)
-      (reset-counter counter))))
-
-(defun prepend-name-to-counters (name counters-and-measurers)
-  (dolist (counter-and-measurer counters-and-measurers counters-and-measurers)
-    (push name (slot-value (car counter-and-measurer) 'name))))
 
 
 ;;;; DBN
@@ -292,12 +271,6 @@ even if it's missing in the input."
        (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
   (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
                                    "test"))
-
-(defmethod negative-phase :around (batch (trainer mnist-base-trainer)
-                                         (rbm mnist-rbm))
-  (call-next-method)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                batch rbm))
 
 
 ;;;; DBN training
@@ -412,7 +385,7 @@ even if it's missing in the input."
                        10
                        (chunk-lump-name chunk-name nil)
                        :prefix '||))))
-    (log-msg "~%~S~%" bpn-def)
+    (log-msg "bpn def:~%~S~%" bpn-def)
     (eval bpn-def)))
 
 
@@ -431,22 +404,6 @@ even if it's missing in the input."
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
        (bpn-error (make-test-sampler :omit-label-p t) bpn)))
-
-(defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
-                                                bpn)
-  (call-next-method)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                samples bpn))
-
-(defmethod train-batch :around (batch (trainer mnist-cg-bp-trainer) bpn)
-  (multiple-value-bind (best-w best-f
-                               n-line-searches n-succesful-line-searches
-                               n-evaluations)
-      (call-next-method)
-    (declare (ignore best-w))
-    (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%" best-f n-evaluations)
-    (log-msg "n-line-searches: ~S (succesful ~S)~%"
-             n-line-searches n-succesful-line-searches)))
 
 (defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)
@@ -690,12 +647,6 @@ even if it's missing in the input."
        (collect-mnist-dbm-mean-field-errors (make-test-sampler) dbm))
   (log-dbm-classification-accuracy dbm (make-test-sampler :omit-label-p t)
                                    "test"))
-
-(defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
-  (call-next-method)
-  (set-visible-mean dbm)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                batch dbm))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
