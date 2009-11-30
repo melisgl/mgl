@@ -168,6 +168,7 @@
    ;; Classification
    #:label
    #:labeled
+   #:labeledp
    #:stripe-label
    #:maybe-make-misclassification-measurer)
   (:documentation "Generic training related interfaces and basic
@@ -327,6 +328,7 @@ interface and simple gradient descent based trainers."))
    #:reconstruction-rmse
    #:reconstruction-error
    #:make-bm-reconstruction-rmse-counters-and-measurers
+   #:make-dbm-reconstruction-rmse-counters-and-measurers
    #:bm-mean-field-errors
    ;; Classification
    #:softmax-label-chunk
@@ -337,7 +339,6 @@ interface and simple gradient descent based trainers."))
    #:down-mean-field
    #:collect-dbn-mean-field-errors
    #:make-dbn-reconstruction-rmse-counters-and-measurers
-   #:make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
    #:make-dbn-reconstruction-misclassification-counters-and-measurers)
   (:documentation "Fully General Boltzmann Machines, Restricted
 Boltzmann Machines and their stacks called Deep Belief

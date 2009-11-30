@@ -2168,12 +2168,33 @@ second value returned is the number of nodes that contributed to the
 error."
   (reconstruction-rmse (visible-chunks bm)))
 
-(defun make-bm-reconstruction-rmse-counters-and-measurers (bm)
+(defun remove-if* (filter seq)
+  (if filter
+      (remove-if filter seq)
+      seq))
+
+(defun make-bm-reconstruction-rmse-counters-and-measurers (bm &key chunk-filter)
   (declare (ignore bm))
   (list (cons (make-instance 'rmse-counter)
               (lambda (samples bm)
                 (declare (ignore samples))
-                (reconstruction-error bm)))))
+                (reconstruction-rmse (remove-if* chunk-filter
+                                                 (visible-chunks bm)))))))
+
+(defun make-dbm-reconstruction-rmse-counters-and-measurers (dbm &key
+                                                            chunk-filter)
+  "Return a list of counter, measurer conses to keep track of
+reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
+  (loop for i upfrom 0
+        for layer in (butlast (layers dbm))
+        collect (let ((i i)
+                      (layer layer))
+                  (cons (make-instance 'rmse-counter
+                                       :prepend-name (format nil "level ~A" i))
+                        (lambda (samples dbn)
+                          (declare (ignore samples dbn))
+                          (reconstruction-rmse
+                           (remove-if* chunk-filter layer)))))))
 
 (defun collect-bm-mean-field-errors
     (sampler bm &key
@@ -2201,8 +2222,8 @@ reconstruction rmse."
        start)))
 
 (defun make-chunk-reconstruction-misclassification-counters-and-measurers
-    (chunks)
-  (loop for chunk in chunks
+    (chunks &key chunk-filter)
+  (loop for chunk in (remove-if* chunk-filter chunks)
         for measurer = (maybe-make-misclassification-measurer chunk)
         when measurer
         collect
@@ -2210,8 +2231,9 @@ reconstruction rmse."
                              :prepend-name (format nil "chunk ~A" (name chunk)))
               measurer)))
 
-(defun make-bm-reconstruction-misclassification-counters-and-measurers (bm)
+(defun make-bm-reconstruction-misclassification-counters-and-measurers
+    (bm &key chunk-filter)
   "Return a list of counter, measurer conses to keep track of
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
-   (chunks bm)))
+   (chunks bm) :chunk-filter chunk-filter))

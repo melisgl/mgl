@@ -599,7 +599,7 @@ possible.")
   `(multiple-value-bind (v e)
        (ignore-errors (progn ,@body))
      (if e
-         "<<error during printing>>"
+         "#<error printing object>"
          v)))
 
 (defun format-description (description stream)

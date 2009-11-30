@@ -196,17 +196,10 @@
 
 ;;;; Logging
 
-(defun ->percent (x)
-  (* 100 (- 1 x)))
-
-(defparameter *percent-format* "~,2F%")
-(defparameter *list-of-percents-format*
-  (format nil "~~{~A~~^, ~~}" *percent-format*))
-
 (defclass mnist-logging-trainer (logging-trainer) ())
 
 (defmethod log-training-period ((trainer mnist-logging-trainer) learner)
-  10000)
+  (min 10000 (length *training-images*)))
 
 (defmethod log-test-period ((trainer mnist-logging-trainer) learner)
   (length *training-images*))
@@ -217,6 +210,20 @@
       (describe learner))
     (describe trainer))
   (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
+
+(defclass mnist-base-trainer (mnist-logging-trainer)
+  ((training-counters-and-measurers :reader training-counters-and-measurers)))
+
+(defmethod log-training-error ((trainer mnist-base-trainer) learner)
+  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
+  (dolist (counter-and-measurer (training-counters-and-measurers trainer))
+    (let ((counter (car counter-and-measurer)))
+      (log-msg "~A~%" counter)
+      (reset-counter counter))))
+
+(defun prepend-name-to-counters (name counters-and-measurers)
+  (dolist (counter-and-measurer counters-and-measurers counters-and-measurers)
+    (push name (slot-value (car counter-and-measurer) 'name))))
 
 
 ;;;; DBN
@@ -231,21 +238,23 @@
     (when inputs
       (clamp-striped-nodes images inputs))))
 
-(defclass mnist-rbm-trainer (mnist-logging-trainer rbm-cd-trainer)
-  ((counter
-    :initform (make-instance 'rmse-counter :prepend-name "training")
-    :reader counter)))
+(defclass mnist-rbm-trainer (mnist-base-trainer rbm-cd-trainer) ())
+
+(defmethod initialize-trainer ((trainer mnist-base-trainer) (rbm mnist-rbm))
+  (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters
+         "dbn train: training"
+         (append
+          (make-bm-reconstruction-rmse-counters-and-measurers rbm)
+          (make-bm-reconstruction-misclassification-counters-and-measurers
+           rbm)))))
 
 (defmethod n-gibbs ((trainer mnist-rbm-trainer))
   (let ((x (slot-value trainer 'n-gibbs)))
     (if (integerp x)
         x
         (funcall x trainer))))
-
-(defmethod log-training-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
-  (log-msg "n-inputs: ~D~%" (n-inputs trainer))
-  (log-msg "~A~%" (counter trainer))
-  (reset-counter (counter trainer)))
 
 (defun collect-dbn-mean-field-errors*
     (sampler dbn &key (rbm (last1 (rbms dbn)))
@@ -268,7 +277,7 @@ even if it's missing in the input."
          (make-dbn-reconstruction-misclassification-counters-and-measurers
           (dbn rbm) :rbm rbm)))
     (map nil (lambda (counter)
-               (log-msg "~A ~:_~A~%" name counter))
+               (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
          (collect-dbn-mean-field-errors*
           sampler
           (dbn rbm)
@@ -277,21 +286,18 @@ even if it's missing in the input."
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
-  (log-dbn-classification-accuracy rbm (make-training-sampler)
-                                   "dbn training reconstruction")
+  (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
   (map nil (lambda (counter)
-             (log-msg "dbn test ~:_~A~%" counter))
+             (log-msg "dbn test: ~:_test ~:_~A~%" counter))
        (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
   (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
-                                   "dbn test"))
+                                   "test"))
 
-(defmethod negative-phase :around (batch trainer (rbm mnist-rbm))
+(defmethod negative-phase :around (batch (trainer mnist-base-trainer)
+                                         (rbm mnist-rbm))
   (call-next-method)
-  (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-rmse
-                        (remove-if (lambda (chunk)
-                                     (typep chunk 'labeled))
-                                   (visible-chunks rbm)))))
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                batch rbm))
 
 
 ;;;; DBN training
@@ -348,7 +354,7 @@ even if it's missing in the input."
                                                  :weight-decay
                                                  (if (conditioning-cloud-p cloud)
                                                      (flt 0)
-                                                     (flt (this decay)))
+                                                     (this decay))
                                                  :batch-size 100)))
                  rbm))))
 
@@ -383,18 +389,19 @@ even if it's missing in the input."
   (cross-entropy-softmax-max-likelihood-classification-error
    (find-lump 'predictions bpn :errorp t)))
 
+(defun make-bpn-counters-and-measurers ()
+  (list (cons (make-instance 'misclassification-counter)
+              (lambda (samples bpn)
+                (declare (ignore samples))
+                (classification-error bpn)))
+        (cons (make-instance 'error-counter :name '("cross entropy"))
+              (lambda (samples bpn)
+                (declare (ignore samples))
+                (cost bpn)))))
+
 (defun bpn-error (sampler bpn)
-  (collect-bpn-errors
-   sampler bpn
-   :counters-and-measurers
-   (list (cons (make-instance 'misclassification-counter)
-               (lambda (samples bpn)
-                 (declare (ignore samples))
-                 (classification-error bpn)))
-         (cons (make-instance 'error-counter :name '("cross entropy"))
-               (lambda (samples bpn)
-                 (declare (ignore samples))
-                 (cost bpn))))))
+  (collect-bpn-errors sampler bpn
+                      :counters-and-measurers (make-bpn-counters-and-measurers)))
 
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
@@ -411,34 +418,25 @@ even if it's missing in the input."
 
 ;;;; BPN training
 
-(defclass mnist-cg-bp-trainer (mnist-logging-trainer cg-bp-trainer)
-  ((cross-entropy-counter
-    :initform (make-instance 'error-counter :name '("training cross entropy"))
-    :reader cross-entropy-counter)
-   (counter
-    :initform (make-instance 'misclassification-counter :prepend-name "training")
-    :reader counter)))
+(defclass mnist-cg-bp-trainer (mnist-base-trainer cg-bp-trainer) ())
 
-(defmethod log-training-error (trainer (bpn mnist-bpn))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer))
-  (log-msg "~A~%" (cross-entropy-counter trainer))
-  (log-msg "~A~%" (counter trainer))
-  (reset-counter (cross-entropy-counter trainer))
-  (reset-counter (counter trainer)))
+(defmethod initialize-trainer ((trainer mnist-base-trainer) (bpn mnist-bpn))
+  (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters "bpn train: training"
+                                  (make-bpn-counters-and-measurers))))
 
 (defmethod log-test-error ((trainer mnist-cg-bp-trainer) (bpn mnist-bpn))
   (call-next-method)
   (map nil (lambda (counter)
-             (log-msg "test ~:_~A~%" counter))
+             (log-msg "bpn test: test ~:_~A~%" counter))
        (bpn-error (make-test-sampler :omit-label-p t) bpn)))
 
 (defmethod compute-derivatives :around (samples (trainer mnist-cg-bp-trainer)
                                                 bpn)
-  (let ((ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (call-next-method)
-    (multiple-value-call #'add-error ce-counter (cost bpn))
-    (multiple-value-call #'add-error counter (classification-error bpn))))
+  (call-next-method)
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                samples bpn))
 
 (defmethod train-batch :around (batch (trainer mnist-cg-bp-trainer) bpn)
   (multiple-value-bind (best-w best-f
@@ -456,7 +454,8 @@ even if it's missing in the input."
     (loop for i upfrom start below end
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
-(defun train-mnist-bpn (bpn &key (batch-size 1000))
+(defun train-mnist-bpn (bpn &key (batch-size
+                                  (min (length *training-images*) 1000)))
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler *training-images*
                        :max-n (* 5 (length *training-images*))
@@ -541,8 +540,8 @@ even if it's missing in the input."
          (setq *dbn/1* (make-mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
          (train-mnist-dbn *dbn/1* :n-epochs 50 :n-gibbs 1
-                          :learning-rate (flt 0.1)
-                          :decay 0.0002 :visible-sampling nil)
+                          :start-level 0 :learning-rate (flt 0.1)
+                          :decay (flt 0.0002) :visible-sampling nil)
          (save-weights *mnist-1-dbn-filename* *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
   (train-mnist-bpn *bpn/1*)
@@ -627,16 +626,7 @@ even if it's missing in the input."
                                            :size 1000))))
    (clouds :initform '(:merge
                        (:chunk1 c0 :chunk2 label :class nil)
-                       (:chunk1 inputs :chunk2 label :class nil)))
-   (training-classification-counters-and-measurers
-    :reader training-classification-counters-and-measurers)))
-
-(defmethod initialize-instance :after ((dbm mnist-dbm) &key &allow-other-keys)
-  (setf (slot-value dbm 'training-classification-counters-and-measurers)
-        (make-bm-reconstruction-misclassification-counters-and-measurers dbm))
-  (dolist (counter-and-measurer
-            (training-classification-counters-and-measurers dbm))
-    (push "training" (slot-value (car counter-and-measurer) 'name))))
+                       (:chunk1 inputs :chunk2 label :class nil)))))
 
 (defun make-mnist-dbm ()
   (make-instance 'mnist-dbm :max-n-stripes 100))
@@ -648,21 +638,17 @@ even if it's missing in the input."
   (let ((label-chunk (find-chunk 'label dbm :errorp t)))
     (clamp-labels images label-chunk)))
 
-(defclass mnist-dbm-trainer (mnist-logging-trainer bm-pcd-trainer)
-  ((counter
-    :initform (make-instance 'rmse-counter
-                             :prepend-name "dbm training reconstruction")
-    :reader counter)))
+(defclass mnist-dbm-trainer (mnist-base-trainer bm-pcd-trainer) ())
 
-(defmethod log-training-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
-  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
-  (log-msg "~A~%" (counter trainer))
-  (reset-counter (counter trainer))
-  (dolist (counter-and-measurer
-            (training-classification-counters-and-measurers dbm))
-    (let ((counter (car counter-and-measurer)))
-      (log-msg "~A~%" counter)
-      (reset-counter counter))))
+(defmethod initialize-trainer ((trainer mnist-base-trainer) (dbm mnist-dbm))
+  (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters
+         "dbm train: training"
+         (append
+          (make-dbm-reconstruction-rmse-counters-and-measurers dbm)
+          (make-bm-reconstruction-misclassification-counters-and-measurers
+           dbm)))))
 
 (defun collect-mnist-dbm-mean-field-errors
     (sampler bm &key
@@ -682,7 +668,7 @@ even if it's missing in the input."
          (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
     (when counters-and-measurers
       (map nil (lambda (counter)
-                 (log-msg "dbm ~:_~A ~:_~A~%" name counter))
+                 (log-msg "dbm test: ~:_~A ~:_~A~%" name counter))
            (collect-mnist-dbm-mean-field-errors
             sampler dbm :counters-and-measurers counters-and-measurers)))))
 
@@ -708,14 +694,8 @@ even if it's missing in the input."
 (defmethod positive-phase :around (batch trainer (dbm mnist-dbm))
   (call-next-method)
   (set-visible-mean dbm)
-  (apply-counters-and-measurers
-   batch
-   (training-classification-counters-and-measurers dbm))
-  (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-rmse
-                        (remove-if (lambda (chunk)
-                                     (typep chunk 'labeled))
-                                   (visible-chunks dbm)))))
+  (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                batch dbm))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 
@@ -820,7 +800,7 @@ even if it's missing in the input."
                     (/ (flt 0.05)
                        (ceiling (1+ (n-inputs trainer))
                                 (* 20 (length *training-images*))))))
-            :decay 0.001
+            :decay (flt 0.001)
             :visible-sampling t)
            (save-weights *mnist-2-dbn-filename* *dbn/2*))
          (train-dbm ()
@@ -911,5 +891,8 @@ even if it's missing in the input."
 
 (describe *dbm/2*)
 (map nil #'print (clouds *dbm/2*))
+
+(setq *training-images* (subseq *training-images* 0 1000))
+(setq *test-images* (subseq *test-images* 0 1000))
 
 |#

@@ -112,41 +112,30 @@ each level in the DBN."
                         counters-and-measurers))
 
 (defun make-dbn-reconstruction-rmse-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))))
+    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
-reconstruction rmse suitable for BM-MEAN-FIELD-ERRORS."
+reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter
                                        :prepend-name (format nil "level ~A" i))
                         (lambda (samples dbn)
                           (declare (ignore samples))
-                          (reconstruction-error (elt (rbms dbn) i)))))))
-
-(defun make-dbn-reconstruction-rmse-counters-and-measurers/no-labels
-    (dbn &key (rbm (last1 (rbms dbn))))
-  "Like MAKE-DBN-RECONSTRUCTION-RMSE-COUNTERS-AND-MEASURERS but don't
-count reconstruction error of labels (that is, those chunks that
-inherit from LABELED)."
-  (loop for i upto (position rbm (rbms dbn))
-        collect (let ((i i))
-                  (cons (make-instance 'rmse-counter)
-                        (lambda (samples dbn)
-                          (declare (ignore samples))
                           (reconstruction-rmse
-                           (remove-if (lambda (chunk)
-                                        (typep chunk 'labeled))
-                                      (visible-chunks (elt (rbms dbn) i)))))))))
+                           (remove-if* chunk-filter
+                                       (visible-chunks
+                                        (elt (rbms dbn) i)))))))))
 
 (defun make-dbn-reconstruction-misclassification-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))))
+    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (apply #'append
           (mapcar #'chunks
                   (subseq (rbms dbn)
-                          0 (1+ (position rbm (rbms dbn))))))))
+                          0 (1+ (position rbm (rbms dbn))))))
+   :chunk-filter chunk-filter))
 
 (defmethod write-weights ((dbn dbn) stream)
   (dolist (rbm (rbms dbn))

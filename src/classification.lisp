@@ -15,6 +15,9 @@ be implemented on the training examples.
 Once set up, COUNT-MISCLASSIFICATIONS can be called directly or one
 can call work with counters and measurers."))
 
+(defun labeledp (object)
+  (typep object 'labeled))
+
 (defgeneric stripe-label (striped stripe)
   (:documentation "Return the label of STRIPE in STRIPED. Typically
 computed by finding the label with the maximum probability."))
