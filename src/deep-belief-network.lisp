@@ -8,7 +8,12 @@ multiple hidden layers are not Boltzmann Machines. The chunks in the
 hidden layer of a constituent RBM and the chunk in the visible layer
 of the RBM one on top of it must be EQ for the DBN to consider them
 the same. Naming them the same is not enough, in fact, all chunks must
-have unique names under EQUAL as usual."))
+have unique names under EQUAL as usual.
+
+Similarly to DBMs, DBNs can be constructed using the :LAYERS initarg.
+When using this feature, a number of RBMs are instantiated. Often one
+wants to create a DBN that consists of some RBM subclass, this is what
+the :RBM-CLASS initarg is for."))
 
 (defmethod n-stripes ((dbn dbn))
   (n-stripes (first (rbms dbn))))
@@ -31,10 +36,19 @@ have unique names under EQUAL as usual."))
     (when name-clashes
       (error "Name conflict between clouds: ~S" name-clashes))))
 
-(defmethod initialize-instance :before ((dbn dbn) &key rbms &allow-other-keys)
-  (check-no-name-clashes rbms))
+(defmethod initialize-instance :around ((dbn dbn) &key (layers () layersp)
+                                        (rbm-class 'rbm) &allow-other-keys)
+  (when layersp
+    (setf (slot-value dbn 'rbms)
+          (loop for (layer1 layer2) on layers
+                while layer2
+                collect (make-instance rbm-class
+                                       :visible-chunks layer1
+                                       :hidden-chunks layer2))))
+  (call-next-method))
 
 (defmethod initialize-instance :after ((dbn dbn) &key &allow-other-keys)
+  (check-no-name-clashes (rbms dbn))
   (dolist (rbm (rbms dbn))
     (setf (slot-value rbm 'dbn) dbn))
   ;; make sure rbms have the same MAX-N-STRIPES

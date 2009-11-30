@@ -187,11 +187,6 @@
                (declare (ignore omit-label-p sample-visible-p))
                (with-stripes ((stripe striped start))
                  (clamp-array image nodes start))))))
-
-(defun layers->rbms (layers &key (class 'rbm))
-  (loop for (v h) on layers
-        when h
-        collect (make-instance class :visible-chunks v :hidden-chunks h)))
 
 
 ;;;; Logging
@@ -445,23 +440,23 @@ even if it's missing in the input."
 
 ;;;; Code for the DBN to BPN approach (paper [1])
 
-(defun make-mnist-dbn/1 ()
-  (make-instance 'mnist-dbn
-                 :rbms (layers->rbms
-                        (list (list (make-instance 'constant-chunk :name 'c0)
-                                    (make-instance 'sigmoid-chunk :name 'inputs
-                                                   :size (* 28 28)))
-                              (list (make-instance 'constant-chunk :name 'c1)
-                                    (make-instance 'sigmoid-chunk :name 'f1
-                                                   :size 500))
-                              (list (make-instance 'constant-chunk :name 'c2)
-                                    (make-instance 'sigmoid-chunk :name 'f2
-                                                   :size 500))
-                              (list (make-instance 'constant-chunk :name 'c3)
-                                    (make-instance 'sigmoid-chunk :name 'f3
-                                                   :size 2000)))
-                        :class 'mnist-rbm)
-                 :max-n-stripes 100))
+(defclass mnist-dbn/1 (mnist-dbn)
+  ()
+  (:default-initargs
+   :layers (list (list (make-instance 'constant-chunk :name 'c0)
+                       (make-instance 'sigmoid-chunk :name 'inputs
+                                      :size (* 28 28)))
+                 (list (make-instance 'constant-chunk :name 'c1)
+                       (make-instance 'sigmoid-chunk :name 'f1
+                                      :size 500))
+                 (list (make-instance 'constant-chunk :name 'c2)
+                       (make-instance 'sigmoid-chunk :name 'f2
+                                      :size 500))
+                 (list (make-instance 'constant-chunk :name 'c3)
+                       (make-instance 'sigmoid-chunk :name 'f3
+                                      :size 2000)))
+    :rbm-class 'mnist-rbm
+    :max-n-stripes 100))
 
 (defun unroll-mnist-dbn/1 (dbn)
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
@@ -487,14 +482,14 @@ even if it's missing in the input."
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   (cond (load-dbn-p
-         (setq *dbn/1* (make-mnist-dbn/1))
+         (setq *dbn/1* (make-instance 'mnist-dbn/1))
          (load-weights *mnist-1-dbn-filename* *dbn/1*)
          (log-msg "Loaded DBN~%")
          (map nil (lambda (counter)
                     (log-msg "dbn test ~:_~A~%" counter))
               (collect-dbn-mean-field-errors* (make-test-sampler) *dbn/1*)))
         (t
-         (setq *dbn/1* (make-mnist-dbn/1))
+         (setq *dbn/1* (make-instance 'mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
          (train-mnist-dbn *dbn/1* :n-epochs 50 :n-gibbs 1
                           :start-level 0 :learning-rate (flt 0.1)

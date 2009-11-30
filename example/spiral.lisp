@@ -108,16 +108,15 @@
         collect (make-instance class :visible-chunks v :hidden-chunks h)))
 
 (defclass spiral-dbn (dbn)
-  ((rbms
-    :initform (layers->rbms
-               (list
-                (list (make-instance 'constant-chunk :name 'c0)
-                      (make-instance 'gaussian-chunk :name 'inputs :size 3))
-                (list (make-instance 'constant-chunk :name 'c1)
-                      (make-instance 'sigmoid-chunk :name 'f1 :size 10))
-                (list (make-instance 'constant-chunk :name 'c2)
-                      (make-instance 'gaussian-chunk :name 'f2 :size 1)))
-               :class 'spiral-rbm))))
+  ()
+  (:default-initargs
+   :layers (list (list (make-instance 'constant-chunk :name 'c0)
+                       (make-instance 'gaussian-chunk :name 'inputs :size 3))
+                 (list (make-instance 'constant-chunk :name 'c1)
+                       (make-instance 'sigmoid-chunk :name 'f1 :size 10))
+                 (list (make-instance 'constant-chunk :name 'c2)
+                       (make-instance 'gaussian-chunk :name 'f2 :size 1)))
+    :rbm-class 'spiral-rbm))
 
 (defun make-spiral-dbn (&key (max-n-stripes 1))
   (make-instance 'spiral-dbn :max-n-stripes max-n-stripes))
@@ -136,30 +135,30 @@
 
 (defun train-spiral-bpn (dbn &key (max-n-stripes 1))
   (multiple-value-bind (defs inits) (unroll-dbn dbn)
-    (print inits)
-    (let ((bpn (eval (print
-                      `(build-bpn (:class 'spiral-bpn
-                                          :max-n-stripes ,max-n-stripes)
-                         ,@defs
-                         (my-error
-                          (error-node
-                           :x (make-instance
-                               '->sum-squared-error
-                               :x (lump ',(chunk-lump-name 'inputs nil))
-                               :y (lump ',(chunk-lump-name
-                                           'inputs
-                                           :reconstruction))))))))))
-      (terpri)
-      (initialize-bpn-from-bm bpn dbn inits)
-      (train (make-sampler 50000)
-             (make-instance 'spiral-bp-trainer
-                            :segmenter
-                            (repeatedly
-                              (make-instance 'batch-gd-trainer
-                                             :learning-rate (flt 0.01)
-                                             :momentum (flt 0.9)
-                                             :batch-size 100)))
-             bpn))))
+    (log-msg "inits:~%~S~%" inits)
+    (let ((bpn-def `(build-bpn (:class 'spiral-bpn
+                                       :max-n-stripes ,max-n-stripes)
+                      ,@defs
+                      (my-error
+                       (error-node
+                        :x (make-instance
+                            '->sum-squared-error
+                            :x (lump ',(chunk-lump-name 'inputs nil))
+                            :y (lump ',(chunk-lump-name
+                                        'inputs
+                                        :reconstruction))))))))
+      (log-msg "bpn def:~%~S~%" bpn-def)
+      (let ((bpn (eval bpn-def)))
+        (initialize-bpn-from-bm bpn dbn inits)
+        (train (make-sampler 50000)
+               (make-instance 'spiral-bp-trainer
+                              :segmenter
+                              (repeatedly
+                                (make-instance 'batch-gd-trainer
+                                               :learning-rate (flt 0.01)
+                                               :momentum (flt 0.9)
+                                               :batch-size 100)))
+               bpn)))))
 
 #|
 
