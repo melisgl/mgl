@@ -329,17 +329,19 @@ interface and simple gradient descent based trainers."))
    #:reconstruction-error
    #:make-bm-reconstruction-rmse-counters-and-measurers
    #:make-dbm-reconstruction-rmse-counters-and-measurers
-   #:bm-mean-field-errors
+   #:collect-bm-mean-field-errors
    ;; Classification
    #:softmax-label-chunk
    #:make-bm-reconstruction-misclassification-counters-and-measurers
+   #:collect-bm-mean-field-errors/labeled
    ;; DBN
    #:dbn
    #:rbms
    #:down-mean-field
-   #:collect-dbn-mean-field-errors
    #:make-dbn-reconstruction-rmse-counters-and-measurers
-   #:make-dbn-reconstruction-misclassification-counters-and-measurers)
+   #:collect-dbn-mean-field-errors
+   #:make-dbn-reconstruction-misclassification-counters-and-measurers
+   #:collect-dbn-mean-field-errors/labeled)
   (:documentation "Fully General Boltzmann Machines, Restricted
 Boltzmann Machines and their stacks called Deep Belief
 Networks (DBN)."))

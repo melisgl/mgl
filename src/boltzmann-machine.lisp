@@ -2237,3 +2237,21 @@ reconstruction rmse."
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (chunks bm) :chunk-filter chunk-filter))
+
+(defun mark-labels-present (object)
+  (dolist (chunk (chunks object))
+    (when (labeledp chunk)
+      (setf (indices-present chunk) nil))))
+
+(defun collect-bm-mean-field-errors/labeled
+    (sampler bm &key
+     (counters-and-measurers
+      (make-bm-reconstruction-misclassification-counters-and-measurers bm)))
+  "Like COLLECT-BM-MEAN-FIELD-ERRORS but reconstruct the labels even
+if they were missing."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples bm)
+                          (set-hidden-mean bm)
+                          (mark-labels-present bm)
+                          (set-visible-mean bm))
+                        sampler bm counters-and-measurers))

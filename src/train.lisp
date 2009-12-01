@@ -264,7 +264,8 @@ is called after each call to FN. Measurers return two values: the
 cumulative error and the counter, suitable as the second and third
 argument to ADD-ERROR. Finally, return the counters. Return
 COUNTERS-AND-MEASURERS."
-  (do-batches-for-learner (samples (sampler learner))
-    (funcall fn samples)
-    (apply-counters-and-measurers counters-and-measurers samples learner))
+  (when counters-and-measurers
+    (do-batches-for-learner (samples (sampler learner))
+      (funcall fn samples)
+      (apply-counters-and-measurers counters-and-measurers samples learner)))
   (map 'list #'car counters-and-measurers))

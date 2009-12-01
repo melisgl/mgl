@@ -110,21 +110,6 @@ the :RBM-CLASS initarg is for."))
   (mapc #'set-visible-mean
         (not-before (reverse (rbms dbn)) rbm)))
 
-(defun collect-dbn-mean-field-errors
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Run the mean field up to RBM then down to the bottom and collect
-the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
-each level in the DBN."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (down-mean-field dbn :rbm rbm))
-                        sampler
-                        dbn
-                        counters-and-measurers))
-
 (defun make-dbn-reconstruction-rmse-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
@@ -140,6 +125,21 @@ reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
                                        (visible-chunks
                                         (elt (rbms dbn) i)))))))))
 
+(defun collect-dbn-mean-field-errors
+    (sampler dbn &key (rbm (last1 (rbms dbn)))
+     (counters-and-measurers
+      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+  "Run the mean field up to RBM then down to the bottom and collect
+the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
+each level in the DBN."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples rbm)
+                          (set-hidden-mean rbm)
+                          (down-mean-field dbn :rbm rbm))
+                        sampler
+                        dbn
+                        counters-and-measurers))
+
 (defun make-dbn-reconstruction-misclassification-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
@@ -150,6 +150,20 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                   (subseq (rbms dbn)
                           0 (1+ (position rbm (rbms dbn))))))
    :chunk-filter chunk-filter))
+
+(defun collect-dbn-mean-field-errors/labeled
+    (sampler dbn &key (rbm (last1 (rbms dbn)))
+     (counters-and-measurers
+      (make-dbn-reconstruction-misclassification-counters-and-measurers
+       dbn :rbm rbm)))
+  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct labeled chunks
+even if it's missing in the input."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples rbm)
+                          (set-hidden-mean rbm)
+                          (mark-labels-present dbn)
+                          (down-mean-field dbn :rbm rbm))
+                        sampler dbn counters-and-measurers))
 
 (defmethod write-weights ((dbn dbn) stream)
   (dolist (rbm (rbms dbn))

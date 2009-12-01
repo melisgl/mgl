@@ -230,7 +230,7 @@
 
 ;;;; Common
 
-(defclass mr-base-trainer (base-classification-trainer) ())
+(defclass mr-base-trainer (cesc-trainer) ())
 
 (defmethod log-training-period ((trainer mr-base-trainer) learner)
   (floor (length *training-stories*) 4))
@@ -324,13 +324,15 @@
 
 (defmethod log-test-error ((trainer mr-rbm-trainer) (rbm mr-rbm))
   (call-next-method)
-  (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
-       (collect-dbn-mean-field-errors/labeled (make-test-sampler)
-                                              (dbn rbm) :rbm rbm))
-  (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
-                                   "test"))
+       (collect-dbn-mean-field-errors/labeled
+        (make-test-sampler) (dbn rbm) :rbm rbm
+        :counters-and-measurers
+        (make-dbn-reconstruction-rmse-counters-and-measurers
+         (dbn rbm) :rbm rbm)))
+  (log-dbn-cesc-accuracy rbm (make-test-sampler :omit-label-p t) "test"))
 
 
 ;;;; DBN training
@@ -396,24 +398,6 @@
               (clamp-label (story-label story)
                            expectations*
                            expectations-start expectations-end))))))
-
-(defun classification-error (bpn)
-  (cross-entropy-softmax-max-likelihood-classification-error
-   (find-lump 'predictions bpn :errorp t)))
-
-(defun make-bpn-counters-and-measurers ()
-  (list (cons (make-instance 'misclassification-counter)
-              (lambda (samples bpn)
-                (declare (ignore samples))
-                (classification-error bpn)))
-        (cons (make-instance 'error-counter :name '("cross entropy"))
-              (lambda (samples bpn)
-                (declare (ignore samples))
-                (cost bpn)))))
-
-(defun bpn-error (sampler bpn)
-  (collect-bpn-errors sampler bpn
-                      :counters-and-measurers (make-bpn-counters-and-measurers)))
 
 
 ;;;; BPN training
@@ -426,7 +410,7 @@
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-error (make-test-sampler :omit-label-p t) bpn)))
+       (bpn-cesc-error (make-test-sampler :omit-label-p t) bpn)))
 
 (defun init-lump (name bpn deviation)
   (multiple-value-bind (array start end)

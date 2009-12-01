@@ -191,7 +191,7 @@
 
 ;;;; Logging
 
-(defclass mnist-base-trainer (base-classification-trainer) ())
+(defclass mnist-base-trainer (cesc-trainer) ())
 
 (defmethod log-training-period ((trainer mnist-base-trainer) learner)
   (min 10000 (length *training-images*)))
@@ -222,13 +222,15 @@
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
-  (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
-       (collect-dbn-mean-field-errors/labeled (make-test-sampler)
-                                              (dbn rbm) :rbm rbm))
-  (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
-                                   "test"))
+       (collect-dbn-mean-field-errors/labeled
+        (make-test-sampler) (dbn rbm) :rbm rbm
+        :counters-and-measurers
+        (make-dbn-reconstruction-rmse-counters-and-measurers
+         (dbn rbm) :rbm rbm)))
+  (log-dbn-cesc-accuracy rbm (make-test-sampler :omit-label-p t) "test"))
 
 
 ;;;; DBN training
@@ -337,8 +339,7 @@
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-cross-entropy-and-classification-error
-        (make-test-sampler :omit-label-p t) bpn)))
+       (bpn-cesc-error (make-test-sampler :omit-label-p t) bpn)))
 
 (defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)
@@ -494,16 +495,6 @@
     (when label-chunk
       (clamp-labels images label-chunk))))
 
-(defclass softmax-label-chunk* (softmax-label-chunk) ())
-
-;;; Samplers don't return examples, but a list of (SAMPLE &KEY
-;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
-(defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
-  (let ((measurer (call-next-method)))
-    (when measurer
-      (lambda (examples learner)
-        (funcall measurer (mapcar #'first examples) learner)))))
-
 (defclass mnist-dbm (dbm)
   ((layers :initform (list
                       (list (make-instance 'constant-chunk :name 'c0)
@@ -540,17 +531,17 @@
                                                 (length *training-images*)))
                                  *mnist-dir*)
                 dbm)
-  (log-dbm-classification-accuracy dbm (make-training-sampler)
-                                   "training reconstruction")
-  (log-dbm-classification-accuracy dbm (make-training-sampler :omit-label-p t)
-                                   "training")
-  ;; This is too time consuming.
+  (log-dbm-cesc-accuracy dbm (make-training-sampler) "training reconstruction")
+  (log-dbm-cesc-accuracy dbm (make-training-sampler :omit-label-p t) "training")
+  ;; This is too time consuming for little benefit.
   #+nil
   (map nil (lambda (counter)
-             (log-msg "dbm test ~:_~A~%" counter))
-       (collect-mnist-dbm-mean-field-errors (make-test-sampler) dbm))
-  (log-dbm-classification-accuracy dbm (make-test-sampler :omit-label-p t)
-                                   "test"))
+             (log-msg "dbm test: ~:_test ~:_~A~%" counter))
+       (collect-bm-mean-field-errors
+        (make-test-sampler) dbm
+        :counters-and-measurers
+        (make-dbm-reconstruction-rmse-counters-and-measurers dbm)))
+  (log-dbm-cesc-accuracy dbm (make-test-sampler :omit-label-p t) "test"))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
 

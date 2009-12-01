@@ -118,11 +118,11 @@
     (push name (slot-value (car counter-and-measurer) 'name))))
 
 
-;;;; Simple cross entropy softmax classification support
+;;;; Simple cross entropy softmax classification (CESC) support
 
 (defclass softmax-label-chunk* (softmax-label-chunk) ())
 
-(defclass base-classification-trainer (base-trainer) ())
+(defclass cesc-trainer (base-trainer) ())
 
 (defun maximally-likely-node (striped stripe &key (nodes (nodes striped)))
   (with-stripes ((stripe striped start end))
@@ -136,51 +136,36 @@
     (when measurer
       (lambda (examples learner)
         (funcall measurer (mapcar #'first examples) learner)))))
-
-(defun mark-labels-present (object)
-  (dolist (chunk (chunks object))
-    (when (labeledp chunk)
-      (setf (indices-present chunk) nil))))
 
 
-;;;; DBN support for BASE-CLASSIFICATION-TRAINER
+;;;; RBM/DBN support for CESC-TRAINER
 
-(defmethod initialize-trainer ((trainer base-classification-trainer) (rbm rbm))
+(defmethod initialize-trainer ((trainer cesc-trainer) (rbm rbm))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters
-         "dbn train: training"
+         "rbm train: training"
          (append
           (make-bm-reconstruction-rmse-counters-and-measurers rbm)
           (make-bm-reconstruction-misclassification-counters-and-measurers
            rbm)))))
 
-(defun collect-dbn-mean-field-errors/labeled
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct labeled chunks
-even if it's missing in the input."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (mark-labels-present dbn)
-                          (down-mean-field dbn :rbm rbm))
-                        sampler dbn counters-and-measurers))
-
-(defun log-dbn-classification-accuracy (rbm sampler name)
-  (let ((counters-and-measurers
-         (make-dbn-reconstruction-misclassification-counters-and-measurers
-          (dbn rbm) :rbm rbm)))
-    (map nil (lambda (counter)
-               (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
-         (collect-dbn-mean-field-errors/labeled
-          sampler (dbn rbm) :counters-and-measurers counters-and-measurers))))
+(defun log-dbn-cesc-accuracy (rbm sampler name)
+  (if (dbn rbm)
+      (let ((counters (collect-dbn-mean-field-errors/labeled sampler (dbn rbm)
+                                                             :rbm rbm)))
+        (map nil (lambda (counter)
+                   (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
+             counters))
+      (let ((counters (collect-bm-mean-field-errors/labeled sampler rbm)))
+        (map nil (lambda (counter)
+                   (log-msg "rbm test: ~:_~A ~:_~A~%" name counter))
+             counters))))
 
 
-;;;; DBM support for BASE-CLASSIFICATION-TRAINER
+;;;; DBM support for CESC-TRAINER
 
-(defmethod initialize-trainer ((trainer base-classification-trainer) (dbm dbm))
+(defmethod initialize-trainer ((trainer cesc-trainer) (dbm dbm))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters
@@ -190,34 +175,21 @@ even if it's missing in the input."
           (make-bm-reconstruction-misclassification-counters-and-measurers
            dbm)))))
 
-(defun collect-dbm-mean-field-errors/labeled
-    (sampler bm &key
-     (counters-and-measurers
-      (make-bm-reconstruction-rmse-counters-and-measurers bm)))
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples bm)
-                          (set-hidden-mean bm)
-                          (mark-labels-present bm)
-                          (set-visible-mean bm))
-                        sampler bm counters-and-measurers))
-
-(defun log-dbm-classification-accuracy (dbm sampler name)
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
+(defun log-dbm-cesc-accuracy (dbm sampler name)
+  (let ((counters (collect-bm-mean-field-errors/labeled sampler dbm)))
+    (when counters
       (map nil (lambda (counter)
                  (log-msg "dbm test: ~:_~A ~:_~A~%" name counter))
-           (collect-dbm-mean-field-errors/labeled
-            sampler dbm :counters-and-measurers counters-and-measurers)))))
+           counters))))
 
 
-;;;; BPN support for BASE-CLASSIFICATION-TRAINER
+;;;; BPN support for CESC-TRAINER
 
 (defun maximally-likely-in-cross-entropy-softmax-lump (lump stripe)
   (values (maximally-likely-node lump stripe :nodes (softmax lump))
           (maximally-likely-node (target lump) stripe)))
 
-(defun cross-entropy-softmax-max-likelihood-classification-error (lump)
+(defun cesc-max-likelihood-classification-error (lump)
   "A measurer that return the number of misclassifications."
   (values (loop for stripe below (n-stripes lump)
                 count (multiple-value-bind (prediction target)
@@ -226,37 +198,35 @@ even if it's missing in the input."
                         (/= prediction target)))
           (n-stripes lump)))
 
-(defun classification-error (bpn)
-  (cross-entropy-softmax-max-likelihood-classification-error
+(defun cesc-classification-error (bpn)
+  (cesc-max-likelihood-classification-error
    (find-if (lambda (lump)
               (typep lump 'cross-entropy-softmax-lump))
             (lumps bpn))))
 
-(defun make-bpn-cross-entropy-and-classification-counters-and-measurers ()
+(defun make-bpn-cesc-counters-and-measurers ()
   (list (cons (make-instance 'misclassification-counter)
               (lambda (samples bpn)
                 (declare (ignore samples))
-                (classification-error bpn)))
+                (cesc-classification-error bpn)))
         (cons (make-instance 'error-counter :name '("cross entropy"))
               (lambda (samples bpn)
                 (declare (ignore samples))
                 (cost bpn)))))
 
-(defmethod initialize-trainer ((trainer base-classification-trainer) (bpn bpn))
+(defmethod initialize-trainer ((trainer cesc-trainer) (bpn bpn))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "bpn train: training"
-         (make-bpn-cross-entropy-and-classification-counters-and-measurers))))
+        (prepend-name-to-counters "bpn train: training"
+                                  (make-bpn-cesc-counters-and-measurers))))
 
-(defun bpn-cross-entropy-and-classification-error (sampler bpn)
-  (collect-bpn-errors
-   sampler bpn
-   :counters-and-measurers
-   (make-bpn-cross-entropy-and-classification-counters-and-measurers)))
+(defun bpn-cesc-error (sampler bpn)
+  (collect-bpn-errors sampler bpn
+                      :counters-and-measurers
+                      (make-bpn-cesc-counters-and-measurers)))
 
 
-;;;; Unrolling support for BASE-CLASSIFICATION-TRAINER
+;;;; Unrolling support for CESC-TRAINER
 
 (defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key
                                             (prefix '||))

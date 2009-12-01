@@ -13,18 +13,13 @@
            #:base-trainer
            #:training-counters-and-measurers
            #:prepend-name-to-counters
-           ;; Classification
+           ;; Cross entropy softmax classification
            #:softmax-label-chunk*
-           #:base-classification-trainer
-           #:collect-dbn-mean-field-errors/labeled
-           #:log-dbn-classification-accuracy
-           #:collect-dbm-mean-field-errors/labeled
-           #:log-dbm-classification-accuracy
-           #:bpn-cross-entropy-and-classification-error
+           #:cesc-trainer
+           #:log-dbn-cesc-accuracy
+           #:log-dbm-cesc-accuracy
+           #:bpn-cesc-error
            #:tack-cross-entropy-softmax-error-on
-           #:maximally-likely-node
-           #:maximally-likely-in-cross-entropy-softmax-lump
-           #:cross-entropy-softmax-max-likelihood-classification-error
            ;; Misc
            #:load-weights
            #:save-weights))
