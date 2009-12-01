@@ -41,7 +41,7 @@
 (defparameter *mr-dir*
   (merge-pathnames "review-polarity-data/" *example-dir*)
   "Set this to the directory where the unpacked data files reside.")
-(defparameter *n-words* 4000)
+(defparameter *n-words* 500)
 (defparameter *n-grams* 3)
 
 (defvar *negative-stories*)
@@ -230,7 +230,7 @@
 
 ;;;; Common
 
-(defclass mr-base-trainer (base-trainer) ())
+(defclass mr-base-trainer (base-classification-trainer) ())
 
 (defmethod log-training-period ((trainer mr-base-trainer) learner)
   (floor (length *training-stories*) 4))
@@ -240,16 +240,6 @@
 
 
 ;;;; DBN
-
-(defclass softmax-label-chunk* (softmax-label-chunk) ())
-
-;;; Samplers don't return examples, but a list of (SAMPLE &KEY
-;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
-(defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
-  (let ((measurer (call-next-method)))
-    (when measurer
-      (lambda (examples learner)
-        (funcall measurer (mapcar #'first examples) learner)))))
 
 (defclass mr-dbn (dbn)
   ()
@@ -319,13 +309,6 @@
 
 (defmethod initialize-trainer ((trainer mr-rbm-trainer) rbm)
   (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "dbn train: training"
-         (append
-          (make-bm-reconstruction-rmse-counters-and-measurers rbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers
-           rbm))))
   (when (typep trainer 'bm-pcd-trainer)
     (setf (max-n-stripes (persistent-chains trainer))
           100
@@ -339,40 +322,13 @@
         (fill (scale inputs) (flt 128))))
     (log-msg "n-stripes: ~S~%" (n-stripes (persistent-chains trainer)))))
 
-(defun collect-dbn-mean-field-errors*
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct the LABEL chunk
-even if it's missing in the input."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (when (find-chunk 'label rbm)
-                            (setf (indices-present (find-chunk 'label rbm)) nil))
-                          (down-mean-field dbn :rbm rbm))
-                        sampler
-                        dbn
-                        counters-and-measurers))
-
-(defun log-dbn-classification-accuracy (rbm sampler name)
-  (let ((counters-and-measurers
-         (make-dbn-reconstruction-misclassification-counters-and-measurers
-          (dbn rbm) :rbm rbm)))
-    (map nil (lambda (counter)
-               (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
-         (collect-dbn-mean-field-errors*
-          sampler
-          (dbn rbm)
-          :counters-and-measurers
-          counters-and-measurers))))
-
 (defmethod log-test-error ((trainer mr-rbm-trainer) (rbm mr-rbm))
   (call-next-method)
   (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
-       (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
+       (collect-dbn-mean-field-errors/labeled (make-test-sampler)
+                                              (dbn rbm) :rbm rbm))
   (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
                                    "test"))
 
@@ -465,12 +421,6 @@ even if it's missing in the input."
 (defclass mr-cg-bp-trainer (mr-base-trainer cg-bp-trainer) ())
 
 (defclass mr-bp-trainer (mr-base-trainer bp-trainer) ())
-
-(defmethod initialize-trainer ((trainer mr-base-trainer) (bpn mr-bpn))
-  (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters "bpn train: training"
-                                  (make-bpn-counters-and-measurers))))
 
 (defmethod log-test-error ((trainer mr-cg-bp-trainer) (bpn mr-bpn))
   (call-next-method)

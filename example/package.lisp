@@ -3,20 +3,31 @@
   (:export #:*example-dir*
            #:time->string
            #:log-msg
+           ;; Loggign trainer
            #:logging-trainer
            #:log-training-error
            #:log-training-period
            #:log-test-error
            #:log-test-period
+           ;; Base trainer
            #:base-trainer
            #:training-counters-and-measurers
            #:prepend-name-to-counters
+           ;; Classification
+           #:softmax-label-chunk*
+           #:base-classification-trainer
+           #:collect-dbn-mean-field-errors/labeled
+           #:log-dbn-classification-accuracy
+           #:collect-dbm-mean-field-errors/labeled
+           #:log-dbm-classification-accuracy
+           #:bpn-cross-entropy-and-classification-error
            #:tack-cross-entropy-softmax-error-on
-           #:load-weights
-           #:save-weights
            #:maximally-likely-node
            #:maximally-likely-in-cross-entropy-softmax-lump
-           #:cross-entropy-softmax-max-likelihood-classification-error))
+           #:cross-entropy-softmax-max-likelihood-classification-error
+           ;; Misc
+           #:load-weights
+           #:save-weights))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp

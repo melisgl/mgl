@@ -191,7 +191,7 @@
 
 ;;;; Logging
 
-(defclass mnist-base-trainer (base-trainer) ())
+(defclass mnist-base-trainer (base-classification-trainer) ())
 
 (defmethod log-training-period ((trainer mnist-base-trainer) learner)
   (min 10000 (length *training-images*)))
@@ -214,56 +214,19 @@
 
 (defclass mnist-rbm-trainer (mnist-base-trainer rbm-cd-trainer) ())
 
-(defmethod initialize-trainer ((trainer mnist-base-trainer) (rbm mnist-rbm))
-  (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "dbn train: training"
-         (append
-          (make-bm-reconstruction-rmse-counters-and-measurers rbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers
-           rbm)))))
-
 (defmethod n-gibbs ((trainer mnist-rbm-trainer))
   (let ((x (slot-value trainer 'n-gibbs)))
     (if (integerp x)
         x
         (funcall x trainer))))
 
-(defun collect-dbn-mean-field-errors*
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
-  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct the LABEL chunk
-even if it's missing in the input."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (when (find-chunk 'label rbm)
-                            (setf (indices-present (find-chunk 'label rbm)) nil))
-                          (down-mean-field dbn :rbm rbm))
-                        sampler
-                        dbn
-                        counters-and-measurers))
-
-(defun log-dbn-classification-accuracy (rbm sampler name)
-  (let ((counters-and-measurers
-         (make-dbn-reconstruction-misclassification-counters-and-measurers
-          (dbn rbm) :rbm rbm)))
-    (map nil (lambda (counter)
-               (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
-         (collect-dbn-mean-field-errors*
-          sampler
-          (dbn rbm)
-          :counters-and-measurers
-          counters-and-measurers))))
-
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
   (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
-       (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
+       (collect-dbn-mean-field-errors/labeled (make-test-sampler)
+                                              (dbn rbm) :rbm rbm))
   (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
                                    "test"))
 
@@ -353,24 +316,6 @@ even if it's missing in the input."
                           (+ expectations-start (image-label image)))
                     #.(flt 1)))))))
 
-(defun classification-error (bpn)
-  (cross-entropy-softmax-max-likelihood-classification-error
-   (find-lump 'predictions bpn :errorp t)))
-
-(defun make-bpn-counters-and-measurers ()
-  (list (cons (make-instance 'misclassification-counter)
-              (lambda (samples bpn)
-                (declare (ignore samples))
-                (classification-error bpn)))
-        (cons (make-instance 'error-counter :name '("cross entropy"))
-              (lambda (samples bpn)
-                (declare (ignore samples))
-                (cost bpn)))))
-
-(defun bpn-error (sampler bpn)
-  (collect-bpn-errors sampler bpn
-                      :counters-and-measurers (make-bpn-counters-and-measurers)))
-
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
                                      :max-n-stripes 1000
@@ -388,17 +333,12 @@ even if it's missing in the input."
 
 (defclass mnist-cg-bp-trainer (mnist-base-trainer cg-bp-trainer) ())
 
-(defmethod initialize-trainer ((trainer mnist-base-trainer) (bpn mnist-bpn))
-  (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters "bpn train: training"
-                                  (make-bpn-counters-and-measurers))))
-
 (defmethod log-test-error ((trainer mnist-cg-bp-trainer) (bpn mnist-bpn))
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-error (make-test-sampler :omit-label-p t) bpn)))
+       (bpn-cross-entropy-and-classification-error
+        (make-test-sampler :omit-label-p t) bpn)))
 
 (defun init-weights (name bpn deviation)
   (multiple-value-bind (array start end)
@@ -460,7 +400,7 @@ even if it's missing in the input."
 
 (defun unroll-mnist-dbn/1 (dbn)
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
-    (log-msg "inits:~%~S~%" inits)
+    (log-msg "bpn inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
       (initialize-bpn-from-bm bpn dbn inits)
       (init-weights 'prediction-weights bpn 0.1)
@@ -487,7 +427,8 @@ even if it's missing in the input."
          (log-msg "Loaded DBN~%")
          (map nil (lambda (counter)
                     (log-msg "dbn test ~:_~A~%" counter))
-              (collect-dbn-mean-field-errors* (make-test-sampler) *dbn/1*)))
+              (collect-dbn-mean-field-errors/labeled (make-test-sampler)
+                                                     *dbn/1*)))
         (t
          (setq *dbn/1* (make-instance 'mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
@@ -591,38 +532,6 @@ even if it's missing in the input."
     (clamp-labels images label-chunk)))
 
 (defclass mnist-dbm-trainer (mnist-base-trainer bm-pcd-trainer) ())
-
-(defmethod initialize-trainer ((trainer mnist-base-trainer) (dbm mnist-dbm))
-  (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "dbm train: training"
-         (append
-          (make-dbm-reconstruction-rmse-counters-and-measurers dbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers
-           dbm)))))
-
-(defun collect-mnist-dbm-mean-field-errors
-    (sampler bm &key
-     (counters-and-measurers
-      (make-bm-reconstruction-rmse-counters-and-measurers bm)))
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples bm)
-                          (set-hidden-mean bm)
-                          (setf (indices-present (find-chunk 'label bm)) nil)
-                          (set-visible-mean bm))
-                        sampler
-                        bm
-                        counters-and-measurers))
-
-(defun log-dbm-classification-accuracy (dbm sampler name)
-  (let ((counters-and-measurers
-         (make-bm-reconstruction-misclassification-counters-and-measurers dbm)))
-    (when counters-and-measurers
-      (map nil (lambda (counter)
-                 (log-msg "dbm test: ~:_~A ~:_~A~%" name counter))
-           (collect-mnist-dbm-mean-field-errors
-            sampler dbm :counters-and-measurers counters-and-measurers)))))
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (call-next-method)
