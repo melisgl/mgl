@@ -62,6 +62,9 @@
   string
   array)
 
+(defmethod label ((story story))
+  (story-label story))
+
 (defun slurp-file (file)
   (with-open-file (in file :direction :input
                    #+sbcl :external-format #+sbcl :latin-1)
@@ -151,14 +154,25 @@
 
 ;;;; Sampling, clamping
 
-(defun make-sampler (stories &key max-n omit-label-p)
+(defun make-sampler (examples &key max-n omit-label-p sample-visible-p)
   (make-instance 'counting-function-sampler
                  :max-n-samples max-n
-                 :sampler (if omit-label-p
-                              (let ((g (make-random-generator stories)))
-                                (lambda ()
-                                  (list (funcall g) :omit-label-p t)))
-                              (make-random-generator stories))))
+                 :sampler (let ((g (make-random-generator examples)))
+                            (lambda ()
+                              (list (funcall g)
+                                    :omit-label-p omit-label-p
+                                    :sample-visible-p sample-visible-p)))))
+
+
+(defun make-training-sampler (&key omit-label-p)
+  (make-sampler (subseq *training-stories* 0 1000)
+                :max-n 1000
+                :omit-label-p omit-label-p))
+
+(defun make-test-sampler (&key omit-label-p)
+  (make-sampler *test-stories*
+                :max-n (length *test-stories*)
+                :omit-label-p omit-label-p))
 
 (defun clamp-story (story array start end)
   (declare (type flt-vector array))
@@ -216,90 +230,58 @@
 
 ;;;; Common
 
-(defclass mr-logging-trainer (logging-trainer) ())
+(defclass mr-base-trainer (base-trainer) ())
 
-(defmethod log-training-period ((trainer mr-logging-trainer) learner)
+(defmethod log-training-period ((trainer mr-base-trainer) learner)
   (floor (length *training-stories*) 4))
 
-(defmethod log-test-period ((trainer mr-logging-trainer) learner)
+(defmethod log-test-period ((trainer mr-base-trainer) learner)
   (length *training-stories*))
 
 
 ;;;; DBN
 
-(defun all-chunks (chunks)
-  (let ((position (position :visible-only chunks)))
-    (if position
-        (append (subseq chunks 0 position) (subseq chunks (1+ position)))
-        chunks)))
+(defclass softmax-label-chunk* (softmax-label-chunk) ())
 
-(defun hidden-chunks-only (chunks)
-  (let ((position (position :visible-only chunks)))
-    (subseq chunks 0 position)))
-
-(defun layers->rbms (layers &key (class 'rbm))
-  (loop for (v h) on layers
-        when h
-        collect (make-instance class
-                               :visible-chunks (all-chunks v)
-                               :hidden-chunks (hidden-chunks-only h)
-                               :clouds (if (find 'inputs (all-chunks v)
-                                                 :key #'name)
-                                           '(:merge)
-                                           #+nil
-                                           '(:merge
-                                             (:class factored-cloud
-                                              :visible-chunk inputs
-                                              :hidden-chunk f1
-                                              :rank 10))
-                                           '(:merge)))))
+;;; Samplers don't return examples, but a list of (SAMPLE &KEY
+;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
+(defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
+  (let ((measurer (call-next-method)))
+    (when measurer
+      (lambda (examples learner)
+        (funcall measurer (mapcar #'first examples) learner)))))
 
 (defclass mr-dbn (dbn)
-  ((rbms :initform (layers->rbms
-                    (list (list (make-instance 'constant-chunk :name 'c0)
-                                (make-instance 'softmax-chunk :name 'input-label
-                                               :size 2 :group-size 2)
-                                (make-instance 'constrained-poisson-chunk
-                                               :name 'inputs
-                                               ;; each input has its
-                                               ;; own scale
-                                               :scale (make-flt-array 0)
-                                               :group-size *n-words*
-                                               :size *n-words*))
-                          (list (make-instance 'constant-chunk :name 'c1)
-                                (make-instance 'sigmoid-chunk :name 'f1
-                                               :size 100))
-                          #+nil
-                          (list (make-instance 'constant-chunk :name 'c2)
-                                (make-instance 'sigmoid-chunk :name 'f2
-                                               :size 100))
-                          #+nil
-                          (list (make-instance 'constant-chunk :name 'c3)
-                                (make-instance 'sigmoid-chunk :name 'f3
-                                               :size 400)))
-                    :class 'mr-rbm))))
-
-(defun make-mr-dbn (&key (max-n-stripes 1))
-  (make-instance 'mr-dbn :max-n-stripes max-n-stripes))
+  ()
+  (:default-initargs
+   :layers (list (list (make-instance 'constant-chunk :name 'c0)
+                       (make-instance 'softmax-label-chunk* :name 'input-label
+                                      :size 2 :group-size 2)
+                       (make-instance 'constrained-poisson-chunk
+                                      :name 'inputs
+                                      ;; each input has its
+                                      ;; own scale
+                                      :scale (make-flt-array 0)
+                                      :group-size *n-words*
+                                      :size *n-words*))
+                 (list (make-instance 'constant-chunk :name 'c1)
+                       (make-instance 'sigmoid-chunk :name 'f1
+                                      :size 100))
+                 #+nil
+                 (list (make-instance 'constant-chunk :name 'c2)
+                       (make-instance 'sigmoid-chunk :name 'f2
+                                      :size 100))
+                 #+nil
+                 (list (make-instance 'constant-chunk :name 'c3)
+                       (make-instance 'sigmoid-chunk :name 'f3
+                                      :size 400)))
+    :rbm-class 'mr-rbm
+    :max-n-stripes 1))
 
 (defclass mr-rbm (rbm) ())
 
 (defun story-size (story)
   (loop for x across (story-array story) summing (cdr x)))
-
-(defun find-dbn-input-labels (rbm)
-  (let ((chunks-and-rbms ()))
-    (dolist (rbm1 (rbms (dbn rbm)))
-      (let ((chunk (find 'input-label (visible-chunks rbm1) :key #'name)))
-        (when chunk
-          (push (cons chunk rbm1) chunks-and-rbms)))
-      (when (eq rbm1 rbm)
-        (return)))
-    chunks-and-rbms))
-
-(defmacro do-dbn-input-labels (((label-chunk label-rbm) rbm) &body body)
-  `(loop for (,label-chunk . ,label-rbm) in (find-dbn-input-labels ,rbm)
-    do (progn ,@body)))
 
 (defmethod mgl-train:set-input (samples (rbm mr-rbm))
   (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
@@ -311,9 +293,9 @@
                        nil)))
         (loop for sample in samples
               for stripe upfrom 0
-              do (destructuring-bind (story &key omit-label-p)
-                     (if (listp sample) sample (list sample))
-                   (declare (ignore omit-label-p))
+              do (destructuring-bind (story &key omit-label-p sample-visible-p)
+                     sample
+                   (declare (ignore omit-label-p sample-visible-p))
                    (when scale
                      (setf (aref scale stripe) (flt (story-size story))))
                    (with-stripes ((stripe chunk start end))
@@ -323,8 +305,9 @@
       (let ((nodes (storage (nodes chunk))))
         (loop for sample in samples
               for stripe upfrom 0
-              do (destructuring-bind (sample &key omit-label-p)
-                     (if (listp sample) sample (list sample))
+              do (destructuring-bind (sample &key omit-label-p sample-visible-p)
+                     sample
+                   (declare (ignore sample-visible-p))
                    (with-stripes ((stripe chunk start end))
                      (fill nodes #.(mgl-util:flt 0) :start start :end end)
                      (unless omit-label-p
@@ -332,11 +315,17 @@
                          ((-1) (setf (aref nodes (+ start 0)) (flt 1)))
                          ((1) (setf (aref nodes (+ start 1)) (flt 1))))))))))))
 
-(defclass mr-rbm-trainer (mr-logging-trainer rbm-cd-trainer)
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+(defclass mr-rbm-trainer (mr-base-trainer rbm-cd-trainer) ())
 
 (defmethod initialize-trainer ((trainer mr-rbm-trainer) rbm)
   (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters
+         "dbn train: training"
+         (append
+          (make-bm-reconstruction-rmse-counters-and-measurers rbm)
+          (make-bm-reconstruction-misclassification-counters-and-measurers
+           rbm))))
   (when (typep trainer 'bm-pcd-trainer)
     (setf (max-n-stripes (persistent-chains trainer))
           100
@@ -348,89 +337,52 @@
         (let ((features (find 'f1 (hidden-chunks rbm) :key #'name)))
           (fill (storage (nodes features)) (flt 0.01)))
         (fill (scale inputs) (flt 128))))
-    (format *trace-output* "n-stripes: ~S~%"
-            (n-stripes (persistent-chains trainer)))))
+    (log-msg "n-stripes: ~S~%" (n-stripes (persistent-chains trainer)))))
 
-(defun dbn-error (sampler rbm)
-  (let* ((dbn (dbn rbm))
-         (label-chunks-and-rbms (find-dbn-input-labels rbm))
-         (sum-errors (make-array (length label-chunks-and-rbms)
-                                 :initial-element 0))
-         (n-errors 0)
-         (max-n-stripes (max-n-stripes dbn)))
-    (loop until (finishedp sampler) do
-          (let ((samples (sample-batch sampler max-n-stripes)))
-            (set-input samples rbm)
-            (set-hidden-mean rbm)
-            ;; this could be done until only LABEL-RBM
-            (down-mean-field dbn :rbm rbm)
-            (loop for (label-chunk . label-rbm) in label-chunks-and-rbms
-                  for i upfrom 0
-                  do
-                  (let ((nodes (storage (nodes label-chunk))))
-                    (loop
-                     for sample in samples
-                     for stripe upfrom 0
-                     do (with-stripes ((stripe label-chunk start end))
-                          (unless (= (story-label (if (listp sample)
-                                                      (first sample)
-                                                      sample))
-                                     (decode-label nodes start end))
-                            (incf (aref sum-errors i)))))))
-            (incf n-errors (length samples))))
-    (if (zerop n-errors)
-        nil
-        (map 'list (lambda (x)
-                     (/ x n-errors))
-             sum-errors))))
+(defun collect-dbn-mean-field-errors*
+    (sampler dbn &key (rbm (last1 (rbms dbn)))
+     (counters-and-measurers
+      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct the LABEL chunk
+even if it's missing in the input."
+  (collect-batch-errors (lambda (samples)
+                          (set-input samples rbm)
+                          (set-hidden-mean rbm)
+                          (when (find-chunk 'label rbm)
+                            (setf (indices-present (find-chunk 'label rbm)) nil))
+                          (down-mean-field dbn :rbm rbm))
+                        sampler
+                        dbn
+                        counters-and-measurers))
 
-(defmethod log-training-error ((trainer mr-rbm-trainer) (rbm mr-rbm))
-  (let ((counter (counter trainer))
-        (n-inputs (n-inputs trainer)))
-    (log-msg "TRAINING RMSE: ~,3E (~D)~%"
-             (or (get-error counter) #.(flt 0))
-             n-inputs)
-    (reset-counter counter)))
+(defun log-dbn-classification-accuracy (rbm sampler name)
+  (let ((counters-and-measurers
+         (make-dbn-reconstruction-misclassification-counters-and-measurers
+          (dbn rbm) :rbm rbm)))
+    (map nil (lambda (counter)
+               (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
+         (collect-dbn-mean-field-errors*
+          sampler
+          (dbn rbm)
+          :counters-and-measurers
+          counters-and-measurers))))
 
 (defmethod log-test-error ((trainer mr-rbm-trainer) (rbm mr-rbm))
-  (let ((dbn (dbn rbm)))
-    (log-msg "DBN TEST RMSE: ~{~,3E~^, ~} (~D)~%"
-             (map 'list
-                  #'get-error
-                  (collect-dbn-mean-field-errors
-                   (make-sampler *test-stories*
-                                 :omit-label-p t
-                                 :max-n (length *test-stories*))
-                   dbn :rbm rbm))
-             (n-inputs trainer))
-    (when (find-dbn-input-labels rbm)
-      (let ((errors (dbn-error (make-sampler *test-stories*
-                                             :omit-label-p t
-                                             :max-n (length *test-stories*))
-                               rbm)))
-        (log-msg "DBN TEST CLASSIFICATION ACCURACY: ~{~,2F%~^, ~} (~D)~%"
-                 (mapcar (lambda (e)
-                           (* 100 (- 1 e)))
-                         errors)
-                 (n-inputs trainer))))))
-
-(defmethod negative-phase :around (batch trainer (rbm mr-rbm))
   (call-next-method)
-  (multiple-value-call #'add-error (counter trainer)
-                       (reconstruction-error rbm)))
+  (log-dbn-classification-accuracy rbm (make-training-sampler) "training")
+  (map nil (lambda (counter)
+             (log-msg "dbn test: ~:_test ~:_~A~%" counter))
+       (collect-dbn-mean-field-errors* (make-test-sampler) (dbn rbm) :rbm rbm))
+  (log-dbn-classification-accuracy rbm (make-test-sampler :omit-label-p t)
+                                   "test"))
 
 
 ;;;; DBN training
 
-(defun bias-cloud-p (cloud)
-  (or (typep (chunk1 cloud) 'constant-chunk)
-      (typep (chunk2 cloud) 'constant-chunk)))
-
-(defclass mr-rbm-segment-trainer (batch-gd-trainer)
-  ((mgl-gd:use-accumulator2 :initform t)))
+(defclass mr-rbm-segment-trainer (batch-gd-trainer) ())
 
 (defun train-mr-dbn ()
-  (let ((dbn (make-mr-dbn :max-n-stripes 100)))
+  (let ((dbn (make-instance 'mr-dbn :max-n-stripes 100)))
     (loop for rbm in (rbms dbn)
           for i upfrom 0 do
           (log-msg "Starting to train level ~S RBM in DBN.~%" i)
@@ -442,20 +394,18 @@
                   :n-gibbs 1
                   :segmenter
                   (lambda (cloud)
-                    (print cloud)
                     (multiple-value-bind (decay learning-rate)
                         (cond ((equal (name cloud) '((inputs f1) :a))
                                (values 0 0.0001))
                               ((equal (name cloud) '((inputs f1) :b))
                                (values 0.002 0.01))
-                              ((bias-cloud-p cloud)
+                              ((conditioning-cloud-p cloud)
                                (values 0 0.01))
                               (t
                                (values 0.002 0.01)))
                       #+nil
                       (when (find 'input-label (name cloud))
                         (setq learning-rate (* 0.1 (flt learning-rate))))
-                      (format t "~S ~S~%" learning-rate decay)
                       (make-instance 'mr-rbm-segment-trainer
                                      :learning-rate (flt learning-rate)
                                      :momentum (flt 0.9)
@@ -469,7 +419,7 @@
 
 (defclass mr-bpn (bpn) ())
 
-(defmethod set-input (stories (bpn mr-bpn))
+(defmethod set-input (samples (bpn mr-bpn))
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
          (label (find-lump (chunk-lump-name 'input-label nil) bpn :errorp nil))
          (expectations (find-lump 'expectations bpn :errorp t))
@@ -477,103 +427,56 @@
          (expectations* (storage (nodes expectations))))
     (when label
       (matlisp:fill-matrix (nodes label) (flt 0)))
-    (loop for story in stories
+    (loop for sample in samples
           for stripe upfrom 0
-          do (with-stripes ((stripe inputs inputs-start inputs-end)
-                            (stripe expectations expectations-start
-                                    expectations-end))
-               (clamp-story story inputs* inputs-start inputs-end)
-               (clamp-label (story-label story)
-                            expectations*
-                            expectations-start expectations-end)))))
-
-(defun bpn-decode-labels (bpn lump-name)
-  (let* ((predictions (find-lump lump-name bpn :errorp t))
-         (nodes (storage (if (eq 'expectations lump-name)
-                             (nodes predictions)
-                             (softmax predictions)))))
-    (loop for stripe below (n-stripes predictions)
-          collect (with-stripes ((stripe predictions start end))
-                    (decode-label nodes start end)))))
+          do
+          (destructuring-bind (story &key omit-label-p sample-visible-p) sample
+            (assert omit-label-p)
+            (assert (not sample-visible-p))
+            (with-stripes ((stripe inputs inputs-start inputs-end)
+                           (stripe expectations expectations-start
+                                   expectations-end))
+              (clamp-story story inputs* inputs-start inputs-end)
+              (clamp-label (story-label story)
+                           expectations*
+                           expectations-start expectations-end))))))
 
 (defun classification-error (bpn)
-  (values (- (n-stripes bpn)
-             (loop for p in (bpn-decode-labels bpn 'predictions)
-                   for e in (bpn-decode-labels bpn 'expectations)
-                   count (= p e)))
-          (n-stripes bpn)))
+  (cross-entropy-softmax-max-likelihood-classification-error
+   (find-lump 'predictions bpn :errorp t)))
+
+(defun make-bpn-counters-and-measurers ()
+  (list (cons (make-instance 'misclassification-counter)
+              (lambda (samples bpn)
+                (declare (ignore samples))
+                (classification-error bpn)))
+        (cons (make-instance 'error-counter :name '("cross entropy"))
+              (lambda (samples bpn)
+                (declare (ignore samples))
+                (cost bpn)))))
 
 (defun bpn-error (sampler bpn)
-  (let ((counter (make-instance 'error-counter))
-        (ce-counter (make-instance 'error-counter))
-        (n-stripes (max-n-stripes bpn)))
-    (loop until (finishedp sampler) do
-          (set-input (sample-batch sampler n-stripes) bpn)
-          (forward-bpn bpn)
-          (multiple-value-call #'add-error ce-counter (cost bpn))
-          (multiple-value-call #'add-error counter (classification-error bpn)))
-    (values (get-error counter)
-            (get-error ce-counter))))
+  (collect-bpn-errors sampler bpn
+                      :counters-and-measurers (make-bpn-counters-and-measurers)))
 
 
 ;;;; BPN training
 
-(defclass mr-cg-bp-trainer (mr-logging-trainer cg-bp-trainer)
-  ((cross-entropy-counter :initform (make-instance 'error-counter)
-                          :reader cross-entropy-counter)
-   (counter :initform (make-instance 'error-counter) :reader counter)))
+(defclass mr-cg-bp-trainer (mr-base-trainer cg-bp-trainer) ())
 
-(defclass mr-bp-trainer (mr-logging-trainer bp-trainer)
-  ((cross-entropy-counter :initform (make-instance 'error-counter)
-                          :reader cross-entropy-counter)
-   (counter :initform (make-instance 'error-counter) :reader counter)))
+(defclass mr-bp-trainer (mr-base-trainer bp-trainer) ())
 
-(defmethod log-training-error (trainer (bpn mr-bpn))
-  (let ((n-inputs (n-inputs trainer))
-        (ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (log-msg "CROSS ENTROPY ERROR: ~,5F (~D)~%"
-             (or (get-error ce-counter) #.(flt 0))
-             n-inputs)
-    (log-msg "CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-             (* 100 (- 1 (or (get-error counter) #.(flt 0))))
-             n-inputs)
-    (reset-counter ce-counter)
-    (reset-counter counter)))
+(defmethod initialize-trainer ((trainer mr-base-trainer) (bpn mr-bpn))
+  (call-next-method)
+  (setf (slot-value trainer 'training-counters-and-measurers)
+        (prepend-name-to-counters "bpn train: training"
+                                  (make-bpn-counters-and-measurers))))
 
-(defmethod log-test-error (trainer (bpn mr-bpn))
-  (multiple-value-bind (e ce)
-      (bpn-error (make-sampler *test-stories*
-                               :max-n (length *test-stories*))
-                 bpn)
-    (log-msg "TEST CROSS ENTROPY ERROR: ~,5F (~D)~%"
-             ce (n-inputs trainer))
-    (log-msg "TEST CLASSIFICATION ACCURACY: ~,2F% (~D)~%"
-             (* 100 (- 1 e)) (n-inputs trainer))))
-
-(defmethod compute-derivatives :around (samples (trainer mr-cg-bp-trainer) bpn)
-  (let ((ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (call-next-method)
-    (multiple-value-call #'add-error ce-counter (cost bpn))
-    (multiple-value-call #'add-error counter (classification-error bpn))))
-
-(defmethod train-batch :around (batch (trainer mr-cg-bp-trainer) bpn)
-  (let ((ce-counter (cross-entropy-counter trainer))
-        (counter (counter trainer)))
-    (loop for samples in (group batch (max-n-stripes bpn)) do
-          (set-input samples bpn)
-          (forward-bpn bpn)
-          (multiple-value-call #'add-error ce-counter (cost bpn))
-          (multiple-value-call #'add-error counter (classification-error bpn)))
-    (multiple-value-bind (best-w best-f
-                                 n-line-searches n-succesful-line-searches
-                                 n-evaluations)
-        (call-next-method)
-      (declare (ignore best-w))
-      (log-msg "BEST-F: ~S, N-EVALUATIONS: ~S~%" best-f n-evaluations)
-      (log-msg "N-LINE-SEARCHES: ~S (succesful ~S)~%"
-               n-line-searches n-succesful-line-searches))))
+(defmethod log-test-error ((trainer mr-cg-bp-trainer) (bpn mr-bpn))
+  (call-next-method)
+  (map nil (lambda (counter)
+             (log-msg "bpn test: test ~:_~A~%" counter))
+       (bpn-error (make-test-sampler :omit-label-p t) bpn)))
 
 (defun init-lump (name bpn deviation)
   (multiple-value-bind (array start end)
@@ -583,40 +486,24 @@
 
 (defun unroll-mr-dbn (dbn &key (name (chunk-lump-name 'f3 nil)) (n-classes 2))
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
-    (print inits)
-    (terpri)
-    (let ((bpn (eval (print
-                      `(build-bpn (:class 'mr-bpn)
-                         ,@defs
-                         ;; Add expectations
-                         (expectations (input-lump :size ,n-classes))
-                         ;; Add a softmax layer. Oh, the pain.
-                         (prediction-weights (weight-lump
-                                              :size (* (size (lump ',name))
-                                                       ,n-classes)))
-                         (prediction-biases (weight-lump :size ,n-classes))
-                         (prediction-activations0
-                          (activation-lump :weights prediction-weights
-                                           :x (lump ',name)))
-                         (prediction-activations
-                          (->+ :args (list prediction-activations0
-                                           prediction-biases)))
-                         (predictions
-                          (cross-entropy-softmax-lump
-                           :group-size ,n-classes
-                           :x prediction-activations
-                           :target expectations))
-                         (my-error (error-node :x predictions)))))))
-      (initialize-bpn-from-bm bpn dbn inits)
-      (init-lump 'prediction-weights bpn 0.1)
-      (init-lump 'prediction-biases bpn 0)
-      bpn)))
+    (log-msg "bpn inits:~%~S~%" inits)
+    (let ((bpn-def `(build-bpn (:class 'mr-bpn)
+                      ,@defs
+                      ,@(tack-cross-entropy-softmax-error-on
+                         n-classes name :prefix '||))))
+      (log-msg "bpn def:~%~S~%" bpn-def)
+      (let ((bpn (eval bpn-def)))
+        (initialize-bpn-from-bm bpn dbn inits)
+        (init-lump 'prediction-weights bpn 0.1)
+        (init-lump 'prediction-biases bpn 0)
+        bpn))))
 
 (defun train-mr-bpn (bpn &key (n-softmax-batches 5) (n-whole-batches 0))
   (setf (max-n-stripes bpn) 1000)
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler *training-stories*
-                       :max-n (* n-softmax-batches (length *training-stories*)))
+                       :max-n (* n-softmax-batches (length *training-stories*))
+                       :omit-label-p t)
          (make-instance 'mr-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 10)
                         :batch-size (length *training-stories*)
@@ -625,13 +512,15 @@
                           (or (eq (name lump) 'prediction-biases)
                               (eq (name lump) 'prediction-weights))))
          bpn)
-  (log-msg "Starting to train the whole BPN~%")
-  (train (make-sampler *training-stories*
-                       :max-n (* n-whole-batches (length *training-stories*)))
-         (make-instance 'mr-cg-bp-trainer
-                        :cg-args (list :max-n-line-searches 3)
-                        :batch-size (length *training-stories*))
-         bpn)
+  (unless (zerop n-whole-batches)
+    (log-msg "Starting to train the whole BPN~%")
+    (train (make-sampler *training-stories*
+                         :max-n (* n-whole-batches (length *training-stories*))
+                         :omit-label-p t)
+           (make-instance 'mr-cg-bp-trainer
+                          :cg-args (list :max-n-line-searches 3)
+                          :batch-size (length *training-stories*))
+           bpn))
   bpn)
 
 (defun train-mr-bpn-gd (bpn)
