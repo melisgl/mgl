@@ -735,10 +735,4 @@
   (sb-sprof:stop-profiling)
   (sb-sprof:report :type :graph))
 
-(describe *dbm/2*)
-(map nil #'print (clouds *dbm/2*))
-
-(setq *training-images* (subseq *training-images* 0 1000))
-(setq *test-images* (subseq *test-images* 0 1000))
-
 |#
