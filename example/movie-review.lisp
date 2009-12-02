@@ -41,7 +41,7 @@
 (defparameter *mr-dir*
   (merge-pathnames "review-polarity-data/" *example-dir*)
   "Set this to the directory where the unpacked data files reside.")
-(defparameter *n-words* 500)
+(defparameter *n-words* 4000)
 (defparameter *n-grams* 3)
 
 (defvar *negative-stories*)
