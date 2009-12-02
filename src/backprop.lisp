@@ -162,6 +162,26 @@ of the network.")))
 (defmethod derive-lump ((lump data-lump)))
 
 
+;;;; ERROR-NODE
+
+(defclass error-node (->sum)
+  ((importance
+    :initform (flt 1) :initarg :importance :accessor importance
+    :documentation "Error nodes have their incoming derivative set to
+IMPORTANCE no matter what other nodes depend on them."))
+  (:documentation "An error node is usually a leaf in the graph of
+lumps. Contrary to non-error leaf lumps it gets a non-zero derivative:
+IMPORTANCE. Error lumps have exactly one node \(in each stripe) whose
+value is computed as the sum of nodes in the X parameter lump."))
+
+(defmethod default-size ((lump error-node))
+  1)
+
+(defmethod derive-lump :around ((lump error-node))
+  (matlisp:fill-matrix (derivatives lump) (importance lump))
+  (call-next-method))
+
+
 ;;;; BPN
 
 (defclass bpn ()
@@ -865,26 +885,6 @@ computed."))
                     (incf (aref yd* i)
                           (* d 2 (- (/ (aref x* i)
                                        (aref y* i)))))))))))
-
-
-;;;; ERROR-NODE
-
-(defclass error-node (->sum)
-  ((importance
-    :initform (flt 1) :initarg :importance :accessor importance
-    :documentation "Error nodes have their incoming derivative set to
-IMPORTANCE no matter what other nodes depend on them."))
-  (:documentation "An error node is usually a leaf in the graph of
-lumps. Contrary to non-error leaf lumps it gets a non-zero derivative:
-IMPORTANCE. Error lumps have exactly one node \(in each stripe) whose
-value is computed as the sum of nodes in the X parameter lump."))
-
-(defmethod default-size ((lump error-node))
-  1)
-
-(defmethod derive-lump :around ((lump error-node))
-  (matlisp:fill-matrix (derivatives lump) (importance lump))
-  (call-next-method))
 
 
 ;;;; CROSS-ENTROPY-SOFTMAX-LUMP
