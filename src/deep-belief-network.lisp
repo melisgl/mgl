@@ -57,6 +57,16 @@ the :RBM-CLASS initarg is for."))
 (defmethod chunks ((dbn dbn))
   (apply #'append (mapcar #'chunks (rbms dbn))))
 
+(defmethod visible-chunks ((dbn dbn))
+  (set-difference (apply #'append (mapcar #'visible-chunks (rbms dbn)))
+                  (hidden-chunks dbn)))
+
+(defmethod hidden-chunks ((dbn dbn))
+  (apply #'append (mapcar #'hidden-chunks (rbms dbn))))
+
+(defmethod clouds ((dbn dbn))
+  (apply #'append (mapcar #'clouds (rbms dbn))))
+
 (defmethod find-chunk (name (dbn dbn) &key errorp)
   (dolist (rbm (rbms dbn))
     (let ((chunk (find-chunk name rbm)))
