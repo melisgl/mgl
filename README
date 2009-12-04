@@ -75,9 +75,13 @@ If you have the stock sse2 package of ATLAS then configure it as:
 or 
 
   ./configure --with-atlas=/home/mega/ATLAS/build-f95-dyn/lib/ \
-              --with-lisp=sbcl --prefix=`pwd`
+              --with-lisp=sbcl --prefix=`pwd` \
+              --with-lisp-exec='sh /home/mega/lisp/sbcl/run-sbcl.sh'
 
-in my case.
+in my case. You may also have to use --with-f77=gfortran or something
+similar. On a suse system, I had to set FFLAGS to '-fPIC -g -O2'
+before configure and edit matlisp.mk to add -fPIC to the compile flags
+for dlamch.f else ld could not link it the dynamic lib.
 
 Edit the generated lib/lazy-loader.lisp:
 
