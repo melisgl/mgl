@@ -86,8 +86,9 @@
 
 (defmethod negative-phase :around (batch (trainer base-trainer) (bm bm))
   (call-next-method)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                batch bm))
+  (unless (typep bm 'dbm)
+    (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                  batch bm)))
 
 (defmethod positive-phase :around (batch (trainer base-trainer) (dbm dbm))
   (call-next-method)
