@@ -110,8 +110,22 @@ for me it was:
 or if you have MKL:
 
   (defun load-blas-&-lapack-libraries ()
-    (sb-alien:load-shared-object "/opt/intel/mkl/9.1.023/lib/32/libmkl.so")
+    (sb-alien:load-shared-object
+     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_core.so")
+    ;; The threaded lib makes sbcl die, use the sequential one.
+    #+nil
+    (sb-alien:load-shared-object
+     "/home/mega/intel/mkl/10.2.2.025/lib/32/libiomp5.so")
+    #+nil
+    (sb-alien:load-shared-object
+     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_gnu_thread.so")
+    (sb-alien:load-shared-object
+     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_sequential.so")
+    (sb-alien:load-shared-object
+     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_gf.so")
     (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
+
+although it was unexpectedly slower than atlas.
 
 Build Matlisp:
 
