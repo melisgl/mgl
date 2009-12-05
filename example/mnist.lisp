@@ -348,7 +348,8 @@
           do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
 
 (defun train-mnist-bpn (bpn &key (batch-size
-                                  (min (length *training-images*) 1000)))
+                                  (min (length *training-images*) 1000))
+                        n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler *training-images*
                        :max-n (* 5 (length *training-images*))
@@ -363,13 +364,13 @@
          bpn)
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 95 (length *training-images*))
+                       :max-n (* n-epochs (length *training-images*))
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size)
          bpn)
-  (log-msg "Full batches on the whole BPN~%")
+  (log-msg "Starting full batches on the whole BPN~%")
   (train (make-sampler *training-images*
                        :max-n (* 1 (length *training-images*))
                        :omit-label-p t)
@@ -438,7 +439,7 @@
                           :decay (flt 0.0002) :visible-sampling nil)
          (save-weights *mnist-1-dbn-filename* *dbn/1*)))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
-  (train-mnist-bpn *bpn/1*)
+  (train-mnist-bpn *bpn/1* :n-epochs 37)
   (save-weights *mnist-1-bpn-filename* *bpn/1*))
 
 
@@ -690,7 +691,7 @@
       (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
                                                        *test-images*)
                           :if-exists :error))
-    (train-mnist-bpn *bpn/2* :batch-size 10000)
+    (train-mnist-bpn *bpn/2* :batch-size 10000 :n-epochs 100)
     (save-weights *mnist-2-bpn-filename* *bpn/2*)))
 
 (defmethod negative-phase (batch (trainer mnist-dbm-trainer) bm)
