@@ -26,6 +26,11 @@
       (format s "~A: " (time->string))
       (pprint-logical-block (s nil)
         (apply #'format s format args)))))
+
+(defmacro with-logging-entry ((stream) &body body)
+  `(log-msg "~A"
+    (with-output-to-string (,stream)
+      ,@body)))
 
 
 ;;;; Logging trainer
@@ -73,8 +78,12 @@
 (defmethod log-test-error ((trainer base-trainer) learner)
   (let ((*print-level* nil))
     (when (zerop (n-inputs trainer))
-      (describe learner *trace-output*))
-    (describe trainer *trace-output*))
+      (with-logging-entry (stream)
+        (format stream "Describing learner:~%")
+        (describe learner stream)))
+    (with-logging-entry (stream)
+      (format stream "Describing trainer:~%")
+      (describe trainer stream)))
   (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
 
 (defmethod log-training-error ((trainer base-trainer) learner)
