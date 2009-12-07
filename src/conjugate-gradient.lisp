@@ -28,9 +28,8 @@ RHO < SIG < 1.")
 (defvar *default-max-n-evaluations* nil)
 
 (defun negate-vector (v &key result)
-  (declare (type flt-vector v))
-  (unless result
-    (setq result (make-flt-array (length v))))
+  (declare (type flt-vector v result)
+           (optimize (speed 3)))
   (map-into result #'- v))
 
 (defun inner* (v1 v2)
