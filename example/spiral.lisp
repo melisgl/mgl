@@ -139,14 +139,12 @@
     (let ((bpn-def `(build-bpn (:class 'spiral-bpn
                                        :max-n-stripes ,max-n-stripes)
                       ,@defs
-                      (my-error
-                       (error-node
-                        :x (make-instance
-                            '->sum-squared-error
-                            :x (lump ',(chunk-lump-name 'inputs nil))
-                            :y (lump ',(chunk-lump-name
-                                        'inputs
-                                        :reconstruction))))))))
+                      (sum-error (->sum-squared-error
+                                  :x (lump ',(chunk-lump-name 'inputs nil))
+                                  :y (lump ',(chunk-lump-name
+                                              'inputs
+                                              :reconstruction))))
+                      (my-error (error-node :x sum-error)))))
       (log-msg "bpn def:~%~S~%" bpn-def)
       (let ((bpn (eval bpn-def)))
         (initialize-bpn-from-bm bpn dbn inits)
@@ -158,7 +156,8 @@
                                                :learning-rate (flt 0.01)
                                                :momentum (flt 0.9)
                                                :batch-size 100)))
-               bpn)))))
+               bpn)
+        bpn))))
 
 #|
 
