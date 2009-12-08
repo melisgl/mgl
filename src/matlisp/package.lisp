@@ -16,4 +16,6 @@
            #:m+!
            #:scal!
            #:ones
-           #:sum))
+           #:sum
+           ;;
+           #:*print-matrix*))

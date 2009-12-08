@@ -20,6 +20,7 @@
                               :components ((:file "package")
                                            (:file "matrix")
                                            (:file "ref")
+                                           (:file "print")
                                            (:file "matlisp-impl")))
                              (:file "package")
                              (:file "util")
