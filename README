@@ -81,7 +81,11 @@ or
 in my case. You may also have to use --with-f77=gfortran or something
 similar. On a suse system, I had to set FFLAGS to '-fPIC -g -O2'
 before configure and edit matlisp.mk to add -fPIC to the compile flags
-for dlamch.f else ld could not link it the dynamic lib.
+for dlamch.f else ld could not link it the dynamic lib. Oh, and
+sometimes loading of matlisp.so fails with a complaint about __powidf2
+in which case you either downgrade to autonconf2.59 and run it at the
+top of the source tree or simply add -lgcc_s to FLIBS in matlisp.mk or
+matlisp.mk.in.
 
 Edit the generated lib/lazy-loader.lisp:
 
