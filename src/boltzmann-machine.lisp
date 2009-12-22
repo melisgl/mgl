@@ -1777,13 +1777,12 @@ by DAMPING."))
   ((sum1 :type flt-vector :initarg :sum1 :reader sum1)
    (old-sum1 :type flt-vector :initarg :old-sum1 :reader old-sum1)
    (sum2 :type flt-vector :initarg :sum2 :reader sum2))
-  (:documentation "Like NORMAL-SPARSITY-GRADIENT-SOURCE, but it needs less
-memory because it only tracks average activation levels of nodes
+  (:documentation "Like NORMAL-SPARSITY-GRADIENT-SOURCE, but it needs
+less memory because it only tracks average activation levels of nodes
 independently (as opposed to simultaneous activations) and thus it may
-not produce the wrong gradient an example for which is when two
-connected nodes are on a lot, but never at the same time. Clearly, it
-makes little sense to change the weight but this is exactly what
-happens."))
+produce the wrong gradient an example for which is when two connected
+nodes are on a lot, but never at the same time. Clearly, it makes
+little sense to change the weight but this is exactly what happens."))
 
 (defun other-chunk (cloud chunk)
   (cond ((eq chunk (chunk1 cloud))
@@ -1802,8 +1801,8 @@ happens."))
     (setf (slot-value sparsity 'old-products)
           (matlisp:make-real-matrix (segment-size (cloud sparsity)) 1))))
 
-(defmethod initialize-instance :after ((sparsity cheating-sparsity-gradient-source)
-                                       &key &allow-other-keys)
+(defmethod initialize-instance :after
+    ((sparsity cheating-sparsity-gradient-source) &key &allow-other-keys)
   (unless (slot-boundp sparsity 'sum1)
     (setf (slot-value sparsity 'sum1)
           (matlisp:make-real-matrix (size (chunk sparsity)) 1)))
