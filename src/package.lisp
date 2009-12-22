@@ -240,6 +240,7 @@ interface and simple gradient descent based trainers."))
    #:chunk-size
    #:inputs
    #:nodes
+   #:means
    #:indices-present
    #:constant-chunk
    #:default-value
