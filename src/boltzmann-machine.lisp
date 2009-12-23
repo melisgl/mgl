@@ -417,7 +417,7 @@ whose means are in NODES.")
 
 (defun version (obj)
   (or (cdr (find obj *versions* :key #'car))
-      '#.(gensym)))
+      (gensym)))
 
 (defmacro with-versions ((version objects) &body body)
   (let ((%version (gensym)))
