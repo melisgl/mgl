@@ -97,9 +97,8 @@ Boltzmann Machine. This is an abstract base class."))
          nil)
         (t
          ;; several stripes or cost is high => blas
-         (and *use-blas*
-              (or (< 1 (chunk-n-stripes chunk))
-                  (use-blas-p cost))))))
+         (or (< 1 (chunk-n-stripes chunk))
+             (use-blas-p cost)))))
 
 (defun ->chunk (chunk-designator chunks)
   (if (typep chunk-designator 'chunk)
