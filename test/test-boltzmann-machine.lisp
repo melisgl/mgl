@@ -1,7 +1,8 @@
 (in-package :mgl-test)
 
 (defclass test-trainer ()
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
+  ((counter :initform (make-instance 'rmse-counter) :reader counter)
+   (features-average-mean :accessor features-average-mean)))
 
 (defclass test-cd-trainer (test-trainer rbm-cd-trainer) ())
 
@@ -27,6 +28,18 @@
         (add-error counter e n)))
     (get-error counter)))
 
+(defun sum* (matrix)
+  (if (= (matlisp:ncols matrix) 1)
+      matrix
+      (matlisp:sum matrix)))
+
+(defmethod positive-phase (batch (trainer test-trainer) (rbm test-rbm))
+  (call-next-method)
+  (let ((features (find-chunk 'features rbm)))
+    (when features
+      (matlisp:m+! (sum* (means features))
+                   (features-average-mean trainer)))))
+
 (defmethod train-batch :around (batch (trainer test-trainer) rbm)
   (call-next-method)
   (let ((counter (counter trainer)))
@@ -40,7 +53,18 @@
                  (or (get-error counter) #.(flt 0))
                  (n-sum-errors counter)
                  n-inputs)
-        (reset-counter counter)))))
+        (reset-counter counter)
+        (when (mgl-bm::sparsity-gradient-sources trainer)
+          (log-msg "Features average means:~%  ~A~%"
+                   (features-average-mean trainer))
+          (matlisp:fill-matrix (features-average-mean trainer) (flt 0)))))))
+
+(defmethod initialize-trainer ((trainer test-trainer) (rbm test-rbm))
+  (call-next-method)
+  (let ((features (find-chunk 'features rbm)))
+    (when features
+      (setf (features-average-mean trainer)
+            (matlisp:make-real-matrix (size features) 1)))))
 
 (defun test-do-chunk ()
   (let ((chunk (make-instance 'sigmoid-chunk :size 5
@@ -63,7 +87,10 @@
                         (batch-size 50)
                         (max-n-stripes 10)
                         (trainer-class 'test-cd-trainer)
-                        (learning-rate (flt 0.1)))
+                        (learning-rate (flt 0.1))
+                        (features-size 1)
+                        normal-sparsity
+                        cheating-sparsity)
   (flet ((clamp (samples rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
              (loop for sample in samples
@@ -84,7 +111,8 @@
                                       (make-instance 'constant-chunk
                                                      :name 'constant2)))
                                  ,(make-instance hidden-type
-                                                 :name 'features :size 1))
+                                                 :name 'features
+                                                 :size features-size))
                 :clouds (if rank
                             `(:merge
                               (:class factored-cloud
@@ -114,7 +142,21 @@
                     (make-instance 'batch-gd-trainer
                                    :learning-rate (flt learning-rate)
                                    :momentum (flt 0.9)
-                                   :batch-size batch-size))))
+                                   :batch-size batch-size))
+                  :sparser
+                  (lambda (cloud chunk)
+                    (when (and (eq (name chunk) 'features)
+                               (or normal-sparsity
+                                   cheating-sparsity))
+                      (make-instance
+                       (if normal-sparsity
+                           'normal-sparsity-gradient-source
+                           'cheating-sparsity-gradient-source)
+                       :cloud cloud
+                       :chunk chunk
+                       :sparsity (flt (or normal-sparsity cheating-sparsity))
+                       :cost (flt 0.1)
+                       :damping (flt 0.9))))))
              rbm)
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples max-n-test-samples
@@ -358,7 +400,7 @@
 (defun test-rbm-examples ()
   ;; Constant one is easily solved with a single large weight.
   (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
-                                   :max-n-stripes 7)))
+                                   :max-n-stripes 1)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 1)))
@@ -519,6 +561,14 @@
                               :trainer-class 'test-pcd-trainer
                               :learning-rate (flt 0.01)
                               :max-n-samples 1000000))))
+
+;;; Sparsity
+#+nil
+(test-rbm/single :sampler (constantly (flt 1))
+                 :max-n-stripes 1
+                 :max-n-samples 100000
+                 :features-size 20
+                 :normal-sparsity (flt 0.7))
 
 (defun test-rbm ()
   (test-do-chunk)
