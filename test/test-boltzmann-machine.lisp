@@ -29,9 +29,12 @@
     (get-error counter)))
 
 (defun sum* (matrix)
-  (if (= (matlisp:ncols matrix) 1)
-      matrix
-      (matlisp:sum matrix)))
+  (cond ((= (matlisp:ncols matrix) 1)
+         matrix)
+        ((= (matlisp:nrows matrix) 1)
+         (matlisp:make-real-matrix (list (list (matlisp:sum matrix)))))
+        (t
+         (matlisp:sum matrix))))
 
 (defmethod positive-phase (batch (trainer test-trainer) (rbm test-rbm))
   (call-next-method)
