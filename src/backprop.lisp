@@ -570,7 +570,7 @@ computed."))
          (nl (/ (size weights)
                 nx)))
     ;; FIXME:
-    (assert (null (same-stripes-p x)))
+    (assert (not (same-stripes-p x)))
     (if (transpose-weights-p lump)
         (matlisp:gemm! (flt 1) (reshape2 (nodes weights) nx nl) (nodes x)
                        (flt 0) (nodes lump) :tn)
