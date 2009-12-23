@@ -1281,7 +1281,7 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
            initargs)))
 
 ;;; Check that there are no clouds between non-adjacent layers. FIXME:
-;;; should intralyer connections be allowed?
+;;; should intralayer connections be allowed?
 (defun check-dbm-clouds (dbm)
   (let ((bad-clouds (set-difference (clouds dbm)
                                     (apply #'append (clouds-up-to-layers dbm)))))
@@ -1939,7 +1939,7 @@ of the batch. Batch size comes from the superclass."))
                      (flt 1) (sum1 sparsity))
       (matlisp:gemm! (flt 1) (means other-chunk)
                      (matlisp:ones (n-stripes other-chunk) 1)
-                     (flt 1) (sum2 sparsity)) :n)))
+                     (flt 1) (sum2 sparsity)))))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
