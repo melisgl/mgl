@@ -1758,7 +1758,10 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
   sparsity)
 
 (define-descriptions (sparsity sparsity-gradient-source)
-  cloud chunk target cost damping)
+  cloud chunk
+  (target (target sparsity) "~,5E")
+  (cost (cost sparsity) "~,5E")
+  (damping (damping sparsity) "~,5E"))
 
 (defclass normal-sparsity-gradient-source (sparsity-gradient-source)
   ((products :type flt-vector :initarg :products :reader products)
@@ -1880,6 +1883,11 @@ of the batch. Batch size comes from the superclass."))
 
 (define-descriptions (trainer segmented-gd-sparse-bm-trainer :inheritp t)
   sparsity-gradient-sources)
+
+(defmethod describe-object :after ((trainer segmented-gd-sparse-bm-trainer)
+                                   stream)
+  (dolist (sparsity (sparsity-gradient-sources trainer))
+    (describe sparsity stream)))
 
 (defun map-sparser (trainer bm)
   (let ((sparsities ()))
