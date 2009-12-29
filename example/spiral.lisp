@@ -116,17 +116,19 @@
                        (make-instance 'gaussian-chunk :name 'f2 :size 1)))
     :rbm-class 'spiral-rbm))
 
-(defun train-spiral-dbn (&key (max-n-stripes 1))
-  (let ((dbn (make-instance 'spiral-dbn :max-n-stripes max-n-stripes)))
-    (dolist (rbm (rbms dbn))
-      (train (make-sampler 50000)
-             (make-instance 'spiral-rbm-trainer
-                            :segmenter
-                            (repeatedly (make-instance 'batch-gd-trainer
-                                                       :momentum (flt 0.9)
-                                                       :batch-size 100)))
-             rbm))
-    dbn))
+(defun make-spiral-dbn (&key (max-n-stripes 1))
+  (make-instance 'spiral-dbn :max-n-stripes max-n-stripes))
+
+(defun train-spiral-dbn (dbn)
+  (dolist (rbm (rbms dbn) dbn)
+    (train (make-sampler 50000)
+           (make-instance 'spiral-rbm-trainer
+                          :segmenter
+                          (repeatedly (make-instance 'batch-gd-trainer
+                                                     :learning-rate (flt 0.01)
+                                                     :momentum (flt 0.9)
+                                                     :batch-size 100)))
+           rbm)))
 
 (defun unroll-spiral-dbn (dbn &key (max-n-stripes 1))
   (multiple-value-bind (defs inits) (unroll-dbn dbn)
@@ -159,11 +161,13 @@
 
 #|
 
-(defparameter *spiral-dbn* (time (train-spiral-dbn :max-n-stripes 100)))
+(defparameter *spiral-dbn* (make-spiral-dbn :max-n-stripes 100))
+
+(time (train-spiral-dbn *spiral-dbn*))
 
 (defparameter *spiral-bpn* (unroll-spiral-dbn *spiral-dbn* :max-n-stripes 100))
 
-(time (train-spiral-bpn *spiral-dbn*))
+(time (train-spiral-bpn *spiral-bpn*))
 
 
 (let* ((dbn (make-instance 'spiral-dbn))
