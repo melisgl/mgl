@@ -14,7 +14,9 @@
   (:method-combination append :most-specific-last))
 
 (defmethod graph-node-fields append (x y)
-  (list (graph-node-type x y)
+  (list (if (= 1 (mgl-train:size y))
+            (graph-node-type x y)
+            (format nil "~A (~A)" (graph-node-type x y) (mgl-train:size y)))
         (prin1-to-string (name y))))
 
 (defun cl-dot-escape (string)
