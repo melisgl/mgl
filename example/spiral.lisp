@@ -161,6 +161,8 @@
 
 #|
 
+;;;; Train
+
 (defparameter *spiral-dbn* (make-spiral-dbn :max-n-stripes 100))
 
 (time (train-spiral-dbn *spiral-dbn*))
@@ -169,6 +171,8 @@
 
 (time (train-spiral-bpn *spiral-bpn*))
 
+
+;;;; Generate pretty pictures
 
 (let* ((dbn (make-instance 'spiral-dbn))
        (dgraph (cl-dot:generate-graph-from-roots dbn (chunks dbn))))
