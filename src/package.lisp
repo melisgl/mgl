@@ -238,6 +238,7 @@ interface and simple gradient descent based trainers."))
   (:export
    ;; Chunk
    #:name
+   #:size
    #:chunk
    #:chunk-size
    #:inputs
@@ -354,6 +355,7 @@ Networks (DBN)."))
   (:export
    #:lump
    #:name
+   #:size
    #:lump-size
    #:lump-node-array
    #:indices-to-calculate
