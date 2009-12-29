@@ -1,3 +1,6 @@
+;;;; Spiral toy example from
+;;;; http://cseweb.ucsd.edu/users/gary/pubs/cottrell-science-2006.pdf
+
 (in-package :mgl-example-spiral)
 
 ;;;; Sampling, clamping
@@ -102,11 +105,6 @@
 
 ;;;; Training
 
-(defun layers->rbms (layers &key (class 'rbm))
-  (loop for (v h) on layers
-        when h
-        collect (make-instance class :visible-chunks v :hidden-chunks h)))
-
 (defclass spiral-dbn (dbn)
   ()
   (:default-initargs
@@ -118,11 +116,8 @@
                        (make-instance 'gaussian-chunk :name 'f2 :size 1)))
     :rbm-class 'spiral-rbm))
 
-(defun make-spiral-dbn (&key (max-n-stripes 1))
-  (make-instance 'spiral-dbn :max-n-stripes max-n-stripes))
-
 (defun train-spiral-dbn (&key (max-n-stripes 1))
-  (let ((dbn (make-spiral-dbn :max-n-stripes max-n-stripes)))
+  (let ((dbn (make-instance 'spiral-dbn :max-n-stripes max-n-stripes)))
     (dolist (rbm (rbms dbn))
       (train (make-sampler 50000)
              (make-instance 'spiral-rbm-trainer
@@ -133,7 +128,7 @@
              rbm))
     dbn))
 
-(defun train-spiral-bpn (dbn &key (max-n-stripes 1))
+(defun unroll-spiral-dbn (dbn &key (max-n-stripes 1))
   (multiple-value-bind (defs inits) (unroll-dbn dbn)
     (log-msg "inits:~%~S~%" inits)
     (let ((bpn-def `(build-bpn (:class 'spiral-bpn
@@ -148,22 +143,40 @@
       (log-msg "bpn def:~%~S~%" bpn-def)
       (let ((bpn (eval bpn-def)))
         (initialize-bpn-from-bm bpn dbn inits)
-        (train (make-sampler 50000)
-               (make-instance 'spiral-bp-trainer
-                              :segmenter
-                              (repeatedly
-                                (make-instance 'batch-gd-trainer
-                                               :learning-rate (flt 0.01)
-                                               :momentum (flt 0.9)
-                                               :batch-size 100)))
-               bpn)
         bpn))))
+
+(defun train-spiral-bpn (bpn)
+  (train (make-sampler 50000)
+         (make-instance 'spiral-bp-trainer
+                        :segmenter
+                        (repeatedly
+                          (make-instance 'batch-gd-trainer
+                                         :learning-rate (flt 0.01)
+                                         :momentum (flt 0.9)
+                                         :batch-size 100)))
+         bpn)
+  bpn)
 
 #|
 
 (defparameter *spiral-dbn* (time (train-spiral-dbn :max-n-stripes 100)))
 
-(defparameter *spiral-bpn* (time (train-spiral-bpn *spiral-dbn*
-                                                   :max-n-stripes 100)))
+(defparameter *spiral-bpn* (unroll-spiral-dbn *spiral-dbn* :max-n-stripes 100))
+
+(time (train-spiral-bpn *spiral-dbn*))
+
+
+(let* ((dbn (make-instance 'spiral-dbn))
+       (dgraph (cl-dot:generate-graph-from-roots dbn (chunks dbn))))
+  (cl-dot:dot-graph dgraph
+                    (asdf-system-relative-pathname "example/spiral-dbn.png")
+                    :format :png))
+
+(let* ((dbn (make-instance 'spiral-dbn))
+       (bpn (unroll-spiral-dbn dbn))
+       (dgraph (cl-dot:generate-graph-from-roots bpn (lumps bpn))))
+  (cl-dot:dot-graph dgraph
+                    (asdf-system-relative-pathname "example/spiral-bpn.png")
+                    :format :png))
 
 |#

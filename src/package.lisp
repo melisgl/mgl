@@ -16,6 +16,8 @@
    ;; Declarations
    #:*no-array-bounds-check*
    #:the!
+   ;; Pathnames
+   #:asdf-system-relative-pathname
    ;; Misc
    #:split-plist
    #:while

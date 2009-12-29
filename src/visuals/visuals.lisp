@@ -195,12 +195,18 @@
        (bpn (eval `(build-bpn () ,@(unroll-dbm dbm)))))
   (let ((dgraph (cl-dot:generate-graph-from-roots dbn (chunks dbn)
                                                   '(:rankdir "BT"))))
-    (cl-dot:dot-graph dgraph "test-dbn.png" :format :png))
+    (cl-dot:dot-graph dgraph
+                      (asdf-system-relative-pathname "src/visuals/test-dbn.png")
+                      :format :png))
   (let ((dgraph (cl-dot:generate-graph-from-roots dbm (chunks dbm)
                                                   '(:rankdir "BT"))))
-    (cl-dot:dot-graph dgraph "test-dbm.png" :format :png))
+    (cl-dot:dot-graph dgraph
+                      (asdf-system-relative-pathname "src/visuals/test-dbm.png")
+                      :format :png))
   (let ((dgraph (cl-dot:generate-graph-from-roots bpn (lumps bpn)
                                                   '(:rankdir "BT"))))
-    (cl-dot:dot-graph dgraph "test-bpn.png" :format :png)))
+    (cl-dot:dot-graph dgraph
+                      (asdf-system-relative-pathname "src/visuals/test-bpn.png")
+                      :format :png)))
 
 |#

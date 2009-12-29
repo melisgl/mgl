@@ -1,5 +1,7 @@
 *~
 *.fasl
+src/visuals/*.png
 example/mgl-example.log
 example/mnist-data
 example/review-polarity-data
+example/*.png
