@@ -55,11 +55,13 @@
 
 (defmethod cl-dot:graph-object-points-to (x (chunk chunk))
   (let ((neighbours ()))
-    (flet ((add (cloud chunk dir)
+    (flet ((add (cloud chunk dir label)
              (declare (ignore cloud))
              (push (make-instance 'cl-dot:attributed
                                   :object chunk
-                                  :attributes `(:dir ,dir))
+                                  :attributes `(:dir ,dir
+                                                ,@(when label
+                                                    (list :label label))))
                    neighbours)))
       (dolist (cloud (clouds x) neighbours)
         (when (eq chunk (chunk1 cloud))
@@ -68,7 +70,12 @@
                       :forward)
                      ((typep (chunk2 cloud) 'conditioning-chunk)
                       :back)
-                     (t :none))))))))
+                     (t :none))
+               (if (or (/= (flt 1) (mgl-bm::scale1 cloud))
+                       (/= (flt 1) (mgl-bm::scale2 cloud)))
+                   (format nil "~A/~A" (float (mgl-bm::scale1 cloud) 0.0)
+                           (float (mgl-bm::scale2 cloud) 0.0))
+                   nil)))))))
 
 
 ;;;; BPN
