@@ -277,6 +277,7 @@ interface and simple gradient descent based trainers."))
    #:chunks
    #:visible-chunks
    #:hidden-chunks
+   #:conditioning-chunks
    #:find-chunk
    #:merge-cloud-specs
    #:clouds

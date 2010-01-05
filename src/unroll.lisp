@@ -396,7 +396,8 @@ was returned by UNROLL-DBN or UNROLL-DBM."
   "Return a list of chunk, lump sublists. Elements are MAP lumps in
 BPN and the corresponding chunk in DBM."
   (let ((chunks-and-lumps ()))
-    (dolist (chunk (hidden-chunks dbm))
+    (dolist (chunk (set-difference (hidden-chunks dbm)
+                                   (conditioning-chunks dbm)))
       (let* ((lump-name (chunk-lump-name (name chunk) :map))
              (lump (find-lump lump-name bpn)))
         (when lump
@@ -473,8 +474,7 @@ signalled."
                     (x ()))
                 (loop for (chunk lump) in map-chunks-and-lumps
                       do
-                      (with-stripes
-                          ((stripe chunk chunk-start chunk-end))
+                      (with-stripes ((stripe chunk chunk-start chunk-end))
                         (let ((xxx (make-flt-array
                                     (- chunk-end chunk-start))))
                           (replace xxx (storage (nodes chunk))
