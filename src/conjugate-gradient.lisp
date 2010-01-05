@@ -414,7 +414,7 @@ is also treated as 0 decay."))
   (:documentation "Mix this before a CG based trainer to conveniently
 add decay on a per-segment basis."))
 
-(defmethod mgl-cg:compute-batch-cost-and-derive
+(defmethod compute-batch-cost-and-derive
     (batch (trainer decayed-cg-trainer-mixin) learner)
   (let* ((cost (flt (call-next-method)))
          (segment-decay-fn (segment-decay-fn trainer))

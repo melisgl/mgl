@@ -270,6 +270,7 @@
     (mgl-util:read-weights obj stream)))
 
 (defun save-weights (filename obj)
+  (ensure-directories-exist filename)
   (with-open-file (stream filename :direction :output
                    :if-does-not-exist :create :if-exists :supersede)
     (mgl-util:write-weights obj stream)))

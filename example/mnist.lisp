@@ -13,8 +13,8 @@
 ;;;;   http://www.cs.toronto.edu/~hinton/absps/dbm.pdf
 ;;;;
 ;;;; Download the four files from http://yann.lecun.com/exdb/mnist and
-;;;; gunzip them. Set *MNIST-DIR* to point to their directory and call
-;;;; TRAIN-MNIST/1 or TRAIN-MNIST/2 for DBN-to-BPN and
+;;;; gunzip them. Set *MNIST-DATA-DIR* to point to their directory and
+;;;; call TRAIN-MNIST/1 or TRAIN-MNIST/2 for DBN-to-BPN and
 ;;;; DBN-to-DBM-to-BPN approaches, respectively.
 ;;;;
 ;;;;
@@ -58,9 +58,13 @@
 
 (in-package :mgl-example-mnist)
 
-(defparameter *mnist-dir*
+(defparameter *mnist-data-dir*
   (merge-pathnames "mnist-data/" *example-dir*)
   "Set this to the directory where the uncompressed mnist files reside.")
+
+(defparameter *mnist-save-dir*
+  (merge-pathnames "mnist-save/" *example-dir*)
+  "Set this to the directory where the trained models are saved.")
 
 (defstruct image
   (label nil :type (integer 0 10))
@@ -116,34 +120,34 @@
     (coerce (loop repeat n collect (read-image-array stream))
             'vector)))
 
-(defun load-training (&optional (mnist-dir *mnist-dir*))
+(defun load-training (&optional (mnist-data-dir *mnist-data-dir*))
   (log-msg "Loading training images~%")
   (prog1
       (map 'vector
            (lambda (label array)
              (make-image :label label :array array))
            (with-open-file (s (merge-pathnames "train-labels-idx1-ubyte"
-                                               mnist-dir)
+                                               mnist-data-dir)
                             :element-type 'unsigned-byte)
              (read-image-labels s))
            (with-open-file (s (merge-pathnames "train-images-idx3-ubyte"
-                                               mnist-dir)
+                                               mnist-data-dir)
                             :element-type 'unsigned-byte)
              (read-image-arrays s)))
     (log-msg "Loading training images done~%")))
 
-(defun load-test (&optional (mnist-dir *mnist-dir*))
+(defun load-test (&optional (mnist-data-dir *mnist-data-dir*))
   (log-msg "Loading test images~%")
   (prog1
       (map 'vector
            (lambda (label array)
              (make-image :label label :array array))
            (with-open-file (s (merge-pathnames "t10k-labels-idx1-ubyte"
-                                               mnist-dir)
+                                               mnist-data-dir)
                             :element-type 'unsigned-byte)
              (read-image-labels s))
            (with-open-file (s (merge-pathnames "t10k-images-idx3-ubyte"
-                                               mnist-dir)
+                                               mnist-data-dir)
                             :element-type 'unsigned-byte)
              (read-image-arrays s)))
     (log-msg "Loading test images done~%")))
@@ -413,10 +417,10 @@
 (defvar *bpn/1*)
 
 (defparameter *mnist-1-dbn-filename*
-  (merge-pathnames "mnist-1.dbn" *mnist-dir*))
+  (merge-pathnames "mnist-1.dbn" *mnist-save-dir*))
 
 (defparameter *mnist-1-bpn-filename*
-  (merge-pathnames "mnist-1.bpn" *mnist-dir*))
+  (merge-pathnames "mnist-1.bpn" *mnist-save-dir*))
 
 (defun train-mnist/1 (&key load-dbn-p)
   (unless (boundp '*training-images*)
@@ -450,13 +454,13 @@
 (defvar *bpn/2*)
 
 (defparameter *mnist-2-dbn-filename*
-  (merge-pathnames "mnist-2.dbn" *mnist-dir*))
+  (merge-pathnames "mnist-2.dbn" *mnist-save-dir*))
 
 (defparameter *mnist-2-dbm-filename*
-  (merge-pathnames "mnist-2.dbm" *mnist-dir*))
+  (merge-pathnames "mnist-2.dbm" *mnist-save-dir*))
 
 (defparameter *mnist-2-bpn-filename*
-  (merge-pathnames "mnist-2.bpn" *mnist-dir*))
+  (merge-pathnames "mnist-2.bpn" *mnist-save-dir*))
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
 (defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
@@ -530,7 +534,7 @@
   (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
                                          (floor (n-inputs trainer)
                                                 (length *training-images*)))
-                                 *mnist-dir*)
+                                 *mnist-save-dir*)
                 dbm)
   (log-dbm-cesc-accuracy dbm (make-training-sampler) "training reconstruction")
   (log-dbm-cesc-accuracy dbm (make-training-sampler :omit-label-p t) "training")
@@ -573,7 +577,7 @@
 (defun train-mnist-dbm (dbm)
   (log-msg "Starting to train DBM.~%")
   (train (make-sampler *training-images*
-                       :max-n (* 200 (length *training-images*))
+                       :max-n (* 500 (length *training-images*))
                        :sample-visible-p t)
          (make-instance 'mnist-dbm-trainer
                         :n-particles 100
@@ -735,5 +739,22 @@
   (sleep 10)
   (sb-sprof:stop-profiling)
   (sb-sprof:report :type :graph))
+
+(let ((dgraph (cl-dot:generate-graph-from-roots *dbn/2* (chunks *dbn/2*)
+                                                '(:rankdir "BT"))))
+  (cl-dot:dot-graph dgraph
+                    (asdf-system-relative-pathname "example/mnist-dbn-2.png")
+                    :format :png))
+
+(let ((dgraph (cl-dot:generate-graph-from-roots *dbm/2* (chunks *dbm/2*)
+                                                '(:rankdir "BT"))))
+  (cl-dot:dot-graph dgraph
+                    (asdf-system-relative-pathname "example/mnist-dbm-2.png")
+                    :format :png))
+
+(let ((dgraph (cl-dot:generate-graph-from-roots *bpn/2* (lumps *bpn/2*))))
+  (cl-dot:dot-graph dgraph
+                    (asdf-system-relative-pathname "example/mnist-bpn-2.png")
+                    :format :png))
 
 |#
