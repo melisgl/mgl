@@ -492,9 +492,9 @@ signalled."
                                   (key (populate-key bpn)))
   (let ((cache (clamping-cache bpn))
         (k (funcall key sample)))
+    (unless (nth-value 1 (gethash k cache))
+      (error "No clamping cache entry for ~S" k))
     (loop for (lump map-nodes) in (gethash k cache) do
-          (unless (nth-value 1 (gethash k cache))
-            (error "No clamping cache entry for ~S" k))
           (with-stripes ((stripe lump lump-start lump-end))
             (declare (type flt-vector map-nodes))
             (assert (= (length map-nodes)
