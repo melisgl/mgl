@@ -488,11 +488,13 @@ signalled."
       (call-periodic-fn (hash-table-count cache) periodic-fn
                         (hash-table-count cache)))))
 
-(defun clamp-cached-entry-on-bpn (bpn stripe sample)
-  (let ((cache (clamping-cache bpn)))
-    (loop for (lump map-nodes) in (gethash sample cache) do
-          (unless (nth-value 1 (gethash sample cache))
-            (error "No clamping cache entry for ~S" sample))
+(defun clamp-cached-entry-on-bpn (bpn stripe sample &key
+                                  (key (populate-key bpn)))
+  (let ((cache (clamping-cache bpn))
+        (k (funcall key sample)))
+    (loop for (lump map-nodes) in (gethash k cache) do
+          (unless (nth-value 1 (gethash k cache))
+            (error "No clamping cache entry for ~S" k))
           (with-stripes ((stripe lump lump-start lump-end))
             (declare (type flt-vector map-nodes))
             (assert (= (length map-nodes)
