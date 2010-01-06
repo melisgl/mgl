@@ -62,8 +62,13 @@
   string
   array)
 
+(defun encode-label (label)
+  (ecase label
+    ((-1) 0)
+    ((1) 1)))
+
 (defmethod label ((story story))
-  (story-label story))
+  (encode-label (story-label story)))
 
 (defun slurp-file (file)
   (with-open-file (in file :direction :input
@@ -187,14 +192,8 @@
 (defun clamp-label (label array start end)
   (declare (type flt-vector array))
   (fill array #.(flt 0) :start start :end end)
-  (setf (aref array (+ start (if (minusp label) 0 1)))
+  (setf (aref array (+ start (encode-label label)))
         #.(flt 1)))
-
-(defun decode-label (array start end)
-  (declare (type flt-vector array))
-  (ecase (- (max-position array start end) start)
-    ((0) -1)
-    ((1) 1)))
 
 (defun encode-all (stories mapper words &key (kind :binary))
   (map nil (lambda (story)
@@ -247,12 +246,12 @@
    :layers (list (list (make-instance 'constant-chunk :name 'c0)
                        (make-instance 'softmax-label-chunk* :name 'input-label
                                       :size 2 :group-size 2)
-                       (make-instance 'constrained-poisson-chunk
+                       (make-instance 'sigmoid-chunk;constrained-poisson-chunk
                                       :name 'inputs
                                       ;; each input has its
                                       ;; own scale
                                       :scale (make-flt-array 0)
-                                      :group-size *n-words*
+                                      ;;:group-size *n-words*
                                       :size *n-words*))
                  (list (make-instance 'constant-chunk :name 'c1)
                        (make-instance 'sigmoid-chunk :name 'f1
@@ -265,8 +264,7 @@
                  (list (make-instance 'constant-chunk :name 'c3)
                        (make-instance 'sigmoid-chunk :name 'f3
                                       :size 400)))
-    :rbm-class 'mr-rbm
-    :max-n-stripes 1))
+    :rbm-class 'mr-rbm))
 
 (defclass mr-rbm (rbm) ())
 
