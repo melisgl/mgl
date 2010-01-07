@@ -49,7 +49,7 @@
 ** DONE general boltzmann machines
 ** DONE deep boltzmann machines
 ** DONE initialize DBM from DBN
-** TODO implmement annealed importance sampling
+** TODO implement annealed importance sampling
 ** TODO unbreak temporal chunks
 * backprop
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
@@ -81,6 +81,7 @@ Doesn't seem to speed up things.
 ** TODO lookup table based exp/sigmoid
 ** TODO investigate SPARTNS
 ** TODO investigate LISP-MATRIX
+** TODO investigate LLA
 ** DONE factor out most frequent and log-likelihood-ratio based feature selection
 * examples
 ** DONE movie review example
