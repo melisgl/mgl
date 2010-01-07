@@ -2071,6 +2071,9 @@ by COPY with 'PCD as the context. Suitable for training BM and
 RBM."))
   (:documentation "Persistent Contrastive Divergence trainer."))
 
+(define-descriptions (trainer bm-pcd-trainer :inheritp t)
+  (n-particles (n-stripes (persistent-chains trainer))))
+
 (defmethod initialize-trainer ((trainer bm-pcd-trainer) (bm bm))
   (setf (slot-value trainer 'normal-chains) bm)
   (setf (slot-value trainer 'persistent-chains) (copy 'pcd bm))
