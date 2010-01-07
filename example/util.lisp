@@ -95,15 +95,16 @@
 
 (defmethod negative-phase :around (batch (trainer base-trainer) (bm bm))
   (call-next-method)
-  (unless (typep bm 'dbm)
+  (when (typep trainer 'rbm-cd-trainer)
     (apply-counters-and-measurers (training-counters-and-measurers trainer)
                                   batch bm)))
 
-(defmethod positive-phase :around (batch (trainer base-trainer) (dbm dbm))
+(defmethod positive-phase :around (batch (trainer base-trainer) (bm bm))
   (call-next-method)
-  (set-visible-mean dbm)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                batch dbm))
+  (when (typep trainer 'bm-pcd-trainer)
+    (set-visible-mean bm)
+    (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                  batch bm)))
 
 (defmethod compute-derivatives :around (batch (trainer base-trainer) (bpn bpn))
   (call-next-method)
