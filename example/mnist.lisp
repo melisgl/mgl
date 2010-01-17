@@ -528,11 +528,6 @@
 
 (defmethod log-test-error ((trainer mnist-dbm-trainer) (dbm mnist-dbm))
   (call-next-method)
-  (save-weights (merge-pathnames (format nil "mnist-2-~A.dbm"
-                                         (floor (n-inputs trainer)
-                                                (length *training-images*)))
-                                 *mnist-save-dir*)
-                dbm)
   (log-dbm-cesc-accuracy dbm (make-training-sampler) "training reconstruction")
   (log-dbm-cesc-accuracy dbm (make-training-sampler :omit-label-p t) "training")
   ;; This is too time consuming for little benefit.
