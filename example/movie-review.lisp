@@ -168,10 +168,9 @@
                                     :omit-label-p omit-label-p
                                     :sample-visible-p sample-visible-p)))))
 
-
 (defun make-training-sampler (&key omit-label-p)
-  (make-sampler (subseq *training-stories* 0 1000)
-                :max-n 1000
+  (make-sampler *training-stories*
+                :max-n (length *training-stories*)
                 :omit-label-p omit-label-p))
 
 (defun make-test-sampler (&key omit-label-p)
@@ -244,7 +243,7 @@
   ()
   (:default-initargs
    :layers (list (list (make-instance 'constant-chunk :name 'c0)
-                       (make-instance 'softmax-label-chunk* :name 'input-label
+                       (make-instance 'softmax-label-chunk* :name 'label
                                       :size 2 :group-size 2)
                        (make-instance 'sigmoid-chunk;constrained-poisson-chunk
                                       :name 'inputs
@@ -288,7 +287,7 @@
                      (setf (aref scale stripe) (flt (story-size story))))
                    (with-stripes ((stripe chunk start end))
                      (clamp-story story nodes start end)))))))
-  (let ((chunk (find 'input-label (visible-chunks rbm) :key #'name)))
+  (let ((chunk (find 'label (visible-chunks rbm) :key #'name)))
     (when chunk
       (let ((nodes (storage (nodes chunk))))
         (loop for sample in samples
@@ -303,15 +302,12 @@
                          ((-1) (setf (aref nodes (+ start 0)) (flt 1)))
                          ((1) (setf (aref nodes (+ start 1)) (flt 1))))))))))))
 
-(defclass mr-rbm-trainer (mr-base-trainer rbm-cd-trainer) ())
+(defclass mr-rbm-trainer (mr-base-trainer bm-pcd-trainer) ())
 
+#+nil
 (defmethod initialize-trainer ((trainer mr-rbm-trainer) rbm)
   (call-next-method)
   (when (typep trainer 'bm-pcd-trainer)
-    (setf (max-n-stripes (persistent-chains trainer))
-          100
-          #+nil
-          (batch-size (elt (trainers trainer) 0)))
     (describe (persistent-chains trainer))
     (let ((inputs (find 'inputs (visible-chunks rbm) :key #'name)))
       (when inputs
@@ -322,7 +318,8 @@
 
 (defmethod log-test-error ((trainer mr-rbm-trainer) (rbm mr-rbm))
   (call-next-method)
-  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training reconstruction")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler :omit-label-p t) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
        (collect-dbn-mean-field-errors/labeled
@@ -343,11 +340,13 @@
           for i upfrom 0 do
           (log-msg "Starting to train level ~S RBM in DBN.~%" i)
           (train (make-sampler *training-stories*
-                               :max-n (* (if (zerop i) 20 20)
+                               :max-n (* (if (zerop i) 200 200)
                                          (length *training-stories*)))
                  (make-instance
                   'mr-rbm-trainer
-                  :n-gibbs 1
+                  :n-gibbs 5
+                  :n-particles 100
+                  :visible-sampling t
                   :segmenter
                   (lambda (cloud)
                     (multiple-value-bind (decay learning-rate)
@@ -360,10 +359,10 @@
                               (t
                                (values 0.002 0.01)))
                       #+nil
-                      (when (find 'input-label (name cloud))
+                      (when (find 'label (name cloud))
                         (setq learning-rate (* 0.1 (flt learning-rate))))
                       (make-instance 'mr-rbm-segment-trainer
-                                     :learning-rate (flt learning-rate)
+                                     :learning-rate (* 0.3 (flt learning-rate))
                                      :momentum (flt 0.9)
                                      :weight-decay (flt decay)
                                      :batch-size 10))))
@@ -377,7 +376,7 @@
 
 (defmethod set-input (samples (bpn mr-bpn))
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
-         (label (find-lump (chunk-lump-name 'input-label nil) bpn :errorp nil))
+         (label (find-lump (chunk-lump-name 'label nil) bpn :errorp nil))
          (expectations (find-lump 'expectations bpn :errorp t))
          (inputs* (storage (nodes inputs)))
          (expectations* (storage (nodes expectations))))
