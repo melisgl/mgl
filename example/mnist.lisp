@@ -54,7 +54,10 @@
 ;;;; DBN-to-DBM-to-BPN
 ;;;;
 ;;;; A 784-500-1000 DBM is pretrained as a DBN then the DBM is
-;;;; translated to a BPN. It's pretty much the same training process.
+;;;; translated to a BPN. It's pretty much the same training process
+;;;; except that after the DBN the DBM is trained by PCD before
+;;;; unrolling that into a BPN. Accuracy is ~99.09% a bit higher than
+;;;; the reported 99.05%.
 
 (in-package :mgl-example-mnist)
 
@@ -226,7 +229,8 @@
 
 (defmethod log-test-error ((trainer mnist-rbm-trainer) (rbm mnist-rbm))
   (call-next-method)
-  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler) "training reconstruction")
+  (log-dbn-cesc-accuracy rbm (make-training-sampler :omit-label-p t) "training")
   (map nil (lambda (counter)
              (log-msg "dbn test: ~:_test ~:_~A~%" counter))
        (collect-dbn-mean-field-errors/labeled
@@ -324,7 +328,7 @@
 
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
-                                     :max-n-stripes 1000
+                                     :max-n-stripes 10000
                                      :initargs ',initargs)
                     ,@defs
                     ,@(tack-cross-entropy-softmax-error-on
@@ -353,10 +357,10 @@
 
 (defun train-mnist-bpn (bpn &key (batch-size
                                   (min (length *training-images*) 1000))
-                        n-epochs)
+                        (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* 5 (length *training-images*))
+                       :max-n (* n-softmax-epochs (length *training-images*))
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
@@ -368,19 +372,12 @@
          bpn)
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler *training-images*
-                       :max-n (* n-epochs (length *training-images*))
+                       :max-n (* (- n-epochs n-softmax-epochs)
+                                 (length *training-images*))
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size)
-         bpn)
-  (log-msg "Starting full batches on the whole BPN~%")
-  (train (make-sampler *training-images*
-                       :max-n (* 1 (length *training-images*))
-                       :omit-label-p t)
-         (make-instance 'mnist-cg-bp-trainer
-                        :cg-args (list :max-n-line-searches 10)
-                        :batch-size (length *training-images*))
          bpn))
 
 
@@ -600,7 +597,7 @@
                                      (not (equal 'label (name (chunk1 cloud))))
                                      (not (equal 'label (name (chunk2 cloud)))))
                             (make-instance
-                             'normal-sparsity-gradient-source
+                             'cheating-sparsity-gradient-source
                              :cloud cloud
                              :chunk chunk
                              :sparsity (flt (if (eq 'f2 (name chunk))
