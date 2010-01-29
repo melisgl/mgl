@@ -492,16 +492,15 @@ chunk."
 CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
 contrastive divergence."))
 
-(defun hijack-means-to-activation (chunks clouds &key addp)
+(defun hijack-means-to-activation (chunks clouds)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
 chunks that don't need activations. If ADDP don't zero NODES first,
 but add to it."
   ;; Zero activations or copy cached activations coming from
   ;; conditioning chunks.
-  (unless addp
-    (dolist (chunk chunks)
-      (unless (conditioning-chunk-p chunk)
-        (zero-chunk chunk))))
+  (dolist (chunk chunks)
+    (unless (conditioning-chunk-p chunk)
+      (zero-chunk chunk)))
   (dolist (cloud clouds)
     (when (and (member (chunk2 cloud) chunks)
                (not (conditioning-chunk-p (chunk2 cloud))))
@@ -1314,9 +1313,6 @@ chunks having upward connections."
         on (rest (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-below)
-        ;; This is an alternative implementation that doubles the
-        ;; biases from below.
-        #+nil
         (let* ((layer*
                 (set-difference layer (visible-and-conditioning-chunks dbm)))
                (layer-above*
@@ -1328,30 +1324,6 @@ chunks having upward connections."
           (dolist (chunk layer*)
             (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
               (matlisp:scal! #.(flt 2) (nodes chunk))))
-          (map nil #'set-chunk-mean layer*)
-          (swap-nodes layer-below))
-        (let* ((layer*
-                (set-difference layer (visible-and-conditioning-chunks dbm)))
-               (layer-above*
-                (set-difference layer-above
-                                (visible-and-conditioning-chunks dbm)))
-               (conditioning-clouds
-                (conditioning-clouds-to layer* clouds-up-to-layer))
-               (conditioning-clouds-above
-                (conditioning-clouds-to layer* clouds-up-to-layer-above)))
-          (hijack-means-to-activation layer*
-                                      (set-difference clouds-up-to-layer
-                                                      conditioning-clouds))
-          ;; Double activations of chunks in LAYER that have non-bias
-          ;; connections to LAYER-ABOVE.
-          (dolist (chunk layer*)
-            (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
-              (matlisp:scal! #.(flt 2) (nodes chunk))))
-          ;; Activations from conditioning chunks are not doubled.
-          ;; Normally, there are biases both in the layer below and
-          ;; above, while non-bias conditioning chunks are visible.
-          (hijack-means-to-activation layer* conditioning-clouds :addp t)
-          (hijack-means-to-activation layer* conditioning-clouds-above :addp t)
           (map nil #'set-chunk-mean layer*)
           (swap-nodes layer-below))))
 
