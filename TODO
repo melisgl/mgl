@@ -83,6 +83,7 @@ Doesn't seem to speed up things.
 ** TODO investigate LISP-MATRIX
 ** TODO investigate LLA
 ** DONE factor out most frequent and log-likelihood-ratio based feature selection
+** TODO parallelize with threads and/or across different images
 * examples
 ** DONE movie review example
 ** TODO netflix example
