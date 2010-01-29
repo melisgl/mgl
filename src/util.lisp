@@ -325,14 +325,6 @@ classes the same."
       #.(flt 1)
       #.(flt 0)))
 
-#+nil
-(defun random-index (seq)
-  (let ((x (random #.(mgl-util:flt 1))))
-    (do* ((i 0 (1+ i))
-          (sum #.(mgl-util:flt 0) (+ sum (aref seq i))))
-         ((or (<= x sum) (= i (1- (length seq))))
-          i))))
-
 (defun gaussian-random-1 ()
   "Return a single float of zero mean and unit variance."
   (loop
