@@ -10,7 +10,7 @@
 (defsystem #:mgl
   :name "MGL, the machine learning library"
   :author "Gabor Melis"
-  :version "0.0.3"
+  :version "0.0.6"
   :licence "MIT"
   :components ((:module "src"
                 :serial t
