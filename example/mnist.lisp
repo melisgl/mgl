@@ -190,7 +190,8 @@
   (let ((nodes (storage (nodes striped))))
     (loop for image in images
           for stripe upfrom 0
-          do (destructuring-bind (image &key omit-label-p sample-visible-p) image
+          do (destructuring-bind (image &key omit-label-p sample-visible-p)
+                 image
                (declare (ignore omit-label-p sample-visible-p))
                (with-stripes ((stripe striped start))
                  (clamp-array image nodes start))))))
@@ -577,15 +578,13 @@
                         :n-gibbs 5
                         :segmenter
                         (lambda (cloud)
-                          (when t #+nil (or (equal 'label (name (chunk1 cloud)))
-                                            (equal 'label (name (chunk2 cloud))))
-                                (make-instance 'mnist-dbm-segment-trainer
-                                               :learning-rate (flt 0.001)
-                                               :weight-decay
-                                               (if (conditioning-cloud-p cloud)
-                                                   (flt 0)
-                                                   (flt 0.0002))
-                                               :batch-size 100)))
+                          (make-instance 'mnist-dbm-segment-trainer
+                                         :learning-rate (flt 0.001)
+                                         :weight-decay
+                                         (if (conditioning-cloud-p cloud)
+                                             (flt 0)
+                                             (flt 0.0002))
+                                         :batch-size 100))
                         :sparser
                         (lambda (cloud chunk)
                           (when (and (member (name chunk) '(f1 f2))
@@ -673,10 +672,11 @@
            ;; the key in the cache and what to pass to the dbm. We
            ;; carefully omit labels.
            (list :populate-key #'first
-                 :populate-convert-to-dbm-sample-fn (lambda (sample)
-                                                      (list (first sample)
-                                                            :sample-visible-p nil
-                                                            :omit-label-p t))
+                 :populate-convert-to-dbm-sample-fn
+                 (lambda (sample)
+                   (list (first sample)
+                         :sample-visible-p nil
+                         :omit-label-p t))
                  :populate-map-cache-lazily-from-dbm *dbm/2*
                  :populate-periodic-fn
                  (make-instance 'periodic-fn :period 1000
