@@ -242,6 +242,22 @@ the previous last, non-weight lump of BPN."
 
 (defmacro build-bpn ((&key (class ''bpn) initargs
                            (max-n-stripes 1)) &body lumps)
+  "Syntactic sugar to assemble BPNs from lumps. Like LET* it is a
+sequence of bindings (of symbols to lumps). The names of the lumps
+created default to the symbol of the binding. In case a lump is not
+bound to a symbol (because it was created in a nested expression), the
+local function LUMP finds the lump with the given name in the bpn
+being built. Example:
+
+  (defun make-one-hidden-layer-bpn (&key n-hiddens n-features)
+    (mgl-bp:build-bpn ()
+      (features (mgl-bp:input-lump :size n-features))
+      (biases (mgl-bp:weight-lump :size n-features))
+      (weights (mgl-bp:weight-lump :size (* n-hiddens n-features)))
+      (activations0 (mgl-bp:activation-lump :weights weights :x features))
+      (activations (mgl-bp:->sum :x (list biases activations0)))
+      (output (mgl-bp:->sigmoid :x activations))))
+"
   (let ((bindings
          (mapcar (lambda (lump)
                    (destructuring-bind (symbol init-form) lump
