@@ -165,20 +165,17 @@ of the network.")))
 ;;;; ERROR-NODE
 
 (defclass error-node (->sum)
-  ((importance
-    :initform (flt 1) :initarg :importance :accessor importance
-    :documentation "Error nodes have their incoming derivative set to
-IMPORTANCE no matter what other nodes depend on them."))
+  ()
   (:documentation "An error node is usually a leaf in the graph of
 lumps. Contrary to non-error leaf lumps it gets a non-zero derivative:
-IMPORTANCE. Error lumps have exactly one node \(in each stripe) whose
-value is computed as the sum of nodes in the X parameter lump."))
+1. Error lumps have exactly one node \(in each stripe) whose value is
+computed as the sum of nodes in the X parameter lump."))
 
 (defmethod default-size ((lump error-node))
   1)
 
 (defmethod derive-lump :around ((lump error-node))
-  (matlisp:fill-matrix (derivatives lump) (importance lump))
+  (matlisp:fill-matrix (derivatives lump) (flt 1))
   (call-next-method))
 
 
@@ -346,14 +343,13 @@ lumps. Return the first one that TRAINER trains."
 
 (defmethod cost (bpn)
   "Return the sum of costs for all active stripes. The cost of a
-stripe is the IMPORTANCE weighted sum of the error nodes. The second
-value is the number of stripes."
+stripe is the sum of the error nodes. The second value is the number
+of stripes."
   (let ((sum (flt 0)))
     (loop for lump across (lumps bpn) do
           (when (typep lump 'error-node)
             (let ((nodes (nodes lump)))
-              (incf sum (* (importance lump)
-                           (if (same-stripes-p lump)
+              (incf sum (* (if (same-stripes-p lump)
                                (n-stripes lump)
                                1)
                            (sum-elements nodes))))))
