@@ -161,10 +161,6 @@
                        :object (mgl-bp::y lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump error-node))
-  (unless (= (flt 1) (importance lump))
-    (list (format nil "IMPORTANCE: ~,5E" (importance lump)))))
-
 (defmethod graph-node-fields append (x (lump cross-entropy-softmax-lump))
   (list (format nil "GROUP-SIZE: ~S" (group-size lump))))
 
