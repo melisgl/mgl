@@ -249,15 +249,13 @@ bound to a symbol (because it was created in a nested expression), the
 local function LUMP finds the lump with the given name in the bpn
 being built. Example:
 
-  (defun make-one-hidden-layer-bpn (&key n-hiddens n-features)
-    (mgl-bp:build-bpn ()
-      (features (mgl-bp:input-lump :size n-features))
-      (biases (mgl-bp:weight-lump :size n-features))
-      (weights (mgl-bp:weight-lump :size (* n-hiddens n-features)))
-      (activations0 (mgl-bp:activation-lump :weights weights :x features))
-      (activations (mgl-bp:->sum :x (list biases activations0)))
-      (output (mgl-bp:->sigmoid :x activations))))
-"
+  (mgl-bp:build-bpn ()
+    (features (mgl-bp:input-lump :size n-features))
+    (biases (mgl-bp:weight-lump :size n-features))
+    (weights (mgl-bp:weight-lump :size (* n-hiddens n-features)))
+    (activations0 (mgl-bp:activation-lump :weights weights :x features))
+    (activations (mgl-bp:->sum :x (list biases activations0)))
+    (output (mgl-bp:->sigmoid :x activations)))"
   (let ((bindings
          (mapcar (lambda (lump)
                    (destructuring-bind (symbol init-form) lump
