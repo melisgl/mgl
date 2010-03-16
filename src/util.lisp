@@ -309,10 +309,21 @@ classes the same."
 (defmacro with-zero-on-underflow (&body body)
   `(locally ,@body))
 
+(declaim (inline sech))
+(defun sech (x)
+  (declare (type flt x))
+  (/ (cosh x)))
+
 (declaim (inline sigmoid))
 (defun sigmoid (x)
   (declare (type flt x))
   (/ (1+ (with-zero-on-underflow (exp (- x))))))
+
+;;; From Yann Lecun's Efficient backprop.
+(declaim (inline scaled-tanh))
+(defun scaled-tanh (x)
+  (declare (type flt x))
+  (* #.(flt 1.7159) (tanh (* #.(flt 2/3) x))))
 
 (declaim (inline try-chance))
 (defun try-chance (chance)

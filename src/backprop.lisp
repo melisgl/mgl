@@ -251,7 +251,7 @@ being built. Example:
     (biases (mgl-bp:weight-lump :size n-features))
     (weights (mgl-bp:weight-lump :size (* n-hiddens n-features)))
     (activations0 (mgl-bp:activation-lump :weights weights :x features))
-    (activations (mgl-bp:->sum :x (list biases activations0)))
+    (activations (mgl-bp:->sum :args (list biases activations0)))
     (output (mgl-bp:->sigmoid :x activations)))"
   (let ((bindings
          (mapcar (lambda (lump)
@@ -763,6 +763,43 @@ computed."))
                              (let ((s (aref l* li)))
                                (* (aref ld* li)
                                   s (- 1 s))))))))))
+
+(defclass ->scaled-tanh (lump)
+  ((x :initarg :x :reader x)))
+
+(defmethod default-size ((lump ->scaled-tanh))
+  (size (x lump)))
+
+(defmethod transfer-lump ((lump ->scaled-tanh))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((x* (storage (nodes x)))
+          (l* (storage (nodes lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    do (setf (aref l* li) (scaled-tanh (aref x* xi)))))))))
+
+(defmethod derive-lump ((lump ->scaled-tanh))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((xd* (storage (derivatives x)))
+          (l* (storage (nodes lump)))
+          (ld* (storage (derivatives lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    do (incf (aref xd* li)
+                             (* (aref ld* li)
+                                (/ #.(flt (/ 7137 6239))
+                                   (expt (sech (* #.(flt 2/3) (aref l* li)))
+                                         2))))))))))
 
 (defclass ->exp (lump)
   ((x :initarg :x :reader x)))

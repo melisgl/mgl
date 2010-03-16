@@ -44,7 +44,9 @@
    #:call-periodic-fn!
    #:last-eval
    ;; Math
+   #:sech
    #:sigmoid
+   #:scaled-tanh
    #:try-chance
    #:binarize-randomly
    #:gaussian-random-1
@@ -395,6 +397,7 @@ Networks (DBN)."))
    #:->sum
    #:->linear
    #:->sigmoid
+   #:->scaled-tanh
    #:->exp
    #:->sum-squared-error
    #:->cross-entropy
