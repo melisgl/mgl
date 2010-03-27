@@ -786,20 +786,20 @@ computed."))
 (defmethod derive-lump ((lump ->scaled-tanh))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((xd* (storage (derivatives x)))
-          (l* (storage (nodes lump)))
+    (let ((x* (storage (nodes x)))
+          (xd* (storage (derivatives x)))
           (ld* (storage (derivatives lump))))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
             (with-stripes ((stripe lump ls le)
                            (stripe x xs xe))
               (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (incf (aref xd* li)
-                             (* (aref ld* li)
-                                (/ #.(flt (/ 7137 6239))
-                                   (expt (sech (* #.(flt 2/3) (aref l* li)))
-                                         2))))))))))
+                    for xi upfrom xs below xe do
+                    (incf (aref xd* xi)
+                          (* (aref ld* li)
+                             #.(flt (/ 7137 6239))
+                             (expt (sech (* #.(flt 2/3) (aref x* xi)))
+                                   2)))))))))
 
 (defclass ->exp (lump)
   ((x :initarg :x :reader x)))
