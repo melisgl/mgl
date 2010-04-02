@@ -146,9 +146,7 @@ each level in the DBN."
                           (set-input samples rbm)
                           (set-hidden-mean rbm)
                           (down-mean-field dbn :rbm rbm))
-                        sampler
-                        dbn
-                        counters-and-measurers))
+                        sampler dbn counters-and-measurers))
 
 (defun make-dbn-reconstruction-misclassification-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)

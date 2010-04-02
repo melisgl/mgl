@@ -262,8 +262,8 @@ COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
 function. The function takes one parameter: a sequence of samples and
 is called after each call to FN. Measurers return two values: the
 cumulative error and the counter, suitable as the second and third
-argument to ADD-ERROR. Finally, return the counters. Return
-COUNTERS-AND-MEASURERS."
+argument to ADD-ERROR. Finally, return the counters. Return the list
+of counters from COUNTERS-AND-MEASURERS."
   (when counters-and-measurers
     (do-batches-for-learner (samples (sampler learner))
       (funcall fn samples)

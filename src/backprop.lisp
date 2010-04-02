@@ -1064,6 +1064,4 @@ target_k if target sums to 1."))
   (collect-batch-errors (lambda (samples)
                           (set-input samples bpn)
                           (forward-bpn bpn))
-                        sampler
-                        bpn
-                        counters-and-measurers))
+                        sampler bpn counters-and-measurers))
