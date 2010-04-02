@@ -59,8 +59,9 @@ SEQ. PRED is a predicate function for deciding whether an element of
 SEQ belongs to the class in question. KEY returns the a number for
 each element which is the predictor's idea of how much that element is
 likely to belong to the class, it's not necessarily a probability."
-  ;; AUC is equal to the probability of a random chosen positive
-  ;; having higher KEY than a randomly chosen negative element.
+  ;; AUC is equal to the probability of a randomly chosen positive
+  ;; having higher KEY (score) than a randomly chosen negative
+  ;; element.
   (let ((sum 0)
         (seq (sort (copy-seq seq) #'> :key key))
         (prev-pos-count 0)
@@ -87,9 +88,8 @@ likely to belong to the class, it's not necessarily a probability."
                  (incf neg-count)))
            seq)
       (add))
-    #+nil
     (let ((xxx (map 'vector pred seq))
-          (vvv (/ sum n-in-class-so-far (- (length seq) n-in-class-so-far))))
+          (vvv (/ sum pos-count neg-count)))
       (break "~S ~S" xxx vvv))
     (if (or (zerop pos-count) (zerop neg-count))
         (values nil nil nil)
@@ -111,8 +111,10 @@ likely to belong to the class, it's not necessarily a probability."
 
 (defclass roc-auc-counter (collecting-counter)
   ((name :initform '("auc"))
-   (class-label :initarg :class-label :reader class-label)
-   (class-index :initarg :class-index :reader class-index)
+   (class-label :initform (error "CLASS-LABEL must be provided.")
+                :initarg :class-label :reader class-label)
+   (class-index :initform (error "CLASS-INDEX must be provided.")
+                :initarg :class-index :reader class-index)
    (example-fn :initform #'car :initarg :example-fn :reader example-fn)
    (confidences-fn
     :initform #'cdr :initarg :confidences-fn :reader confidences-fn)))
