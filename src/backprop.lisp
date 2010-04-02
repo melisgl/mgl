@@ -1065,3 +1065,7 @@ target_k if target sums to 1."))
                           (set-input samples bpn)
                           (forward-bpn bpn))
                         sampler bpn counters-and-measurers))
+
+(defmethod classification-confidences ((lump cross-entropy-softmax-lump) stripe)
+  (with-stripes ((stripe lump start end))
+    (subseq (storage (softmax lump)) start end)))
