@@ -2188,9 +2188,7 @@ reconstruction rmse."
                           (set-input samples bm)
                           (set-hidden-mean bm)
                           (set-visible-mean bm))
-                        sampler
-                        bm
-                        counters-and-measurers))
+                        sampler bm counters-and-measurers))
 
 
 ;;;; Classification
@@ -2201,6 +2199,10 @@ reconstruction rmse."
   (with-stripes ((stripe chunk start end))
     (- (max-position (storage (nodes chunk)) start end)
        start)))
+
+(defmethod classification-confidences ((chunk softmax-label-chunk) stripe)
+  (with-stripes ((stripe chunk start end))
+    (subseq (storage (nodes chunk)) start end)))
 
 (defun make-chunk-reconstruction-misclassification-counters-and-measurers
     (chunks &key chunk-filter)

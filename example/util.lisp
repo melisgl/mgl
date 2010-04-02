@@ -147,6 +147,13 @@
     (when measurer
       (lambda (examples learner)
         (funcall measurer (mapcar #'first examples) learner)))))
+
+(defmethod mgl-train::maybe-make-classification-confidence-collector
+    ((chunk softmax-label-chunk*))
+  (let ((measurer (call-next-method)))
+    (when measurer
+      (lambda (examples learner)
+        (funcall measurer (mapcar #'first examples) learner)))))
 
 
 ;;;; RBM/DBN support for CESC-TRAINER
