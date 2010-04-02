@@ -61,28 +61,39 @@ each element which is the predictor's idea of how much that element is
 likely to belong to the class, it's not necessarily a probability."
   ;; AUC is equal to the probability of a random chosen positive
   ;; having higher KEY than a randomly chosen negative element.
-  ;;
-  ;; FIXME: does not handle equal values well
   (let ((sum 0)
         (seq (sort (copy-seq seq) #'> :key key))
-        (n (length seq))
-        (n-in-class-so-far 0))
-    (map nil
-         (lambda (x)
-           (cond ((funcall pred x)
-                  (incf n-in-class-so-far))
-                 (t
-                  (incf sum n-in-class-so-far))))
-         seq)
+        (prev-pos-count 0)
+        (prev-neg-count 0)
+        (pos-count 0)
+        (neg-count 0)
+        (prev-score nil))
+    (flet ((add ()
+             (incf sum (*
+                        ;; In regions of equal scores go with the
+                        ;; expectation.
+                        (/ (+ pos-count prev-pos-count) 2)
+                        (- neg-count prev-neg-count)))))
+      (map nil
+           (lambda (x)
+             (let ((score (funcall key x)))
+               (when (or (null prev-score) (/= prev-score score))
+                 (add)
+                 (setq prev-score score
+                       prev-pos-count pos-count
+                       prev-neg-count neg-count)))
+             (if (funcall pred x)
+                 (incf pos-count)
+                 (incf neg-count)))
+           seq)
+      (add))
     #+nil
     (let ((xxx (map 'vector pred seq))
           (vvv (/ sum n-in-class-so-far (- (length seq) n-in-class-so-far))))
       (break "~S ~S" xxx vvv))
-    (if (or (zerop n-in-class-so-far)
-            (= n-in-class-so-far n))
-        (values nil nil)
-        (values (/ sum n-in-class-so-far (- (length seq) n-in-class-so-far))
-                n-in-class-so-far))))
+    (if (or (zerop pos-count) (zerop neg-count))
+        (values nil nil nil)
+        (values (/ sum pos-count neg-count) pos-count neg-count))))
 
 (defun test-roc-auc ()
   (assert (= 8/9
@@ -174,6 +185,7 @@ example). Return NIL if OBJ contains no labels.")
                              :class-index class-index)
               measurer)))
 
+#+nil
 (defun make-bm-reconstruction-roc-auc-counters-and-measurers
     (bm &key chunk-filter)
   "Return a list of counter, measurer conses to keep track of
