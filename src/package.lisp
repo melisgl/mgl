@@ -176,7 +176,8 @@
    #:stripe-label
    #:maybe-make-misclassification-measurer
    #:classification-confidences
-   #:roc-auc)
+   #:roc-auc
+   #:roc-auc-counter)
   (:documentation "Generic training related interfaces and basic
 definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
