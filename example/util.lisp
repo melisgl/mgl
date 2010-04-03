@@ -114,13 +114,15 @@
 (defmethod train-batch (batch (trainer base-trainer) (bpn bpn))
   (if (typep trainer 'cg-bp-trainer)
       (let ((result (multiple-value-list (call-next-method))))
-        (destructuring-bind (best-w best-f n-line-searches
-                                    n-succesful-line-searches n-evaluations)
-            result
-          (declare (ignore best-w))
-          (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%" best-f n-evaluations)
-          (log-msg "n-line-searches: ~S (succesful ~S)~%"
-                   n-line-searches n-succesful-line-searches))
+        (when (= (length result) 5)
+          (destructuring-bind (best-w best-f n-line-searches
+                                      n-succesful-line-searches n-evaluations)
+              result
+            (declare (ignore best-w))
+            (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%"
+                     best-f n-evaluations)
+            (log-msg "n-line-searches: ~S (succesful ~S)~%"
+                     n-line-searches n-succesful-line-searches)))
         result)
       (call-next-method)))
 
