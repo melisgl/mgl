@@ -150,6 +150,13 @@
       (lambda (examples learner)
         (funcall measurer (mapcar #'first examples) learner)))))
 
+(defmethod mgl-train::maybe-make-cross-entropy-measurer
+    ((chunk softmax-label-chunk*))
+  (let ((measurer (call-next-method)))
+    (when measurer
+      (lambda (examples learner)
+        (funcall measurer (mapcar #'first examples) learner)))))
+
 (defmethod mgl-train::maybe-make-classification-confidence-collector
     ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
@@ -164,22 +171,22 @@
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters
-         "rbm train: training"
+         "rbm: training"
          (append
           (make-bm-reconstruction-rmse-counters-and-measurers rbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers
-           rbm)))))
+          (make-bm-reconstruction-misclassification-counters-and-measurers rbm)
+          (make-bm-reconstruction-cross-entropy-counters-and-measurers rbm)))))
 
 (defun log-dbn-cesc-accuracy (rbm sampler name)
   (if (dbn rbm)
       (let ((counters (collect-dbn-mean-field-errors/labeled sampler (dbn rbm)
                                                              :rbm rbm)))
         (map nil (lambda (counter)
-                   (log-msg "dbn test: ~:_~A ~:_~A~%" name counter))
+                   (log-msg "dbn: ~:_~A ~:_~A~%" name counter))
              counters))
       (let ((counters (collect-bm-mean-field-errors/labeled sampler rbm)))
         (map nil (lambda (counter)
-                   (log-msg "rbm test: ~:_~A ~:_~A~%" name counter))
+                   (log-msg "rbm: ~:_~A ~:_~A~%" name counter))
              counters))))
 
 
@@ -193,6 +200,8 @@
          (append
           (make-dbm-reconstruction-rmse-counters-and-measurers dbm)
           (make-bm-reconstruction-misclassification-counters-and-measurers
+           dbm)
+          (make-bm-reconstruction-cross-entropy-counters-and-measurers
            dbm)))))
 
 (defun log-dbm-cesc-accuracy (dbm sampler name)

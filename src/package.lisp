@@ -124,6 +124,7 @@
    #:counter
    #:error-counter
    #:misclassification-counter
+   #:cross-entropy-counter
    #:rmse-counter
    #:sum-errors
    #:n-sum-errors
@@ -176,6 +177,7 @@
    #:stripe-label
    #:maybe-make-misclassification-measurer
    #:classification-confidences
+   #:maybe-make-cross-entropy-measurer
    #:roc-auc
    #:roc-auc-counter)
   (:documentation "Generic training related interfaces and basic
@@ -343,6 +345,7 @@ interface and simple gradient descent based trainers."))
    ;; Classification
    #:softmax-label-chunk
    #:make-bm-reconstruction-misclassification-counters-and-measurers
+   #:make-bm-reconstruction-cross-entropy-counters-and-measurers
    #:collect-bm-mean-field-errors/labeled
    ;; DBN
    #:dbn

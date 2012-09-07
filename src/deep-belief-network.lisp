@@ -159,11 +159,25 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
                           0 (1+ (position rbm (rbms dbn))))))
    :chunk-filter chunk-filter))
 
+(defun make-dbn-reconstruction-cross-entropy-counters-and-measurers
+    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
+  "Return a list of counter, measurer conses to keep track of
+misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-cross-entropy-counters-and-measurers
+   (apply #'append
+          (mapcar #'chunks
+                  (subseq (rbms dbn)
+                          0 (1+ (position rbm (rbms dbn))))))
+   :chunk-filter chunk-filter))
+
 (defun collect-dbn-mean-field-errors/labeled
     (sampler dbn &key (rbm (last1 (rbms dbn)))
      (counters-and-measurers
-      (make-dbn-reconstruction-misclassification-counters-and-measurers
-       dbn :rbm rbm)))
+      (append
+       (make-dbn-reconstruction-misclassification-counters-and-measurers
+        dbn :rbm rbm)
+       (make-dbn-reconstruction-cross-entropy-counters-and-measurers
+        dbn :rbm rbm))))
   "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct labeled chunks
 even if it's missing in the input."
   (collect-batch-errors (lambda (samples)

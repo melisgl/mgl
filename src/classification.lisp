@@ -13,7 +13,7 @@ prediction with the maximum probability. Thus, only LABEL is left to
 be implemented on the training examples.
 
 Once set up, COUNT-MISCLASSIFICATIONS can be called directly or one
-can call work with counters and measurers."))
+can work with counters and measurers."))
 
 (defun labeledp (object)
   (typep object 'labeled))
@@ -49,6 +49,39 @@ misclassifications. Return NIL if OBJ contains no labels.")
     (lambda (examples learner)
       (declare (ignore learner))
       (count-misclassifications examples labeled))))
+
+(defgeneric classification-confidences (striped stripe))
+
+(defun measure-cross-entropy (examples striped
+                              &key (label-fn #'label)
+                              (confidence-fn #'classification-confidences))
+  "Return the sum of the cross entropy between the real and the  the  and the number of
+examples. The length of EXAMPLES must be equal to the number of
+stripes in STRIPED. LABEL-FN takes an example and returns its label
+that compared by EQL to what STRIPE-LABEL-FN returns for STRIPED and
+the index of the stripe. This is a measurer function."
+  (assert (= (length examples) (n-stripes striped)))
+  (let ((sum 0))
+    (loop for example in examples
+          for stripe upfrom 0
+          for confidences = (funcall confidence-fn striped stripe)
+          do (incf sum (- (log (max #.(expt 10d0 -15)
+                                    (aref confidences (funcall label-fn example)))))))
+    (values sum (length examples))))
+
+(defgeneric maybe-make-cross-entropy-measurer (obj)
+  (:documentation "Return a function of one parameter that is invoked
+when OBJ has the predicted label(s) computed and it measures cross
+entropy error. Return NIL if OBJ contains no labels.")
+  (:method (obj)
+    (values nil nil))
+  (:method ((labeled labeled))
+    (lambda (examples learner)
+      (declare (ignore learner))
+      (measure-cross-entropy examples labeled))))
+
+(defclass cross-entropy-counter (error-counter)
+  ((name :initform '("cross entropy"))))
 
 
 ;;;; ROC
@@ -139,8 +172,6 @@ likely to belong to the class, it's not necessarily a probability."
              :key (lambda (element)
                     (elt (funcall confidences-fn element)
                          class-index)))))
-
-(defgeneric classification-confidences (striped stripe))
 
 (defun collect-classification-confidences
     (examples striped &key (confidence-fn #'classification-confidences))

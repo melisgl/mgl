@@ -2214,11 +2214,28 @@ reconstruction rmse."
                              :prepend-name (format nil "chunk ~A" (name chunk)))
               measurer)))
 
+(defun make-chunk-reconstruction-cross-entropy-counters-and-measurers
+    (chunks &key chunk-filter)
+  (loop for chunk in (remove-if* chunk-filter chunks)
+        for measurer = (maybe-make-cross-entropy-measurer chunk)
+        when measurer
+          collect
+          (cons (make-instance 'cross-entropy-counter
+                               :prepend-name (format nil "chunk ~A" (name chunk)))
+                measurer)))
+
 (defun make-bm-reconstruction-misclassification-counters-and-measurers
     (bm &key chunk-filter)
-  "Return a list of counter, measurer conses to keep track of
-misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  "Return a list of counter, measurer conses to keep track of cross
+entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
+   (chunks bm) :chunk-filter chunk-filter))
+
+(defun make-bm-reconstruction-cross-entropy-counters-and-measurers
+    (bm &key chunk-filter)
+  "Return a list of counter, measurer conses to keep track of cross
+entropy error suitable for BM-MEAN-FIELD-ERRORS."
+  (make-chunk-reconstruction-cross-entropy-counters-and-measurers
    (chunks bm) :chunk-filter chunk-filter))
 
 (defun mark-labels-present (object)
