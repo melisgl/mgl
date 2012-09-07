@@ -46,6 +46,9 @@ propagate to the two branches allowing them to be more optimized."
 
 (defun make-flt-array (dimensions)
   (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
+
+(defun flt-vector (&rest args)
+  (make-array (length args) :element-type 'flt :initial-contents args))
 
 
 ;;;; Declarations
