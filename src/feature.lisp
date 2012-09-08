@@ -128,7 +128,7 @@ assembled sparse vector are normalized to sum to 1."
                    (let ((pos (position index v :key #'car)))
                      (if pos
                          (incf (cdr (aref v pos)))
-                         (vector-push-extend (cons index 1) v))))))
+                         (vector-push-extend (cons index #.(flt 1)) v))))))
              document)
     (when (member kind '(:binary :normalized-binary))
       (loop for x across v
