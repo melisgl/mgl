@@ -233,8 +233,8 @@ activation plus guassian noise of unit variance."))
     :initarg :scale :accessor scale
     :documentation "The sum of the means after normalization. Can be
 changed during training, for instance when clamping. If it is a vector
-then its length must be MAX-N-STRIPES which automatically maintained
-when changing the number of stripes.")
+then its length must be MAX-N-STRIPES which is automatically
+maintained when changing the number of stripes.")
    (group-size
     :initform (error "GROUP-SIZE must be specified.")
     :initarg :group-size
@@ -329,7 +329,7 @@ are remembered."))
   (:documentation "Set NODES of CHUNK to the means of the probability
 distribution. When called NODES contains the activations.")
   (:method :after ((chunk chunk))
-           (nodes->means chunk))
+    (nodes->means chunk))
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
     (let ((nodes (storage (nodes chunk))))
@@ -351,18 +351,20 @@ distribution. When called NODES contains the activations.")
       (assert (zerop (mod (chunk-size chunk) group-size)))
       (do-stripes (chunk stripe)
         (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
-          (do-chunk (i chunk)
-            ;; this assumes that nodes in the same group have values at
-            ;; the same time
-            (when (zerop (mod i group-size))
-              (let ((sum #.(flt 0)))
-                (declare (type flt sum) (optimize (speed 3)))
-                (loop for j upfrom i below (+ i group-size)
-                      do (incf sum (aref nodes j)))
-                (setq sum (/ sum scale))
-                (loop for j upfrom i below (+ i group-size)
-                      do (setf (aref nodes j)
-                               (/ (aref nodes j) sum))))))))))
+          (when (/= 0 scale)
+            (do-chunk (i chunk)
+              ;; this assumes that nodes in the same group have values at
+              ;; the same time
+              (when (zerop (mod i group-size))
+                (let ((sum #.(flt 0)))
+                  (declare (type flt sum) (optimize (speed 3)))
+                  (loop for j upfrom i below (+ i group-size)
+                        do (incf sum (aref nodes j)))
+                  (when (/= 0 sum)
+                    (setq sum (/ sum scale))
+                    (loop for j upfrom i below (+ i group-size)
+                          do (setf (aref nodes j)
+                                   (/ (aref nodes j) sum))))))))))))
   (:method ((chunk exp-normalized-group-chunk))
     (let ((nodes (storage (nodes chunk))))
       (do-stripes (chunk)
