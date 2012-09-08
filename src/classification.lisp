@@ -55,18 +55,20 @@ misclassifications. Return NIL if OBJ contains no labels.")
 (defun measure-cross-entropy (examples striped
                               &key (label-fn #'label)
                               (confidence-fn #'classification-confidences))
-  "Return the sum of the cross entropy between the real and the  the  and the number of
-examples. The length of EXAMPLES must be equal to the number of
-stripes in STRIPED. LABEL-FN takes an example and returns its label
-that compared by EQL to what STRIPE-LABEL-FN returns for STRIPED and
-the index of the stripe. This is a measurer function."
+  "Return the sum of the cross entropy between the confidences and the
+distribution (1 at the label of the class) and the number of examples.
+The length of EXAMPLES must be equal to the number of stripes in
+STRIPED. LABEL-FN takes an example and returns its label that compared
+by EQL to what STRIPE-LABEL-FN returns for STRIPED and the index of
+the stripe. This is a measurer function."
   (assert (= (length examples) (n-stripes striped)))
   (let ((sum 0))
     (loop for example in examples
           for stripe upfrom 0
           for confidences = (funcall confidence-fn striped stripe)
           do (incf sum (- (log (max #.(expt 10d0 -15)
-                                    (aref confidences (funcall label-fn example)))))))
+                                    (aref confidences
+                                          (funcall label-fn example)))))))
     (values sum (length examples))))
 
 (defgeneric maybe-make-cross-entropy-measurer (obj)
