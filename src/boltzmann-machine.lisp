@@ -912,6 +912,18 @@ FULL-CLOUDS-EVERYWHERE returns for VISIBLE-CHUNKS and HIDDEN-CHUNKS.
 See MERGE-CLOUD-SPECS for the gory details. The initform, '(:MERGE),
 simply leaves the default cloud specs alone."))
 
+(defmethod print-object ((bm bm) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (bm stream :type t)
+      (format stream "~S - ~S"
+              (mapcar (lambda (chunk)
+                        (ignore-errors (name chunk)))
+                      (visible-chunks bm))
+              (mapcar (lambda (chunk)
+                        (ignore-errors (name chunk)))
+                      (hidden-chunks bm)))))
+  bm)
+
 (define-descriptions (bm bm)
   visible-chunks hidden-chunks clouds n-stripes max-n-stripes)
 
