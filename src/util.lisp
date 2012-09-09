@@ -146,7 +146,7 @@ propagate to the two branches allowing them to be more optimized."
 
 (defun reverse-hash-table (hash-table &key (test #'eql))
   "Return a hash table that maps from the values of HASH-TABLE back to
-its keys. HASH-TABLE better be a bijection."
+its keys. HASH-TABLE had better be a bijection."
   (let ((r (make-hash-table :test test)))
     (maphash (lambda (key value)
                (setf (gethash value r) key))
