@@ -54,7 +54,7 @@ misclassifications. Return NIL if OBJ contains no labels.")
 
 (defun measure-cross-entropy (examples striped
                               &key (label-fn #'label)
-                              (confidence-fn #'classification-confidences))
+                                (confidence-fn #'classification-confidences))
   "Return the sum of the cross entropy between the confidences and the
 distribution (1 at the label of the class) and the number of examples.
 The length of EXAMPLES must be equal to the number of stripes in
@@ -62,14 +62,22 @@ STRIPED. LABEL-FN takes an example and returns its label that compared
 by EQL to what STRIPE-LABEL-FN returns for STRIPED and the index of
 the stripe. This is a measurer function."
   (assert (= (length examples) (n-stripes striped)))
-  (let ((sum 0))
+  (let ((sum 0)
+        (label-errors ()))
     (loop for example in examples
           for stripe upfrom 0
           for confidences = (funcall confidence-fn striped stripe)
-          do (incf sum (- (log (max #.(expt 10d0 -15)
-                                    (aref confidences
-                                          (funcall label-fn example)))))))
-    (values sum (length examples))))
+          do (let* ((label (funcall label-fn example))
+                    (err (- (log (max #.(expt 10d0 -15)
+                                      (aref confidences label))))))
+               (incf sum err)
+               (let ((label-error (or (getf label-errors label)
+                                      (setf (getf label-errors label)
+                                            (list #.(flt 0) 0)))))
+                 (incf (first label-error) err)
+                 (incf (second label-error)))))
+    (values (list sum label-errors)
+            (length examples))))
 
 (defgeneric maybe-make-cross-entropy-measurer (obj)
   (:documentation "Return a function of one parameter that is invoked
@@ -83,7 +91,42 @@ entropy error. Return NIL if OBJ contains no labels.")
       (measure-cross-entropy examples labeled))))
 
 (defclass cross-entropy-counter (error-counter)
-  ((name :initform '("cross entropy"))))
+  ((name :initform '("cross entropy"))
+   (per-label-counters
+    :initform (make-hash-table)
+    :initarg :per-label-counters
+    :reader per-label-counters
+    :documentation "A hash table mapping labels to the cross entropy
+counters for samples with that label.")))
+
+(defmethod print-counter ((counter cross-entropy-counter) stream)
+  (multiple-value-bind (e c) (get-error counter)
+    (if e
+        (format stream "~,5E (~D)" e c)
+        (format stream "~A (~D)" e c)))
+  (loop for cons in (sort (alexandria:hash-table-alist
+                           (per-label-counters counter))
+                          #'< :key #'car)
+        do (destructuring-bind (label . counter) cons
+             (format stream ",~_ (label: ~S, ~A)" label
+                     (with-output-to-string (stream)
+                       (print-counter counter stream))))))
+
+(defmethod add-error ((counter cross-entropy-counter) (err list) n)
+  (destructuring-bind (overall-err label-errors) err
+    (call-next-method counter overall-err n)
+    (loop for (label (err n)) on label-errors by #'cddr
+          do (let ((counter-for-label
+                     (or (gethash label (per-label-counters counter))
+                         (setf (gethash label (per-label-counters counter))
+                               (make-instance 'cross-entropy-counter)))))
+               (add-error counter-for-label err n)))))
+
+(defmethod reset-counter ((counter cross-entropy-counter))
+  (call-next-method)
+  (map nil #'reset-counter
+       (mapcar #'cdr (alexandria:hash-table-alist
+                      (per-label-counters counter)))))
 
 
 ;;;; ROC
