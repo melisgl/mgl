@@ -96,6 +96,7 @@
    ;; Feature selection, encoding
    #:count-features
    #:compute-feature-llrs
+   #:compute-feature-disambiguities
    #:index-scored-features
    #:read-indexed-features
    #:write-indexed-features

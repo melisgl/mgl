@@ -80,6 +80,53 @@ features of the document."
                  all)
         all))))
 
+;;; From the paper 'Using Ambiguity Measure Feature Selection
+;;; Algorithm for Support Vector Machine Classifier'.
+(defun compute-feature-disambiguities (documents mapper class-fn
+                                       &key (classes
+                                             (all-document-classes documents
+                                                                   class-fn)))
+  "Return scored features as an EQUAL hash table whose keys are
+features of DOCUMENTS and values are their log likelihood ratios.
+MAPPER takes a function and a document and calls function with
+features of the document."
+  (when (< (length classes) 2)
+    (error "LLR feature selection needs at least 2 classes."))
+  (flet ((document-class-index (document)
+           (let ((class (funcall class-fn document)))
+             (or (position class classes)
+                 (error "Unexpected class ~S" class)))))
+    (let ((all (make-hash-table :test #'equal)))
+      (map nil (lambda (document)
+                 (let ((index (document-class-index document)))
+                   (maphash (lambda (feature -)
+                              (incf
+                               (first
+                                (or (gethash feature all)
+                                    (setf (gethash feature all)
+                                          (make-list (1+ (length classes))
+                                                     :initial-element 0)))))
+                              (incf (elt (gethash feature all) (1+ index))))
+                            (document-features document mapper))))
+           documents)
+      (let ((class-counts
+              (loop for class in classes
+                    collect (count class documents
+                                   :key (lambda (document)
+                                          (funcall class-fn document)))))
+            (total (length documents)))
+        (assert (= total (loop for x in class-counts sum x)))
+        (maphash (lambda (feature counts)
+                   (destructuring-bind (count &rest feature-class-counts)
+                       counts
+                     (assert (= count (loop for x in feature-class-counts
+                                            sum x)))
+                     (setf (gethash feature all)
+                           (/ (apply #'max feature-class-counts)
+                              (+ 10 count)))))
+                 all)
+        all))))
+
 (defun index-scored-features (feature-scores n &key (start 0))
   "Take scored features as a feature -> score hash table \(returned by
 COUNT-FEATURES or COMPUTE-FEATURE-LLR, for instance) and return a
