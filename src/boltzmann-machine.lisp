@@ -2260,7 +2260,9 @@ entropy error suitable for BM-MEAN-FIELD-ERRORS."
 (defun collect-bm-mean-field-errors/labeled
     (sampler bm &key
      (counters-and-measurers
-      (make-bm-reconstruction-misclassification-counters-and-measurers bm)))
+      (append
+       (make-bm-reconstruction-misclassification-counters-and-measurers bm)
+       (make-bm-reconstruction-cross-entropy-counters-and-measurers bm))))
   "Like COLLECT-BM-MEAN-FIELD-ERRORS but reconstruct the labels even
 if they were missing."
   (collect-batch-errors (lambda (samples)
