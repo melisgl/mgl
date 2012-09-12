@@ -154,7 +154,7 @@ each level in the DBN."
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (apply #'append
-          (mapcar #'chunks
+          (mapcar #'visible-chunks
                   (subseq (rbms dbn)
                           0 (1+ (position rbm (rbms dbn))))))
    :chunk-filter chunk-filter))
@@ -165,7 +165,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-cross-entropy-counters-and-measurers
    (apply #'append
-          (mapcar #'chunks
+          (mapcar #'visible-chunks
                   (subseq (rbms dbn)
                           0 (1+ (position rbm (rbms dbn))))))
    :chunk-filter chunk-filter))

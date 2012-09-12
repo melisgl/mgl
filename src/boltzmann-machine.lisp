@@ -2243,14 +2243,14 @@ reconstruction rmse."
   "Return a list of counter, measurer conses to keep track of cross
 entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
-   (chunks bm) :chunk-filter chunk-filter))
+   (visible-chunks bm) :chunk-filter chunk-filter))
 
 (defun make-bm-reconstruction-cross-entropy-counters-and-measurers
     (bm &key chunk-filter)
   "Return a list of counter, measurer conses to keep track of cross
 entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-cross-entropy-counters-and-measurers
-   (chunks bm) :chunk-filter chunk-filter))
+   (visible-chunks bm) :chunk-filter chunk-filter))
 
 (defun mark-labels-present (object)
   (dolist (chunk (chunks object))
