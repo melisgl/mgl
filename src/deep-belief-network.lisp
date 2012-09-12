@@ -37,14 +37,20 @@ the :RBM-CLASS initarg is for."))
       (error "Name conflict between clouds: ~S" name-clashes))))
 
 (defmethod initialize-instance :around ((dbn dbn) &key (layers () layersp)
-                                        (rbm-class 'rbm) &allow-other-keys)
+                                        clouds-up-to-layers (rbm-class 'rbm)
+                                        &allow-other-keys)
   (when layersp
     (setf (slot-value dbn 'rbms)
           (loop for (layer1 layer2) on layers
+                for cloud-spec in (or clouds-up-to-layers
+                                      (make-list (1- (length layers))
+                                                 :initial-element
+                                                 '(:merge)))
                 while layer2
                 collect (make-instance rbm-class
                                        :visible-chunks layer1
-                                       :hidden-chunks layer2))))
+                                       :hidden-chunks layer2
+                                       :clouds cloud-spec))))
   (call-next-method))
 
 (defmethod initialize-instance :after ((dbn dbn) &key &allow-other-keys)
