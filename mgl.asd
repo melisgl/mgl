@@ -36,7 +36,7 @@
                              (:file "deep-belief-network")
                              (:file "backprop")
                              (:file "unroll"))))
-  :depends-on (:closer-mop))
+  :depends-on (:alexandria :closer-mop))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
   (oos 'load-op '#:mgl-test)
