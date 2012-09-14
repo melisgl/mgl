@@ -154,6 +154,11 @@ START."
 
 ;;;; Encoding
 
+(defun compact-binary-feature-vector (feature-vector)
+  (make-array (length feature-vector)
+              :element-type '(unsigned-byte 32)
+              :initial-contents (map 'vector #'car feature-vector)))
+
 (defun encode/bag-of-words (document mapper feature->index &key (kind :binary))
   "Return a sparse vector that represents the encoded DOCUMENT. Get
 the features of DOCUMENT from MAPPER, convert each feature to an index
@@ -162,11 +167,12 @@ used. The result is a vector of index/value conses. Indexes are unique
 within the vector and are in increasing order. Depending on KIND value
 is calculated differently: for :FREQUENCY it is the number of times
 the corresponding feature was found in DOCUMENT, for :BINARY it is
-always 1. :NORMALIZED-FREQUENCY and :NORMALIZED-FREQUENCY are like the
+always 1. :NORMALIZED-FREQUENCY and :NORMALIZED-BINARY are like the
 unnormalized counterparts except that as the final step values in the
 assembled sparse vector are normalized to sum to 1."
   (assert (member kind '(:binary :frequency
-                         :normalized-binary :normalized-frequency)))
+                         :normalized-binary :normalized-frequency
+                         :compacted-binary)))
   (let ((v (make-array 20 :adjustable t :fill-pointer 0)))
     (funcall mapper
              (lambda (feature)
@@ -177,7 +183,7 @@ assembled sparse vector are normalized to sum to 1."
                          (incf (cdr (aref v pos)))
                          (vector-push-extend (cons index #.(flt 1)) v))))))
              document)
-    (when (member kind '(:binary :normalized-binary))
+    (when (member kind '(:binary :normalized-binary :compacted-binary))
       (loop for x across v
             do (setf (cdr x) #.(flt 1))))
     (when (member kind '(:normalized-binary :normalized-frequency))
@@ -186,4 +192,7 @@ assembled sparse vector are normalized to sum to 1."
                       (cons (car x)
                             (/ (cdr x) sum)))
                   v)))
-    (sort v #'< :key #'car)))
+    (let ((r (sort v #'< :key #'car)))
+      (if (eq kind :compacted-binary)
+          (compact-binary-feature-vector r)
+          r))))
