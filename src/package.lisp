@@ -33,6 +33,7 @@
    #:reverse-hash-table
    #:repeatedly
    #:nshuffle-vector
+   #:shuffle-vector
    #:make-seq-generator
    #:make-random-generator
    #:make-n-gram-mappee

@@ -168,6 +168,9 @@ its keys. HASH-TABLE had better be a bijection."
              (rotatef (aref vector idx) (aref vector other))))
   vector)
 
+(defun shuffle-vector (vector)
+  (nshuffle-vector (copy-seq vector)))
+
 (defun make-seq-generator (vector)
   "Return a function that returns elements of VECTOR in order without
 end. When there are no more elements, start over."
