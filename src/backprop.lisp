@@ -994,15 +994,21 @@ target_k if target sums to 1."))
                   for i upfrom 0
                   do
                   (when (zerop (mod i group-size))
-                    (let ((sum #.(flt 0)))
-                      (declare (type flt sum)
+                    (let ((max #.(flt 0))
+                          (sum #.(flt 0)))
+                      (declare (type flt max sum)
                                (optimize (speed 3)))
+                      ;; It's more stable numerically to subtract the
+                      ;; max from elements in the group before
+                      ;; exponentiating.
                       (loop for xj upfrom xi below (+ xi group-size)
-                            do (incf sum (exp (aref x* xj))))
+                            do (setq max (max max (aref x* xj))))
+                      (loop for xj upfrom xi below (+ xi group-size)
+                            do (incf sum (exp (- (aref x* xj) max))))
                       (loop for lj upfrom li below (+ li group-size)
                             for xj upfrom xi below (+ xi group-size)
                             for tj upfrom ti below (+ ti group-size)
-                            do (let ((s (/ (exp (aref x* xj)) sum)))
+                            do (let ((s (/ (exp (- (aref x* xj) max)) sum)))
                                  (declare (type positive-flt s))
                                  (setf (aref softmax* lj) s)
                                  (setf (aref to* lj)
