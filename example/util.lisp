@@ -238,10 +238,13 @@
               (lambda (samples bpn)
                 (declare (ignore samples))
                 (cesc-classification-error bpn)))
-        (cons (make-instance 'error-counter :name '("cross entropy"))
+        (cons (make-instance 'cross-entropy-counter)
               (lambda (samples bpn)
-                (declare (ignore samples))
-                (cost bpn)))))
+                (mgl-train::measure-cross-entropy
+                 samples
+                 (find-if (lambda (lump)
+                            (typep lump 'cross-entropy-softmax-lump))
+                          (lumps bpn)))))))
 
 (defmethod initialize-trainer ((trainer cesc-trainer) (bpn bpn))
   (call-next-method)

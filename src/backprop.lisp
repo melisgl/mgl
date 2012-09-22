@@ -947,6 +947,13 @@ normalized in groups of GROUP-SIZE.")
     :initarg :target :reader target
     :documentation "A lump of the same size as INPUT-LUMP that is the
 T in -sum_{k}target_k*ln(x_k) which the the cross entropy error.")
+   (class-weights
+    :initform nil
+    :initarg :class-weights
+    :accessor class-weights
+    :documentation "If non-NIL, an FLT-VECTOR of GROUP-SIZE. Useful
+TARGET's distribution is different on the training and test sets. Just
+set the w_i to test_frequency_i/training_frequency_i.")
    (normalized-lump :reader normalized-lump))
   (:documentation "A specialized lump that is equivalent to hooking
 ->EXP with NORMALIZED-LUMP and ->CROSS-ENTROPY but is numerically
@@ -982,8 +989,10 @@ target_k if target sums to 1."))
          (softmax* (storage (ensure-softmax lump)))
          (target (target lump))
          (target* (storage (nodes target)))
-         (to* (storage (nodes lump))))
-    (declare (type index group-size))
+         (to* (storage (nodes lump)))
+         (class-weights (class-weights lump)))
+    (declare (type index group-size)
+             (type (or flt-vector null) class-weights))
     (loop for stripe of-type index below (n-stripes* lump) do
           (with-stripes ((stripe lump ls le)
                          (stripe x xs xe)
@@ -1008,11 +1017,15 @@ target_k if target sums to 1."))
                       (loop for lj upfrom li below (+ li group-size)
                             for xj upfrom xi below (+ xi group-size)
                             for tj upfrom ti below (+ ti group-size)
+                            for i below group-size
                             do (let ((s (/ (exp (- (aref x* xj) max)) sum)))
                                  (declare (type positive-flt s))
                                  (setf (aref softmax* lj) s)
                                  (setf (aref to* lj)
-                                       (- (* (aref target* tj)
+                                       (- (* (if class-weights
+                                                 (aref class-weights i)
+                                                 #.(flt 1))
+                                             (aref target* tj)
                                              (the flt (log s))))))))))))))
 
 (defmethod derive-lump ((lump cross-entropy-softmax-lump))
@@ -1023,8 +1036,10 @@ target_k if target sums to 1."))
          (softmax* (storage softmax))
          (target (target lump))
          (target* (storage (nodes target)))
-         (d* (storage (derivatives lump))))
-    (declare (type index group-size))
+         (d* (storage (derivatives lump)))
+         (class-weights (class-weights lump)))
+    (declare (type index group-size)
+             (type (or flt-vector null) class-weights))
     ;; FIXME: target derivative not calculated
     (assert (typep target 'input-lump))
     (loop for stripe of-type index below (n-stripes* lump) do
@@ -1055,13 +1070,31 @@ target_k if target sums to 1."))
                 (loop
                  for li upfrom lg below (+ lg group-size)
                  for ti upfrom tg below (+ tg group-size)
+                 for i below group-size
                  do (incf (aref xd* xj)
                           (* (aref d* li)
+                             (if class-weights
+                                 (aref class-weights i)
+                                 #.(flt 1))
                              (aref target* ti)
                              (- (aref softmax* lj)
                                 (if (= ti tj)
                                     #.(flt 1)
                                     #.(flt 0)))))))))))))
+
+(defmethod classification-confidences ((lump cross-entropy-softmax-lump) stripe)
+  (with-stripes ((stripe lump start end))
+    (subseq (storage (softmax lump)) start end)))
+
+(defmethod label-distribution ((lump cross-entropy-softmax-lump) stripe object)
+  (declare (ignore object))
+  (let ((target (target lump))
+        (class-weights (class-weights lump)))
+    (with-stripes ((stripe target ts te))
+      (let ((d (subseq (storage (nodes target)) ts te)))
+        (if class-weights
+            (map-into d #'* d class-weights)
+            d)))))
 
 
 ;;;; Utilities
@@ -1071,7 +1104,3 @@ target_k if target sums to 1."))
                           (set-input samples bpn)
                           (forward-bpn bpn))
                         sampler bpn counters-and-measurers))
-
-(defmethod classification-confidences ((lump cross-entropy-softmax-lump) stripe)
-  (with-stripes ((stripe lump start end))
-    (subseq (storage (softmax lump)) start end)))

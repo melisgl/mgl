@@ -167,6 +167,7 @@
    #:group-size
    #:default-value
    #:label
+   #:label-distribution
    #:n-inputs
    #:nodes
    #:name
@@ -412,6 +413,7 @@ Networks (DBN)."))
    #:cross-entropy-softmax-lump
    #:softmax
    #:target
+   #:class-weights
    ;; Utilities
    #:collect-bpn-errors)
   (:documentation "Backpropagation."))

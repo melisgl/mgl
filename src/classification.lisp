@@ -1,6 +1,14 @@
 (in-package :mgl-train)
 
-(defgeneric label (object))
+(defgeneric label (object)
+  (:documentation "Return the label of object as an index. This is a
+special case of LABEL-DISTRIBUTION."))
+
+(defgeneric label-distribution (striped  stripe object)
+  (:documentation "Return an FLT-VECTOR that represent our knowledge
+of the distribution of the true label of OBJECT.")
+  (:method (striped stripe object)
+    nil))
 
 (defclass labeled () ()
   (:documentation "Mixin for chunks/whatever that hold labels. In the
@@ -54,30 +62,50 @@ misclassifications. Return NIL if OBJ contains no labels.")
 
 (defun measure-cross-entropy (examples striped
                               &key (label-fn #'label)
+                                (label-distribution-fn #'label-distribution)
                                 (confidence-fn #'classification-confidences))
   "Return the sum of the cross entropy between the confidences and the
 distribution (1 at the label of the class) and the number of examples.
 The length of EXAMPLES must be equal to the number of stripes in
-STRIPED. LABEL-FN takes an example and returns its label that compared
-by EQL to what STRIPE-LABEL-FN returns for STRIPED and the index of
-the stripe. This is a measurer function."
+STRIPED. LABEL-FN takes an example and returns its label. This is a
+measurer function."
   (assert (= (length examples) (n-stripes striped)))
   (let ((sum 0)
+        (sum-weights #.(flt 0))
         (label-errors ()))
     (loop for example in examples
           for stripe upfrom 0
           for confidences = (funcall confidence-fn striped stripe)
-          do (let* ((label (funcall label-fn example))
-                    (err (- (log (max #.(expt 10d0 -15)
-                                      (aref confidences label))))))
-               (incf sum err)
-               (let ((label-error (or (getf label-errors label)
-                                      (setf (getf label-errors label)
-                                            (list #.(flt 0) 0)))))
-                 (incf (first label-error) err)
-                 (incf (second label-error)))))
+          do (let ((distribution (funcall label-distribution-fn
+                                          striped stripe example)))
+               (cond (distribution
+                      (assert (= (length confidences) (length distribution)))
+                      (loop for prediction across confidences
+                            for target across distribution
+                            for label upfrom 0
+                            do (let ((err (- (* target
+                                                (log (max #.(expt 10d0 -15)
+                                                          prediction))))))
+                                 (incf sum err)
+                                 (incf sum-weights target)
+                                 (let ((label-error (or (getf label-errors label)
+                                                        (setf (getf label-errors label)
+                                                              (list #.(flt 0) 0)))))
+                                   (incf (first label-error) err)
+                                   (incf (second label-error) target)))))
+                     (t
+                      (let* ((label (funcall label-fn example))
+                             (err (- (* (log (max #.(expt 10d0 -15)
+                                                  (aref confidences label)))))))
+                        (incf sum err)
+                        (incf sum-weights)
+                        (let ((label-error (or (getf label-errors label)
+                                               (setf (getf label-errors label)
+                                                     (list #.(flt 0) 0)))))
+                          (incf (first label-error) err)
+                          (incf (second label-error))))))))
     (values (list sum label-errors)
-            (length examples))))
+            sum-weights)))
 
 (defgeneric maybe-make-cross-entropy-measurer (obj)
   (:documentation "Return a function of one parameter that is invoked
