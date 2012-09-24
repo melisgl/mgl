@@ -16,6 +16,7 @@
 
 (defvar *bpn-being-built* nil)
 (defvar *next-lump-name* nil)
+(defvar *in-training-p* nil)
 
 (defun next-lump-name ()
   (prog1 (or *next-lump-name* (gensym))
@@ -151,7 +152,6 @@ of the network.")))
 ;;;; Data lumps
 
 (defclass data-lump (lump) ())
-(defclass input-lump (data-lump) ())
 (defclass weight-lump (data-lump)
   ((same-stripes-p :initform t)))
 (defclass constant-lump (data-lump)
@@ -160,6 +160,21 @@ of the network.")))
 (defmethod transfer-lump ((lump data-lump)))
 
 (defmethod derive-lump ((lump data-lump)))
+
+(defclass input-lump (data-lump)
+  ((dropout :initform nil :initarg :dropout :reader dropout)))
+
+(defmethod transfer-lump ((lump input-lump))
+  (let ((dropout (dropout lump)))
+    (when dropout
+      (if *in-training-p*
+          (let* ((nodes* (storage (nodes lump))))
+            (loop for stripe of-type index below (n-stripes* lump) do
+              (with-stripes ((stripe lump ls le))
+                (loop for li upfrom ls below le
+                      do (when (try-chance dropout)
+                           (setf (aref nodes* li) (flt 0)))))))))))
+
 
 
 ;;;; ERROR-NODE
@@ -251,7 +266,7 @@ being built. Example:
     (biases (mgl-bp:weight-lump :size n-features))
     (weights (mgl-bp:weight-lump :size (* n-hiddens n-features)))
     (activations0 (mgl-bp:activation-lump :weights weights :x features))
-    (activations (mgl-bp:->sum :args (list biases activations0)))
+    (activations (mgl-bp:->+ :args (list biases activations0)))
     (output (mgl-bp:->sigmoid :x activations)))"
   (let ((bindings
          (mapcar (lambda (lump)
@@ -357,9 +372,10 @@ of stripes."
 
 (defgeneric compute-derivatives (samples trainer bpn)
   (:method (samples trainer bpn)
-    (set-input samples bpn)
-    (forward-bpn bpn)
-    (backward-bpn bpn :last-lump (first-trained-weight-lump trainer bpn))))
+    (let ((*in-training-p* t))
+      (set-input samples bpn)
+      (forward-bpn bpn)
+      (backward-bpn bpn :last-lump (first-trained-weight-lump trainer bpn)))))
 
 
 ;;;; CG trainer
@@ -729,7 +745,8 @@ computed."))
                             (* d (aref x* xi))))))))))
 
 (defclass ->sigmoid (lump)
-  ((x :initarg :x :reader x)))
+  ((x :initarg :x :reader x)
+   (dropout :initform nil :initarg :dropout :reader dropout)))
 
 (defmethod default-size ((lump ->sigmoid))
   (size (x lump)))
@@ -738,14 +755,24 @@ computed."))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
     (let ((x* (storage (nodes x)))
-          (l* (storage (nodes lump))))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (l* (storage (nodes lump)))
+          (dropout (dropout lump)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type (or flt null) dropout))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (setf (aref l* li) (sigmoid (aref x* xi)))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (setf (aref l* li)
+                         (if dropout
+                             (if *in-training-p*
+                                 (if (try-chance (- #.(flt 1) dropout))
+                                     (sigmoid (aref x* xi))
+                                     #.(flt 0))
+                                 (* (- #.(flt 1) dropout)
+                                    (sigmoid (aref x* xi))))
+                             (sigmoid (aref x* xi))))))))))
 
 (defmethod derive-lump ((lump ->sigmoid))
   (let ((x (x lump)))

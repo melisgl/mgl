@@ -398,6 +398,7 @@ Networks (DBN)."))
    #:bp-trainer
    #:compute-derivatives
    #:cg-bp-trainer
+   #:dropout
    ;; Node types
    #:define-node-type
    #:node
