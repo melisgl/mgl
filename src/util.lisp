@@ -182,13 +182,13 @@ end. When there are no more elements, start over."
           (aref vector n)
         (setf n (mod (1+ n) l))))))
 
-(defun make-random-generator (vector)
+(defun make-random-generator (seq)
   "Return a function that returns elements of VECTOR in random order
 without end. When there are no more elements, start over with a
 different random order."
-  (let ((vector (copy-seq (coerce vector 'vector)))
-        (l (length vector))
-        (n 0))
+  (let* ((vector (copy-seq (coerce seq 'vector)))
+         (l (length vector))
+         (n 0))
     (lambda ()
       (when (zerop n)
         (setq vector (nshuffle-vector vector)))
@@ -252,7 +252,8 @@ FRACTIONS:
          seq)
     (nreverse result)))
 
-(defun stratified-split (fractions seq &key (key #'identity) (test #'eql))
+(defun stratified-split (fractions seq &key (key #'identity) (test #'eql)
+                                         randomizep)
   "Similar to BREAK-SEQ, but also makes sure that keys are equally
 distributed among the paritions. It can be useful for classification
 tasks to partition the data set while keeping the distribution of
@@ -261,13 +262,19 @@ classes the same."
     (if (zerop (length keys))
         ()
         (let ((per-key-splits
-               (loop for k in keys
-                     collect
-                     (break-seq fractions
-                                (remove-if-not (lambda (x)
-                                                 (funcall test k
-                                                          (funcall key x)))
-                                               seq)))))
+                (loop for k in keys
+                      collect
+                      (let ((elements
+                              (coerce
+                               (remove-if-not (lambda (x)
+                                                (funcall test k
+                                                         (funcall key x)))
+                                              seq)
+                               'vector)))
+                        (break-seq fractions
+                                   (if randomizep
+                                       (nshuffle-vector elements)
+                                       elements))))))
           (loop for i below (length (elt per-key-splits 0))
                 collect (apply #'concatenate
                                (if (listp seq)
