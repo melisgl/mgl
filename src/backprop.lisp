@@ -162,7 +162,12 @@ of the network.")))
 (defmethod derive-lump ((lump data-lump)))
 
 (defclass input-lump (data-lump)
-  ((dropout :initform nil :initarg :dropout :reader dropout)))
+  ((dropout
+    :initform nil :initarg :dropout :reader dropout
+    :documentation "If non-NIL, then in the forward pass zero out each
+node in this chunk if DROPOUT probability. See Geoffrey Hinton's
+'Improving neural networks by preventing co-adaptation of feature
+detectors'.")))
 
 (defmethod transfer-lump ((lump input-lump))
   (let ((dropout (dropout lump)))
@@ -746,7 +751,12 @@ computed."))
 
 (defclass ->sigmoid (lump)
   ((x :initarg :x :reader x)
-   (dropout :initform nil :initarg :dropout :reader dropout)))
+   (dropout
+    :initform nil :initarg :dropout :reader dropout
+    :documentation "If non-NIL, then in the forward pass zero out each
+node in this chunk with DROPOUT probability. See Geoffrey Hinton's
+'Improving neural networks by preventing co-adaptation of feature
+detectors'.")))
 
 (defmethod default-size ((lump ->sigmoid))
   (size (x lump)))
@@ -767,9 +777,9 @@ computed."))
                 do (setf (aref l* li)
                          (if dropout
                              (if *in-training-p*
-                                 (if (try-chance (- #.(flt 1) dropout))
-                                     (sigmoid (aref x* xi))
-                                     #.(flt 0))
+                                 (if (try-chance dropout)
+                                     #.(flt 0)
+                                     (sigmoid (aref x* xi)))
                                  (* (- #.(flt 1) dropout)
                                     (sigmoid (aref x* xi))))
                              (sigmoid (aref x* xi))))))))))
