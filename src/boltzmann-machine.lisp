@@ -379,7 +379,7 @@ distribution. When called NODES contains the activations.")
               ;; this assumes that nodes in the same group have values at
               ;; the same time
               (when (zerop (mod i group-size))
-                (let ((max #.(flt 0)))
+                (let ((max least-negative-flt))
                   (declare (type flt max))
                   ;; It's more stable numerically to subtract the max
                   ;; from elements in the group before exponentiating.

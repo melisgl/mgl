@@ -1040,7 +1040,7 @@ target_k if target sums to 1."))
                   for i upfrom 0
                   do
                   (when (zerop (mod i group-size))
-                    (let ((max #.(flt 0))
+                    (let ((max least-negative-flt)
                           (sum #.(flt 0)))
                       (declare (type flt max sum)
                                (optimize (speed 3)))

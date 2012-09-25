@@ -9,6 +9,8 @@
    ;; Types
    #:flt
    #:positive-flt
+   #:least-negative-flt
+   #:most-postitive-flt
    #:flt-vector
    #:make-flt-array
    #:index

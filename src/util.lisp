@@ -37,6 +37,8 @@ propagate to the two branches allowing them to be more optimized."
 (eval-when (:compile-toplevel :load-toplevel)
   (deftype flt () 'double-float)
   (deftype positive-flt () '(double-float #.least-positive-double-float))
+  (defconstant least-negative-flt least-negative-double-float)
+  (defconstant most-postitive-flt most-positive-double-float)
   (deftype flt-vector () '(simple-array flt (*)))
   (declaim (inline flt))
   (defun flt (x)
