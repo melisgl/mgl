@@ -409,6 +409,7 @@ Networks (DBN)."))
    #:->sum
    #:->linear
    #:->sigmoid
+   #:->stochastic-sigmoid
    #:->scaled-tanh
    #:->exp
    #:->sum-squared-error

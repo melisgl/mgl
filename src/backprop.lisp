@@ -172,13 +172,16 @@ detectors'.")))
 (defmethod transfer-lump ((lump input-lump))
   (let ((dropout (dropout lump)))
     (when dropout
-      (if *in-training-p*
-          (let* ((nodes* (storage (nodes lump))))
-            (loop for stripe of-type index below (n-stripes* lump) do
-              (with-stripes ((stripe lump ls le))
-                (loop for li upfrom ls below le
-                      do (when (try-chance dropout)
-                           (setf (aref nodes* li) (flt 0)))))))))))
+      (let* ((nodes* (storage (nodes lump)))
+             (d (- #.(flt 1) dropout)))
+        (loop for stripe of-type index below (n-stripes* lump) do
+          (with-stripes ((stripe lump ls le))
+            (loop for li upfrom ls below le
+                  do (if *in-training-p*
+                         (when (try-chance dropout)
+                           (setf (aref nodes* li) (flt 0)))
+                         (setf (aref nodes* li)
+                               (* d (aref nodes* li)))))))))))
 
 
 
@@ -792,14 +795,53 @@ detectors'.")))
           (ld* (storage (derivatives lump))))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (incf (aref xd* li)
-                             (let ((s (aref l* li)))
-                               (* (aref ld* li)
-                                  s (- 1 s))))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (incf (aref xd* li)
+                         (let ((s (aref l* li)))
+                           (* (aref ld* li)
+                              s (- 1 s))))))))))
+
+(defclass ->stochastic-sigmoid (lump)
+  ((x :initarg :x :reader x)))
+
+(defmethod default-size ((lump ->stochastic-sigmoid))
+  (size (x lump)))
+
+(defmethod transfer-lump ((lump ->stochastic-sigmoid))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((x* (storage (nodes x)))
+          (l* (storage (nodes lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (setf (aref l* li)
+                         (if *in-training-p*
+                             (binarize-randomly (sigmoid (aref x* xi)))
+                             (sigmoid (aref x* xi))))))))))
+
+(defmethod derive-lump ((lump ->stochastic-sigmoid))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((xd* (storage (derivatives x)))
+          (l* (storage (nodes lump)))
+          (ld* (storage (derivatives lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (incf (aref xd* li)
+                         (let ((s (aref l* li)))
+                           (* (aref ld* li)
+                              s (- 1 s))))))))))
 
 (defclass ->scaled-tanh (lump)
   ((x :initarg :x :reader x)))
