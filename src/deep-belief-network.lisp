@@ -23,6 +23,7 @@ the :RBM-CLASS initarg is for."))
     (setf (n-stripes rbm) n-stripes)))
 
 (defmethod set-max-n-stripes (max-n-stripes (dbn dbn))
+  (setf (slot-value dbn 'max-n-stripes) max-n-stripes)
   (dolist (rbm (rbms dbn))
     (setf (max-n-stripes rbm) max-n-stripes)))
 
