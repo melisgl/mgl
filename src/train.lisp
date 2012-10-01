@@ -235,9 +235,8 @@ striped objects.
   "Call FN with batches of samples suitable for LEARNER. The number of
 samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER runs
 out."
-  (let ((max-n-stripes (max-n-stripes learner)))
-    (loop until (finishedp sampler) do
-          (funcall fn (sample-batch sampler max-n-stripes)))))
+  (loop until (finishedp sampler) do
+    (funcall fn (sample-batch sampler (max-n-stripes learner)))))
 
 (defmacro do-batches-for-learner ((samples (sampler learner)) &body body)
   "Convenience macro over MAP-BATCHES-FOR-LEARNER."
