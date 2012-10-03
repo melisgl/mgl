@@ -49,8 +49,8 @@ On my Debian Lenny I compiled the ATLAS from source like this:
   # apt-get install gfortran
   # echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
   $ cd ATLAS
-  $ mkdir build-f95-dyn
-  $ cd build-f95-dyn/
+  $ mkdir build-x86-64
+  $ cd build-x86-64
   $ ../configure -Fa alg -fPIC
   $ make
   $ cd lib
@@ -58,25 +58,26 @@ On my Debian Lenny I compiled the ATLAS from source like this:
   $ cd ..
   $ make ptcheck
   $ make time
+  # <restore the cpufreq scaling governor>
 
 
 * Installing Matlisp
 
 Get Matlisp:
 
-  cvs -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp login
-  cvs -z3 -d:pserver:anonymous@matlisp.cvs.sourceforge.net:/cvsroot/matlisp \
-      co -P matlisp
+  git://matlisp.git.sourceforge.net/gitroot/matlisp/matlisp
 
 If you have the stock sse2 package of ATLAS then configure it as:
 
-  ./configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --prefix=`pwd`
+  mkdir build-x86-64
+  cd build-x86-64
+  ../configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --libdir=$PWD/lib/
 
 or 
 
-  ./configure --with-atlas=/home/mega/ATLAS/build-f95-dyn/lib/ \
-              --with-lisp=sbcl --prefix=`pwd` \
-              --with-lisp-exec='sh /home/mega/lisp/sbcl/run-sbcl.sh'
+  ../configure --with-atlas=/home/mega/ATLAS/build-x86-64/lib/ \
+      --enable-sbcl --with-lisp-exec='/home/mega/bin/sbcl' \
+      --libdir=$PWD/lib/
 
 in my case. You may also have to use --with-f77=gfortran or something
 similar. On a suse system, I had to set FFLAGS to '-fPIC -g -O2'
@@ -87,52 +88,12 @@ in which case you either downgrade to autonconf2.59 and run it at the
 top of the source tree or simply add -lgcc_s to FLIBS in matlisp.mk or
 matlisp.mk.in.
 
-Edit the generated lib/lazy-loader.lisp:
-
-  #+:sbcl
-  (defun load-blas-&-lapack-libraries ()
-    (sb-alien:load-shared-object "/usr/lib/sse2/libatlas.so.3")
-    (sb-alien:load-shared-object "/usr/lib/sse2/libcblas.so.3")
-    (sb-alien:load-shared-object "/usr/lib/sse2/libf77blas.so.3")
-    (sb-alien:load-shared-object "/usr/lib/sse2/liblapack_atlas.so.3")
-    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
-
-for me it was:
-
-  #+:sbcl
-  (defun load-blas-&-lapack-libraries ()
-    (sb-alien:load-shared-object
-    "/home/mega/ATLAS/build-f95-dyn/lib/libatlas.so")
-    (sb-alien:load-shared-object
-    "/home/mega/ATLAS/build-f95-dyn/lib/libptcblas.so")
-    (sb-alien:load-shared-object
-     "/home/mega/ATLAS/build-f95-dyn/lib/libptf77blas.so")
-    (sb-alien:load-shared-object
-    "/home/mega/ATLAS/build-f95-dyn/lib/liblapack.so")
-    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
-
-or if you have MKL:
-
-  (defun load-blas-&-lapack-libraries ()
-    (sb-alien:load-shared-object
-     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_core.so")
-    ;; The threaded lib makes sbcl die, use the sequential one.
-    #+nil
-    (sb-alien:load-shared-object
-     "/home/mega/intel/mkl/10.2.2.025/lib/32/libiomp5.so")
-    #+nil
-    (sb-alien:load-shared-object
-     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_gnu_thread.so")
-    (sb-alien:load-shared-object
-     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_sequential.so")
-    (sb-alien:load-shared-object
-     "/home/mega/intel/mkl/10.2.2.025/lib/32/libmkl_gf.so")
-    (sb-alien:load-shared-object "matlisp:lib;libmatlisp.so"))
-
-although it was unexpectedly slower than atlas.
+If you want to use the threaded libs (create by 'make ptshared'), then
+replace libcblas and libf77blas with libptcblas and libptf77blas
+respectively in build-x86-64/lib/lazy-loader.lisp.
 
 Build Matlisp:
 
   $ make
 
-finally load matlisp/start.lisp.
+finally load matlisp/build-x86-64/start.lisp.
