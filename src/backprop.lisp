@@ -804,6 +804,56 @@ detectors'.")))
                            (* (aref ld* li)
                               s (- 1 s))))))))))
 
+#+nil
+(defmethod transfer-lump ((lump ->sigmoid))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((x* (storage (nodes x)))
+          (l* (storage (nodes lump)))
+          (dropout (dropout lump)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type (or flt null) dropout))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (setf (aref l* li)
+                         (if dropout
+                             (if *in-training-p*
+                                 (if (try-chance dropout)
+                                     #.(flt 0)
+                                     (/ (sigmoid (aref x* xi))
+                                        (- #.(flt 1) dropout)))
+                                 (sigmoid (aref x* xi)))
+                             (sigmoid (aref x* xi))))))))))
+
+#+nil
+(defmethod derive-lump ((lump ->sigmoid))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (let ((x* (storage (nodes x)))
+          (xd* (storage (derivatives x)))
+          (l* (storage (nodes lump)))
+          (ld* (storage (derivatives lump)))
+          (dropout (dropout lump)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type (or flt null) dropout))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (unless (zerop (aref l* li))
+                     (incf (aref xd* li)
+                           (let ((s (sigmoid (aref x* xi))))
+                             #+nil
+                             (* (aref ld* li)
+                                s (- 1 s))
+                             (/ (* (aref ld* li)
+                                   s (- 1 s))
+                                (- #.(flt 1) dropout)))))))))))
+
 (defclass ->stochastic-sigmoid (lump)
   ((x :initarg :x :reader x)))
 
