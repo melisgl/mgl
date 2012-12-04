@@ -69,6 +69,8 @@ Get Matlisp:
 
 If you have the stock sse2 package of ATLAS then configure it as:
 
+  cd matlisp/
+  autoreconf --install
   mkdir build-x86-64
   cd build-x86-64
   ../configure --with-atlas=/usr/lib/sse2/ --with-lisp=sbcl --libdir=$PWD/lib/
