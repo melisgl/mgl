@@ -28,7 +28,7 @@
         (error "Can't compute size for ~S." lump))))
 
 (defclass lump ()
-  ((name :initform (next-lump-name) :type symbol :initarg :name :reader name)
+  ((name :initform (next-lump-name) :initarg :name :reader name)
    (size :type index :initarg :size :reader size)
    (n-stripes :initform 1 :type index :reader n-stripes)
    (max-n-stripes
