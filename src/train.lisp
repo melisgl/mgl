@@ -163,7 +163,8 @@ contributed to SUM-ERROR.")))
   (pprint-logical-block (stream ())
     (flet ((foo ()
              (when (slot-boundp counter 'name)
-               (format stream "~{~A~^ ~:_~}: ~:_" (name counter)))
+               (format stream "~{~A~^ ~:_~}: ~:_"
+                       (alexandria:ensure-list (name counter))))
              (print-counter counter stream)))
       (if *print-escape*
           (print-unreadable-object (counter stream :type t)
