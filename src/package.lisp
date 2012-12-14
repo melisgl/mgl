@@ -126,6 +126,7 @@
    #:sample-batch
    ;; Error counter
    #:counter
+   #:print-counter
    #:error-counter
    #:misclassification-counter
    #:cross-entropy-counter
