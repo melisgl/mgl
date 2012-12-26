@@ -150,14 +150,12 @@ contributed to SUM-ERROR.")))
   (:method ((counter error-counter))
     (with-slots (sum-errors n-sum-errors) counter
       (values (if (zerop n-sum-errors)
-                  nil
+                  0
                   (/ sum-errors n-sum-errors))
               n-sum-errors)))
   (:method ((counter rmse-counter))
     (multiple-value-bind (e n) (call-next-method)
-      (if e
-          (values (sqrt e) n)
-          nil))))
+      (values (sqrt e) n))))
 
 (defmethod print-object ((counter counter) stream)
   (pprint-logical-block (stream ())
