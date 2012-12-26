@@ -188,7 +188,11 @@ detectors'.")))
 ;;;; ERROR-NODE
 
 (defclass error-node (->sum)
-  ()
+  ((importance
+    :initform nil
+    :initarg :importance
+    :accessor importance
+    :documentation "If non-NIL, an FLT-VECTOR of n-stripes."))
   (:documentation "An error node is usually a leaf in the graph of
 lumps. Contrary to non-error leaf lumps it gets a non-zero derivative:
 1. Error lumps have exactly one node \(in each stripe) whose value is
@@ -198,7 +202,9 @@ computed as the sum of nodes in the X parameter lump."))
   1)
 
 (defmethod derive-lump :around ((lump error-node))
-  (matlisp:fill-matrix (derivatives lump) (flt 1))
+  (if (importance lump)
+      (replace (storage (nodes (derivatives lump))) (importance lump))
+      (matlisp:fill-matrix (derivatives lump) (flt 1)))
   (call-next-method))
 
 

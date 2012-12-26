@@ -383,6 +383,7 @@ Networks (DBN)."))
    #:activation-lump
    #:transpose-weights-p
    #:error-node
+   #:importance
    #:cost
    #:transfer-lump
    #:derive-lump
