@@ -203,7 +203,7 @@ computed as the sum of nodes in the X parameter lump."))
 
 (defmethod derive-lump :around ((lump error-node))
   (if (importance lump)
-      (replace (storage (nodes (derivatives lump))) (importance lump))
+      (replace (storage (derivatives lump)) (importance lump))
       (matlisp:fill-matrix (derivatives lump) (flt 1)))
   (call-next-method))
 
@@ -717,28 +717,30 @@ computed."))
 (defmethod transfer-lump ((lump ->linear))
   (let ((x (x lump))
         (y (y lump)))
-    (assert (= (size lump) (size x) (size y)))
+    (assert (= 1 (size lump)))
+    (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
     (let ((x* (storage (nodes x)))
           (y* (storage (nodes y)))
           (to* (storage (nodes lump))))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe x xs xe)
-                           (stripe y ys ye))
-              (setf (aref to* stripe)
-                    (let ((sum (flt 0)))
-                      (declare (type flt sum))
-                      (loop for xi upfrom xs below xe
-                            for yi upfrom ys below ye
-                            do (incf sum (* (aref x* xi)
-                                            (aref y* yi))))
-                      sum)))))))
+        (with-stripes ((stripe x xs xe)
+                       (stripe y ys ye))
+          (setf (aref to* stripe)
+                (let ((sum (flt 0)))
+                  (declare (type flt sum))
+                  (loop for xi upfrom xs below xe
+                        for yi upfrom ys below ye
+                        do (incf sum (* (aref x* xi)
+                                        (aref y* yi))))
+                  sum)))))))
 
 (defmethod derive-lump ((lump ->linear))
   (let ((x (x lump))
         (y (y lump)))
-    (assert (= (size lump) (size x) (size y)))
+    (assert (= 1 (size lump)))
+    (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
     (let ((x* (storage (nodes x)))
           (xd* (storage (derivatives x)))
@@ -747,16 +749,15 @@ computed."))
           (derivatives* (storage (derivatives lump))))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (let ((d (aref derivatives* stripe)))
-              (with-stripes ((stripe x xs xe)
-                             (stripe y ys ye))
-                (loop for xi upfrom xs below xe
-                      for yi upfrom ys below ye
-                      do
-                      (incf (aref xd* xi)
-                            (* d (aref y* yi)))
-                      (incf (aref yd* yi)
-                            (* d (aref x* xi))))))))))
+        (let ((d (aref derivatives* stripe)))
+          (with-stripes ((stripe x xs xe)
+                         (stripe y ys ye))
+            (loop for xi upfrom xs below xe
+                  for yi upfrom ys below ye
+                  do (incf (aref xd* xi)
+                           (* d (aref y* yi)))
+                     (incf (aref yd* yi)
+                           (* d (aref x* xi))))))))))
 
 (defclass ->sigmoid (lump)
   ((x :initarg :x :reader x)
