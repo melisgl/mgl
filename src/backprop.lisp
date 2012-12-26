@@ -35,7 +35,7 @@
     :initform 1 :type index :initarg :max-n-stripes
     :reader max-n-stripes)
    (same-stripes-p
-    :initform nil :reader same-stripes-p
+    :initform nil :initarg :same-stripes-p :reader same-stripes-p
     :documentation "Non-NIL iff all stripes are the same. If true, it
 effectively overrides both N-STRIPES and MAX-N-STRIPES and there is
 only one column in NODES and DERIVATIVES. Set up by the lump itself
