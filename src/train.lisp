@@ -242,9 +242,13 @@ out."
   `(map-batches-for-learner (lambda (,samples) ,@body) ,sampler ,learner))
 
 (defun add-measured-error (counter-and-measurer &rest args)
-  (multiple-value-call #'add-error
-    (car counter-and-measurer)
-    (apply (cdr counter-and-measurer) args)))
+  (destructuring-bind (counter . measurer) counter-and-measurer
+    (cond ((or (functionp measurer) (symbolp measurer))
+           (multiple-value-call #'add-error counter (apply measurer args)))
+          ((and (consp measurer) (eq :adder (car measurer)))
+           (apply (cdr measurer) counter args))
+          (t
+           (error "Bad measurer ~S" measurer)))))
 
 (defun apply-counters-and-measurers (counters-and-measurers &rest args)
   "Add the errors measured by the measurers to the counters."

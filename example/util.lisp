@@ -128,7 +128,10 @@
 
 (defun prepend-name-to-counters (name counters-and-measurers)
   (dolist (counter-and-measurer counters-and-measurers counters-and-measurers)
-    (push name (slot-value (car counter-and-measurer) 'name))))
+    (setf (slot-value (car counter-and-measurer) 'name)
+          (cons name
+                (alexandria:ensure-list
+                 (slot-value (car counter-and-measurer) 'name))))))
 
 
 ;;;; Simple cross entropy softmax classification (CESC) support
