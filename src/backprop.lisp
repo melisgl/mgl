@@ -1021,18 +1021,17 @@ detectors'.")))
           (derivatives* (storage (derivatives lump))))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (let ((d (aref derivatives* stripe)))
-              (with-stripes ((stripe x xs xe)
-                             (stripe y ys ye))
-                (loop for xi upfrom xs below xe
-                      for yi upfrom ys below ye
-                      do
-                      (incf (aref xd* xi)
-                            (* d 2 (- (aref x* xi)
-                                      (aref y* yi))))
-                      (incf (aref yd* yi)
-                            (* d 2 (- (aref y* yi)
-                                      (aref x* xi)))))))))))
+        (let ((d (aref derivatives* stripe)))
+          (with-stripes ((stripe x xs xe)
+                         (stripe y ys ye))
+            (loop for xi upfrom xs below xe
+                  for yi upfrom ys below ye
+                  do (incf (aref xd* xi)
+                           (* d 2 (- (aref x* xi)
+                                     (aref y* yi))))
+                     (incf (aref yd* yi)
+                           (* d 2 (- (aref y* yi)
+                                     (aref x* xi)))))))))))
 
 (defclass ->squared-error (lump)
   ((x :initarg :x :reader x)
@@ -1080,13 +1079,14 @@ detectors'.")))
           (loop for xi upfrom xs below xe
                 for yi upfrom ys below ye
                 for li upfrom ls below le
-                do (let ((d (aref derivatives* stripe)))
-                     (setf (aref xd* xi)
-                           (* d 2 (- (aref x* xi)
-                                     (aref y* yi))))
-                     (setf (aref yd* yi)
-                           (* d 2 (- (aref y* yi)
-                                     (aref x* xi)))))))))))
+                do (incf (aref xd* xi)
+                         (* (aref derivatives* li)
+                            2 (- (aref x* xi)
+                                 (aref y* yi))))
+                   (incf (aref yd* yi)
+                         (* (aref derivatives* li)
+                            2 (- (aref y* yi)
+                                 (aref x* xi))))))))))
 
 (defclass ->cross-entropy (lump) ())
 
