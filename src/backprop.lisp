@@ -1033,6 +1033,60 @@ detectors'.")))
                             (* d 2 (- (aref y* yi)
                                       (aref x* xi)))))))))))
 
+(defclass ->squared-error (lump)
+  ((x :initarg :x :reader x)
+   (y :initarg :y :reader y)))
+
+(defmethod default-size ((lump ->squared-error))
+  (size (x lump)))
+
+(defmethod transfer-lump ((lump ->squared-error))
+  (let ((x (x lump))
+        (y (y lump)))
+    (assert (= (size x) (size y)))
+    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
+    (let ((x* (storage (nodes x)))
+          (y* (storage (nodes y)))
+          (to* (storage (nodes lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe x xs xe)
+                       (stripe y ys ye)
+                       (stripe lump ls le))
+          (loop for xi upfrom xs below xe
+                for yi upfrom ys below ye
+                for li upfrom ls below le
+                do (setf (aref to* li)
+                         (expt (- (aref x* xi)
+                                  (aref y* yi))
+                               2))))))))
+
+(defmethod derive-lump ((lump ->squared-error))
+  (let ((x (x lump))
+        (y (y lump)))
+    (assert (= (size x) (size y)))
+    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
+    (let ((x* (storage (nodes x)))
+          (xd* (storage (derivatives x)))
+          (y* (storage (nodes y)))
+          (yd* (storage (derivatives y)))
+          (derivatives* (storage (derivatives lump))))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe x xs xe)
+                       (stripe y ys ye)
+                       (stripe lump ls le))
+          (loop for xi upfrom xs below xe
+                for yi upfrom ys below ye
+                for li upfrom ls below le
+                do (let ((d (aref derivatives* stripe)))
+                     (setf (aref xd* xi)
+                           (* d 2 (- (aref x* xi)
+                                     (aref y* yi))))
+                     (setf (aref yd* yi)
+                           (* d 2 (- (aref y* yi)
+                                     (aref x* xi)))))))))))
+
 (defclass ->cross-entropy (lump) ())
 
 #+nil

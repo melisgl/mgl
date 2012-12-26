@@ -415,6 +415,7 @@ Networks (DBN)."))
    #:->scaled-tanh
    #:->exp
    #:->sum-squared-error
+   #:->squared-error
    #:->cross-entropy
    #:cross-entropy-softmax-lump
    #:softmax
