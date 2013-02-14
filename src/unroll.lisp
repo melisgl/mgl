@@ -92,8 +92,8 @@ of CLOUD. The third values is the cloud inits. The third is name of
 the `end' lump.")
   (:method (from-lumpy to-lumpy (cloud full-cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
-           (from-size (chunk-size from-chunk))
-           (n-weights (matlisp:number-of-elements (weights cloud)))
+           (from-size (size from-chunk))
+           (n-weights (array-total-size (weights cloud)))
            (weight-symbol (gensym))
            (weight-name (cloud-weight-lump-name (name cloud) transposep))
            (size (/ n-weights from-size))
@@ -137,12 +137,10 @@ the `end' lump.")
            (linear-name (cloud-linear-lump-name (name cloud) transposep)))
       (list `((,weight-b-symbol (->weight
                                  :name ',weight-b-name
-                                 :size ,(matlisp:number-of-elements
-                                         (weights cloud-b))))
+                                 :size ,(array-total-size (weights cloud-b))))
               (,weight-a-symbol (->weight
                                  :name ',weight-a-name
-                                 :size ,(matlisp:number-of-elements
-                                         (weights cloud-a))))
+                                 :size ,(array-total-size (weights cloud-a))))
               (,shared-symbol (->activation
                                :name ',shared-name
                                :size ,(rank cloud)
@@ -153,7 +151,7 @@ the `end' lump.")
                                :transpose-weights-p ,transposep))
               (,linear-symbol (->activation
                                :name ',linear-name
-                               :size ,(chunk-size (lumpy-chunk to-lumpy))
+                               :size ,(size (lumpy-chunk to-lumpy))
                                :weights ,(if transposep
                                              weight-b-symbol
                                              weight-a-symbol)
@@ -188,7 +186,7 @@ the `end' lump.")
              (name (lumpy-name lumpy))
              (activation-symbol (gensym))
              (activation-name (lumpy-activation-name lumpy))
-             (size (chunk-size chunk)))
+             (size (size chunk)))
         (cond ((typep chunk 'constant-chunk)
                (assert (endp incomings))
                (push `(,(lumpy-symbol lumpy)
@@ -364,15 +362,15 @@ the backprop network."
   (:method (bpn (cloud full-cloud) args)
     (destructuring-bind (&key weight-name) args
       (let* ((lump (find-lump weight-name bpn :errorp t))
-             (weights (storage (weights cloud))))
-        (declare (type flt-vector weights))
+             (weights (weights cloud)))
+        (declare (type flt-matrix weights))
         (multiple-value-bind (nodes start end)
             (segment-weights lump)
           (declare (type flt-vector nodes))
-          (unless (= (length weights) (- end start))
+          (unless (= (array-total-size weights) (- end start))
             (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
                    lump cloud))
-          (replace nodes weights :start1 start :end1 end)))))
+          (lla:copy! weights (aops:displace nodes (- end start) start))))))
   (:method (bpn (cloud factored-cloud) args)
     (destructuring-bind (&key weight-b-name weight-a-name) args
       (initialize-from-cloud bpn (cloud-b cloud)
@@ -478,7 +476,7 @@ signalled."
                       (with-stripes ((stripe chunk chunk-start chunk-end))
                         (let ((xxx (make-flt-array
                                     (- chunk-end chunk-start))))
-                          (replace xxx (storage (nodes chunk))
+                          (replace xxx (nodes chunk)
                                    :start2 chunk-start :end2 chunk-end)
                           (push (list lump xxx) x))))
                 (setf (gethash k cache)
@@ -500,9 +498,7 @@ signalled."
             (declare (type flt-vector map-nodes))
             (assert (= (length map-nodes)
                        (- lump-end lump-start)))
-            (replace (storage (nodes lump))
-                     map-nodes
-                     :start1 lump-start)))))
+            (replace (nodes lump) map-nodes :start1 lump-start)))))
 
 (defmethod set-input :before (samples (bpn bpn-clamping-cache))
   (when (populate-map-cache-lazily-from-dbm bpn)

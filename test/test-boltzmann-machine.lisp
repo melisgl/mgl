@@ -1,8 +1,7 @@
 (in-package :mgl-test)
 
 (defclass test-trainer ()
-  ((counter :initform (make-instance 'rmse-counter) :reader counter)
-   (features-average-mean :accessor features-average-mean)))
+  ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defclass test-cd-trainer (test-trainer rbm-cd-trainer) ())
 
@@ -28,21 +27,6 @@
         (add-error counter e n)))
     (get-error counter)))
 
-(defun sum* (matrix)
-  (cond ((= (matlisp:ncols matrix) 1)
-         matrix)
-        ((= (matlisp:nrows matrix) 1)
-         (matlisp:make-real-matrix (list (list (matlisp:sum matrix)))))
-        (t
-         (matlisp:sum matrix))))
-
-(defmethod positive-phase (batch (trainer test-trainer) (rbm test-rbm))
-  (call-next-method)
-  (let ((features (find-chunk 'features rbm)))
-    (when features
-      (matlisp:m+! (sum* (means features))
-                   (features-average-mean trainer)))))
-
 (defmethod train-batch :around (batch (trainer test-trainer) rbm)
   (call-next-method)
   (let ((counter (counter trainer)))
@@ -56,18 +40,7 @@
                  (or (get-error counter) #.(flt 0))
                  (n-sum-errors counter)
                  n-inputs)
-        (reset-counter counter)
-        (when (mgl-bm::sparsity-gradient-sources trainer)
-          (log-msg "Features average means:~%  ~A~%"
-                   (features-average-mean trainer))
-          (matlisp:fill-matrix (features-average-mean trainer) (flt 0)))))))
-
-(defmethod initialize-trainer ((trainer test-trainer) (rbm test-rbm))
-  (call-next-method)
-  (let ((features (find-chunk 'features rbm)))
-    (when features
-      (setf (features-average-mean trainer)
-            (matlisp:make-real-matrix (size features) 1)))))
+        (reset-counter counter)))))
 
 (defun test-do-chunk ()
   (let ((chunk (make-instance 'sigmoid-chunk :size 5
@@ -99,7 +72,7 @@
              (loop for sample in samples
                    for stripe upfrom 0
                    do (with-stripes ((stripe chunk start))
-                        (setf (aref (storage (nodes chunk)) (+ start 0))
+                        (setf (aref (nodes chunk) (+ start 0))
                               sample))))))
     (let ((rbm (make-instance
                 'test-rbm
@@ -172,7 +145,7 @@
              (select-random-element (list #.(flt 0) #.(flt 1))))
            (clamp (samples rbm)
              (declare (ignore rbm))
-             (let ((nodes (storage (nodes chunk))))
+             (let ((nodes (nodes chunk)))
                (loop for x in samples
                      for stripe upfrom 0
                      do (with-stripes ((stripe chunk start))
@@ -250,11 +223,11 @@
            (random 5))
          (clamp (samples rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
-             (matlisp:fill-matrix (nodes chunk) (flt 0))
+             (fill! (flt 0) (nodes chunk))
              (loop for sample in samples
                    for stripe upfrom 0
                    do (with-stripes ((stripe chunk start))
-                        (setf (aref (storage (nodes chunk)) (+ start sample))
+                        (setf (aref (nodes chunk) (+ start sample))
                               #.(flt 1)))))))
     (let ((rbm (make-instance
                 'test-rbm
@@ -292,7 +265,7 @@
            (random (* 2 pi)))
          (clamp (samples rbm)
            (let* ((chunk (second (visible-chunks rbm)))
-                  (nodes (storage (nodes chunk))))
+                  (nodes (nodes chunk)))
              (loop for x in samples
                    for stripe upfrom 0
                    do (with-stripes ((stripe chunk start))
@@ -360,45 +333,46 @@
                                  :segmenter
                                  (repeatedly
                                    (make-instance 'batch-gd-trainer)))))
-    (assert (= n-hidden (matlisp:nrows (weights (cloud-a cloud)))))
-    (assert (= rank (matlisp:ncols (weights (cloud-a cloud)))))
-    (assert (= rank (matlisp:nrows (weights (cloud-b cloud)))))
-    (assert (= n-visible (matlisp:ncols (weights (cloud-b cloud)))))
+    (assert (= n-visible (array-operations:nrow (weights (cloud-a cloud)))))
+    (assert (= rank (array-operations:ncol (weights (cloud-a cloud)))))
+    (assert (= rank (array-operations:nrow (weights (cloud-b cloud)))))
+    (assert (= n-hidden (array-operations:ncol (weights (cloud-b cloud)))))
     (initialize-trainer trainer rbm)
-    (setf (matlisp:matrix-ref a 0 0) (flt 1))
-    (setf (matlisp:matrix-ref a 1 0) (flt 3))
-    (setf (matlisp:matrix-ref a 2 0) (flt 7))
-    (setf (matlisp:matrix-ref b 0 0) (flt -5))
-    (setf (matlisp:matrix-ref b 0 1) (flt 11))
-    (setf (matlisp:matrix-ref v 0 0) (flt 1/13))
-    (setf (matlisp:matrix-ref v 1 0) (flt 1/2))
-    (setf (matlisp:matrix-ref h 0 0) (flt 1/4))
-    (setf (matlisp:matrix-ref h 1 0) (flt 1/5))
-    (setf (matlisp:matrix-ref h 2 0) (flt 1/7))
+    (progn
+      (setf (aref a 0 0) (flt -5))
+      (setf (aref a 1 0) (flt 11))
+      (setf (aref b 0 0) (flt 1))
+      (setf (aref b 0 1) (flt 3))
+      (setf (aref b 0 2) (flt 7))
+      (setf (aref v 0) (flt 1/13))
+      (setf (aref v 1) (flt 1/2)))
+    (fill! (flt 0) h)
+    (mgl-bm::activate-cloud cloud nil :from-fn #'nodes)
+    (assert (clnu:num= (lla:mmm (aops:reshape v (list 1 n-visible)) a b)
+                       (aops:reshape h (list 1 n-hidden))))
+    (fill! (flt 0) v)
+    (mgl-bm::activate-cloud cloud t :from-fn #'nodes)
+    (assert (clnu:num= (lla:mmm (aops:reshape (nodes hidden-chunk)
+                                              (list 1 n-hidden))
+                                (clnu:transpose b)
+                                (clnu:transpose a))
+                       (aops:reshape (nodes visible-chunk) (list 1 n-visible))))
     (mgl-bm::accumulate-negative-phase-statistics trainer rbm)
     (assert (= 2 (length (trainers trainer))))
-    (let ((db (reshape2 (accumulator (elt (trainers trainer) 0))
-                        rank n-visible))
-          (da (reshape2 (accumulator (elt (trainers trainer) 1))
-                        n-hidden rank)))
-      (dotimes (c rank)
-        (dotimes (j n-visible)
-          (let ((x (matlisp:matrix-ref db c j))
-                (y (* (loop for i below n-hidden
-                            sum (* (matlisp:matrix-ref a i c)
-                                   (matlisp:matrix-ref h i)))
-                      (matlisp:matrix-ref v j))))
-            (unless (~= x y)
-              (error "db_{~A,~A}: ~S /= ~S~%" c j x y)))))
-      (dotimes (i n-hidden)
-        (dotimes (c rank)
-          (let ((x (matlisp:matrix-ref da i c))
-                (y (* (loop for j below n-visible
-                            sum (* (matlisp:matrix-ref b c j)
-                                   (matlisp:matrix-ref v j)))
-                      (matlisp:matrix-ref h i))))
-            (unless (~= x y)
-              (error "da_{~A,~A}: ~S /= ~S~%" i c x y))))))))
+    (let ((da (aops:reshape (accumulator (elt (trainers trainer) 1))
+                            (list n-visible rank)))
+          (db (aops:reshape (accumulator (elt (trainers trainer) 0))
+                            (list rank n-hidden))))
+      (assert (clnu:num= (lla:mmm (clnu:transpose
+                                   (aops:reshape v (list 1 n-visible)))
+                                  (aops:reshape h (list 1 n-hidden))
+                                  (clnu:transpose b))
+                         da))
+      (assert (clnu:num= (lla:mmm (clnu:transpose a)
+                                  (clnu:transpose
+                                   (aops:reshape v (list 1 n-visible)))
+                                  (aops:reshape h (list 1 n-hidden)))
+                         db)))))
 
 (defun test-rbm-examples ()
   ;; Constant one is easily solved with a single large weight.
@@ -555,7 +529,7 @@
              (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t
                               :trainer-class 'test-pcd-trainer)))
   ;; identity
-  (assert (> 0.01
+  (assert (> 0.02
              (test-rbm/single :sampler (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))
@@ -575,12 +549,8 @@
 
 (defun test-rbm ()
   (test-do-chunk)
-  (let ((mgl-util:*use-blas* nil))
-    (test-factored-cloud)
-    (test-rbm-examples))
-  (let ((mgl-util:*use-blas* t))
-    (test-factored-cloud)
-    (test-rbm-examples))
+  (test-factored-cloud)
+  (test-rbm-examples)
   (test-copy-pcd)
   (test-rbm-examples/pcd))
 
@@ -676,23 +646,23 @@
                  (error "DBM chunks ~A and DBN chunk ~A are the same." x y))
                (unless (every (lambda (x y)
                                 (~= x y))
-                              (storage (nodes x)) (storage (nodes y)))
+                              (nodes x) (nodes y))
                  (error "~A and ~A are different." x y)))
              (check ()
                (map nil #'~=v
                     (list dbm-inputs dbm-features1 dbm-features2)
                     (list dbn-inputs dbn-features1 dbn-features2))))
-      (replace (storage (weights (find-cloud '(inputs constant1) dbm)))
+      (replace (aops:flatten (weights (find-cloud '(inputs constant1) dbm)))
                '(0.35d0 1.09d0))
-      (replace (storage (weights (find-cloud '(inputs features1) dbm)))
+      (replace (aops:flatten (weights (find-cloud '(inputs features1) dbm)))
                '(0.3d0 -0.8d0))
-      (replace (storage (weights (find-cloud '(constant1 features2) dbm)))
+      (replace (aops:flatten (weights (find-cloud '(constant1 features2) dbm)))
                '(-0.63d0 -1.75d0))
-      (replace (storage (weights (find-cloud '(features1 features2) dbm)))
+      (replace (aops:flatten (weights (find-cloud '(features1 features2) dbm)))
                '(-2.3d0 -0.1d0))
-      (replace (storage (nodes dbm-inputs))
+      (replace (aops:flatten (nodes dbm-inputs))
                '(0.7d0 0.2d0))
-      (replace (storage (nodes dbn-inputs))
+      (replace (aops:flatten (nodes dbn-inputs))
                '(0.7d0 0.2d0))
       (up-dbm dbm)
       (map nil #'set-hidden-mean (rbms dbn))

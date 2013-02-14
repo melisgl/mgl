@@ -187,7 +187,7 @@
 
 (defun clamp-striped-nodes (images striped)
   (assert (= (length images) (n-stripes striped)))
-  (let ((nodes (storage (nodes striped))))
+  (let ((nodes (nodes striped)))
     (loop for image in images
           for stripe upfrom 0
           do (destructuring-bind (image &key omit-label-p sample-visible-p)
@@ -260,18 +260,20 @@
 (defun init-mnist-dbn (dbn &key stddev (start-level 0))
   (loop for i upfrom start-level
         for rbm in (subseq (rbms dbn) start-level) do
-        (flet ((this (x)
-                 (if (listp x)
-                     (elt x i)
-                     x)))
-          (do-clouds (cloud rbm)
-            (if (conditioning-cloud-p cloud)
-                (fill (storage (weights cloud)) #.(flt 0))
-                (progn
-                  (log-msg "init: ~A ~A~%" cloud (this stddev))
-                  (map-into (storage (weights cloud))
-                            (lambda () (flt (* (this stddev)
-                                               (gaussian-random-1)))))))))))
+          (flet ((this (x)
+                   (if (listp x)
+                       (elt x i)
+                       x)))
+            (do-clouds (cloud rbm)
+              (if (conditioning-cloud-p cloud)
+                  (fill! (flt 0) (weights cloud))
+                  (progn
+                    (log-msg "init: ~A ~A~%" cloud (this stddev))
+                    (let ((weights (weights cloud)))
+                      (dotimes (i (array-total-size weights))
+                        (setf (row-major-aref weights i)
+                              (flt (* (this stddev)
+                                      (gaussian-random-1))))))))))))
 
 (defun train-mnist-dbn (dbn &key n-epochs n-gibbs learning-rate decay
                         visible-sampling (start-level 0))
@@ -308,8 +310,9 @@
 (defmethod set-input (images (bpn mnist-bpn))
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
          (expectations (find-lump 'expectations bpn :errorp t))
-         (inputs-nodes (storage (nodes inputs)))
-         (expectations-nodes (storage (nodes expectations))))
+         (inputs-nodes (nodes inputs))
+         (expectations-nodes (nodes expectations)))
+    (declare (type flt-vector inputs-nodes expectations-nodes))
     (loop for image in images
           for stripe upfrom 0
           do
@@ -468,7 +471,7 @@
         (if (and images (getf (rest (elt images 0)) :omit-label-p))
             (make-array 0 :element-type 'index)
             nil))
-  (let ((nodes (storage (nodes chunk))))
+  (let ((nodes (nodes chunk)))
     (loop for image in images
           for stripe upfrom 0
           do (destructuring-bind (image &key omit-label-p sample-visible-p)

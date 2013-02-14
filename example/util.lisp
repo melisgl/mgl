@@ -142,7 +142,7 @@
 
 (defun maximally-likely-node (striped stripe &key (nodes (nodes striped)))
   (with-stripes ((stripe striped start end))
-    (- (max-position (storage nodes) start end)
+    (- (max-position nodes start end)
        start)))
 
 ;;; Samplers don't return examples, but a list of (SAMPLE &KEY

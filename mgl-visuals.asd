@@ -5,8 +5,8 @@
   :author "Gabor Melis"
   :licence "MIT"
   :components ((:module "src"
-                        :components ((:module "visuals"
-                                              :serial t
-                                              :components ((:file "package")
-                                                           (:file "visuals"))))))
+                :components ((:module "visuals"
+                              :serial t
+                              :components ((:file "package")
+                                           (:file "dot"))))))
   :depends-on (:mgl :cl-ppcre :cl-dot))

@@ -273,7 +273,7 @@
 (defmethod mgl-train:set-input (samples (rbm mr-rbm))
   (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
     (when chunk
-      (let ((nodes (storage (nodes chunk)))
+      (let ((nodes (nodes chunk))
             (scale (if (and (typep chunk 'exp-normalized-group-chunk)
                             (typep (scale chunk) 'flt-vector))
                        (scale chunk)
@@ -289,7 +289,7 @@
                      (clamp-story story nodes start end)))))))
   (let ((chunk (find 'label (visible-chunks rbm) :key #'name)))
     (when chunk
-      (let ((nodes (storage (nodes chunk))))
+      (let ((nodes (nodes chunk)))
         (loop for sample in samples
               for stripe upfrom 0
               do (destructuring-bind (sample &key omit-label-p sample-visible-p)
@@ -312,7 +312,7 @@
     (let ((inputs (find 'inputs (visible-chunks rbm) :key #'name)))
       (when inputs
         (let ((features (find 'f1 (hidden-chunks rbm) :key #'name)))
-          (fill (storage (nodes features)) (flt 0.01)))
+          (fill (nodes features) (flt 0.01)))
         (fill (scale inputs) (flt 128))))
     (log-msg "n-stripes: ~S~%" (n-stripes (persistent-chains trainer)))))
 
@@ -378,10 +378,10 @@
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
          (label (find-lump (chunk-lump-name 'label nil) bpn :errorp nil))
          (expectations (find-lump 'expectations bpn :errorp t))
-         (inputs* (storage (nodes inputs)))
-         (expectations* (storage (nodes expectations))))
+         (inputs* (nodes inputs))
+         (expectations* (nodes expectations)))
     (when label
-      (matlisp:fill-matrix (nodes label) (flt 0)))
+      (fill! (flt 0) (nodes label)))
     (loop for sample in samples
           for stripe upfrom 0
           do

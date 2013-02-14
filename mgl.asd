@@ -5,8 +5,6 @@
 
 (in-package :mgl-system)
 
-(defclass matlisp-source-file (cl-source-file) ())
-
 (defsystem #:mgl
   :name "MGL, the machine learning library"
   :author "Gabor Melis"
@@ -14,15 +12,7 @@
   :licence "MIT"
   :components ((:module "src"
                 :serial t
-                :components ((:module "matlisp"
-                              :default-component-class matlisp-source-file
-                              :serial t
-                              :components ((:file "package")
-                                           (:file "matrix")
-                                           (:file "ref")
-                                           (:file "print")
-                                           (:file "matlisp-impl")))
-                             (:file "package")
+                :components ((:file "package")
                              (:file "util")
                              (:file "copy")
                              (:file "confusion-matrix")
@@ -36,7 +26,7 @@
                              (:file "deep-belief-network")
                              (:file "backprop")
                              (:file "unroll"))))
-  :depends-on (:alexandria :closer-mop))
+  :depends-on (:alexandria :closer-mop :array-operations :lla))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
   (oos 'load-op '#:mgl-test)
@@ -45,11 +35,3 @@
 
 (defmethod operation-done-p ((o test-op) (c (eql (find-system '#:mgl))))
   (values nil))
-
-(defmethod operation-done-p ((o compile-op) (c matlisp-source-file))
-  (or (find-package '#:blas)
-      (call-next-method)))
-
-(defmethod operation-done-p ((o load-op) (c matlisp-source-file))
-  (or (find-package '#:blas)
-      (call-next-method)))

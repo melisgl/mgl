@@ -51,7 +51,7 @@
   (apply #'concatenate 'list
          (map 'list (lambda (lump)
                       (let ((size (size lump)))
-                        (subseq (storage (nodes lump))
+                        (subseq (nodes lump)
                                 (* stripe size) (* (1+ stripe) size))))
               (lumps bpn))))
 
@@ -59,7 +59,7 @@
   (apply #'concatenate 'list
          (map 'list (lambda (lump)
                       (let ((size (size lump)))
-                        (subseq (storage (derivatives lump))
+                        (subseq (derivatives lump)
                                 (* stripe size) (* (1+ stripe) size))))
               (lumps bpn))))
 
@@ -70,7 +70,7 @@
                 (my-linear (->linear :x inputs :y weights :size 1))
                 (sse (->sum-squared-error :x inputs :y my-linear))
                 (my-error (->error :x sse))))
-         (nodes (map 'list (lambda (lump) (storage (nodes lump)))
+         (nodes (map 'list (lambda (lump) (nodes lump))
                      (lumps net))))
     (setf (n-stripes net) 1)
     (setf (aref (elt nodes 0) 0) #.(flt 2))
@@ -84,12 +84,12 @@
            (clamper (samples bpn1)
              (assert (eq bpn1 net))
              (let* ((inputs (find-lump 'inputs bpn1))
-                    (nodes* (storage (nodes inputs))))
+                    (nodes (nodes inputs)))
                (loop for sample in samples
                      for stripe upfrom 0
                      do
-                     (with-stripes ((stripe inputs start))
-                       (setf (aref nodes* start) sample))))))
+                        (with-stripes ((stripe inputs start))
+                          (setf (aref nodes start) sample))))))
       (setf (clamper net) #'clamper)
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 1000
@@ -123,9 +123,9 @@
                 (sse (->sum-squared-error :x norm :y expectations))
                 (my-error (->error :x sse)))))
     (let* ((inputs (find-lump 'inputs net))
-           (inputs-nodes (storage (nodes inputs)))
+           (inputs-nodes (nodes inputs))
            (expectations (find-lump 'expectations net))
-           (expectations-nodes (storage (nodes expectations))))
+           (expectations-nodes (nodes expectations)))
       (flet ((sample ()
                (loop repeat 4 collect (loop repeat 3 collect (random (flt 5)))))
              (clamper (samples bpn1)
@@ -203,9 +203,9 @@
                                                  :target expectations))
                 (my-error (->error :x output)))))
     (let* ((inputs (find-lump 'inputs net))
-           (inputs-nodes (storage (nodes inputs)))
+           (inputs-nodes (nodes inputs))
            (expectations (find-lump 'expectations net))
-           (expectations-nodes (storage (nodes expectations))))
+           (expectations-nodes (nodes expectations)))
       (flet ((sample ()
                (loop repeat 3 collect (random (flt 5))))
              (clamper (samples bpn1)
@@ -308,9 +308,9 @@
     (init-lump 'biases net 0.01)
     (init-lump 'weights net 0.01)
     (let* ((inputs (find-lump 'inputs net))
-           (input-nodes (storage (nodes inputs)))
+           (input-nodes (nodes inputs))
            (expectations (find-lump 'expectations net))
-           (expectations-nodes (storage (nodes expectations))))
+           (expectations-nodes (nodes expectations)))
       (flet ((sample ()
                (list (random (flt 1)) (random (flt 1))))
              (clamper (samples bpn1)
@@ -359,12 +359,11 @@
 (defun test-bp ()
   (declare (optimize (debug 3)))
   (dolist (max-n-stripes '(1 10))
-    (dolist (*use-blas* '(nil t))
-      (dolist (cg '(nil t))
-        (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
-        (dolist (transposep '(nil t))
-          (assert (> 0.01 (test-activation :transposep transposep :cg cg
-                                           :max-n-stripes max-n-stripes))))
-        (assert (> 0.3 (test-softmax :cg cg :max-n-stripes max-n-stripes)))
-        (assert (> 0.1 (test-cross-entropy :cg cg
-                                           :max-n-stripes max-n-stripes)))))))
+    (dolist (cg '(nil t))
+      (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
+      (dolist (transposep '(nil t))
+        (assert (> 0.01 (test-activation :transposep transposep :cg cg
+                                         :max-n-stripes max-n-stripes))))
+      (assert (> 0.3 (test-softmax :cg cg :max-n-stripes max-n-stripes)))
+      (assert (> 0.1 (test-cross-entropy :cg cg
+                                         :max-n-stripes max-n-stripes))))))

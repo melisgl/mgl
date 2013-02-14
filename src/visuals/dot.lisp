@@ -1,3 +1,6 @@
+;;;; Generate pretty graphs from DBN, DBM and BPN with CL-DOT
+;;;; (graphviz).
+
 (in-package :mgl-visuals)
 
 (defgeneric graph-node-type (x y)

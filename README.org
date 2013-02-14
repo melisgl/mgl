@@ -1,0 +1,31 @@
+MGL
+
+Common Lisp machine learning library by Gabor Melis with some parts
+contributed by Ravenpack International. Implements:
+- Restricted Boltzmann Machines and Deep Belief Networks
+- Semi Restricted Boltzmann Machines
+- Boltzmann Machines
+- Backprop networks
+- Unrolling DBN to backrop network
+- Contrastive Divergence, Persistent Contrastive Divergence
+- Gradient descent optimization
+- Conjugate gradient optimization
+- Gaussian Processes
+
+It's under the MIT licence. See COPYING.
+
+
+* Tests
+
+Run the built in tests with:
+
+  (ASDF:OOS 'ASDF:TEST-OP '#:MGL)
+
+Note, that most of the tests are rather stochastic and can fail once
+in a while.
+
+
+* BLAS
+
+MGL uses on LLA (https://github.com/tpapp/lla) to interface to BLAS
+and LAPACK. See the README in LLA on how to set things up.

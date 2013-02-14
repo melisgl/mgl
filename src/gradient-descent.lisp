@@ -11,7 +11,7 @@ ACCUMULATOR) on each segment trained by TRAINER."))
   `(map-segment-gradient-accumulators
     (lambda (,segment ,acc-start ,accumulator)
       (declare (type index ,acc-start)
-               (type matlisp:real-matrix ,accumulator))
+               (type flt-vector ,accumulator))
       ,@body)
     ,trainer))
 
@@ -39,7 +39,7 @@ belonging to SEGMENT in TRAINER or NIL if it is not found.")
   `(multiple-value-bind (,start ,accumulator)
        (find-segment-gradient-accumulator ,segment ,trainer)
      (declare (type (or index null) ,start)
-              (type (or matlisp:real-matrix null) ,accumulator))
+              (type (or flt-vector null) ,accumulator))
      ,@body))
 
 
@@ -52,9 +52,9 @@ belonging to SEGMENT in TRAINER or NIL if it is not found.")
     :documentation "The set of segments that are to be trained. The
 ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
 indices.")
-   (weight-deltas :type matlisp:real-matrix :accessor weight-deltas)
+   (weight-deltas :type flt-vector :accessor weight-deltas)
    (accumulator
-    :type matlisp:real-matrix :accessor accumulator
+    :type flt-vector :accessor accumulator
     :documentation "An FLT vector that is accessed directly by the
 client and are used to store the sum of the computed gradient.")
    (learning-rate
@@ -146,9 +146,8 @@ only missing values does not change anything."))
   (setf (slot-value trainer 'segment-set)
         (make-instance 'segment-set :segments (list-segments segmentable)))
   (let ((n-weights (segment-set-size (segment-set trainer))))
-    (setf (accumulator trainer) (matlisp:make-real-matrix n-weights 1))
-    (matlisp:fill-matrix (accumulator trainer) #.(flt 0))
-    (setf (weight-deltas trainer) (matlisp:make-real-matrix n-weights 1))))
+    (setf (accumulator trainer) (make-flt-array n-weights))
+    (setf (weight-deltas trainer) (make-flt-array n-weights))))
 
 (defun set-up-n-weight-uses (trainer)
   (let ((n-weights (segment-set-size (segment-set trainer))))
@@ -194,8 +193,8 @@ only missing values does not change anything."))
 ;;;
 ;;; plus momentum, weight-penalty.
 (defmethod update-weights ((trainer batch-gd-trainer))
-  (let ((accumulator (storage (accumulator trainer)))
-        (weight-deltas (storage (weight-deltas trainer)))
+  (let ((accumulator (accumulator trainer))
+        (weight-deltas (weight-deltas trainer))
         (learning-rate (learning-rate trainer))
         (n-inputs (flt (n-inputs-in-batch trainer)))
         (momentum (momentum trainer))
@@ -208,8 +207,6 @@ only missing values does not change anything."))
     (do-segment-set (segment :start-in-segment-set start-in-segment-set)
                     (segment-set trainer)
       (with-segment-weights ((weights start end) segment)
-        ;; Maybe this could be done with Matlisp, but it's not a
-        ;; hotspot.
         (do ((i start-in-segment-set (the! index (1+ i)))
              (j start (1+ j)))
             ((<= end j))
@@ -236,9 +233,9 @@ only missing values does not change anything."))
 (defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
                                  n-new-inputs)
   (declare (type index n-new-inputs))
-  (let ((accumulator (storage (accumulator trainer)))
+  (let ((accumulator (accumulator trainer))
         (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
-        (weight-deltas (storage (weight-deltas trainer)))
+        (weight-deltas (weight-deltas trainer))
         (learning-rate (learning-rate trainer))
         (momentum (momentum trainer))
         (weight-decay (weight-decay trainer))
@@ -294,9 +291,9 @@ only missing values does not change anything."))
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
   (assert (= 1 n-new-inputs))
-  (let ((accumulator (storage (accumulator trainer)))
+  (let ((accumulator (accumulator trainer))
         (n-weight-uses-in-batch (n-weight-uses-in-batch trainer))
-        (weight-deltas (storage (weight-deltas trainer)))
+        (weight-deltas (weight-deltas trainer))
         (learning-rate (learning-rate trainer))
         (momentum (momentum trainer))
         (weight-decay (weight-decay trainer))

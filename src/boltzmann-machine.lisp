@@ -4,8 +4,10 @@
 
 (defclass chunk ()
   ((name :initform (gensym) :initarg :name :reader name)
+   (size :initarg :size :reader size)
+   (n-stripes :initform 1 :reader n-stripes)
    (nodes
-    :type matlisp:real-matrix :reader nodes
+    :type flt-vector :reader nodes
     :documentation "A value for each node in the chunk. First,
 activations are put here (weights*inputs) then the mean of the
 probability distribution is calculated from the activation and finally
@@ -15,16 +17,16 @@ is supposed to clamp the values. Note that not only the values in the
 matrix but also the matrix object itself can change when the network
 is used.")
    (old-nodes
-    :type matlisp:real-matrix :reader old-nodes
+    :type flt-vector :reader old-nodes
     :documentation "The previous value of each node. Used to provide
 parallel computation semantics when there are intralayer connections.
 Swapped with NODES or MEANS at times.")
    (means
-    :type (or matlisp:real-matrix null) :reader means
+    :type (or flt-vector null) :reader means
     :documentation "Saved values of the means (see SET-MEAN) last
 computed.")
    (inputs
-    :type (or matlisp:real-matrix null) :reader inputs
+    :type (or flt-vector null) :reader inputs
     :documentation "This is where the after method of SET-INPUT saves
 the input for later use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is
 NIL in CONDITIONING-CHUNKS.")
@@ -37,68 +39,45 @@ it is non-NIL then N-STRIPES must be 1."))
   (:documentation "A chunk is a set of nodes of the same type in a
 Boltzmann Machine. This is an abstract base class."))
 
-(declaim (inline chunk-size))
-(defun chunk-size (chunk)
-  (the index (values (matlisp:nrows (nodes chunk)))))
-
-(defmethod size ((chunk chunk))
-  (chunk-size chunk))
-
-(declaim (inline chunk-n-stripes))
-(defun chunk-n-stripes (chunk)
-  (the index (values (matlisp:ncols (nodes chunk)))))
-
-(defmethod n-stripes ((chunk chunk))
-  (chunk-n-stripes chunk))
-
-(declaim (inline mat-max-n-stripes))
-(defun mat-max-n-stripes (mat)
-  (the index (/ (length (storage mat))
-                (matlisp:nrows mat))))
-
-(declaim (inline chunk-max-n-stripes))
-(defun chunk-max-n-stripes (chunk)
-  (mat-max-n-stripes (nodes chunk)))
+(declaim (inline nodes*))
+(defun nodes* (chunk)
+  (the flt-vector (values (nodes chunk))))
 
 (defmethod max-n-stripes ((chunk chunk))
-  (chunk-max-n-stripes chunk))
+  (/ (length (nodes chunk))
+     (size chunk)))
 
 (defmethod stripe-start (stripe (chunk chunk))
-  (* stripe (chunk-size chunk)))
+  (* stripe (size chunk)))
 
 (defmethod stripe-end (stripe (chunk chunk))
-  (* (1+ stripe) (chunk-size chunk)))
+  (* (1+ stripe) (size chunk)))
 
 (defmethod print-object ((chunk chunk) stream)
   (pprint-logical-block (stream ())
     (print-unreadable-object (chunk stream :type t)
       (format stream "~S ~:_~S(~S/~S)"
               (ignore-errors (name chunk))
-              (ignore-errors (chunk-size chunk))
-              (ignore-errors (chunk-n-stripes chunk))
-              (ignore-errors (chunk-max-n-stripes chunk)))))
+              (ignore-errors (size chunk))
+              (ignore-errors (n-stripes chunk))
+              (ignore-errors (max-n-stripes chunk)))))
   chunk)
 
 (define-descriptions (chunk chunk)
   name size n-stripes max-n-stripes)
 
 ;;; Currently the lisp code handles only the single stripe case and
-;;; blas cannot deal with no missing values.
+;;; blas cannot deal with missing values.
 (defun check-stripes (chunk)
   (let ((indices-present (indices-present chunk)))
     (assert (or (null indices-present)
                 (zerop (length indices-present))
-                (= 1 (chunk-n-stripes chunk))))))
+                (= 1 (n-stripes chunk))))))
 
-(defun use-blas-on-chunk-p (cost chunk)
+(defun use-blas-on-chunk-p (chunk)
   (check-stripes chunk)
-  (cond ((indices-present chunk)
-         ;; there is no missing value support in blas
-         nil)
-        (t
-         ;; several stripes or cost is high => blas
-         (or (< 1 (chunk-n-stripes chunk))
-             (use-blas-p cost)))))
+  ;; there is no missing value support in blas
+  (null (indices-present chunk)))
 
 (defun ->chunk (chunk-designator chunks)
   (if (typep chunk-designator 'chunk)
@@ -112,7 +91,7 @@ Boltzmann Machine. This is an abstract base class."))
   (with-gensyms (%chunk)
     `(let ((,%chunk ,chunk))
        (check-stripes ,%chunk)
-       (dotimes (,stripe (chunk-n-stripes ,%chunk))
+       (dotimes (,stripe (the index (n-stripes ,%chunk)))
          (let ((*current-stripe* ,stripe))
            ,@body)))))
 
@@ -125,7 +104,7 @@ Boltzmann Machine. This is an abstract base class."))
            (locally (declare (type index-vector ,%indices-present))
              (loop for ,index across ,%indices-present
                    do (progn ,@body)))
-           (let ((,%size (chunk-size ,%chunk)))
+           (let ((,%size (size ,%chunk)))
              (declare (type index ,%size))
              (loop for ,index fixnum
                    upfrom (locally (declare (optimize (speed 1)))
@@ -136,9 +115,9 @@ Boltzmann Machine. This is an abstract base class."))
 
 (defun fill-chunk (chunk value &key allp)
   (declare (type flt value))
-  (if (or allp (use-blas-on-chunk-p (cost-of-fill (nodes chunk)) chunk))
-      (matlisp:fill-matrix (nodes chunk) value)
-      (let ((nodes (storage (nodes chunk))))
+  (if (or (null (indices-present chunk)) allp)
+      (fill! value (nodes chunk))
+      (let ((nodes (nodes* chunk)))
         (declare (optimize (speed 3) #.*no-array-bounds-check*))
         (do-stripes (chunk)
           (do-chunk (i chunk)
@@ -149,9 +128,9 @@ Boltzmann Machine. This is an abstract base class."))
 
 (defun sum-chunk-nodes-and-old-nodes (chunk node-weight old-node-weight)
   (unless (eq (nodes chunk) (old-nodes chunk))
-    (matlisp:scal! (flt node-weight) (nodes chunk))
-    (matlisp:scal! (flt old-node-weight) (old-nodes chunk))
-    (matlisp:m+! (old-nodes chunk) (nodes chunk))))
+    (lla:scal! (flt node-weight) (nodes chunk))
+    (lla:scal! (flt old-node-weight) (old-nodes chunk))
+    (lla:axpy! 1 (old-nodes chunk) (nodes chunk))))
 
 (defun sum-nodes-and-old-nodes (chunks node-weight old-node-weight)
   (map nil (lambda (chunk)
@@ -168,17 +147,18 @@ the visible layer allows `conditional' RBMs."))
 
 (defgeneric copy-nodes (chunk)
   (:method ((chunk chunk))
-    (matlisp:copy (nodes chunk)))
+    (alexandria:copy-array (nodes chunk)))
   (:method ((chunk conditioning-chunk))
     (nodes chunk)))
 
 (defgeneric resize-chunk (chunk size max-n-stripes)
   (:method ((chunk chunk) size max-n-stripes)
     (unless (and (slot-boundp chunk 'nodes)
-                 (= size (chunk-size chunk))
-                 (= max-n-stripes (chunk-max-n-stripes chunk)))
+                 (= size (size chunk))
+                 (= max-n-stripes (max-n-stripes chunk)))
+      (setf (slot-value chunk 'size) size)
       (setf (slot-value chunk 'nodes)
-            (matlisp:make-real-matrix size max-n-stripes))
+            (make-flt-array (* max-n-stripes size)))
       (setf (slot-value chunk 'means)
             (copy-nodes chunk))
       (setf (slot-value chunk 'old-nodes)
@@ -186,18 +166,14 @@ the visible layer allows `conditional' RBMs."))
       (setf (slot-value chunk 'inputs)
             (if (typep chunk 'conditioning-chunk)
                 nil
-                (matlisp:make-real-matrix size max-n-stripes))))))
+                (make-flt-array (* max-n-stripes size)))))))
 
 (defmethod set-n-stripes (n-stripes (chunk chunk))
-  (set-ncols (nodes chunk) n-stripes)
-  (set-ncols (means chunk) n-stripes)
-  (set-ncols (old-nodes chunk) n-stripes)
-  (when (inputs chunk)
-    (set-ncols (inputs chunk) n-stripes))
-  n-stripes)
+  (assert (<= n-stripes (max-n-stripes chunk)))
+  (setf (slot-value chunk 'n-stripes) n-stripes))
 
 (defmethod set-max-n-stripes (max-n-stripes (chunk chunk))
-  (resize-chunk chunk (chunk-size chunk) max-n-stripes)
+  (resize-chunk chunk (size chunk) max-n-stripes)
   max-n-stripes)
 
 (defmethod initialize-instance :after ((chunk chunk)
@@ -277,29 +253,27 @@ are remembered."))
 (defmethod resize-chunk ((chunk temporal-chunk) size max-n-stripes)
   (call-next-method)
   (unless (and (slot-boundp chunk 'next-node-inputs)
-               (= size (matlisp:nrows (next-node-inputs chunk)))
-               (= max-n-stripes (mat-max-n-stripes (next-node-inputs chunk))))
+               (= (length (next-node-inputs chunk))
+                  (length (nodes chunk))))
     (setf (slot-value chunk 'next-node-inputs)
-          (matlisp:make-real-matrix size max-n-stripes))))
+          (make-flt-array (* size max-n-stripes)))))
 
 (defun copy-chunk-nodes (chunk from to)
+  (declare (type flt-vector from to))
   (unless (eq from to)
-    (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
-        (matlisp:copy! from to)
-        (let ((from (storage from))
-              (to (storage to)))
-          (declare (optimize (speed 3)))
+    (if (null (indices-present chunk))
+        (lla:copy! from to)
+        (locally (declare (optimize (speed 3)))
           (do-stripes (chunk)
             (do-chunk (i chunk)
               (setf (aref to i) (aref from i))))))))
 
 (defun add-chunk-nodes (chunk from to)
+  (declare (type flt-vector from to))
   (unless (eq from to)
-    (if (use-blas-on-chunk-p (cost-of-copy from) chunk)
-        (matlisp:m+! from to)
-        (let ((from (storage from))
-              (to (storage to)))
-          (declare (optimize (speed 3)))
+    (if (null (indices-present chunk))
+        (lla:axpy! 1 from to)
+        (locally (declare (optimize (speed 3)))
           (do-stripes (chunk)
             (do-chunk (i chunk)
               (incf (aref to i) (aref from i))))))))
@@ -332,7 +306,7 @@ distribution. When called NODES contains the activations.")
     (nodes->means chunk))
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((nodes (storage (nodes chunk))))
+    (let ((nodes (nodes* chunk)))
       (do-stripes (chunk)
         (do-chunk (i chunk)
           (setf (aref nodes i)
@@ -343,12 +317,12 @@ distribution. When called NODES contains the activations.")
   (:method ((chunk normalized-group-chunk))
     ;; NODES is already set up, only normalization within groups of
     ;; GROUP-SIZE remains.
-    (let ((nodes (storage (nodes chunk)))
+    (let ((nodes (nodes* chunk))
           (scale (scale chunk))
           (group-size (group-size chunk)))
       (declare (type (or flt flt-vector) scale)
                (type index group-size))
-      (assert (zerop (mod (chunk-size chunk) group-size)))
+      (assert (zerop (mod (size chunk) group-size)))
       (do-stripes (chunk stripe)
         (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
           (when (/= 0 scale)
@@ -366,12 +340,12 @@ distribution. When called NODES contains the activations.")
                           do (setf (aref nodes j)
                                    (/ (aref nodes j) sum))))))))))))
   (:method ((chunk exp-normalized-group-chunk))
-    (let ((nodes (storage (nodes chunk)))
+    (let ((nodes (nodes* chunk))
           (scale (scale chunk))
           (group-size (group-size chunk)))
       (declare (type (or flt flt-vector) scale)
                (type index group-size))
-      (assert (zerop (mod (chunk-size chunk) group-size)))
+      (assert (zerop (mod (size chunk) group-size)))
       (do-stripes (chunk stripe)
         (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
           (when (/= 0 scale)
@@ -401,20 +375,20 @@ distribution. When called NODES contains the activations.")
 whose means are in NODES.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
-    (let ((nodes (storage (nodes chunk))))
+    (let ((nodes (nodes* chunk)))
       (do-stripes (chunk)
         (do-chunk (i chunk)
           (setf (aref nodes i)
                 (binarize-randomly (aref nodes i)))))))
   (:method ((chunk gaussian-chunk))
-    (let ((nodes (storage (nodes chunk))))
+    (let ((nodes (nodes* chunk)))
       (do-stripes (chunk)
         (do-chunk (i chunk)
           (setf (aref nodes i)
                 (+ (aref nodes i)
                    (gaussian-random-1)))))))
   (:method ((chunk softmax-chunk))
-    (let ((nodes (storage (nodes chunk)))
+    (let ((nodes (nodes* chunk))
           (group-size (group-size chunk)))
       (declare (type index group-size)
                (optimize (speed 3)))
@@ -424,12 +398,12 @@ whose means are in NODES.")
             (let ((x (random #.(flt 1))))
               (declare (type flt x))
               (loop for j upfrom i below (+ i group-size) do
-                    (when (minusp (decf x (aref nodes j)))
-                      (fill nodes #.(flt 0) :start i :end (+ i group-size))
-                      (setf (aref nodes j) #.(flt 1))
-                      (return)))))))))
+                (when (minusp (decf x (aref nodes j)))
+                  (fill nodes #.(flt 0) :start i :end (+ i group-size))
+                  (setf (aref nodes j) #.(flt 1))
+                  (return)))))))))
   (:method ((chunk constrained-poisson-chunk))
-    (let ((nodes (storage (nodes chunk))))
+    (let ((nodes (nodes* chunk)))
       (do-stripes (chunk)
         (do-chunk (i chunk)
           (setf (aref nodes i) (flt (poisson-random (aref nodes i)))))))))
@@ -468,10 +442,10 @@ coming from this cloud multiplied by SCALE2.")
    (cached-version2 :initform (gensym) :accessor cached-version2)
    (cached-activations1
     :initform nil
-    :type (or matlisp:real-matrix null) :reader cached-activations1)
+    :type (or flt-vector null) :reader cached-activations1)
    (cached-activations2
     :initform nil
-    :type (or matlisp:real-matrix null) :reader cached-activations2))
+    :type (or flt-vector null) :reader cached-activations2))
   (:documentation "A set of connections between two chunks. The chunks
 may be the same, be both visible or both hidden subject to constraints
 imposed by the type of boltzmann machine the cloud is part of."))
@@ -501,15 +475,17 @@ TO-FN are the accessors to use to get the nodes value arrays (one of
 #'NODES, #'OLD-NODES, #'MEANS. In the simplest case it adds
 weights (of CLOUD) * OLD-NODES (of CHUNK1) to the nodes of the hidden
 chunk."
-  (activate-cloud* cloud reversep
-                   (funcall from-fn (if reversep
-                                        (chunk2 cloud)
-                                        (chunk1 cloud)))
-                   (funcall to-fn (if reversep
-                                      (chunk1 cloud)
-                                      (chunk2 cloud)))))
+  (multiple-value-bind (from-chunk to-chunk)
+      (if reversep
+          (values (chunk2 cloud) (chunk1 cloud))
+          (values (chunk1 cloud) (chunk2 cloud)))
+    (activate-cloud* cloud reversep
+                     from-chunk to-chunk
+                     (funcall from-fn from-chunk)
+                     (funcall to-fn to-chunk))))
 
-(defgeneric activate-cloud* (cloud reversep from-matrix to-matrix)
+(defgeneric activate-cloud* (cloud reversep from-chunk to-chunk
+                             from-matrix to-matrix)
   (:documentation "Like ACTIVATE-CLOUD but without keyword parameters."))
 
 (defgeneric accumulate-cloud-statistics (trainer bm cloud multiplier)
@@ -543,29 +519,30 @@ but add to it."
 (defgeneric zero-weight-to-self (cloud)
   (:documentation "In a BM W_{i,i} is always zero."))
 
-(defmethod activate-cloud* :before (cloud reversep from-matrix to-matrix)
+(defmethod activate-cloud* :before (cloud reversep from-chunk to-chunk
+                                    from-matrix to-matrix)
   (zero-weight-to-self cloud))
 
-(defun reshape-or-create (mat prototype)
-  (let ((m (matlisp:nrows prototype))
-        (n (matlisp:ncols prototype)))
-    (if (and mat (<= (* m n) (length (storage mat))))
-        (reshape2 mat m n)
-        (matlisp:make-real-matrix m n))))
+(defun ensure-array-large-enough (array prototype)
+  (let ((size (array-total-size prototype)))
+    (if (and array (<= size (array-total-size array)))
+        array
+        (make-flt-array size))))
 
-(defmethod activate-cloud* :around (cloud reversep from-matrix to-matrix)
+(defmethod activate-cloud* :around (cloud reversep from-chunk to-chunk
+                                    from-matrix to-matrix)
   (let ((chunk1 (chunk1 cloud))
         (chunk2 (chunk2 cloud)))
     (cond (reversep
            (let ((version (version chunk2)))
              (unless (eq version (cached-version1 cloud))
                (setf (slot-value cloud 'cached-activations1)
-                     (reshape-or-create (cached-activations1 cloud)
-                                        (nodes chunk1)))
-               (matlisp:fill-matrix (cached-activations1 cloud)
-                                    #.(flt 0))
-               (call-next-method cloud reversep from-matrix
-                                 (cached-activations1 cloud))
+                     (ensure-array-large-enough (cached-activations1 cloud)
+                                                (nodes chunk1)))
+               (fill! 0 (cached-activations1 cloud))
+               (call-next-method cloud reversep
+                                 from-chunk to-chunk
+                                 from-matrix (cached-activations1 cloud))
                (setf (cached-version1 cloud) version)))
            (add-chunk-nodes (chunk1 cloud)
                             (cached-activations1 cloud)
@@ -574,12 +551,12 @@ but add to it."
            (let ((version (version chunk1)))
              (unless (eq version (cached-version2 cloud))
                (setf (slot-value cloud 'cached-activations2)
-                     (reshape-or-create (cached-activations2 cloud)
-                                        (nodes chunk2)))
-               (matlisp:fill-matrix (cached-activations2 cloud)
-                                    #.(flt 0))
-               (call-next-method cloud reversep from-matrix
-                                 (cached-activations2 cloud))
+                     (ensure-array-large-enough (cached-activations2 cloud)
+                                                (nodes chunk2)))
+               (fill! 0 (cached-activations2 cloud))
+               (call-next-method cloud reversep
+                                 from-chunk to-chunk
+                                 from-matrix (cached-activations2 cloud))
                (setf (cached-version2 cloud) version)))
            (add-chunk-nodes (chunk2 cloud)
                             (cached-activations2 cloud)
@@ -606,18 +583,15 @@ but add to it."
 
 (defclass full-cloud (cloud)
   ((weights
-    :type matlisp:real-matrix :initarg :weights :reader weights
-    :documentation "In Matlisp, chunks are represented as column
-vectors \(disregarding the multi-striped case). If the visible chunk
-is Nx1 and the hidden is Mx1 then the weight matrix is MxN. Hidden =
-hidden + weights * visible. Visible = visible + weights^T * hidden.
-Looking directly at the underlying Lisp array \(MATLISP::STORE), it's
-all transposed.")))
+    :type flt-matrix :initarg :weights :reader weights
+    :documentation "A chunk is represented as a row vector
+\(disregarding the multi-striped case). If the visible chunk is 1xN
+and the hidden is 1xM then the weight matrix is NxM. Hidden = hidden +
+weights * visible. Visible = visible + weights^T * hidden.")))
 
 (defun norm (matrix)
-  (sqrt (let ((store (storage matrix)))
-          (loop for i below (matlisp:number-of-elements matrix)
-                sum (expt (aref store i) 2)))))
+  (sqrt (loop for i below (array-total-size matrix)
+              sum (expt (row-major-aref matrix i) 2))))
 
 (defun full-cloud-norm (cloud)
   (norm (weights cloud)))
@@ -640,11 +614,11 @@ all transposed.")))
                                        &key &allow-other-keys)
   (unless (slot-boundp cloud 'weights)
     (setf (slot-value cloud 'weights)
-          (matlisp:make-real-matrix (chunk-size (chunk2 cloud))
-                                    (chunk-size (chunk1 cloud))))
+          (make-flt-array (list (size (chunk1 cloud))
+                                (size (chunk2 cloud)))))
     (unless (or (conditioning-chunk-p (chunk1 cloud))
                 (conditioning-chunk-p (chunk2 cloud)))
-      (map-into (storage (weights cloud))
+      (map-into (aops:flatten (weights cloud))
                 (lambda () (flt (* 0.01 (gaussian-random-1))))))))
 
 (defmacro do-cloud-runs (((start end) cloud) &body body)
@@ -652,14 +626,14 @@ all transposed.")))
   (with-gensyms (%cloud %chunk2-size %index)
     `(let ((,%cloud ,cloud))
        (if (indices-present (chunk1 ,%cloud))
-           (let ((,%chunk2-size (chunk-size (chunk2 ,%cloud))))
+           (let ((,%chunk2-size (size (chunk2 ,%cloud))))
              (do-stripes ((chunk1 ,%cloud))
                (do-chunk (,%index (chunk1 ,%cloud))
                  (let* ((,start (the! index (* ,%index ,%chunk2-size)))
                         (,end (the! index (+ ,start ,%chunk2-size))))
                    ,@body))))
            (let ((,start 0)
-                 (,end (matlisp:number-of-elements (weights ,%cloud))))
+                 (,end (array-total-size (weights ,%cloud))))
              ,@body)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -673,7 +647,7 @@ all transposed.")))
 (defmacro do-cloud/chunk1 ((chunk1-index cloud) &body body)
   (with-gensyms (%cloud %chunk2-size %offset)
     `(let* ((,%cloud ,cloud)
-            (,%chunk2-size (chunk-size (chunk2 ,%cloud))))
+            (,%chunk2-size (size (chunk2 ,%cloud))))
        (declare (type index ,%chunk2-size))
        (when (indices-present (chunk2 ,%cloud))
          (error "CHUNK2 cannot have INDICES-PRESENT."))
@@ -690,39 +664,39 @@ all transposed.")))
 (defmethod zero-weight-to-self ((cloud full-cloud))
   (when (eq (chunk1 cloud) (chunk2 cloud))
     (let ((weights (weights cloud)))
-      (loop for i below (chunk-size (chunk1 cloud)) do
-            (setf (matlisp:matrix-ref weights i i) #.(flt 0))))))
+      (loop for i below (size (chunk1 cloud)) do
+        (setf (aref weights i i) #.(flt 0))))))
 
-(defmethod activate-cloud* ((cloud full-cloud) reversep from to)
-  (if (not reversep)
-      (let ((weights (weights cloud))
-            (scale (scale2 cloud)))
-        (declare (type flt scale)
-                 (optimize (speed 3) #.*no-array-bounds-check*))
-        (if (use-blas-on-chunk-p (cost-of-gemm weights from :nn)
-                                 (chunk1 cloud))
-            (matlisp:gemm! scale weights from (flt 1) to)
-            (let ((weights (storage weights))
-                  (from (storage from))
-                  (to (storage to)))
+(defmethod activate-cloud* ((cloud full-cloud) reversep
+                            from-chunk to-chunk from to)
+  (let ((weights (weights cloud))
+        (scale1 (scale1 cloud))
+        (scale2 (scale2 cloud))
+        (from-size (size from-chunk))
+        (to-size (size to-chunk))
+        (n-stripes (n-stripes from-chunk)))
+    (declare (type flt scale1 scale2)
+             (optimize (speed 3) #.*no-array-bounds-check*))
+    (if (not reversep)
+        (if (use-blas-on-chunk-p (chunk1 cloud))
+            (lla:gemm! scale2 from weights 1 to
+                        :lda from-size :ldc to-size
+                        :m n-stripes :n to-size :k from-size)
+            (let ((weights (backing-array weights)))
               (declare (type flt-vector weights from to))
               (do-cloud/chunk1 (i cloud)
                 (let ((x (aref from i)))
                   (unless (zerop x)
-                    (setq x (* x scale))
+                    (setq x (* x scale2))
                     (do-cloud/chunk2 (j weight-index)
                       (incf (aref to j)
-                            (* x (aref weights weight-index))))))))))
-      (let ((weights (weights cloud))
-            (scale (scale1 cloud)))
-        (declare (type flt scale)
-                 (optimize (speed 3) #.*no-array-bounds-check*))
-        (if (use-blas-on-chunk-p (cost-of-gemm weights from :tn)
-                                 (chunk1 cloud))
-            (matlisp:gemm! scale weights from (flt 1) to :tn)
-            (let ((weights (storage weights))
-                  (from (storage from))
-                  (to (storage to)))
+                            (* x (aref weights weight-index)))))))))
+        (if (use-blas-on-chunk-p (chunk1 cloud))
+            (lla:gemm! scale1 from weights 1 to
+                        :transpose-b? t
+                        :lda from-size :ldc to-size
+                        :m n-stripes :n to-size :k from-size)
+            (let ((weights (backing-array weights)))
               (declare (type flt-vector weights from to))
               (do-cloud/chunk1 (i cloud)
                 (let ((sum #.(flt 0)))
@@ -730,28 +704,25 @@ all transposed.")))
                   (do-cloud/chunk2 (j weight-index)
                     (incf sum (* (aref from j)
                                  (aref weights weight-index))))
-                  (incf (aref to i) (* sum scale))))))))
+                  (incf (aref to i) (* sum scale1))))))))
   (values))
 
 (defgeneric accumulate-cloud-statistics* (cloud v1 v2 multiplier
-                                                start accumulator))
+                                          start accumulator))
 
 (defmethod accumulate-cloud-statistics* ((cloud full-cloud) v1 v2 multiplier
                                          start accumulator)
   (declare (type flt multiplier)
+           (type flt-vector v1 v2 accumulator)
            (type index start))
-  (if (and (zerop start)
-           (use-blas-on-chunk-p (cost-of-gemm v2 v1 :nt)
-                                (chunk1 cloud)))
-      (matlisp:gemm! multiplier v2 v1 (flt 1)
-                     (reshape2 accumulator
-                               (matlisp:nrows v2)
-                               (matlisp:nrows v1))
-                     :nt)
-      (let ((v1 (storage v1))
-            (v2 (storage v2))
-            (accumulator (storage accumulator)))
-        (declare (optimize (speed 3) #.*no-array-bounds-check*))
+  (if (use-blas-on-chunk-p (chunk1 cloud))
+      (let ((size1 (size (chunk1 cloud)))
+            (size2 (size (chunk2 cloud))))
+        (lla:gemm! multiplier v1 v2 (flt 1)
+                    (aops:reshape accumulator (list size1 size2) start)
+                    :transpose-a? t :lda size1 :ldb size2 :ldc size2
+                    :m size1 :n size2 :k (n-stripes (chunk1 cloud))))
+      (locally (declare (optimize (speed 3) #.*no-array-bounds-check*))
         (cond ((= multiplier (flt 1))
                (special-case (zerop start)
                  (do-cloud/chunk1 (i cloud)
@@ -784,18 +755,18 @@ all transposed.")))
   (funcall fn cloud))
 
 (defmethod segment-weights ((cloud full-cloud))
-  (values (storage (weights cloud)) 0
-          (length (storage (weights cloud)))))
+  (values (backing-array (weights cloud)) 0
+          (array-total-size (weights cloud))))
 
 (defmethod map-segment-runs (fn (cloud full-cloud))
   (do-cloud-runs ((start end) cloud)
     (funcall fn start end)))
 
 (defmethod write-weights ((cloud full-cloud) stream)
-  (write-double-float-vector (storage (weights cloud)) stream))
+  (write-double-float-vector (weights cloud) stream))
 
 (defmethod read-weights ((cloud full-cloud) stream)
-  (read-double-float-vector (storage (weights cloud)) stream))
+  (read-double-float-vector (weights cloud) stream))
 
 
 ;;;; Factored cloud
@@ -803,17 +774,17 @@ all transposed.")))
 (defclass factored-cloud (cloud)
   ((cloud-a
     :type full-cloud :initarg :cloud-a :reader cloud-a
-    :documentation "A full cloud whose hidden chunk is the same as the
-hidden chunk of this cloud and whose visible chunk is the same as the
-hidden chunk of CLOUD-B.")
-   (cloud-b
-    :type full-cloud :initarg :cloud-b :reader cloud-b
     :documentation "A full cloud whose visible chunk is the same as
 the visible chunk of this cloud and whose hidden chunk is the same as
-the visible chunk of CLOUD-A."))
+the visible chunk of CLOUD-B.")
+   (cloud-b
+    :type full-cloud :initarg :cloud-b :reader cloud-b
+    :documentation "A full cloud whose hidden chunk is the same as the
+hidden chunk of this cloud and whose visible chunk is the same as the
+hidden chunk of CLOUD-A."))
   (:documentation "Like FULL-CLOUD but the weight matrix is factored
 into a product of two matrices: A*B. At activation time, HIDDEN +=
-A*B*VISIBLE."))
+VISIBLE*A*B."))
 
 (define-descriptions (cloud factored-cloud :inheritp t)
   (cloud-a-norm (format-full-cloud-norm (cloud-a cloud)) "~A")
@@ -843,21 +814,21 @@ A*B*VISIBLE."))
       (setf (slot-value cloud 'cloud-a)
             (make-instance 'full-cloud
                            :name (list (name cloud) :a)
-                           :chunk1 shared
-                           :chunk2 (chunk2 cloud)
-                           :scale2 (scale2 cloud)))
+                           :chunk1 (chunk1 cloud)
+                           :chunk2 shared
+                           :scale1 (scale1 cloud)))
       (setf (slot-value cloud 'cloud-b)
             (make-instance 'full-cloud
                            :name (list (name cloud) :b)
-                           :chunk1 (chunk1 cloud)
-                           :chunk2 shared
-                           :scale1 (scale1 cloud))))))
+                           :chunk1 shared
+                           :chunk2 (chunk2 cloud)
+                           :scale2 (scale2 cloud))))))
 
 (defun factored-cloud-shared-chunk (cloud)
-  (chunk1 (cloud-a cloud)))
+  (chunk2 (cloud-a cloud)))
 
 (defun rank (cloud)
-  (chunk-size (factored-cloud-shared-chunk cloud)))
+  (size (factored-cloud-shared-chunk cloud)))
 
 (defmethod set-n-stripes (n-stripes (cloud factored-cloud))
   (setf (n-stripes (factored-cloud-shared-chunk cloud)) n-stripes))
@@ -869,16 +840,22 @@ A*B*VISIBLE."))
   (when (eq (chunk1 cloud) (chunk2 cloud))
     (error "ZERO-WEIGHT-TO-SELF not implemented for FACTORED-CLOUD")))
 
-(defmethod activate-cloud* ((cloud factored-cloud) reversep from to)
-  ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
-  (zero-chunk (factored-cloud-shared-chunk cloud))
-  (let ((nodes (nodes (factored-cloud-shared-chunk cloud))))
+(defmethod activate-cloud* ((cloud factored-cloud) reversep from-chunk to-chunk
+                            from to)
+  (let ((shared (factored-cloud-shared-chunk cloud))
+        (nodes (nodes (factored-cloud-shared-chunk cloud))))
+    ;; Normal chunks are zeroed by HIJACK-MEANS-TO-ACTIVATION.
+    (zero-chunk shared)
     (cond ((not reversep)
-           (activate-cloud* (cloud-b cloud) reversep from nodes)
-           (activate-cloud* (cloud-a cloud) reversep nodes to))
+           (activate-cloud* (cloud-a cloud) reversep
+                            from-chunk shared from nodes)
+           (activate-cloud* (cloud-b cloud) reversep
+                            shared to-chunk nodes to))
           (t
-           (activate-cloud* (cloud-a cloud) reversep from nodes)
-           (activate-cloud* (cloud-b cloud) reversep nodes to)))))
+           (activate-cloud* (cloud-b cloud) reversep
+                            from-chunk shared from nodes)
+           (activate-cloud* (cloud-a cloud) reversep
+                            shared to-chunk nodes to)))))
 
 (defmethod map-segments (fn (cloud factored-cloud))
   (funcall fn (cloud-a cloud))
@@ -1318,8 +1295,9 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
 ;;; Check that there are no clouds between non-adjacent layers. FIXME:
 ;;; should intralayer connections be allowed?
 (defun check-dbm-clouds (dbm)
-  (let ((bad-clouds (set-difference (clouds dbm)
-                                    (apply #'append (clouds-up-to-layers dbm)))))
+  (let ((bad-clouds
+          (set-difference (clouds dbm)
+                          (apply #'append (clouds-up-to-layers dbm)))))
     (when bad-clouds
       (error "In ~A some clouds are between non-adjecent layers: ~A"
              dbm bad-clouds))))
@@ -1347,22 +1325,23 @@ Disregard intralayer and downward connections, double activations to
 chunks having upward connections."
   (loop for (layer-below layer layer-above) on (layers dbm)
         for (clouds-up-to-layer clouds-up-to-layer-above)
-        on (rest (clouds-up-to-layers dbm))
+          on (rest (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-below)
-        (let* ((layer*
-                (set-difference layer (visible-and-conditioning-chunks dbm)))
-               (layer-above*
-                (set-difference layer-above
-                                (visible-and-conditioning-chunks dbm))))
-          (hijack-means-to-activation layer* clouds-up-to-layer)
-          ;; Double activations of chunks in LAYER that have non-bias
-          ;; connections to LAYER-ABOVE.
-          (dolist (chunk layer*)
-            (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
-              (matlisp:scal! #.(flt 2) (nodes chunk))))
-          (map nil #'set-chunk-mean layer*)
-          (swap-nodes layer-below))))
+           (let* ((layer*
+                    (set-difference layer
+                                    (visible-and-conditioning-chunks dbm)))
+                  (layer-above*
+                    (set-difference layer-above
+                                    (visible-and-conditioning-chunks dbm))))
+             (hijack-means-to-activation layer* clouds-up-to-layer)
+             ;; Double activations of chunks in LAYER that have non-bias
+             ;; connections to LAYER-ABOVE.
+             (dolist (chunk layer*)
+               (when (connects-to-p chunk layer-above* clouds-up-to-layer-above)
+                 (lla:scal! #.(flt 2) (nodes chunk))))
+             (map nil #'set-chunk-mean layer*)
+             (swap-nodes layer-below))))
 
 (defun down-dbm (dbm)
   "Do a single downward pass in DBM, propagating the mean-field much
@@ -1371,19 +1350,19 @@ Disregard intralayer and upward connections, double activations to
 chunks having downward connections."
   (loop for (layer-above layer layer-below) on (reverse (layers dbm))
         for (clouds-down-to-layer clouds-down-to-layer-below)
-        on (reverse (clouds-up-to-layers dbm))
+          on (reverse (clouds-up-to-layers dbm))
         while layer
         do (swap-nodes layer-above)
-        (hijack-means-to-activation layer clouds-down-to-layer)
-        ;; Double activations of chunks in LAYER that have connections
-        ;; to LAYER-BELOW.
-        (dolist (chunk layer)
-          (when (and (not (conditioning-chunk-p chunk))
-                     (connects-to-p chunk layer-below
-                                    clouds-down-to-layer-below))
-            (matlisp:scal! #.(flt 2) (nodes chunk))))
-        (map nil #'set-chunk-mean layer)
-        (swap-nodes layer-above)))
+           (hijack-means-to-activation layer clouds-down-to-layer)
+           ;; Double activations of chunks in LAYER that have connections
+           ;; to LAYER-BELOW.
+           (dolist (chunk layer)
+             (when (and (not (conditioning-chunk-p chunk))
+                        (connects-to-p chunk layer-below
+                                       clouds-down-to-layer-below))
+               (lla:scal! #.(flt 2) (nodes chunk))))
+           (map nil #'set-chunk-mean layer)
+           (swap-nodes layer-above)))
 
 
 ;;;; DBM->DBN
@@ -1392,7 +1371,7 @@ chunks having downward connections."
   nodes means old-nodes inputs indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'dbm->dbn)) (chunk chunk))
-  `(:size ,(chunk-size chunk)
+  `(:size ,(size chunk)
     :max-n-stripes ,(max-n-stripes chunk)))
 
 (define-slots-not-to-be-copied 'dbm->dbn temporal-chunk
@@ -1421,7 +1400,8 @@ chunks having downward connections."
 ;;;
 ;;; In short, double activation from the cloud if the target chunk has
 ;;; input from another layer.
-(defun copy-dbm-cloud-to-dbn (cloud clouds layer-below layer1 layer2 layer-above)
+(defun copy-dbm-cloud-to-dbn (cloud clouds
+                              layer-below layer1 layer2 layer-above)
   (let ((chunk1 (chunk1 cloud))
         (chunk2 (chunk2 cloud))
         (copy (copy 'dbm->dbn cloud)))
@@ -1517,8 +1497,8 @@ contributed to the average."
     (declare (type flt sum) (type index n) (optimize (speed 3)))
     (dolist (chunk chunks)
       (unless (conditioning-chunk-p chunk)
-        (let ((nodes (storage (nodes chunk)))
-              (old-nodes (storage (old-nodes chunk))))
+        (let ((nodes (nodes* chunk))
+              (old-nodes (the flt-vector (old-nodes chunk))))
           (do-stripes (chunk)
             (do-chunk (i chunk)
               (let ((x (aref nodes i))
@@ -1657,65 +1637,43 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
                                         multiplier)
   (declare (type flt multiplier))
   (let* ((chunk1 (chunk1 cloud))
+         (chunk2 (chunk2 cloud))
          (v (means-or-samples trainer bm chunk1))
-         (h (means-or-samples trainer bm (chunk2 cloud)))
+         (h (means-or-samples trainer bm chunk2))
          (a (weights (cloud-a cloud)))
          (b (weights (cloud-b cloud)))
          (n-stripes (n-stripes (chunk1 cloud)))
-         (c (matlisp:nrows b))
          (shared (factored-cloud-shared-chunk cloud))
-         (v* (storage v))
-         (shared* (storage (nodes shared))))
+         (x (nodes shared)))
     (check-stripes chunk1)
+    (when (indices-present chunk1)
+      (error "Missing value support not implemented for FACTORED-CLOUD."))
+    (assert (null (indices-present chunk2)))
     (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud-a cloud) trainer))
       (when (and accumulator start)
-        ;; dCD/dA ~= h*v'*B'
-        (let ((x (reshape2 (nodes shared) n-stripes c)))
-          (if (and (zerop start)
-                   (null (indices-present chunk1)))
-              (matlisp:gemm! (flt 1) v b (flt 0) x :tt)
-              (let ((b* (storage b)))
-                (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                (matlisp:fill-matrix x (flt 0))
-                (do-stripes (chunk1)
-                  (do-chunk (i chunk1)
-                    (let ((v*i (aref v* i)))
-                      (unless (zerop v*i)
-                        (loop for j of-type index upfrom 0 below c
-                              for bi of-type index
-                              upfrom (the! index (* i c)) do
-                              (incf (aref shared* j)
-                                    (* v*i (aref b* bi))))))))))
-          (matlisp:gemm! multiplier h x
-                         (flt 1) (reshape2 accumulator
-                                           (matlisp:nrows a)
-                                           (matlisp:ncols a))))))
+        ;; dCD/dA = v'*h*B'
+        (lla:gemm! (flt 1) h b (flt 0) x
+                    :transpose-b? t
+                    :lda (size chunk2) :ldc (size shared)
+                    :m n-stripes :n (size shared) :k (aops:ncol b))
+        (lla:gemm! multiplier v x (flt 1)
+                    (aops:displace accumulator (array-total-size a) start)
+                    :transpose-a? t
+                    :lda (size chunk1) :ldb (size shared) :ldc (aops:ncol a)
+                    :m (aops:nrow a) :n (aops:ncol a) :k n-stripes)))
     (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud-b cloud) trainer))
       (when (and accumulator start)
-        ;; dCD/dB ~= A'*h*v'
-        (let ((x (reshape2 (nodes shared) c n-stripes)))
-          (matlisp:gemm! (flt 1) a h (flt 0) x :tn)
-          (if (and (zerop start)
-                   (null (indices-present (chunk1 cloud))))
-              (matlisp:gemm! multiplier x v
-                             (flt 1) (reshape2 accumulator
-                                               (matlisp:nrows b)
-                                               (matlisp:ncols b))
-                             :nt)
-              (let ((acc* (storage accumulator)))
-                (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                (do-stripes (chunk1)
-                  (do-chunk (i chunk1)
-                    (let ((v*i (* multiplier (aref v* i))))
-                      (unless (zerop v*i)
-                        (loop for j of-type index upfrom 0 below c
-                              for acc-i of-type index
-                              upfrom (the! index
-                                           (+ start (the! index (* i c)))) do
-                              (incf (aref acc* acc-i)
-                                    (* v*i (aref shared* j)))))))))))))))
+        ;; dCD/dB = A'*v'*h
+        (lla:gemm! (flt 1) a v (flt 0) x
+                    :transpose-a? t :transpose-b? t
+                    :ldb (size chunk1) :ldc n-stripes
+                    :m (size shared) :n n-stripes :k (size chunk1))
+        (lla:gemm! multiplier x h (flt 1)
+                    (aops:displace accumulator (array-total-size b) start)
+                    :lda n-stripes :ldb (size chunk2) :ldc (aops:ncol b)
+                    :m (aops:nrow b) :n (aops:ncol b) :k n-stripes)))))
 
 (defgeneric accumulate-positive-phase-statistics (trainer bm &key multiplier)
   (:method ((trainer segmented-gd-bm-trainer) bm &key (multiplier (flt 1)))
@@ -1802,38 +1760,28 @@ little sense to change the weight but this is exactly what happens."))
         (t
          (assert nil))))
 
-(defmethod initialize-instance :after ((sparsity normal-sparsity-gradient-source)
-                                       &key &allow-other-keys)
+(defmethod initialize-instance :after
+    ((sparsity normal-sparsity-gradient-source) &key &allow-other-keys)
   (unless (slot-boundp sparsity 'products)
     (setf (slot-value sparsity 'products)
-          (matlisp:make-real-matrix (segment-size (cloud sparsity)) 1)))
+          (make-flt-array (segment-size (cloud sparsity)))))
   (unless (slot-boundp sparsity 'old-products)
     (setf (slot-value sparsity 'old-products)
-          (matlisp:make-real-matrix (segment-size (cloud sparsity)) 1))))
+          (make-flt-array (segment-size (cloud sparsity))))))
 
 (defmethod initialize-instance :after
     ((sparsity cheating-sparsity-gradient-source) &key &allow-other-keys)
   (unless (slot-boundp sparsity 'sum1)
     (setf (slot-value sparsity 'sum1)
-          (matlisp:make-real-matrix (size (chunk sparsity)) 1)))
+          (make-flt-array (size (chunk sparsity)))))
   (unless (slot-boundp sparsity 'old-sum1)
     (setf (slot-value sparsity 'old-sum1)
-          (matlisp:make-real-matrix (size (chunk sparsity)) 1))
-    (matlisp:fill-matrix (old-sum1 sparsity) (target sparsity)))
+          (make-flt-array (size (chunk sparsity))))
+    (fill! (target sparsity) (old-sum1 sparsity)))
   (unless (slot-boundp sparsity 'sum2)
     (setf (slot-value sparsity 'sum2)
-          (matlisp:make-real-matrix (size (other-chunk (cloud sparsity)
-                                                       (chunk sparsity)))
-                                    1))))
-
-(defun add-into (c v1 v2 &key start1)
-  (declare (type flt-vector v1 v2)
-           (type flt c)
-           (type index start1)
-           (optimize (speed 3)))
-  (loop for i upfrom start1 below (the index (+ start1 (length v2)))
-        for j below (length v2)
-        do (incf (aref v1 i) (* c (aref v2 j)))))
+          (make-flt-array (size (other-chunk (cloud sparsity)
+                                             (chunk sparsity)))))))
 
 (defgeneric flush-accumulator (sparsity accumulator start n-inputs-in-batch)
   ;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
@@ -1844,38 +1792,37 @@ little sense to change the weight but this is exactly what happens."))
           (cost (cost sparsity))
           (products (products sparsity))
           (old-products (old-products sparsity)))
-      (matlisp:scal! damping old-products)
-      (matlisp:scal! (/ (- (flt 1) damping) n-inputs-in-batch)
-                     products)
-      (matlisp:m+! products old-products)
-      (add-into (* cost n-inputs-in-batch)
-                (storage accumulator) (storage old-products)
-                :start1 start)
-      (fill (storage products) #.(flt 0))))
+      (lla:scal! damping old-products)
+      (lla:axpy! (/ (- (flt 1) damping) n-inputs-in-batch)
+                  products old-products)
+      (lla:axpy! (* cost n-inputs-in-batch) old-products
+                  (aops:displace accumulator (array-total-size old-products)
+                                 start))
+      (fill! (flt 0) products)))
   ;; Add DAMPING * OLD-SUM1 + (1 - DAMPING) * SUM1 to the accumulator
   ;; and zero SUM1.
   (:method ((sparsity cheating-sparsity-gradient-source)
             accumulator start n-inputs-in-batch)
-    (let ((damping (damping sparsity))
-          (cost (cost sparsity))
-          (sum1 (sum1 sparsity))
-          (old-sum1 (old-sum1 sparsity))
-          (sum2 (sum2 sparsity))
-          (target (sparsity-target sparsity)))
-      (matlisp:scal! damping old-sum1)
-      (matlisp:scal! (/ (- (flt 1) damping) n-inputs-in-batch)
-                     sum1)
-      (matlisp:m+! sum1 old-sum1)
-      (assert (zerop start))
-      (matlisp:copy! old-sum1 sum1)
-      (matlisp:m+! sum1 (- target))
-      (matlisp:gemm! cost sum1 sum2
-                     (flt 1) (reshape2 accumulator
-                                       (matlisp:nrows old-sum1)
-                                       (matlisp:nrows sum2))
-                     :nt)
-      (fill (storage sum1) #.(flt 0))
-      (fill (storage sum2) #.(flt 0)))))
+    (let* ((damping (damping sparsity))
+           (cost (cost sparsity))
+           (sum1 (sum1 sparsity))
+           (old-sum1 (old-sum1 sparsity))
+           (sum2 (sum2 sparsity))
+           (target (sparsity-target sparsity))
+           (size1 (length sum1))
+           (size2 (length sum2)))
+      (lla:scal! damping old-sum1)
+      (lla:axpy! (/ (- (flt 1) damping) n-inputs-in-batch) sum1 old-sum1)
+      (lla:copy! old-sum1 sum1)
+      (dotimes (i size1)
+        (decf (aref sum1 i) target))
+      (lla:gemm! cost sum1 sum2
+                  (flt 1) (aops:reshape accumulator (list size1 size2)
+                                        start)
+                  :m size1 :n size2 :k 1
+                  :lda 1 :ldb size2 :ldc size2)
+      (fill! (flt 0) sum1)
+      (fill! (flt 0) sum2))))
 
 (defclass segmented-gd-sparse-bm-trainer (segmented-gd-bm-trainer)
   ((sparsity-gradient-sources
@@ -1925,7 +1872,7 @@ of the batch. Batch size comes from the superclass."))
       (with-segment-gradient-accumulator ((start accumulator)
                                           ((cloud sparsity) trainer))
         (let ((segment-trainer
-               (find-trainer-for-segment (cloud sparsity) trainer)))
+                (find-trainer-for-segment (cloud sparsity) trainer)))
           (push (lambda ()
                   (flush-accumulator sparsity accumulator start
                                      (n-inputs-in-batch segment-trainer)))
@@ -1933,11 +1880,15 @@ of the batch. Batch size comes from the superclass."))
 
 (defgeneric accumulate-sparsity-statistics (sparsity multiplier)
   (:method ((sparsity normal-sparsity-gradient-source) multiplier)
-    (let ((chunk (chunk sparsity))
-          (cloud (cloud sparsity)))
+    (let* ((chunk (chunk sparsity))
+           (cloud (cloud sparsity))
+           (sparsity-target (sparsity-target sparsity))
+           (old-nodes (old-nodes chunk)))
+      (declare (type flt-vector old-nodes))
       (assert (not (eq (nodes chunk) (old-nodes chunk))))
       (copy-chunk-nodes chunk (means chunk) (old-nodes chunk))
-      (matlisp:m+! (- (sparsity-target sparsity)) (old-nodes chunk))
+      (dotimes (i (* (size chunk) (n-stripes chunk)))
+        (decf (aref old-nodes i) sparsity-target))
       (multiple-value-bind (v1 v2)
           (if (eq chunk (chunk1 cloud))
               (values (old-nodes chunk) (means (chunk2 cloud)))
@@ -1947,15 +1898,25 @@ of the batch. Batch size comes from the superclass."))
   (:method ((sparsity cheating-sparsity-gradient-source) multiplier)
     (let* ((chunk (chunk sparsity))
            (cloud (cloud sparsity))
-           (other-chunk (other-chunk cloud chunk)))
+           (other-chunk (other-chunk cloud chunk))
+           (size1 (size chunk))
+           (size2 (size other-chunk))
+           (n-stripes (n-stripes chunk)))
+      (assert (= n-stripes (n-stripes other-chunk)))
       ;; FIXME: MULTIPLIER
       (assert (= #.(flt 1) multiplier))
-      (matlisp:gemm! (flt 1) (means chunk)
-                     (matlisp:ones (n-stripes chunk) 1)
-                     (flt 1) (sum1 sparsity))
-      (matlisp:gemm! (flt 1) (means other-chunk)
-                     (matlisp:ones (n-stripes other-chunk) 1)
-                     (flt 1) (sum2 sparsity)))))
+      (lla:gemm! (flt 1) (make-flt-array (list 1 n-stripes)
+                                         :initial-element (flt 1))
+                 (means chunk)
+                 (flt 1) (sum1 sparsity)
+                 :ldb size1 :ldc size1
+                 :m 1 :n size1 :k n-stripes)
+      (lla:gemm! (flt 1) (make-flt-array (list 1 n-stripes)
+                                         :initial-element (flt 1))
+                 (means other-chunk)
+                 (flt 1) (sum2 sparsity)
+                 :ldb size2 :ldc size2
+                 :m 1 :n size2 :k n-stripes))))
 
 (defmethod accumulate-positive-phase-statistics
     ((trainer segmented-gd-sparse-bm-trainer) (bm bm) &key (multiplier (flt 1)))
@@ -2038,7 +1999,7 @@ trainers for BMs."))
   nodes means old-nodes inputs indices-present)
 
 (defmethod copy-object-extra-initargs ((context (eql 'pcd)) (chunk chunk))
-  `(:size ,(chunk-size chunk)
+  `(:size ,(size chunk)
     :max-n-stripes ,(max-n-stripes chunk)))
 
 (define-slots-not-to-be-copied 'pcd temporal-chunk
@@ -2169,8 +2130,8 @@ error."
     (declare (type flt sum) (type index n) (optimize (speed 3)))
     (dolist (chunk chunks)
       (unless (conditioning-chunk-p chunk)
-        (let ((inputs (storage (inputs chunk)))
-              (nodes (storage (nodes chunk))))
+        (let ((inputs (the flt-vector (inputs chunk)))
+              (nodes (nodes* chunk)))
           (do-stripes (chunk)
             (do-chunk (i chunk)
               (let ((x (aref inputs i))
@@ -2234,12 +2195,12 @@ reconstruction rmse."
 
 (defmethod stripe-label ((chunk softmax-label-chunk) stripe)
   (with-stripes ((stripe chunk start end))
-    (- (max-position (storage (nodes chunk)) start end)
+    (- (max-position (nodes chunk) start end)
        start)))
 
 (defmethod classification-confidences ((chunk softmax-label-chunk) stripe)
   (with-stripes ((stripe chunk start end))
-    (subseq (storage (nodes chunk)) start end)))
+    (subseq (nodes chunk) start end)))
 
 (defun make-chunk-reconstruction-misclassification-counters-and-measurers
     (chunks &key chunk-filter)
@@ -2258,7 +2219,8 @@ reconstruction rmse."
         when measurer
           collect
           (cons (make-instance 'cross-entropy-counter
-                               :prepend-name (format nil "chunk ~A" (name chunk)))
+                               :prepend-name (format nil "chunk ~A"
+                                                     (name chunk)))
                 measurer)))
 
 (defun make-bm-reconstruction-misclassification-counters-and-measurers

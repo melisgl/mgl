@@ -19,7 +19,7 @@
         (aref array (+ start 2)) (cos x)))
 
 (defun clamp-striped-nodes (samples striped)
-  (let ((nodes (storage (nodes striped))))
+  (let ((nodes (nodes striped)))
     (loop for sample in samples
           for stripe upfrom 0
           do (with-stripes ((stripe striped start))

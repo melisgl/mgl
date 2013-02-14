@@ -14,6 +14,7 @@
    #:least-positive-flt
    #:most-positive-flt
    #:flt-vector
+   #:flt-matrix
    #:make-flt-array
    #:index
    #:index-vector
@@ -56,6 +57,7 @@
    #:try-chance
    #:binarize-randomly
    #:gaussian-random-1
+   #:mv-gaussian-random
    #:poisson-random
    #:select-random-element
    #:binomial-log-likelihood-ratio
@@ -66,16 +68,10 @@
    #:add-to-running-stat
    #:running-stat-variance
    #:running-stat-mean
-   ;; Blas support
-   #:*use-blas*
-   #:use-blas-p
-   #:cost-of-copy
-   #:cost-of-fill
-   #:cost-of-gemm
-   #:storage
-   #:reshape2
-   #:set-ncols
-   #:sum-elements
+   ;; Array utilities
+   #:backing-array
+   #:fill!
+   #:to-scalar
    ;; I/O
    #:read-single-float-vector
    #:write-single-float-vector
@@ -391,6 +387,7 @@ Networks (DBN)."))
    #:deflump
    #:name
    #:size
+   #:default-size
    #:lump-size
    #:lump-node-array
    #:indices-to-calculate

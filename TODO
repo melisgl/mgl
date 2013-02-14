@@ -32,7 +32,9 @@
 ** TODO cache inputs optionally
    This should make higher level RBMs a lot faster and can be
    implemented trivially with a samples -> node arrays hash table.
-** TODO fix gradient accumulation
+** DONE fix gradient accumulation
+CLOSED: [2013-03-05 Tue 16:32]
+- CLOSING NOTE [2013-03-05 Tue 16:32]
    When the accumulator's start is not zero, there are two ways to
    fail: a) go to the matlisp branch and put it into the wrong place
    as if start were 0, b) use the lisp branch and fail if there are
@@ -66,22 +68,32 @@
 ** TODO flip chunk
    When an input chunk is to be reconstructed it should go above the
    layer in the bpn instead of below it where it is in the BM.
+* gaussian processes
+** DONE implement gaussian processes
+CLOSED: [2013-03-05 Tue 16:33]
+- CLOSING NOTE [2013-03-05 Tue 16:33]
 * misc
 ** DONE faster exp? http://citeseer.ist.psu.edu/cache/papers/cs/43/ftp:zSzzSzftp.idsia.chzSzpubzSzniczSzexp.pdf/schraudolph98fast.pdf
 Doesn't seem to speed up things.
 ** DONE remove dependency on BLAS: implement some of matlisp in Lisp
    Ripped matrix.lisp and various bits from Matlisp.
-** TODO what to do with *USE-BLAS*?
+** DONE what to do with *USE-BLAS*?
+CLOSED: [2013-03-05 Tue 16:31]
+- CLOSING NOTE [2013-03-05 Tue 16:31]
    The wrappers should calculate cost and call matlisp if it is
    avaible.
 ** TODO float vector I/O for cmucl
-** MAYBE support more lisps
+** DONE support more lisps
+CLOSED: [2013-03-05 Tue 16:32]
+- CLOSING NOTE [2013-03-05 Tue 16:32]
    Matlisp only supports cmucl, sbcl and allegro.
 ** TODO optimize the missing value case (SSE?)
 ** TODO lookup table based exp/sigmoid
 ** TODO investigate SPARTNS
 ** TODO investigate LISP-MATRIX
-** TODO investigate LLA
+** DONE investigate LLA
+CLOSED: [2013-03-05 Tue 16:31]
+- CLOSING NOTE [2013-03-05 Tue 16:31]
 ** DONE factor out most frequent and log-likelihood-ratio based feature selection
 ** TODO parallelize with threads and/or across different images
 * examples

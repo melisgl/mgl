@@ -42,14 +42,15 @@ propagate to the two branches allowing them to be more optimized."
   (defconstant least-positive-flt least-positive-double-float)
   (defconstant most-positive-flt most-positive-double-float)
   (deftype flt-vector () '(simple-array flt (*)))
+  (deftype flt-matrix () '(simple-array flt (* *)))
   (declaim (inline flt))
   (defun flt (x)
     (coerce x 'flt))
   (deftype index () '(integer 0 #.(1- array-total-size-limit)))
   (deftype index-vector () '(simple-array index (*))))
 
-(defun make-flt-array (dimensions)
-  (make-array dimensions :element-type 'flt :initial-element #.(flt 0)))
+(defun make-flt-array (dimensions &key (initial-element #.(flt 0)))
+  (make-array dimensions :element-type 'flt :initial-element initial-element))
 
 (defun flt-vector (&rest args)
   (make-array (length args) :element-type 'flt :initial-contents args))
@@ -376,6 +377,19 @@ classes the same."
          (* x2
             (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
 
+(defun mv-gaussian-random (&key means covariances
+                           (covariances-left-square-root
+                            (lla:cholesky (clnu:hermitian-matrix covariances))))
+  "Return a column matrix of samples from the multivariate normal
+distribution defined by MEANS (Nx1) and COVARIANCES (NxN). For
+multiple calls with the same parameter one can pass in
+COVARIANCES-LEFT-SQUARE-ROOT instead of COVARIANCES."
+  (let* ((n (array-total-size means))
+         (z (make-flt-array (list n 1))))
+    (dotimes (i n)
+      (setf (aref z i 0) (gaussian-random-1)))
+    (clnu:e+ means (lla:mm covariances-left-square-root z))))
+
 ;; Knuth's slow poisson sampler.
 (defun poisson-random (mean)
   (let ((l (exp (- mean)))
@@ -484,63 +498,41 @@ K1 and K2 before calling."
   stat)
 
 
-;;;; BLAS support
+;;;; Array utilities
 
-(defvar *use-blas* 10000
-  "Use BLAS routines if available. If it is NIL then BLAS is never
-used \(not quite true as some code does not care about this setting).
-If it is a real number then BLAS is only used when the problem size
-exceeds that number. In all other cases BLAS is used whenever
-possible.")
+(defun backing-array (array)
+  "Return the array in which the contents of ARRAY are stored. For
+simple arrays, this is always the array itself. The second value is
+the displacement."
+  #+sbcl
+  (sb-c::with-array-data ((v array) (start) (end))
+    (declare (ignore end))
+    (values v start))
+  #+(or cmu scl)
+  (lisp::with-array-data ((v array) (start) (end))
+    (declare (ignore end))
+    (values v start))
+  #+allegro
+  (excl::array-base array)
+  #+openmcl
+  (ccl::array-data-and-offset array)
+  #-(or sbcl allegro cmu scl openmcl)
+  (declare (ignore array))
+  #-(or sbcl cmu scl allegro openmcl)
+  (error "Not implemented."))
 
-(defun cost-of-copy (mat)
-  (matlisp:number-of-elements mat))
+(defun fill! (alpha x)
+  (let ((alpha (flt alpha)))
+    (multiple-value-bind (backing-array start) (backing-array x)
+      (if (typep backing-array 'flt-vector)
+          (let ((end (+ start (array-total-size x))))
+            (fill backing-array alpha :start start :end end))
+          (loop for i below (array-total-size x)
+                do (setf (row-major-aref x i) alpha))))))
 
-(defun cost-of-fill (mat)
-  (matlisp:number-of-elements mat))
-
-(defun cost-of-gemm (a b job)
-  (* (if (member job '(:nt :nn))
-         (matlisp:nrows a)
-         (matlisp:ncols a))
-     (matlisp:number-of-elements b)))
-
-(defun use-blas-p (cost)
-  (let ((x *use-blas*))
-    (and x
-         (or (not (realp x))
-             (< x cost))
-         (find-package 'blas))))
-
-(declaim (inline storage))
-(defun storage (matlisp-matrix)
-  (the flt-vector (values (matlisp::store matlisp-matrix))))
-
-(defgeneric reshape2 (mat m n)
-  (:method ((mat matlisp:real-matrix) m n)
-    (assert (<= (* m n) (length (storage mat))))
-    (if (and (= (matlisp:nrows mat) m)
-             (= (matlisp:ncols mat) n))
-        mat
-        (make-instance 'matlisp:real-matrix
-                       :nrows m :ncols n :store (storage mat)))))
-
-(defgeneric set-ncols (mat ncols)
-  (:method ((mat matlisp:real-matrix) ncols)
-    (assert (<= 0 ncols (/ (length (storage mat))
-                           (matlisp:nrows mat))))
-    (setf (matlisp:ncols mat) ncols)
-    (setf (matlisp:number-of-elements mat) (* ncols (matlisp:nrows mat)))))
-
-(defgeneric sum-elements (mat))
-
-(defmethod sum-elements ((a matlisp:real-matrix))
-  (let ((sum 0d0)
-        (store-a (storage a)))
-    (declare (type double-float sum))
-    (loop for i of-type fixnum below (matlisp:number-of-elements a)
-          do (incf sum (aref store-a i)))
-    sum))
+(defun to-scalar (matrix)
+  (assert (= 1 (array-total-size matrix)))
+  (row-major-aref matrix 0))
 
 
 ;;;; Float vector I/O
