@@ -47,6 +47,7 @@
    #:call-periodic-fn!
    #:last-eval
    ;; Math
+   #:sign
    #:sech
    #:sigmoid
    #:scaled-tanh

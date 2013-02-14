@@ -324,6 +324,13 @@ classes the same."
 (defmacro with-zero-on-underflow (&body body)
   `(locally ,@body))
 
+(declaim (inline sign))
+(defun sign (x)
+  (declare (type flt x))
+  (cond ((plusp x) #.(flt 1))
+        ((minusp x) #.(flt -1))
+        (t #.(flt 0))))
+
 (declaim (inline sech))
 (defun sech (x)
   (declare (type flt x))
