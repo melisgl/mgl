@@ -224,6 +224,7 @@ and LEARNERs."))
    #:momentum
    #:weight-decay
    #:weight-penalty
+   #:after-update-hook
    #:batch-size
    #:batch-gd-trainer
    #:n-inputs-in-batch

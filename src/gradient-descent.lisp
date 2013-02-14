@@ -75,6 +75,11 @@ the weight towards negative infinity. It's as if the function whose
 minima is sought had sum_i{WEIGHT-PENALTY*WEIGHT_i} added to it.
 Putting it on feature biases consitutes a sparsity constraint on the
 features.")
+   (after-update-hook
+    :type 'list
+    :initform () :initarg :after-update-hook :accessor after-update-hook
+    :documentation "A list of functions with no arguments called after
+weights are updated.")
    (batch-size
     :initarg :batch-size :accessor batch-size
     :documentation "Normally, after having gone through BATCH-SIZE
@@ -95,6 +100,7 @@ based trainers with momentum and weight decay."))
   (momentum (momentum trainer) "~,5E")
   (weight-decay (weight-decay trainer) "~,5E")
   (weight-penalty (weight-penalty trainer) "~,5E")
+  (n-after-upate-hook (length (after-update-hook trainer)) "~S")
   batch-size)
 
 (defclass batch-gd-trainer (gd-trainer)
@@ -200,7 +206,7 @@ only missing values does not change anything."))
                    weight-decay weight-penalty)
              (optimize (speed 3) #.*no-array-bounds-check*))
     (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-        (segment-set trainer)
+                    (segment-set trainer)
       (with-segment-weights ((weights start end) segment)
         ;; Maybe this could be done with Matlisp, but it's not a
         ;; hotspot.
@@ -218,7 +224,8 @@ only missing values does not change anything."))
             (setf (aref accumulator i) #.(flt 0))
             (setf (aref weight-deltas i) delta)
             (decf (aref weights j) (* learning-rate delta)))))
-      (setf (n-inputs-in-batch trainer) 0))))
+      (setf (n-inputs-in-batch trainer) 0)))
+  (map nil #'funcall (after-update-hook trainer)))
 
 (defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
   (when (<= (batch-size trainer)
@@ -242,7 +249,7 @@ only missing values does not change anything."))
              (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
     (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-        (segment-set trainer)
+                    (segment-set trainer)
       (with-segment-weights ((weights weights-start weights-end) segment)
         (declare (ignore weights weights-end))
         (map-segment-runs
@@ -264,7 +271,7 @@ only missing values does not change anything."))
                                           n-new-inputs)))
       (setf (n-inputs-in-batch trainer) 0)
       (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-          (segment-set trainer)
+                      (segment-set trainer)
         (with-segment-weights ((weights start end) segment)
           (declare (optimize (speed 3) #.*no-array-bounds-check*))
           (do ((i start-in-segment-set (the! index (1+ i)))
@@ -280,7 +287,8 @@ only missing values does not change anything."))
               (setf (aref weight-deltas i) delta)
               (decf (aref weights j) (* learning-rate delta))
               (setf (aref n-weight-uses-in-batch i) 0
-                    (aref accumulator i) #.(flt 0))))))))
+                    (aref accumulator i) #.(flt 0))))))
+      (map nil #'funcall (after-update-hook trainer))))
   (incf (n-inputs trainer) n-new-inputs))
 
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
@@ -297,34 +305,36 @@ only missing values does not change anything."))
     (declare (type flt-vector accumulator weight-deltas)
              (type index-vector n-weight-uses-in-batch)
              (type flt learning-rate momentum weight-decay weight-penalty)
-             (type index batch-size)
-             (optimize (speed 3) #.*no-array-bounds-check*))
-    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-        (segment-set trainer)
-      (with-segment-weights ((weights weights-start weights-end) segment)
-        (declare (ignore weights-end))
-        (map-segment-runs
-         (lambda (start end)
-           (declare (type index start end))
-           (do ((i (the! index
-                         (+ start-in-segment-set (- start weights-start)))
-                   (the! index (1+ i)))
-                (j start (1+ j)))
-               ((<= end j))
-             (when (<= batch-size
-                       (setf (aref n-weight-uses-in-batch i)
-                             (1+ (the! index
-                                       (aref n-weight-uses-in-batch i)))))
-               (let ((delta (+ (* momentum (aref weight-deltas i))
-                               (/ (aref accumulator i)
-                                  (aref n-weight-uses-in-batch i))
-                               (* weight-decay (aref weights j))
-                               weight-penalty)))
-                 (setf (aref weight-deltas i) delta)
-                 (decf (aref weights j) (* learning-rate delta))
-                 (setf (aref n-weight-uses-in-batch i) 0
-                       (aref accumulator i) #.(flt 0))))))
-         segment))))
+             (type index batch-size))
+    (locally
+        (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+                      (segment-set trainer)
+        (with-segment-weights ((weights weights-start weights-end) segment)
+          (declare (ignore weights-end))
+          (map-segment-runs
+           (lambda (start end)
+             (declare (type index start end))
+             (do ((i (the! index
+                           (+ start-in-segment-set (- start weights-start)))
+                     (the! index (1+ i)))
+                  (j start (1+ j)))
+                 ((<= end j))
+               (when (<= batch-size
+                         (setf (aref n-weight-uses-in-batch i)
+                               (1+ (the! index
+                                         (aref n-weight-uses-in-batch i)))))
+                 (let ((delta (+ (* momentum (aref weight-deltas i))
+                                 (/ (aref accumulator i)
+                                    (aref n-weight-uses-in-batch i))
+                                 (* weight-decay (aref weights j))
+                                 weight-penalty)))
+                   (setf (aref weight-deltas i) delta)
+                   (decf (aref weights j) (* learning-rate delta))
+                   (setf (aref n-weight-uses-in-batch i) 0
+                         (aref accumulator i) #.(flt 0))))))
+           segment))))
+    (map nil #'funcall (after-update-hook trainer)))
   (incf (n-inputs trainer)))
 
 (defmethod n-inputs-until-update ((trainer batch-gd-trainer))
