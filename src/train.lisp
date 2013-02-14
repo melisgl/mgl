@@ -118,8 +118,11 @@ contributed to SUM-ERROR.")))
 (defmethod print-counter ((counter error-counter) stream)
   (multiple-value-bind (e c) (get-error counter)
     (if e
-        (format stream "~,5E (~D)" e c)
-        (format stream "~A (~D)" e c))))
+        (format stream "~,5E" e)
+        (format stream "~A" e))
+    (if (integerp c)
+        (format stream " (~D)" c)
+        (format stream " (~,2F)" c))))
 
 (defclass misclassification-counter (error-counter)
   ((name :initform '("classification accuracy"))))
