@@ -233,7 +233,7 @@
 (defun cesc-classification-error (bpn)
   (cesc-max-likelihood-classification-error
    (find-if (lambda (lump)
-              (typep lump 'cross-entropy-softmax-lump))
+              (typep lump '->cross-entropy-softmax))
             (lumps bpn))))
 
 (defun make-bpn-cesc-counters-and-measurers ()
@@ -246,7 +246,7 @@
                 (mgl-train::measure-cross-entropy
                  samples
                  (find-if (lambda (lump)
-                            (typep lump 'cross-entropy-softmax-lump))
+                            (typep lump '->cross-entropy-softmax))
                           (lumps bpn)))))))
 
 (defmethod initialize-trainer ((trainer cesc-trainer) (bpn bpn))
@@ -263,29 +263,29 @@
 
 ;;;; Unrolling support for CESC-TRAINER
 
-(defun tack-cross-entropy-softmax-error-on (n-classes lump-name &key
-                                            (prefix '||))
+(defun tack-cross-entropy-softmax-error-on (n-classes lump-name
+                                            &key (prefix '||))
   (flet ((foo (symbol)
            (intern (format nil "~A~A" prefix (symbol-name symbol))
                    (symbol-package prefix))))
-    `((,(foo 'expectations) (input-lump :size ,n-classes))
-      (,(foo 'prediction-weights) (weight-lump
+    `((,(foo 'expectations) (->input :size ,n-classes))
+      (,(foo 'prediction-weights) (->weight
                                    :size (* (size (lump ',lump-name))
                                             ,n-classes)))
-      (,(foo 'prediction-biases) (weight-lump :size ,n-classes))
+      (,(foo 'prediction-biases) (->weight :size ,n-classes))
       (,(foo 'prediction-activations0)
-       (activation-lump :weights ,(foo 'prediction-weights)
-        :x (lump ',lump-name)
-        :transpose-weights-p t))
+       (->activation :weights ,(foo 'prediction-weights)
+                     :x (lump ',lump-name)
+                     :transpose-weights-p t))
       (,(foo 'prediction-activations)
        (->+ :args (list ,(foo 'prediction-activations0)
                         ,(foo 'prediction-biases))))
       (,(foo 'predictions)
-       (cross-entropy-softmax-lump
+       (->cross-entropy-softmax
         :group-size ,n-classes
         :x ,(foo 'prediction-activations)
         :target ,(foo 'expectations)))
-      (,(foo 'ce-error) (error-node :x ,(foo 'predictions))))))
+      (,(foo 'ce-error) (->error :x ,(foo 'predictions))))))
 
 
 ;;;; Utilities

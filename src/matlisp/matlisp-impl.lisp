@@ -208,3 +208,19 @@
 		  (declare (type fixnum j))
 		  (incf val (aref store-a (fortran-matrix-indexing  i j n)))))))
       result)))
+
+(defmethod m.*! ((a real-matrix) (b real-matrix))
+  (let* ((nxm (number-of-elements b))
+	 (a-store (store a))
+	 (b-store (store b)))
+    (declare (type fixnum nxm))
+
+    (dotimes (k nxm b)
+      (declare (type fixnum k))
+      (setf (aref b-store k) (* (aref a-store k) (aref b-store k))))))
+
+(defmethod m.*! ((a standard-matrix) (b number))
+  (scal! b a))
+
+(defmethod m.*! ((a number) (b standard-matrix))
+  (scal! a b))

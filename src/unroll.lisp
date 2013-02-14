@@ -62,7 +62,7 @@ clamp inits, the third is a list of inits.")
     (let ((exp-symbol (gensym)))
       (values
        `((,exp-symbol (->exp :x ,activation-symbol))
-         (,sym (normalized-lump :name ',name
+         (,sym (->normalized :name ',name
                 :scale ,(scale chunk) :group-size ,(group-size chunk)
                 :x ,exp-symbol)))
        `((:from-lump ,name :to-lump ,exp-symbol))))))
@@ -100,11 +100,11 @@ the `end' lump.")
            (linear-symbol (gensym))
            (linear-name (cloud-linear-lump-name (name cloud) transposep)))
       (list `((,weight-symbol
-               (weight-lump
+               (->weight
                 :name ',weight-name
                 :size ,n-weights))
               (,linear-symbol
-               (activation-lump
+               (->activation
                 :name ',linear-name
                 :size ,size
                 :weights ,weight-symbol
@@ -135,15 +135,15 @@ the `end' lump.")
                          (cloud-linear-lump-name (name cloud) transposep)
                          :shared))
            (linear-name (cloud-linear-lump-name (name cloud) transposep)))
-      (list `((,weight-b-symbol (weight-lump
+      (list `((,weight-b-symbol (->weight
                                  :name ',weight-b-name
                                  :size ,(matlisp:number-of-elements
                                          (weights cloud-b))))
-              (,weight-a-symbol (weight-lump
+              (,weight-a-symbol (->weight
                                  :name ',weight-a-name
                                  :size ,(matlisp:number-of-elements
                                          (weights cloud-a))))
-              (,shared-symbol (activation-lump
+              (,shared-symbol (->activation
                                :name ',shared-name
                                :size ,(rank cloud)
                                :weights ,(if transposep
@@ -151,7 +151,7 @@ the `end' lump.")
                                              weight-b-symbol)
                                :x ,(lumpy-symbol from-lumpy)
                                :transpose-weights-p ,transposep))
-              (,linear-symbol (activation-lump
+              (,linear-symbol (->activation
                                :name ',linear-name
                                :size ,(chunk-size (lumpy-chunk to-lumpy))
                                :weights ,(if transposep
@@ -192,7 +192,7 @@ the `end' lump.")
         (cond ((typep chunk 'constant-chunk)
                (assert (endp incomings))
                (push `(,(lumpy-symbol lumpy)
-                       (constant-lump
+                       (->constant
                         :name ',name :size ,size
                         :default-value ,(default-value chunk)))
                      defs))
@@ -200,7 +200,7 @@ the `end' lump.")
                    (endp incomings))
                (assert (endp incomings))
                (push `(,(lumpy-symbol lumpy)
-                       (input-lump :name ',name :size ,size))
+                       (->input :name ',name :size ,size))
                      defs))
               (t
                (multiple-value-bind (cloud-defs cloud-clamps cloud-inits
@@ -334,7 +334,8 @@ the backprop network."
                                (not (typep lower-chunk 'conditioning-chunk)))
                       ;; Add the marginals of the approximate
                       ;; posterior as an input.
-                      (let ((lower-lumpy (ensure-lumpy lower-depth lower-chunk)))
+                      (let ((lower-lumpy
+                              (ensure-lumpy lower-depth lower-chunk)))
                         ;; If it has no connections from below then
                         ;; it's an input, so don't add the :MAP
                         ;; connection.

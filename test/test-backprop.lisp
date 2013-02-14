@@ -65,11 +65,11 @@
 
 (defun test-simple (&key cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)
-                (weights (weight-lump :size 1))
-                (inputs (input-lump :size 1))
+                (weights (->weight :size 1))
+                (inputs (->input :size 1))
                 (my-linear (->linear :x inputs :y weights :size 1))
                 (sse (->sum-squared-error :x inputs :y my-linear))
-                (my-error (error-node :x sse))))
+                (my-error (->error :x sse))))
          (nodes (map 'list (lambda (lump) (storage (nodes lump)))
                      (lumps net))))
     (setf (n-stripes net) 1)
@@ -114,14 +114,14 @@
 
 (defun test-softmax (&key cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)
-                (inputs (input-lump :size 12))
-                (weights (weight-lump :size (* 12 12)))
-                (linear (activation-lump :weights weights :x inputs))
+                (inputs (->input :size 12))
+                (weights (->weight :size (* 12 12)))
+                (linear (->activation :weights weights :x inputs))
                 (exp (->exp :x linear))
-                (norm (normalized-lump :group-size 3 :x exp))
-                (expectations (input-lump :size 12))
+                (norm (->normalized :group-size 3 :x exp))
+                (expectations (->input :size 12))
                 (sse (->sum-squared-error :x norm :y expectations))
-                (my-error (error-node :x sse)))))
+                (my-error (->error :x sse)))))
     (let* ((inputs (find-lump 'inputs net))
            (inputs-nodes (storage (nodes inputs)))
            (expectations (find-lump 'expectations net))
@@ -194,14 +194,14 @@
 
 (defun test-cross-entropy (&key cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)
-                (inputs (input-lump :size 3))
-                (weights (weight-lump :size (* 3 3)))
-                (linear (activation-lump :x inputs :weights weights))
-                (expectations (input-lump :size 3))
-                (output (cross-entropy-softmax-lump :group-size 3
-                                                    :x linear
-                                                    :target expectations))
-                (my-error (error-node :x output)))))
+                (inputs (->input :size 3))
+                (weights (->weight :size (* 3 3)))
+                (linear (->activation :x inputs :weights weights))
+                (expectations (->input :size 3))
+                (output (->cross-entropy-softmax :group-size 3
+                                                 :x linear
+                                                 :target expectations))
+                (my-error (->error :x output)))))
     (let* ((inputs (find-lump 'inputs net))
            (inputs-nodes (storage (nodes inputs)))
            (expectations (find-lump 'expectations net))
@@ -211,26 +211,28 @@
              (clamper (samples bpn1)
                (assert (eq bpn1 net))
                (loop
-                for sample in samples
-                for stripe upfrom 0
-                do
-                (with-stripes ((stripe inputs inputs-start inputs-end)
-                                       (stripe expectations
-                                               expectations-start
-                                               expectations-end))
-                  (let* ((expectations (make-array 3 :initial-element (flt 0)))
-                         (inputs (let* ((max (loop for x in sample
-                                                   maximizing x))
-                                        (pos (position max sample :test #'=)))
-                                   (setf (aref expectations pos) (flt 1))
-                                   sample)))
-                    (loop for i upfrom inputs-start below inputs-end
-                          for j upfrom 0
-                          do (setf (aref inputs-nodes i) (elt inputs j)))
-                    (loop for i upfrom expectations-start below expectations-end
-                          for j upfrom 0
-                          do (setf (aref expectations-nodes i)
-                                   (aref expectations j))))))))
+                 for sample in samples
+                 for stripe upfrom 0
+                 do (with-stripes ((stripe inputs inputs-start inputs-end)
+                                   (stripe expectations
+                                           expectations-start
+                                           expectations-end))
+                      (let* ((expectations
+                               (make-array 3 :initial-element (flt 0)))
+                             (inputs (let* ((max (loop for x in sample
+                                                       maximizing x))
+                                            (pos (position max sample
+                                                           :test #'=)))
+                                       (setf (aref expectations pos) (flt 1))
+                                       sample)))
+                        (loop for i upfrom inputs-start below inputs-end
+                              for j upfrom 0
+                              do (setf (aref inputs-nodes i) (elt inputs j)))
+                        (loop for i upfrom expectations-start
+                                below expectations-end
+                              for j upfrom 0
+                              do (setf (aref expectations-nodes i)
+                                       (aref expectations j))))))))
         (setf (clamper net) #'clamper)
         (init-lump 'weights net 0.01)
         (train (make-instance 'counting-function-sampler
@@ -261,17 +263,17 @@
 
 (defun test-activation (&key transposep cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)
-                (inputs (input-lump :size 2))
-                (biases (weight-lump :size 2))
+                (inputs (->input :size 2))
+                (biases (->weight :size 2))
                 (biased-input (->+ :size 2 :args (list inputs biases)))
-                (weights (weight-lump :size (* 3 2)))
-                (activations (activation-lump :size 3
+                (weights (->weight :size (* 3 2)))
+                (activations (->activation :size 3
                                               :transpose-weights-p transposep
                                               :x biased-input
                                               :weights weights))
-                (expectations (input-lump :size 3))
+                (expectations (->input :size 3))
                 (sse (->sum-squared-error :x expectations :y activations))
-                (my-error (error-node :x sse)))))
+                (my-error (->error :x sse)))))
     ;; Set weights
     (multiple-value-bind (nodes bias-start)
         (segment-weights (find-lump 'biases net))

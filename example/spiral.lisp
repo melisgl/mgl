@@ -141,7 +141,7 @@
                                   :y (lump ',(chunk-lump-name
                                               'inputs
                                               :reconstruction))))
-                      (my-error (error-node :x sum-error)))))
+                      (my-error (->error :x sum-error)))))
       (log-msg "bpn def:~%~S~%" bpn-def)
       (let ((bpn (eval bpn-def)))
         (initialize-bpn-from-bm bpn dbn inits)

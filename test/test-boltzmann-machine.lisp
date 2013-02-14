@@ -269,7 +269,7 @@
                                                :size 1))
                 :clamper #'clamp)))
       (train (make-instance 'counting-function-sampler
-                            :max-n-samples 10000
+                            :max-n-samples 30000
                             :sampler #'sample)
              (make-instance 'test-cd-trainer
                             :segmenter
@@ -429,7 +429,7 @@
   #+nil
   (assert (> 0.25 (test-rbm/identity-and-xor :missingp t :rank 1)))
   (assert (> 0.25 (test-rbm/identity-and-xor :randomp t)))
-  (assert (> 0.35 (test-rbm/identity-and-xor :missingp t :randomp t)))
+  (assert (> 0.4 (test-rbm/identity-and-xor :missingp t :randomp t)))
   (assert (> 0.2 (test-rbm/single :sampler (constantly (flt 1))
                                   :visible-type 'gaussian-chunk
                                   :max-n-samples 10000)))

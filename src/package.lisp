@@ -388,20 +388,24 @@ Networks (DBN)."))
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-cg)
   (:export
    #:lump
+   #:deflump
    #:name
    #:size
    #:lump-size
    #:lump-node-array
    #:indices-to-calculate
-   #:input-lump
-   #:weight-lump
-   #:constant-lump
+   #:->input
+   #:update-stats-p
+   #:normalize-with-stats-p
+   #:normalized-cap
+   #:->weight
+   #:->constant
    #:default-value
-   #:normalized-lump
+   #:->normalized
    #:group-size
-   #:activation-lump
+   #:->activation
    #:transpose-weights-p
-   #:error-node
+   #:->error
    #:importance
    #:cost
    #:transfer-lump
@@ -415,6 +419,8 @@ Networks (DBN)."))
    #:initialize-lump
    #:initialize-bpn
    #:add-lump
+   #:remove-lump
+   #:with-weights-copied
    #:build-bpn
    #:forward-bpn
    #:backward-bpn
@@ -426,22 +432,36 @@ Networks (DBN)."))
    #:define-node-type
    #:node
    #:add-derivative
+   #:->rep
+   #:->stretch
    #:->+
+   #:->*
    #:->sum
    #:->linear
    #:->sigmoid
    #:->stochastic-sigmoid
    #:->scaled-tanh
+   #:->rectified
+   #:noisyp
+   #:->softplus
    #:->exp
+   #:->abs
+   #:->rough-exponential
+   #:->ref
+   #:->periodic
    #:->sum-squared-error
    #:->squared-error
+   #:->dropout
+   #:->max
+   #:->softmax
    #:->cross-entropy
-   #:cross-entropy-softmax-lump
+   #:->cross-entropy-softmax
    #:softmax
    #:target
    #:class-weights
    ;; Utilities
-   #:collect-bpn-errors)
+   #:collect-bpn-errors
+   #:renormalize-activations)
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll

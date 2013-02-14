@@ -80,11 +80,11 @@
 
 ;;;; BPN
 
-(defmethod graph-node-fields append (x (lump constant-lump))
+(defmethod graph-node-fields append (x (lump ->constant))
   (unless (= (flt 1) (default-value lump))
     (list (format nil "VALUE: ~,5E" (default-value lump)))))
 
-(defmethod graph-node-fields append (x (lump normalized-lump))
+(defmethod graph-node-fields append (x (lump ->normalized))
   `(,(format nil "GROUP-SIZE: ~S" (group-size lump))
     ,@(unless (= (flt 1) (scale lump))
         (list (format nil "SCALE: ~,5E" (scale lump))))))
@@ -96,25 +96,25 @@
                                :style :filled
                                :color :black
                                :fillcolor ,(cond
-                                             ((typep lump 'constant-lump)
+                                             ((typep lump '->constant)
                                               "#555555")
-                                             ((typep lump 'weight-lump)
+                                             ((typep lump '->weight)
                                               "#888888")
-                                             ((typep lump 'input-lump)
+                                             ((typep lump '->input)
                                               "#AAAAAA")
                                              (t
                                               "#DDDDDD")))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump normalized-lump))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->normalized))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump activation-lump))
+(defmethod graph-node-fields append (x (lump ->activation))
   (when (transpose-weights-p lump)
     (list (format nil "TRANSPOSE: ~S" (transpose-weights-p lump)))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump activation-lump))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->activation))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
@@ -161,11 +161,11 @@
                        :object (mgl-bp::y lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump cross-entropy-softmax-lump))
+(defmethod graph-node-fields append (x (lump ->cross-entropy-softmax))
   (list (format nil "GROUP-SIZE: ~S" (group-size lump))))
 
 (defmethod cl-dot:graph-object-points-to ((bpn bpn)
-                                          (lump cross-entropy-softmax-lump))
+                                          (lump ->cross-entropy-softmax))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
