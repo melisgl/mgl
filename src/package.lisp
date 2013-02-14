@@ -57,6 +57,12 @@
    #:select-random-element
    #:binomial-log-likelihood-ratio
    #:multinomial-log-likelihood-ratio
+   ;; Running stat
+   #:running-stat
+   #:clear-running-stat
+   #:add-to-running-stat
+   #:running-stat-variance
+   #:running-stat-mean
    ;; Blas support
    #:*use-blas*
    #:use-blas-p

@@ -435,6 +435,46 @@ K1 and K2 before calling."
             (log-l p2 k2))))))
 
 
+;;;; Running mean and variance.
+;;;;
+;;;; See Knuth TAOCP vol 2, 3rd edition, page 232.
+
+(defclass running-stat ()
+  ((n :initform 0)
+   (mean :initform 0)
+   (m2 :initform 0)))
+
+(defun clear-running-stat (stat)
+  (with-slots (n mean m2) stat
+    (setf n 0
+          mean 0
+          m2 0)))
+
+(defun add-to-running-stat (x stat)
+  (with-slots (n mean m2) stat
+    (incf n)
+    (let ((delta (- x mean)))
+      (incf mean (/ delta n))
+      (incf m2 (* delta (- x mean))))))
+
+(defun running-stat-variance (stat)
+  (with-slots (n mean m2) stat
+    (if (<= n 1)
+        0
+        (/ m2 (1- n)))))
+
+(defun running-stat-mean (stat)
+  (slot-value stat 'mean))
+
+(defmethod print-object ((stat running-stat) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (stat stream :type t)
+      (format stream ":mean ~,5F :variance ~,5F"
+              (running-stat-mean stat)
+              (running-stat-variance stat))))
+  stat)
+
+
 ;;;; BLAS support
 
 (defvar *use-blas* 10000
