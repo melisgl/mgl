@@ -156,6 +156,15 @@
    #:do-batches-for-learner
    #:apply-counters-and-measurers
    #:collect-batch-errors
+   ;; Executors
+   #:map-over-executors
+   #:do-executors
+   #:find-one-executor
+   #:trivial-cached-executor-mixin
+   #:lookup-executor-cache
+   #:insert-into-executor-cache
+   #:trivially-map-over-executors
+   #:sample-to-executor-cache-key
    ;; Segments
    #:map-segments
    #:segment-weights

@@ -271,3 +271,67 @@ of counters from COUNTERS-AND-MEASURERS."
       (funcall fn samples)
       (apply-counters-and-measurers counters-and-measurers samples learner)))
   (map 'list #'car counters-and-measurers))
+
+
+;;;; Executors
+
+(defgeneric map-over-executors (fn samples object)
+  (:documentation "Divide SAMPLES between executors. And call FN with
+the samples and the executor for which the samples are.
+
+Some objects conflate function and call: the forward pass of a bpn
+computes output from inputs so it is like a function but it also
+doubles as a function call in the sense that the bpn (function) object
+changes state during the computation of the output. Hence not even the
+forward pass of a bpn is thread safe. There is also the restriction
+that all inputs must be of the same size.
+
+For example, if we have a function that builds bpn for an input of a
+certain size, then we can create a factory that creates bpns for a
+particular call. The factory probably wants keep the weights the same
+though.
+
+Another possibility MAP-OVER-EXECUTORS allows is to parallelize
+execution.
+
+The default implementation simply calls FN with SAMPLES and OBJECT.")
+  (:method (fn samples object)
+    (funcall fn samples object)))
+
+(defmacro do-executors ((samples object) &body body)
+  `(map-over-executors (lambda (,samples ,object)
+                         ,@body)
+                       ,samples ,object))
+
+(defclass trivial-cached-executor-mixin ()
+  ((executor-cache :initform (make-hash-table :test #'equal)
+                   :reader executor-cache))
+  (:documentation ""))
+
+(defun lookup-executor-cache (key cache)
+  (gethash key (executor-cache cache)))
+
+(defun insert-into-executor-cache (key cache value)
+  (setf (gethash key (executor-cache cache)) value))
+
+(defmethod map-over-executors (fn samples (c trivial-cached-executor-mixin))
+  (trivially-map-over-executors fn samples c))
+
+(defun trivially-map-over-executors (fn samples obj)
+  (let ((executor-to-samples (make-hash-table)))
+    (dolist (sample samples)
+      (let ((executor (find-one-executor sample obj)))
+        (push sample (gethash executor executor-to-samples))))
+    (maphash (lambda (executor samples)
+               (funcall fn samples executor))
+             executor-to-samples)))
+
+(defgeneric find-one-executor (sample obj)
+  (:documentation "Called by TRIVIALLY-MAP-OVER-EXECUTORS.")
+  (:method (sample obj)
+    nil)
+  (:method :around (sample obj)
+    (or (call-next-method)
+        obj)))
+
+(defgeneric sample-to-executor-cache-key (sample object))
