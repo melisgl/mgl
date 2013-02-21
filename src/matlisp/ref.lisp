@@ -830,20 +830,14 @@
 	 (store (store matrix))
 	 (new-store (store new)))
     
-    (declare (type fixnum m)
-	     (type (real-matrix-store-type (*)) store new-store))
+    (declare (type (real-matrix-store-type (*)) store new-store))
     
     (setf (aref store (fortran-matrix-indexing i 0 n))
 	  (aref new-store 0))))
 
 (defmethod (setf matrix-ref-1d) ((new real-matrix) (matrix real-matrix) (i list))
-  (let* ((n (nrows matrix))
-	 (m (ncols matrix))
-	 (new-n (nrows new)))
+  (let* ((new-n (nrows new)))
     
-    (declare (type fixnum n m new-n new-m)
-	     (type (real-matrix-store-type (*)) store new-store))
-
     (let ((p (length i)))
       (when (> p new-n)
 	(error "cannot do matrix assignment, too many indices")))
@@ -856,15 +850,8 @@
 	(error "out of bounds indexing"))))
 
 (defmethod (setf matrix-ref-1d) ((new real-matrix) (matrix real-matrix) (i real-matrix))
-  (let* ((n (nrows matrix))
-	 (m (ncols matrix))
-	 (new-n (nrows new))
-	 )
+  (let* ((new-n (nrows new)))
     
-    (declare (type fixnum n m new-n new-m)
-	     (type (real-matrix-store-type (*)) store new-store))
-    
-  
     (let ((p (if (integerp i)
 		 1
 		 (if (listp i)
@@ -2342,10 +2329,9 @@
 	 (m (ncols matrix))
 	 (store (store matrix))
 	 (new-n (nrows new))
-	 (new-m (ncols new))
-	 (new-store (store new)))
+         (new-store (store new)))
     
-    (declare (type fixnum n m new-n new-m)
+    (declare (type fixnum n m new-n)
 	     (type (real-matrix-store-type (*)) new-store)
 	     (type (complex-matrix-store-type (*)) store))
     

@@ -136,7 +136,7 @@
 	  make-complex-matrix-dim
 	  make-complex-matrix))
 
-(eval-when (load eval compile)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (deftype integer4-matrix-element-type ()
   '(signed-byte 32))
 

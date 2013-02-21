@@ -30,7 +30,7 @@
 (in-package :matlisp)
 
 (eval-when (:load-toplevel :execute)
-  (warn
+  (write-line
    (if (find-package 'blas)
        "Matlisp is already loaded: redefining with slow, Lisp implementation."
        "Loading Lisp implementation of a fraction Matlisp. ~

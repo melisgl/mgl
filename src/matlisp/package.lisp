@@ -18,5 +18,9 @@
            #:ones
            #:sum
            #:m.*!
+           #:m+
+           #:matrix-ref
+           #:m*
+           #:size
            ;;
            #:*print-matrix*))
