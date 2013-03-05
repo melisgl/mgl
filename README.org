@@ -12,7 +12,10 @@ contributed by Ravenpack International. Implements:
 - Conjugate gradient optimization
 - Gaussian Processes
 
-It's under the MIT licence. See COPYING.
+mgl-gnuplot, a plotting library, that does not depend on the rest of
+the code is bundled.
+
+MGL is under the MIT licence. See COPYING.
 
 
 * Tests

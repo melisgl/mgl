@@ -98,6 +98,7 @@ CLOSED: [2013-03-05 Tue 16:31]
 - CLOSING NOTE [2013-03-05 Tue 16:31]
 ** DONE factor out most frequent and log-likelihood-ratio based feature selection
 ** TODO parallelize with threads and/or across different images
+** TODO add high level interface (scikit?)
 * examples
 ** DONE movie review example
 ** TODO netflix example
