@@ -763,10 +763,10 @@ weights * visible. Visible = visible + weights^T * hidden.")))
     (funcall fn start end)))
 
 (defmethod write-weights ((cloud full-cloud) stream)
-  (write-double-float-vector (weights cloud) stream))
+  (write-double-float-array (weights cloud) stream))
 
 (defmethod read-weights ((cloud full-cloud) stream)
-  (read-double-float-vector (weights cloud) stream))
+  (read-double-float-array (weights cloud) stream))
 
 
 ;;;; Factored cloud

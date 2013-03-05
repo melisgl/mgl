@@ -563,10 +563,10 @@ of stripes."
 ;;;; I/O
 
 (defmethod write-weights ((lump ->weight) stream)
-  (write-double-float-vector (nodes lump) stream))
+  (write-double-float-array (nodes lump) stream))
 
 (defmethod read-weights ((lump ->weight) stream)
-  (read-double-float-vector (nodes lump) stream))
+  (read-double-float-array (nodes lump) stream))
 
 (defmethod write-weights ((bpn bpn) stream)
   (map-segments (lambda (weights)

@@ -82,7 +82,9 @@ CLOSED: [2013-03-05 Tue 16:31]
 - CLOSING NOTE [2013-03-05 Tue 16:31]
    The wrappers should calculate cost and call matlisp if it is
    avaible.
-** TODO float vector I/O for cmucl
+** DONE float vector I/O for cmucl
+CLOSED: [2013-03-05 Tue 19:39]
+- CLOSING NOTE [2013-03-05 Tue 19:39]
 ** DONE support more lisps
 CLOSED: [2013-03-05 Tue 16:32]
 - CLOSING NOTE [2013-03-05 Tue 16:32]

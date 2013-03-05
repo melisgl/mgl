@@ -535,97 +535,30 @@ the displacement."
   (row-major-aref matrix 0))
 
 
-;;;; Float vector I/O
+;;;; Float I/O
 
-(deftype single-float-vector () '(simple-array single-float (*)))
-(deftype double-float-vector () '(simple-array double-float (*)))
+(defun write-as-bytes (integer n stream)
+  (let ((x integer))
+    (loop repeat n do
+      (write-byte (logand x #xff) stream)
+      (setq x (ash x -8)))
+    (assert (zerop x))))
 
-#+sbcl
-(progn
+(defun write-double-float-array (array stream)
+  (dotimes (i (array-total-size array))
+    (write-as-bytes (ieee-floats:encode-float64 (row-major-aref array i)) 8
+                    stream)))
 
-(defun sync->fd (fd-stream)
-  (force-output fd-stream)
-  (let ((fd (sb-impl::fd-stream-fd fd-stream)))
-    (sb-unix:unix-lseek fd (file-position fd-stream) sb-unix:l_set)))
+(defun read-as-bytes (n stream)
+  (let ((x 0))
+    (loop for i below n do
+      (incf x (ash (read-byte stream) (* i 8))))
+    x))
 
-(defun sync<-fd (fd-stream)
-  (let ((fd (sb-impl::fd-stream-fd fd-stream)))
-    (file-position fd-stream
-                   (sb-unix:unix-lseek fd 0 sb-unix:l_incr))))
-
-(defun write-single-float-vector (array fd-stream)
-  (declare (type single-float-vector array))
-  (sync->fd fd-stream)
-  (let ((fd (sb-impl::fd-stream-fd fd-stream)))
-    (sb-unix:unix-write fd
-                        (sb-sys:vector-sap array)
-                        0
-                        (* 4 (length array))))
-  (sync<-fd fd-stream))
-
-(defun read-single-float-vector (array fd-stream)
-  (declare (type single-float-vector array))
-  (sync->fd fd-stream)
-  (let* ((l (* 4 (length array)))
-         (l2 (sb-unix:unix-read (sb-impl::fd-stream-fd fd-stream)
-                                (sb-sys:vector-sap array)
-                                l)))
-    (sync<-fd fd-stream)
-    (unless (= l l2)
-      (error "Read only ~S bytes out of ~S~%" l2 l))))
-
-(defun write-double-float-vector (array fd-stream)
-  (declare (type double-float-vector array))
-  (sync->fd fd-stream)
-  (let ((fd (sb-impl::fd-stream-fd fd-stream)))
-    (sb-unix:unix-write fd
-                        (sb-sys:vector-sap array)
-                        0
-                        (* 8 (length array))))
-  (sync<-fd fd-stream))
-
-(defun read-double-float-vector (array fd-stream)
-  (declare (type double-float-vector array))
-  (sync->fd fd-stream)
-  (let* ((l (* 8 (length array)))
-         (l2 (sb-unix:unix-read (sb-impl::fd-stream-fd fd-stream)
-                                (sb-sys:vector-sap array)
-                                l)))
-    (sync<-fd fd-stream)
-    (unless (= l l2)
-      (error "Read only ~S bytes out of ~S~%" l2 l))))
-)
-
-#+allegro
-(progn
-
-(defun write-single-float-vector (array stream)
-  (declare (type single-float-vector array)
-           (type excl:simple-stream stream))
-  (excl:write-vector array stream))
-
-(defun read-single-float-vector (array stream)
-  (declare (type single-float-vector array)
-           (type excl:simple-stream stream))
-  (let* ((l (* 4 (length array)))
-         (l2 (excl:read-vector array stream)))
-    (unless (= l l2)
-      (error "Read only ~S bytes out of ~S~%" l2 l))))
-
-(defun write-double-float-vector (array stream)
-  (declare (type double-float-vector array)
-           (type excl:simple-stream stream))
-  (excl:write-vector array stream))
-
-(defun read-double-float-vector (array stream)
-  (declare (type double-float-vector array)
-           (type excl:simple-stream stream))
-  (let* ((l (* 8 (length array)))
-         (l2 (excl:read-vector array stream)))
-    (unless (= l l2)
-      (error "Read only ~S bytes out of ~S~%" l2 l))))
-
-)
+(defun read-double-float-array (array stream)
+  (dotimes (i (array-total-size array))
+    (setf (row-major-aref array i)
+          (ieee-floats:decode-float64 (read-as-bytes 8 stream)))))
 
 
 ;;;; Weight I/O

@@ -73,10 +73,8 @@
    #:fill!
    #:to-scalar
    ;; I/O
-   #:read-single-float-vector
-   #:write-single-float-vector
-   #:read-double-float-vector
-   #:write-double-float-vector
+   #:read-double-float-array
+   #:write-double-float-array
    #:write-weights
    #:read-weights
    ;; Printing

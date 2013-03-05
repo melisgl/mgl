@@ -291,12 +291,12 @@
 ;;;; Utilities
 
 (defun load-weights (filename obj)
-  (with-open-file (stream filename)
+  (with-open-file (stream filename :element-type 'unsigned-byte)
     (mgl-util:read-weights obj stream)))
 
 (defun save-weights (filename obj)
   (ensure-directories-exist filename)
   (with-open-file (stream filename :direction :output
-                   :if-does-not-exist :create :if-exists :supersede)
+                   :if-does-not-exist :create :if-exists :supersede
+                   :element-type 'unsigned-byte)
     (mgl-util:write-weights obj stream)))
-

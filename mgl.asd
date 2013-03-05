@@ -26,7 +26,7 @@
                              (:file "deep-belief-network")
                              (:file "backprop")
                              (:file "unroll"))))
-  :depends-on (:alexandria :closer-mop :array-operations :lla))
+  :depends-on (:alexandria :closer-mop :array-operations :lla :ieee-floats))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
   (oos 'load-op '#:mgl-test)
