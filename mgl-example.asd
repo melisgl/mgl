@@ -10,5 +10,6 @@
                              (:file "util")
                              (:file "spiral")
                              (:file "mnist")
-                             (:file "movie-review"))))
+                             (:file "movie-review")
+                             (:file "gaussian-process"))))
   :depends-on (#:mgl #:cl-ppcre))

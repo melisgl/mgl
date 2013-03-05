@@ -15,5 +15,6 @@
                              (:file "test-boltzmann-machine")
                              (:file "test-backprop")
                              (:file "test-unroll")
+                             (:file "test-gaussian-process")
                              (:file "test"))))
   :depends-on (#:mgl))

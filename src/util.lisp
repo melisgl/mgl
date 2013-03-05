@@ -380,7 +380,7 @@ classes the same."
 (defun mv-gaussian-random (&key means covariances
                            (covariances-left-square-root
                             (lla:cholesky (clnu:hermitian-matrix covariances))))
-  "Return a column matrix of samples from the multivariate normal
+  "Return a column vector of samples from the multivariate normal
 distribution defined by MEANS (Nx1) and COVARIANCES (NxN). For
 multiple calls with the same parameter one can pass in
 COVARIANCES-LEFT-SQUARE-ROOT instead of COVARIANCES."
@@ -388,7 +388,7 @@ COVARIANCES-LEFT-SQUARE-ROOT instead of COVARIANCES."
          (z (make-flt-array (list n 1))))
     (dotimes (i n)
       (setf (aref z i 0) (gaussian-random-1)))
-    (clnu:e+ means (lla:mm covariances-left-square-root z))))
+    (clnu:e+ (as-column-vector means) (lla:mm covariances-left-square-root z))))
 
 ;; Knuth's slow poisson sampler.
 (defun poisson-random (mean)
@@ -533,6 +533,9 @@ the displacement."
 (defun to-scalar (matrix)
   (assert (= 1 (array-total-size matrix)))
   (row-major-aref matrix 0))
+
+(defun as-column-vector (a)
+  (aops:reshape a (list (array-total-size a) 1)))
 
 
 ;;;; Float I/O

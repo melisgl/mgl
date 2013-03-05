@@ -72,6 +72,7 @@
    #:backing-array
    #:fill!
    #:to-scalar
+   #:as-column-vector
    ;; I/O
    #:read-double-float-array
    #:write-double-float-array
@@ -474,3 +475,26 @@ Networks (DBN)."))
    #:populate-map-cache)
   (:documentation "Translating Boltzmann Machines to a Backprop
 networks, aka `unrolling'."))
+
+(cl:defpackage :mgl-gp
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bp)
+  (:export
+   #:gp
+   #:gp-means
+   #:gp-covariances
+   #:gp-means-and-covariances
+   #:gp-means-and-covariances*
+   ;;
+   #:prior-gp
+   #:posterior-gp
+   #:update-gp
+   ;; BPN-GP
+   #:bpn-gp
+   #:mean-lump-name
+   #:covariance-lump-name
+   #:->gp)
+  (:export
+   #:gp-confidences-as-plot-data
+   #:gp-samples-as-plot-data)
+  (:documentation "Gaussian processes with support for training with
+backpropagation."))

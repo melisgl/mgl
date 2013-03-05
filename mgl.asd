@@ -25,8 +25,10 @@
                              (:file "boltzmann-machine")
                              (:file "deep-belief-network")
                              (:file "backprop")
-                             (:file "unroll"))))
-  :depends-on (:alexandria :closer-mop :array-operations :lla :ieee-floats))
+                             (:file "unroll")
+                             (:file "gaussian-process"))))
+  :depends-on (:alexandria :closer-mop :array-operations :lla :ieee-floats
+                           :mgl-gnuplot))
 
 (defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
   (oos 'load-op '#:mgl-test)

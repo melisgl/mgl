@@ -37,3 +37,7 @@
 (cl:defpackage #:mgl-example-movie-review
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp
         #:mgl-unroll #:mgl-example-util))
+
+(cl:defpackage :mgl-example-gp
+  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-gp #:mgl-bp
+        #:mgl-example-util))

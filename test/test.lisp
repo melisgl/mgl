@@ -6,4 +6,5 @@
   (test-bm)
   (test-bp)
   (test-unroll)
+  (test-gp)
   (values))
