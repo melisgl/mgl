@@ -9,4 +9,4 @@
                               :serial t
                               :components ((:file "package")
                                            (:file "dot"))))))
-  :depends-on (:mgl :cl-ppcre :cl-dot))
+  :depends-on (#:mgl #:cl-ppcre #:cl-dot))

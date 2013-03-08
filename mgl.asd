@@ -1,11 +1,6 @@
 ;;;; -*- mode: Lisp -*-
 
-(defpackage mgl-system
-  (:use #:common-lisp :asdf))
-
-(in-package :mgl-system)
-
-(defsystem #:mgl
+(asdf:defsystem #:mgl
   :name "MGL, the machine learning library"
   :author "Gabor Melis"
   :version "0.0.6"
@@ -27,13 +22,13 @@
                              (:file "backprop")
                              (:file "unroll")
                              (:file "gaussian-process"))))
-  :depends-on (:alexandria :closer-mop :array-operations :lla :ieee-floats
-                           :mgl-gnuplot))
+  :depends-on (#:alexandria #:closer-mop #:array-operations #:lla
+                            #:ieee-floats #:mgl-gnuplot))
 
-(defmethod perform ((o test-op) (c (eql (find-system '#:mgl))))
-  (oos 'load-op '#:mgl-test)
-  (funcall (intern (symbol-name '#:test)
-                   (find-package '#:mgl-test))))
+(defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
+  (asdf:oos 'asdf:load-op '#:mgl-test)
+  (funcall (intern (symbol-name '#:test) (find-package '#:mgl-test))))
 
-(defmethod operation-done-p ((o test-op) (c (eql (find-system '#:mgl))))
+(defmethod asdf:operation-done-p ((o asdf:test-op)
+                                  (c (eql (asdf:find-system '#:mgl))))
   (values nil))
