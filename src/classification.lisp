@@ -62,8 +62,8 @@ misclassifications. Return NIL if OBJ contains no labels.")
 
 (defun measure-cross-entropy (examples striped
                               &key (label-fn #'label)
-                                (label-distribution-fn #'label-distribution)
-                                (confidence-fn #'classification-confidences))
+                              (label-distribution-fn #'label-distribution)
+                              (confidence-fn #'classification-confidences))
   "Return the sum of the cross entropy between the confidences and the
 distribution (1 at the label of the class) and the number of examples.
 The length of EXAMPLES must be equal to the number of stripes in
@@ -88,9 +88,10 @@ measurer function."
                                                           prediction))))))
                                  (incf sum err)
                                  (incf sum-weights target)
-                                 (let ((label-error (or (getf label-errors label)
-                                                        (setf (getf label-errors label)
-                                                              (list #.(flt 0) 0)))))
+                                 (let ((label-error
+                                         (or (getf label-errors label)
+                                             (setf (getf label-errors label)
+                                                   (list #.(flt 0) 0)))))
                                    (incf (first label-error) err)
                                    (incf (second label-error) target)))))
                      (t

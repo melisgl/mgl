@@ -92,7 +92,8 @@ TARGET."
 (defun add-confusion-matrix (matrix result-matrix)
   "Add MATRIX into RESULT-MATRIX."
   (map-confusion-matrix (lambda (target prediction count)
-                          (incf (confusion-count result-matrix target prediction)
+                          (incf (confusion-count result-matrix target
+                                                 prediction)
                                 count))
                         matrix)
   result-matrix)
@@ -103,26 +104,28 @@ TARGET."
                (format nil "~,2F%" (* 100 x))
                nil)))
     (let ((all-classes
-           (sort-confusion-classes matrix
-                                   (confusion-matrix-classes matrix))))
+            (sort-confusion-classes matrix
+                                    (confusion-matrix-classes matrix))))
       (print-unreadable-object (matrix stream :type t)
         (print-table
          `(("" ,@(mapcar (lambda (class)
                            (confusion-class-name matrix class))
                          all-classes)
-            "Recall")
+               "Recall")
            ,@(loop
-              for target in all-classes
-              collect (append (cons (confusion-class-name matrix target)
-                                    (loop for prediction in all-classes
-                                          collect (confusion-count
-                                                   matrix target prediction)))
-                              (list (->% (confusion-matrix-recall matrix
-                                                                  target)))))
+               for target in all-classes
+               collect (append (cons (confusion-class-name matrix target)
+                                     (loop for prediction in all-classes
+                                           collect (confusion-count
+                                                    matrix target prediction)))
+                               (list (->% (confusion-matrix-recall matrix
+                                                                   target)))))
            ("Precision"
             ,@(loop for prediction in all-classes
-                    collect (->% (confusion-matrix-precision matrix prediction)))
+                    collect (->% (confusion-matrix-precision matrix
+                                                             prediction)))
             ""))
          :stream stream)
-        (format stream "Accuracy: ~A" (->% (confusion-matrix-accuracy matrix)))))
+        (format stream "Accuracy: ~A"
+                (->% (confusion-matrix-accuracy matrix)))))
     matrix))

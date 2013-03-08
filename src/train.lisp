@@ -28,9 +28,9 @@ automatically from a :BEFORE method on TRAIN."))
 
 (defgeneric train (sampler trainer learner)
   (:method :around (sampler trainer learner)
-           (declare (ignore sampler))
-           (initialize-trainer trainer learner)
-           (call-next-method))
+    (declare (ignore sampler))
+    (initialize-trainer trainer learner)
+    (call-next-method))
   (:documentation "Train LEARNER with TRAINER on the examples from
 SAMPLER. Before that TRAINER is initialized for LEARNER with
 INITIALIZE-TRAINER. Training continues until SAMPLER is finished."))

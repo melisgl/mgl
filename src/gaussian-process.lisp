@@ -53,7 +53,7 @@ by GP at INPUTS as a column vector."
 
 ;;;; PRIOR-GP
 
-;;; A gp  by two lisp functions. 
+;;; A gp defined by two lisp functions.
 (defclass prior-gp (gp)
   ((mean-fn :initarg :mean-fn :reader mean-fn)
    (covariance-fn :initarg :covariance-fn :reader covariance-fn))
@@ -83,7 +83,7 @@ lisp functions. Can be updated, but it's not trainable."))
     covariances))
 
 
-;;;; POSTERIOR-GP.
+;;;; POSTERIOR-GP
 
 ;;; A gp that takes some evidence into account (see UPDATE-GP). Can't
 ;;; be trained.
@@ -290,23 +290,7 @@ lisp functions. Can be updated, but it's not trainable."))
                              (lla:mmm (aops:flatten centered-outputs)
                                       inverted-covariances
                                       centered-outputs))
-                            (* n (log (* 2 pi)))))))
-               #+nil
-               (when t;; (minusp (aref nodes stripe))
-                 (format t "~S = ~S ~S ~S ~S~%~S~%"
-                         (aref nodes* stripe)
-                         (- (symmetric-posdef-logdet
-                             inverted-covariances))
-                         (symmetric-posdef-logdet
-                          (matlisp:m/ inverted-covariances))
-                         (to-scalar
-                          (matrix* (matlisp:transpose centered-outputs)
-                                   inverted-covariances
-                                   centered-outputs))
-                         (* n (log (* 2 pi)))
-                         inverted-covariances)
-                 (when (minusp (aref nodes* stripe))
-                   (break)))))))
+                            (* n (log (* 2 pi)))))))))))
 
 (defmethod derive-lump ((lump ->gp))
   (let* ((means (means lump))
@@ -347,7 +331,7 @@ lisp functions. Can be updated, but it's not trainable."))
            (lumps bpn)))
 
 
-;;;; Utilities for plotting.
+;;;; Utilities for plotting
 
 (defun gp-confidences-as-plot-data
     (gp inputs &key means covariances

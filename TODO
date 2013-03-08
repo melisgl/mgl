@@ -91,8 +91,12 @@ CLOSED: [2013-03-05 Tue 16:32]
    Matlisp only supports cmucl, sbcl and allegro.
 ** TODO optimize the missing value case (SSE?)
 ** TODO lookup table based exp/sigmoid
-** TODO investigate SPARTNS
-** TODO investigate LISP-MATRIX
+** CANCELLED investigate SPARTNS
+CLOSED: [2013-03-07 Thu 21:42]
+- CLOSING NOTE [2013-03-07 Thu 21:42]
+** CANCELLED investigate LISP-MATRIX
+CLOSED: [2013-03-07 Thu 21:42]
+- CLOSING NOTE [2013-03-07 Thu 21:42]
 ** DONE investigate LLA
 CLOSED: [2013-03-05 Tue 16:31]
 - CLOSING NOTE [2013-03-05 Tue 16:31]

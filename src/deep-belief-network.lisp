@@ -28,9 +28,10 @@ the :RBM-CLASS initarg is for."))
     (setf (max-n-stripes rbm) max-n-stripes)))
 
 (defun check-no-name-clashes (rbms)
-  (let ((name-clashes (name-clashes
-                       (append (apply #'append (mapcar #'visible-chunks rbms))
-                               (apply #'append (mapcar #'hidden-chunks rbms))))))
+  (let ((name-clashes
+          (name-clashes
+           (append (apply #'append (mapcar #'visible-chunks rbms))
+                   (apply #'append (mapcar #'hidden-chunks rbms))))))
     (when name-clashes
       (error "Name conflict between chunks: ~S" name-clashes)))
   (let ((name-clashes (name-clashes (apply #'append (mapcar #'clouds rbms)))))
