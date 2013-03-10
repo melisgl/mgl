@@ -320,8 +320,13 @@ classes the same."
 ;;; values must be known to be FLT for this to work.
 #+allegro
 (defmacro with-zero-on-underflow (&body body)
-  `(locally (declare (optimize (safety 0) (speed 3)))
-     ,@body))
+  (alexandria:with-gensyms (trap-underflow)
+    `(catch ',trap-underflow
+       (handler-bind ((floating-point-underflow
+                        #'(lambda (c)
+                            (declare (ignore c))
+                            (throw ',trap-underflow (flt 0)))))
+         ,@body))))
 
 #-allegro
 (defmacro with-zero-on-underflow (&body body)
