@@ -583,7 +583,7 @@ but add to it."
 
 (defclass full-cloud (cloud)
   ((weights
-    :type flt-matrix :initarg :weights :reader weights
+    :type flt-vector :initarg :weights :reader weights
     :documentation "A chunk is represented as a row vector
 \(disregarding the multi-striped case). If the visible chunk is 1xN
 and the hidden is 1xM then the weight matrix is NxM. Hidden = hidden +
@@ -614,11 +614,11 @@ weights * visible. Visible = visible + weights^T * hidden.")))
                                        &key &allow-other-keys)
   (unless (slot-boundp cloud 'weights)
     (setf (slot-value cloud 'weights)
-          (make-flt-array (list (size (chunk1 cloud))
-                                (size (chunk2 cloud)))))
+          (make-flt-array (* (size (chunk1 cloud))
+                             (size (chunk2 cloud)))))
     (unless (or (conditioning-chunk-p (chunk1 cloud))
                 (conditioning-chunk-p (chunk2 cloud)))
-      (map-into (aops:flatten (weights cloud))
+      (map-into (weights cloud)
                 (lambda () (flt (* 0.01 (gaussian-random-1))))))))
 
 (defmacro do-cloud-runs (((start end) cloud) &body body)
@@ -633,7 +633,7 @@ weights * visible. Visible = visible + weights^T * hidden.")))
                         (,end (the! index (+ ,start ,%chunk2-size))))
                    ,@body))))
            (let ((,start 0)
-                 (,end (array-total-size (weights ,%cloud))))
+                 (,end (length (weights ,%cloud))))
              ,@body)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -663,9 +663,10 @@ weights * visible. Visible = visible + weights^T * hidden.")))
 
 (defmethod zero-weight-to-self ((cloud full-cloud))
   (when (eq (chunk1 cloud) (chunk2 cloud))
-    (let ((weights (weights cloud)))
-      (loop for i below (size (chunk1 cloud)) do
-        (setf (aref weights i i) #.(flt 0))))))
+    (let ((weights (weights cloud))
+          (n (size (chunk1 cloud))))
+      (loop for i below n do
+        (setf (aref weights (+ (* i n) i)) #.(flt 0))))))
 
 (defmethod activate-cloud* ((cloud full-cloud) reversep
                             from-chunk to-chunk from to)
@@ -676,35 +677,32 @@ weights * visible. Visible = visible + weights^T * hidden.")))
         (to-size (size to-chunk))
         (n-stripes (n-stripes from-chunk)))
     (declare (type flt scale1 scale2)
+             (type flt-vector weights from to)
              (optimize (speed 3) #.*no-array-bounds-check*))
     (if (not reversep)
         (if (use-blas-on-chunk-p (chunk1 cloud))
             (lla:gemm! scale2 from weights 1 to
-                        :lda from-size :ldc to-size
-                        :m n-stripes :n to-size :k from-size)
-            (let ((weights (backing-array weights)))
-              (declare (type flt-vector weights from to))
-              (do-cloud/chunk1 (i cloud)
-                (let ((x (aref from i)))
-                  (unless (zerop x)
-                    (setq x (* x scale2))
-                    (do-cloud/chunk2 (j weight-index)
-                      (incf (aref to j)
-                            (* x (aref weights weight-index)))))))))
+                       :lda from-size :ldb to-size :ldc to-size
+                       :m n-stripes :n to-size :k from-size)
+            (do-cloud/chunk1 (i cloud)
+              (let ((x (aref from i)))
+                (unless (zerop x)
+                  (setq x (* x scale2))
+                  (do-cloud/chunk2 (j weight-index)
+                    (incf (aref to j)
+                          (* x (aref weights weight-index))))))))
         (if (use-blas-on-chunk-p (chunk1 cloud))
             (lla:gemm! scale1 from weights 1 to
-                        :transpose-b? t
-                        :lda from-size :ldc to-size
-                        :m n-stripes :n to-size :k from-size)
-            (let ((weights (backing-array weights)))
-              (declare (type flt-vector weights from to))
-              (do-cloud/chunk1 (i cloud)
-                (let ((sum #.(flt 0)))
-                  (declare (type flt sum))
-                  (do-cloud/chunk2 (j weight-index)
-                    (incf sum (* (aref from j)
-                                 (aref weights weight-index))))
-                  (incf (aref to i) (* sum scale1))))))))
+                       :transpose-b? t
+                       :lda from-size :ldb from-size :ldc to-size
+                       :m n-stripes :n to-size :k from-size)
+            (do-cloud/chunk1 (i cloud)
+              (let ((sum #.(flt 0)))
+                (declare (type flt sum))
+                (do-cloud/chunk2 (j weight-index)
+                  (incf sum (* (aref from j)
+                               (aref weights weight-index))))
+                (incf (aref to i) (* sum scale1)))))))
   (values))
 
 (defgeneric accumulate-cloud-statistics* (cloud v1 v2 multiplier
@@ -755,8 +753,7 @@ weights * visible. Visible = visible + weights^T * hidden.")))
   (funcall fn cloud))
 
 (defmethod segment-weights ((cloud full-cloud))
-  (values (backing-array (weights cloud)) 0
-          (array-total-size (weights cloud))))
+  (values (weights cloud) 0 (array-total-size (weights cloud))))
 
 (defmethod map-segment-runs (fn (cloud full-cloud))
   (do-cloud-runs ((start end) cloud)
@@ -1638,13 +1635,16 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
   (declare (type flt multiplier))
   (let* ((chunk1 (chunk1 cloud))
          (chunk2 (chunk2 cloud))
+         (size1 (size chunk1))
+         (size2 (size chunk2))
          (v (means-or-samples trainer bm chunk1))
          (h (means-or-samples trainer bm chunk2))
          (a (weights (cloud-a cloud)))
          (b (weights (cloud-b cloud)))
          (n-stripes (n-stripes (chunk1 cloud)))
          (shared (factored-cloud-shared-chunk cloud))
-         (x (nodes shared)))
+         (x (nodes shared))
+         (n-shared (size shared)))
     (check-stripes chunk1)
     (when (indices-present chunk1)
       (error "Missing value support not implemented for FACTORED-CLOUD."))
@@ -1654,26 +1654,26 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
       (when (and accumulator start)
         ;; dCD/dA = v'*h*B'
         (lla:gemm! (flt 1) h b (flt 0) x
-                    :transpose-b? t
-                    :lda (size chunk2) :ldc (size shared)
-                    :m n-stripes :n (size shared) :k (aops:ncol b))
+                   :transpose-b? t
+                   :lda size2 :ldb size2 :ldc n-shared
+                   :m n-stripes :n n-shared :k size2)
         (lla:gemm! multiplier v x (flt 1)
-                    (aops:displace accumulator (array-total-size a) start)
-                    :transpose-a? t
-                    :lda (size chunk1) :ldb (size shared) :ldc (aops:ncol a)
-                    :m (aops:nrow a) :n (aops:ncol a) :k n-stripes)))
+                   (aops:displace accumulator (array-total-size a) start)
+                   :transpose-a? t
+                   :lda size1 :ldb n-shared :ldc n-shared
+                   :m size1 :n n-shared :k n-stripes)))
     (with-segment-gradient-accumulator ((start accumulator)
                                         ((cloud-b cloud) trainer))
       (when (and accumulator start)
         ;; dCD/dB = A'*v'*h
         (lla:gemm! (flt 1) a v (flt 0) x
-                    :transpose-a? t :transpose-b? t
-                    :ldb (size chunk1) :ldc n-stripes
-                    :m (size shared) :n n-stripes :k (size chunk1))
+                   :transpose-a? t :transpose-b? t
+                   :lda n-shared :ldb size1 :ldc n-stripes
+                   :m n-shared :n n-stripes :k size1)
         (lla:gemm! multiplier x h (flt 1)
-                    (aops:displace accumulator (array-total-size b) start)
-                    :lda n-stripes :ldb (size chunk2) :ldc (aops:ncol b)
-                    :m (aops:nrow b) :n (aops:ncol b) :k n-stripes)))))
+                   (aops:displace accumulator (array-total-size b) start)
+                   :lda n-stripes :ldb size2 :ldc size2
+                   :m n-shared :n size2 :k n-stripes)))))
 
 (defgeneric accumulate-positive-phase-statistics (trainer bm &key multiplier)
   (:method ((trainer segmented-gd-bm-trainer) bm &key (multiplier (flt 1)))

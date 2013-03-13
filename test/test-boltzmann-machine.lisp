@@ -304,76 +304,6 @@
                                :sampler #'sample)
                 rbm))))
 
-(defun test-factored-cloud ()
-  (let* ((n-visible 2)
-         (n-hidden 3)
-         (rank 1)
-         (visible-chunk (make-instance 'sigmoid-chunk
-                                       :name 'inputs
-                                       :size n-visible))
-         (hidden-chunk (make-instance 'sigmoid-chunk
-                                      :name 'features
-                                      :size n-hidden))
-         (rbm (make-instance 'rbm
-                             :visible-chunks (list visible-chunk)
-                             :hidden-chunks (list hidden-chunk)
-                             :clouds `(:merge
-                                       (:class factored-cloud
-                                        :chunk1 inputs
-                                        :chunk2 features
-                                        :rank ,rank))))
-         (cloud (find-cloud '(inputs features) rbm))
-         (a (weights (cloud-a cloud)))
-         (b (weights (cloud-b cloud)))
-         (v (nodes visible-chunk))
-         (h (nodes hidden-chunk))
-         (trainer (make-instance 'rbm-cd-trainer
-                                 :visible-sampling t
-                                 :hidden-sampling t
-                                 :segmenter
-                                 (repeatedly
-                                   (make-instance 'batch-gd-trainer)))))
-    (assert (= n-visible (array-operations:nrow (weights (cloud-a cloud)))))
-    (assert (= rank (array-operations:ncol (weights (cloud-a cloud)))))
-    (assert (= rank (array-operations:nrow (weights (cloud-b cloud)))))
-    (assert (= n-hidden (array-operations:ncol (weights (cloud-b cloud)))))
-    (initialize-trainer trainer rbm)
-    (progn
-      (setf (aref a 0 0) (flt -5))
-      (setf (aref a 1 0) (flt 11))
-      (setf (aref b 0 0) (flt 1))
-      (setf (aref b 0 1) (flt 3))
-      (setf (aref b 0 2) (flt 7))
-      (setf (aref v 0) (flt 1/13))
-      (setf (aref v 1) (flt 1/2)))
-    (fill! (flt 0) h)
-    (mgl-bm::activate-cloud cloud nil :from-fn #'nodes)
-    (assert (clnu:num= (lla:mmm (aops:reshape v (list 1 n-visible)) a b)
-                       (aops:reshape h (list 1 n-hidden))))
-    (fill! (flt 0) v)
-    (mgl-bm::activate-cloud cloud t :from-fn #'nodes)
-    (assert (clnu:num= (lla:mmm (aops:reshape (nodes hidden-chunk)
-                                              (list 1 n-hidden))
-                                (clnu:transpose b)
-                                (clnu:transpose a))
-                       (aops:reshape (nodes visible-chunk) (list 1 n-visible))))
-    (mgl-bm::accumulate-negative-phase-statistics trainer rbm)
-    (assert (= 2 (length (trainers trainer))))
-    (let ((da (aops:reshape (accumulator (elt (trainers trainer) 1))
-                            (list n-visible rank)))
-          (db (aops:reshape (accumulator (elt (trainers trainer) 0))
-                            (list rank n-hidden))))
-      (assert (clnu:num= (lla:mmm (clnu:transpose
-                                   (aops:reshape v (list 1 n-visible)))
-                                  (aops:reshape h (list 1 n-hidden))
-                                  (clnu:transpose b))
-                         da))
-      (assert (clnu:num= (lla:mmm (clnu:transpose a)
-                                  (clnu:transpose
-                                   (aops:reshape v (list 1 n-visible)))
-                                  (aops:reshape h (list 1 n-hidden)))
-                         db)))))
-
 (defun test-rbm-examples ()
   ;; Constant one is easily solved with a single large weight.
   (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
@@ -549,7 +479,6 @@
 
 (defun test-rbm ()
   (test-do-chunk)
-  (test-factored-cloud)
   (test-rbm-examples)
   (test-copy-pcd)
   (test-rbm-examples/pcd))
