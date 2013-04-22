@@ -128,6 +128,7 @@
    #:max-n-samples
    #:counting-function-sampler
    #:sample-batch
+   #:make-sequence-sampler
    ;; Error counter
    #:counter
    #:print-counter
@@ -145,6 +146,8 @@
    #:set-n-stripes
    #:max-n-stripes
    #:set-max-n-stripes
+   #:find-striped
+   #:striped-array
    #:stripe-start
    #:stripe-end
    #:with-stripes
@@ -187,6 +190,7 @@
    #:n-inputs
    #:nodes
    #:name
+   #:name=
    #:size
    #:target
    ;; Classification
@@ -373,6 +377,8 @@ interface and simple gradient descent based trainers."))
    #:down-mean-field
    #:make-dbn-reconstruction-rmse-counters-and-measurers
    #:collect-dbn-mean-field-errors
+   #:mark-labels-present
+   #:mark-everything-present
    #:make-dbn-reconstruction-misclassification-counters-and-measurers
    #:collect-dbn-mean-field-errors/labeled)
   (:documentation "Fully General Boltzmann Machines, Restricted

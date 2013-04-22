@@ -3,6 +3,8 @@
 ;;;; Various accessor type generic functions shared by packages
 
 (defgeneric name (object))
+(defun name= (name1 name2)
+  (equal name1 name2))
 (defgeneric size (object))
 (defgeneric nodes (object))
 (defgeneric default-value (object))
@@ -14,9 +16,10 @@
 ;;;; Interface
 
 (defgeneric sample (sampler)
-  (:documentation "The SAMPLER - if not FINISHEDP - returns on object
+  (:documentation "The SAMPLER - if not FINISHEDP - returns an object
 that represents a sample from the world to be experienced or in other
-words simply something the can be used as input for the learning."))
+words simply something the can be used as input for training or
+prediction."))
 
 (defgeneric finishedp (sampler)
   (:documentation "See if SAMPLER has run out of examples."))
@@ -91,6 +94,12 @@ SAMPLER runs out."
   (loop repeat max-size
         while (not (finishedp sampler))
         collect (sample sampler)))
+
+(defun make-sequence-sampler (seq)
+  "A simple sampler that returns elements of SEQ once, in order."
+  (make-instance 'counting-function-sampler
+                 :max-n-samples (length seq)
+                 :sampler (make-seq-generator seq)))
 
 
 ;;;; Error counter
@@ -202,13 +211,21 @@ that are in use in OBJECT."))
 (defsetf n-stripes (object) (store)
   `(set-n-stripes ,store ,object))
 
+(defgeneric find-striped (name object)
+  (:documentation "Return the striped component of OBJECT whose name
+is NAME."))
+
+(defgeneric striped-array (object)
+  (:documentation "Return the array in which the stripes of OBJECT are
+stored."))
+
 (defgeneric stripe-start (stripe object)
-  (:documentation "Return the start of STRIPE in OBJECT, that's
-usually an index into some kind of storage that backs OBJECT."))
+  (:documentation "Return the start index of STRIPE in STRIPED-ARRAY
+of OBJECT."))
 
 (defgeneric stripe-end (stripe object)
-  (:documentation "Return the end of STRIPE in OBJECT, that's usually
-an index into some kind of storage that backs OBJECT."))
+  (:documentation "Return the end index (exclusive) of STRIPE in
+STRIPED-ARRAY of OBJECT."))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun stripe-binding (stripe object start &optional end)

@@ -149,6 +149,9 @@ of the network.")))
   (when *bpn-being-built*
     (add-lump lump *bpn-being-built*)))
 
+(defmethod striped-array ((lump lump))
+  (nodes lump))
+
 (defmethod stripe-start (stripe (lump lump))
   (assert (<= 0 stripe (1- (n-stripes lump))))
   (* (if (same-stripes-p lump)
@@ -318,10 +321,13 @@ computed as the sum of nodes in the X parameter lump."))
   (setf (max-n-stripes bpn) (max-n-stripes bpn)))
 
 (defun find-lump (name bpn &key errorp)
-  (or (find name (lumps bpn) :key #'name :test #'equal)
+  (or (find name (lumps bpn) :key #'name :test #'name=)
       (if errorp
           (error "Cannot find lump ~S." name)
           nil)))
+
+(defmethod find-striped (name (bpn bpn))
+  (find-lump name bpn))
 
 (defmethod set-input :around (samples (bpn bpn))
   (setf (n-stripes bpn) (length samples))
@@ -1918,7 +1924,7 @@ T in -sum_{k}target_k*ln(x_k) which the the cross entropy error.")
     :accessor class-weights
     :documentation "If non-NIL, an FLT-VECTOR of GROUP-SIZE. Useful
 TARGET's distribution is different on the training and test sets. Just
-set the w_i to test_frequency_i/training_frequency_i.")
+set w_i to test_frequency_i/training_frequency_i.")
    (normalized-lump :reader normalized-lump))
   (:documentation "A specialized lump that is equivalent to hooking
 ->EXP with NORMALIZED-LUMP and ->CROSS-ENTROPY but is numerically

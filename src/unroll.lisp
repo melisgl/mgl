@@ -403,12 +403,6 @@ BPN and the corresponding chunk in DBM."
           (push (list chunk lump) chunks-and-lumps))))
     chunks-and-lumps))
 
-(defun make-seq-sampler (seq)
-  "A simple sampler that returns elements of SEQ once, in order."
-  (make-instance 'counting-function-sampler
-                 :max-n-samples (length seq)
-                 :sampler (make-seq-generator seq)))
-
 (defclass bpn-clamping-cache ()
   ((clamping-cache
     :initform (make-hash-table)
@@ -447,7 +441,7 @@ default, the cache is unchanged; if :SUPERSEDE, the cache entry is
 replaced by the calculated contents; if :APPEND, the new (lump array)
 entries are appended to the existing ones; if :ERROR, an error is
 signalled."
-  (let ((sampler (make-seq-sampler samples))
+  (let ((sampler (make-sequence-sampler samples))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
     (do-batches-for-learner (samples (sampler dbm))

@@ -31,9 +31,8 @@ as matrices.")
 
 (defun update-gp (gp inputs outputs &key means covariances)
   "Update GP with the evidence embodied by INPUTS and the
-corresponding OUTPUTS. Return a new POSTERIOR-GP. If MEANS are
-COVARIANCES are given, then the call to GP-MEANS-AND-COVARIANCES is
-not made."
+corresponding OUTPUTS. Return a new POSTERIOR-GP. If MEANS and
+COVARIANCES are given, then GP-MEANS-AND-COVARIANCES is not called."
   (multiple-value-bind (means covariances)
       (if (and means covariances)
           (values means covariances)

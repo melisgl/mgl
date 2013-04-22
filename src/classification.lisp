@@ -5,7 +5,7 @@
 special case of LABEL-DISTRIBUTION."))
 
 (defgeneric label-distribution (striped  stripe object)
-  (:documentation "Return an FLT-VECTOR that represent our knowledge
+  (:documentation "Return an FLT-VECTOR that represents our knowledge
 of the distribution of the true label of OBJECT.")
   (:method (striped stripe object)
     nil))

@@ -47,6 +47,9 @@ Boltzmann Machine. This is an abstract base class."))
   (/ (length (nodes chunk))
      (size chunk)))
 
+(defmethod striped-array ((chunk chunk))
+  (nodes chunk))
+
 (defmethod stripe-start (stripe (chunk chunk))
   (* stripe (size chunk)))
 
@@ -928,10 +931,13 @@ simply leaves the default cloud specs alone."))
   (:documentation "Find the chunk in OBJECT whose name is EQUAL to
 NAME. Signal an error if not found and ERRORP.")
   (:method (name (bm bm) &key errorp)
-    (or (find name (chunks bm) :key #'name :test #'equal)
+    (or (find name (chunks bm) :key #'name :test #'name=)
         (if errorp
             (error "Cannot find chunk ~S." name)
             nil))))
+
+(defmethod find-striped (name (bm bm))
+  (find-chunk name bm))
 
 (defmacro do-clouds ((cloud bm) &body body)
   `(dolist (,cloud (clouds ,bm))
@@ -2241,6 +2247,10 @@ entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (dolist (chunk (chunks object))
     (when (labeledp chunk)
       (setf (indices-present chunk) nil))))
+
+(defun mark-everything-present (object)
+  (dolist (chunk (chunks object))
+    (setf (indices-present chunk) nil)))
 
 (defun collect-bm-mean-field-errors/labeled
     (sampler bm &key
