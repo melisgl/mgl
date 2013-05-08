@@ -363,7 +363,7 @@ the backprop network."
     (destructuring-bind (&key weight-name) args
       (let* ((lump (find-lump weight-name bpn :errorp t))
              (weights (weights cloud)))
-        (declare (type flt-matrix weights))
+        (declare (type flt-vector weights))
         (multiple-value-bind (nodes start end)
             (segment-weights lump)
           (declare (type flt-vector nodes))
