@@ -39,13 +39,16 @@ stripes in STRIPED. LABEL-FN takes an example and returns its label
 that compared by EQL to what STRIPE-LABEL-FN returns for STRIPED and
 the index of the stripe. This is a measurer function."
   (assert (= (length examples) (n-stripes striped)))
-  (let ((n 0))
+  (let ((n-misclassifications 0)
+        (n 0))
     (loop for example in examples
           for stripe upfrom 0
-          do (unless (= (funcall label-fn example)
-                        (funcall stripe-label-fn striped stripe))
-               (incf n)))
-    (values n (length examples))))
+          do (let ((label (funcall label-fn example)))
+               (when label
+                 (when (/= label (funcall stripe-label-fn striped stripe))
+                   (incf n-misclassifications))
+                 (incf n))))
+    (values n-misclassifications n)))
 
 (defgeneric maybe-make-misclassification-measurer (obj)
   (:documentation "Return a function of one parameter that is invoked
@@ -95,16 +98,19 @@ measurer function."
                                    (incf (first label-error) err)
                                    (incf (second label-error) target)))))
                      (t
-                      (let* ((label (funcall label-fn example))
-                             (err (- (* (log (max #.(expt 10d0 -15)
-                                                  (aref confidences label)))))))
-                        (incf sum err)
-                        (incf sum-weights)
-                        (let ((label-error (or (getf label-errors label)
-                                               (setf (getf label-errors label)
-                                                     (list #.(flt 0) 0)))))
-                          (incf (first label-error) err)
-                          (incf (second label-error))))))))
+                      (let ((label (funcall label-fn example)))
+                        (when label
+                          (let ((err (- (* (log
+                                            (max #.(expt 10d0 -15)
+                                                 (aref confidences label)))))))
+                            (incf sum err)
+                            (incf sum-weights)
+                            (let ((label-error
+                                    (or (getf label-errors label)
+                                        (setf (getf label-errors label)
+                                              (list #.(flt 0) 0)))))
+                              (incf (first label-error) err)
+                              (incf (second label-error))))))))))
     (values (list sum label-errors)
             sum-weights)))
 
