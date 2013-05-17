@@ -1579,8 +1579,8 @@ then it's taken to be a damping factor. For no damping return 0."
 if there are visible-to-visible connections. For an RBM it trivially
 calls SET-VISIBLE-MEAN.")
   (:method :around ((bm bm))
-           (with-versions ((gensym) (hidden-and-conditioning-chunks bm))
-             (call-next-method)))
+    (with-versions ((gensym) (hidden-and-conditioning-chunks bm))
+      (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
     ;; values alone. Also, SETTLE-VISIBLE-MEAN-FIELD does not do
@@ -1594,8 +1594,8 @@ calls SET-VISIBLE-MEAN.")
 if there are hidden-to-hidden connections. For an RBM it trivially
 calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
   (:method :around ((bm bm))
-           (with-versions ((gensym) (visible-and-conditioning-chunks bm))
-             (call-next-method)))
+    (with-versions ((gensym) (visible-and-conditioning-chunks bm))
+      (call-next-method)))
   (:method ((bm bm))
     ;; It could be initialized randomly. Instead, we just leave the
     ;; values alone. Also, SETTLE-HIDDEN-MEAN-FIELD does not do
