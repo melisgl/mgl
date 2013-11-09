@@ -171,10 +171,15 @@ counters for samples with that label.")))
 SEQ. PRED is a predicate function for deciding whether an element of
 SEQ belongs to the class in question. KEY returns the a number for
 each element which is the predictor's idea of how much that element is
-likely to belong to the class, it's not necessarily a probability."
+likely to belong to the class, it's not necessarily a probability.
+
+The algorithm is based on algorithm 2 in the paper 'An introduction to
+ROC analysis' by Tom Fawcett."
   ;; AUC is equal to the probability of a randomly chosen positive
   ;; having higher KEY (score) than a randomly chosen negative
-  ;; element.
+  ;; element. With equal scores in mind, a more precise version is:
+  ;; AUC is the expectation of the above probability over all possible
+  ;; sequences sorted by scores.
   (let ((sum 0)
         (seq (sort (copy-seq seq) #'> :key key))
         (prev-pos-count 0)
@@ -183,11 +188,17 @@ likely to belong to the class, it's not necessarily a probability."
         (neg-count 0)
         (prev-score nil))
     (flet ((add ()
+             ;; Called once per 'batch', i.e. examples with equal
+             ;; scores.
              (incf sum (*
-                        ;; In regions of equal scores go with the
-                        ;; expectation.
-                        (/ (+ pos-count prev-pos-count) 2)
-                        (- neg-count prev-neg-count)))))
+                        ;; The number of negative examples in the
+                        ;; current batch.
+                        (- neg-count prev-neg-count)
+                        ;; The number of positive examples occurring
+                        ;; earlier than the negatives examples in the
+                        ;; batch. With positive examples in the batch
+                        ;; we take the expectation over random orders.
+                        (/ (+ pos-count prev-pos-count) 2)))))
       (map nil
            (lambda (x)
              (let ((score (funcall key x)))
@@ -204,11 +215,6 @@ likely to belong to the class, it's not necessarily a probability."
     (if (or (zerop pos-count) (zerop neg-count))
         (values nil nil nil)
         (values (/ sum pos-count neg-count) pos-count neg-count))))
-
-(defun test-roc-auc ()
-  (assert (= 8/9
-             (roc-auc '((9 . t) (8 . t) (7 . nil) (6 . t) (5 . nil) (4 . nil))
-                      #'cdr :key #'car))))
 
 (defclass collecting-counter (counter)
   ((elements

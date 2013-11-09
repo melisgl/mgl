@@ -10,6 +10,7 @@
                              (:file "util")
                              (:file "test-util")
                              (:file "test-copy")
+                             (:file "test-classification")
                              (:file "test-confusion-matrix")
                              (:file "test-conjugate-gradient")
                              (:file "test-boltzmann-machine")
