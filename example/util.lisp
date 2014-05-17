@@ -75,6 +75,13 @@
 (defclass base-trainer (logging-trainer)
   ((training-counters-and-measurers :reader training-counters-and-measurers)))
 
+(defun log-cuda ()
+  (when (use-cuda-p)
+    (log-msg "cuda mats: ~S, copies: h->d: ~S, d->h: ~S~%"
+             (mgl-cube:count-barred-facets 'cuda-array :type 'mat)
+             *n-memcpy-host-to-device*
+             *n-memcpy-device-to-host*)))
+
 (defmethod log-test-error ((trainer base-trainer) learner)
   (let ((*print-level* nil))
     (when (zerop (n-inputs trainer))
@@ -84,39 +91,47 @@
       (with-logging-entry (stream)
         (format stream "Describing trainer:~%")
         (describe trainer stream))))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer)))
+  (log-msg "n-inputs: ~S~%" (n-inputs trainer))
+  (log-cuda))
 
 (defmethod log-training-error ((trainer base-trainer) learner)
   (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
+  (log-cuda)
   (dolist (counter-and-measurer (training-counters-and-measurers trainer))
     (let ((counter (car counter-and-measurer)))
       (log-msg "~A~%" counter)
       (reset-counter counter))))
 
-(defmethod negative-phase :around (batch (trainer base-trainer) (bm bm))
+(defmethod negative-phase :around (batch (learner rbm-cd-learner)
+                                   (sink base-trainer) multiplier)
   (call-next-method)
-  (when (typep trainer 'rbm-cd-trainer)
-    (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                  batch bm)))
+  (when *accumulating-interesting-gradients*
+    (apply-counters-and-measurers (training-counters-and-measurers sink)
+                                  batch (bm learner))))
 
-(defmethod positive-phase :around (batch (trainer base-trainer) (bm bm))
+(defmethod positive-phase :around (batch (learner bm-pcd-learner)
+                                   (sink base-trainer) multiplier)
   (call-next-method)
-  (when (typep trainer 'bm-pcd-trainer)
-    (set-visible-mean bm)
-    (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                  batch bm)))
+  (when *accumulating-interesting-gradients*
+    (let ((bm (bm learner)))
+      (set-visible-mean bm)
+      (apply-counters-and-measurers (training-counters-and-measurers sink)
+                                    batch bm))))
 
-(defmethod compute-derivatives :around (batch (trainer base-trainer) (bpn bpn))
-  (call-next-method)
-  (apply-counters-and-measurers (training-counters-and-measurers trainer)
-                                batch bpn))
+(defmethod compute-derivatives :around (batch (trainer base-trainer)
+                                        (learner bp-learner))
+  (multiple-value-prog1 (call-next-method)
+    ;; FIXME: this is broken if DO-EXECUTORS is non-trivial.
+    (when *accumulating-interesting-gradients*
+      (apply-counters-and-measurers (training-counters-and-measurers trainer)
+                                    batch (bpn learner)))))
 
-(defmethod train-batch (batch (trainer base-trainer) (bpn bpn))
-  (if (typep trainer 'cg-bp-trainer)
+(defmethod train-batch (batch (trainer base-trainer) (learner bp-learner))
+  (if (typep trainer 'mgl-cg:cg-trainer)
       (let ((result (multiple-value-list (call-next-method))))
         (when (= (length result) 5)
           (destructuring-bind (best-w best-f n-line-searches
-                                      n-succesful-line-searches n-evaluations)
+                               n-succesful-line-searches n-evaluations)
               result
             (declare (ignore best-w))
             (log-msg "best-f: ~,5E, ~:_n-evaluations: ~S~%"
@@ -141,9 +156,11 @@
 (defclass cesc-trainer (base-trainer) ())
 
 (defun maximally-likely-node (striped stripe &key (nodes (nodes striped)))
-  (with-stripes ((stripe striped start end))
-    (- (max-position nodes start end)
-       start)))
+  (with-facets ((nodes (nodes 'backing-array :direction :input
+                              :type flt-vector)))
+    (with-stripes ((stripe striped start end))
+      (- (max-position nodes start end)
+         start))))
 
 ;;; Samplers don't return examples, but a list of (SAMPLE &KEY
 ;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
@@ -170,7 +187,7 @@
 
 ;;;; RBM/DBN support for CESC-TRAINER
 
-(defmethod initialize-trainer ((trainer cesc-trainer) (rbm rbm))
+(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (rbm rbm))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters
@@ -195,7 +212,7 @@
 
 ;;;; DBM support for CESC-TRAINER
 
-(defmethod initialize-trainer ((trainer cesc-trainer) (dbm dbm))
+(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (dbm dbm))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters
@@ -249,7 +266,7 @@
                             (typep lump '->cross-entropy-softmax))
                           (lumps bpn)))))))
 
-(defmethod initialize-trainer ((trainer cesc-trainer) (bpn bpn))
+(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (bpn bpn))
   (call-next-method)
   (setf (slot-value trainer 'training-counters-and-measurers)
         (prepend-name-to-counters "bpn train: training"
@@ -292,11 +309,11 @@
 
 (defun load-weights (filename obj)
   (with-open-file (stream filename :element-type 'unsigned-byte)
-    (mgl-util:read-weights obj stream)))
+    (read-weights obj stream)))
 
 (defun save-weights (filename obj)
   (ensure-directories-exist filename)
   (with-open-file (stream filename :direction :output
                    :if-does-not-exist :create :if-exists :supersede
                    :element-type 'unsigned-byte)
-    (mgl-util:write-weights obj stream)))
+    (write-weights obj stream)))

@@ -1,6 +1,7 @@
 (in-package :mgl-test)
 
 (defun test ()
+  (mgl-mat::test)
   (test-util)
   (test-classification)
   (test-cg)

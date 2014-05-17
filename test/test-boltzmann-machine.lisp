@@ -1,11 +1,11 @@
 (in-package :mgl-test)
 
-(defclass test-trainer ()
+(defclass test-trainer (segmented-gd-trainer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
-(defclass test-cd-trainer (test-trainer rbm-cd-trainer) ())
+(defclass test-cd-learner (rbm-cd-learner) ())
 
-(defclass test-pcd-trainer (test-trainer bm-pcd-trainer) ())
+(defclass test-pcd-learner (bm-pcd-learner) ())
 
 (defclass test-rbm (rbm)
   ((clamper :initarg :clamper :reader clamper)))
@@ -27,9 +27,10 @@
         (add-error counter e n)))
     (get-error counter)))
 
-(defmethod train-batch :around (batch (trainer test-trainer) rbm)
+(defmethod train-batch :around (batch (trainer test-trainer) learner)
   (call-next-method)
-  (let ((counter (counter trainer)))
+  (let ((counter (counter trainer))
+        (rbm (bm learner)))
     (inputs->nodes rbm)
     (multiple-value-bind (e n) (get-squared-error rbm)
       (add-error counter e n))
@@ -62,18 +63,20 @@
                         (max-n-test-samples 1000)
                         (batch-size 50)
                         (max-n-stripes 10)
-                        (trainer-class 'test-cd-trainer)
+                        (learner-class 'test-cd-learner)
                         (learning-rate (flt 0.1))
                         (features-size 1)
                         normal-sparsity
                         cheating-sparsity)
   (flet ((clamp (samples rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
-             (loop for sample in samples
-                   for stripe upfrom 0
-                   do (with-stripes ((stripe chunk start))
-                        (setf (aref (nodes chunk) (+ start 0))
-                              sample))))))
+             (with-facets ((nodes ((nodes chunk) 'backing-array
+                                   :direction :output
+                                   :type flt-vector)))
+               (loop for sample in samples
+                     for stripe upfrom 0
+                     do (with-stripes ((stripe chunk start))
+                          (setf (aref nodes (+ start 0)) sample)))))))
     (let ((rbm (make-instance
                 'test-rbm
                 :visible-chunks `(,@(when hidden-bias-p
@@ -92,48 +95,44 @@
                 :clouds (if rank
                             `(:merge
                               (:class factored-cloud
-                               :rank ,rank
-                               :chunk1 inputs
-                               :chunk2 features))
+                                      :rank ,rank
+                                      :chunk1 inputs
+                                      :chunk2 features))
                             '(:merge))
                 :max-n-stripes max-n-stripes
                 :clamper #'clamp)))
       (train (make-instance 'counting-function-sampler
                             :max-n-samples max-n-samples
                             :sampler sampler)
-             (if (subtypep trainer-class 'bm-pcd-trainer)
-                 (make-instance
-                  trainer-class
-                  :n-particles batch-size
-                  :segmenter
-                  (repeatedly
-                    (make-instance 'batch-gd-trainer
-                                   :learning-rate (flt learning-rate)
-                                   :momentum (flt 0.9)
-                                   :batch-size batch-size)))
-                 (make-instance
-                  trainer-class
-                  :segmenter
-                  (repeatedly
-                    (make-instance 'batch-gd-trainer
-                                   :learning-rate (flt learning-rate)
-                                   :momentum (flt 0.9)
-                                   :batch-size batch-size))
-                  :sparser
-                  (lambda (cloud chunk)
-                    (when (and (eq (name chunk) 'features)
-                               (or normal-sparsity
-                                   cheating-sparsity))
-                      (make-instance
-                       (if normal-sparsity
-                           'normal-sparsity-gradient-source
-                           'cheating-sparsity-gradient-source)
-                       :cloud cloud
-                       :chunk chunk
-                       :sparsity (flt (or normal-sparsity cheating-sparsity))
-                       :cost (flt 0.1)
-                       :damping (flt 0.9))))))
-             rbm)
+             (make-instance
+              'test-trainer
+              :segmenter
+              (repeatedly
+                (make-instance 'batch-gd-trainer
+                               :learning-rate (flt learning-rate)
+                               :momentum (flt 0.9)
+                               :batch-size batch-size)))
+             (if (subtypep learner-class 'bm-pcd-learner)
+                 (make-instance learner-class
+                                :bm rbm
+                                :n-particles batch-size)
+                 (make-instance learner-class
+                                :bm rbm
+                                :sparser
+                                (lambda (cloud chunk)
+                                  (when (and (eq (name chunk) 'features)
+                                             (or normal-sparsity
+                                                 cheating-sparsity))
+                                    (make-instance
+                                     (if normal-sparsity
+                                         'normal-sparsity-gradient-source
+                                         'cheating-sparsity-gradient-source)
+                                     :cloud cloud
+                                     :chunk chunk
+                                     :sparsity (flt (or normal-sparsity
+                                                        cheating-sparsity))
+                                     :cost (flt 0.1)
+                                     :damping (flt 0.9)))))))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples max-n-test-samples
                                :sampler test-sampler)
@@ -145,7 +144,8 @@
              (select-random-element (list #.(flt 0) #.(flt 1))))
            (clamp (samples rbm)
              (declare (ignore rbm))
-             (let ((nodes (nodes chunk)))
+             (with-facets ((nodes ((nodes chunk) 'backing-array
+                                   :direction :output :type flt-vector)))
                (loop for x in samples
                      for stripe upfrom 0
                      do (with-stripes ((stripe chunk start))
@@ -187,15 +187,15 @@
                   :clouds (if rank
                               `(:merge
                                 (:class factored-cloud
-                                 :rank ,rank
-                                 :chunk1 inputs
-                                 :chunk2 features))
+                                        :rank ,rank
+                                        :chunk1 inputs
+                                        :chunk2 features))
                               '(:merge))
                   :clamper #'clamp)))
         (train (make-instance 'counting-function-sampler
                               :max-n-samples 100000
                               :sampler #'sample)
-               (make-instance 'test-cd-trainer
+               (make-instance 'test-trainer
                               :segmenter
                               (lambda (chunk)
                                 (make-instance
@@ -211,7 +211,7 @@
                                      (flt 0.1))
                                  :momentum (flt 0.9)
                                  :batch-size 100)))
-               rbm)
+               (make-instance 'test-cd-learner :rbm rbm))
         (setq randomp nil)
         (rbm-rmse (make-instance 'counting-function-sampler
                                  :max-n-samples 10000
@@ -224,11 +224,13 @@
          (clamp (samples rbm)
            (let ((chunk (find 'inputs (visible-chunks rbm) :key #'name)))
              (fill! (flt 0) (nodes chunk))
-             (loop for sample in samples
-                   for stripe upfrom 0
-                   do (with-stripes ((stripe chunk start))
-                        (setf (aref (nodes chunk) (+ start sample))
-                              #.(flt 1)))))))
+             (with-facets ((nodes ((nodes chunk) 'backing-array
+                                   :direction :io :type flt-vector)))
+               (loop for sample in samples
+                     for stripe upfrom 0
+                     do (with-stripes ((stripe chunk start))
+                          (setf (aref nodes (+ start sample))
+                                #.(flt 1))))))))
     (let ((rbm (make-instance
                 'test-rbm
                 :visible-chunks (list
@@ -244,13 +246,13 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 30000
                             :sampler #'sample)
-             (make-instance 'test-cd-trainer
+             (make-instance 'test-trainer
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
                                              :momentum (flt 0.9)
                                              :batch-size 10)))
-             rbm)
+             (make-instance 'test-cd-learner :rbm rbm))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
@@ -264,19 +266,20 @@
   (flet ((sample ()
            (random (* 2 pi)))
          (clamp (samples rbm)
-           (let* ((chunk (second (visible-chunks rbm)))
-                  (nodes (nodes chunk)))
-             (loop for x in samples
-                   for stripe upfrom 0
-                   do (with-stripes ((stripe chunk start))
-                        (loop for i below 10
-                              do (setf (aref nodes (+ start i)) #.(flt 0)))
-                        (setf (aref nodes
-                                    (+ start (rate-code x 0 (* 2 pi) 5) 0))
-                              #.(flt 1))
-                        (setf (aref nodes
-                                    (+ start 5 (rate-code (sin x) -1 1 5)))
-                              #.(flt 1)))))))
+           (let* ((chunk (second (visible-chunks rbm))))
+             (with-facets ((nodes* ((nodes chunk) 'backing-array
+                                    :direction :output :type flt-vector)))
+               (loop for x in samples
+                     for stripe upfrom 0
+                     do (with-stripes ((stripe chunk start))
+                          (loop for i below 10
+                                do (setf (aref nodes* (+ start i)) #.(flt 0)))
+                          (setf (aref nodes*
+                                      (+ start (rate-code x 0 (* 2 pi) 5) 0))
+                                #.(flt 1))
+                          (setf (aref nodes*
+                                      (+ start 5 (rate-code (sin x) -1 1 5)))
+                                #.(flt 1))))))))
     (let ((rbm (make-instance
                 'test-rbm
                 :visible-chunks (list
@@ -292,13 +295,13 @@
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 100000
                             :sampler #'sample)
-             (make-instance 'test-cd-trainer
+             (make-instance 'test-trainer
                             :segmenter
                             (repeatedly
                               (make-instance 'per-weight-batch-gd-trainer
                                              :momentum (flt 0.9)
                                              :batch-size 10)))
-             rbm)
+             (make-instance 'test-cd-learner :rbm rbm))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
@@ -306,6 +309,7 @@
 
 (defun test-rbm-examples ()
   ;; Constant one is easily solved with a single large weight.
+  ;; qwe
   (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
                                    :max-n-stripes 1)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
@@ -339,7 +343,7 @@
                                   :max-n-samples 10000)))
   (assert (> 0.4 (test-rbm/identity/softmax)))
   (assert (> 0.2 (test-rbm/identity/softmax :hidden-type 'gaussian-chunk)))
-  (assert (> 0.1 (test-rbm/sine))))
+  (assert (> 0.2 (test-rbm/sine))))
 
 (defun compare-objects (x y)
   (let ((class (class-of x))
@@ -442,30 +446,30 @@
   ;; Constant one is easily solved with a single large weight.
   (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
                                    :max-n-stripes 7
-                                   :trainer-class 'test-pcd-trainer)))
+                                   :learner-class 'test-pcd-learner)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 1
-                                     :trainer-class 'test-pcd-trainer)))
+                                     :learner-class 'test-pcd-learner)))
   (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 3
-                                     :trainer-class 'test-pcd-trainer)))
+                                     :learner-class 'test-pcd-learner)))
   ;; For constant zero we need to add a bias to either layer.
   (assert (> 0.01
              (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t
-                              :trainer-class 'test-pcd-trainer)))
+                              :learner-class 'test-pcd-learner)))
   (assert (> 0.01
              (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t
-                              :trainer-class 'test-pcd-trainer)))
+                              :learner-class 'test-pcd-learner)))
   ;; identity
-  (assert (> 0.02
+  (assert (> 0.04
              (test-rbm/single :sampler (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))
                               :visible-bias-p t
                               :hidden-bias-p t
-                              :trainer-class 'test-pcd-trainer
+                              :learner-class 'test-pcd-learner
                               :learning-rate (flt 0.01)
                               :max-n-samples 1000000))))
 
@@ -573,26 +577,28 @@
     (labels ((~=v (x y)
                (when (eq x y)
                  (error "DBM chunks ~A and DBN chunk ~A are the same." x y))
-               (unless (every (lambda (x y)
-                                (~= x y))
-                              (nodes x) (nodes y))
-                 (error "~A and ~A are different." x y)))
+               (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                                  :type flt-vector))
+                             (y* ((nodes y) 'backing-array :direction :input
+                                  :type flt-vector)))
+                 (unless (every #'~= x* y*)
+                   (error "~A and ~A are different." x y))))
              (check ()
                (map nil #'~=v
                     (list dbm-inputs dbm-features1 dbm-features2)
                     (list dbn-inputs dbn-features1 dbn-features2))))
-      (replace (aops:flatten (weights (find-cloud '(inputs constant1) dbm)))
-               '(0.35d0 1.09d0))
-      (replace (aops:flatten (weights (find-cloud '(inputs features1) dbm)))
-               '(0.3d0 -0.8d0))
-      (replace (aops:flatten (weights (find-cloud '(constant1 features2) dbm)))
-               '(-0.63d0 -1.75d0))
-      (replace (aops:flatten (weights (find-cloud '(features1 features2) dbm)))
-               '(-2.3d0 -0.1d0))
-      (replace (aops:flatten (nodes dbm-inputs))
-               '(0.7d0 0.2d0))
-      (replace (aops:flatten (nodes dbn-inputs))
-               '(0.7d0 0.2d0))
+      (replace! (weights (find-cloud '(inputs constant1) dbm))
+                '(0.35d0 1.09d0))
+      (replace! (weights (find-cloud '(inputs features1) dbm))
+                '(0.3d0 -0.8d0))
+      (replace! (weights (find-cloud '(constant1 features2) dbm))
+                '(-0.63d0 -1.75d0))
+      (replace! (weights (find-cloud '(features1 features2) dbm))
+                '(-2.3d0 -0.1d0))
+      (replace! (nodes dbm-inputs)
+                '((0.7d0) (0.2d0)))
+      (replace! (nodes dbn-inputs)
+                '((0.7d0) (0.2d0)))
       (up-dbm dbm)
       (map nil #'set-hidden-mean (rbms dbn))
       (check)
@@ -610,5 +616,6 @@
   (test-copy-dbm->dbn))
 
 (defun test-bm ()
-  (test-rbm)
-  (test-dbm))
+  (do-cuda ()
+    (test-rbm)
+    (test-dbm)))

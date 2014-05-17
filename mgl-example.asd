@@ -8,8 +8,6 @@
                 :serial t
                 :components ((:file "package")
                              (:file "util")
-                             (:file "spiral")
                              (:file "mnist")
-                             (:file "movie-review")
                              (:file "gaussian-process"))))
-  :depends-on (#:mgl #:cl-ppcre))
+  :depends-on (#:mgl))

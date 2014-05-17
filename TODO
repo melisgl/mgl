@@ -56,9 +56,23 @@ CLOSED: [2013-03-05 Tue 16:32]
 * backprop
 ** TODO VALIDATE-LUMP: set and check size if possible, check inputs
 ** DONE ADD-LUMP: set MAX-N-STRIPES to something saner
-** TODO redo ->CROSS-ENTROPY
-** TODO what to do with INDICES-TO-CALCULATE?
+** DONE redo ->CROSS-ENTROPY
+CLOSED: [2014-01-20 Mon 13:13]
+- CLOSING NOTE [2014-01-20 Mon 13:13] \\
+  removed
+** DONE what to do with INDICES-TO-CALCULATE?
+CLOSED: [2014-01-20 Mon 13:13]
+- CLOSING NOTE [2014-01-20 Mon 13:13] \\
+  removed
 ** DONE normalized-lump: scale should be per stripe
+** TODO implement: http://media.nips.cc/nipsbooks/nipspapers/paper_files/nips26/1409.pdf
+** TODO implement: http://riejohnson.com/rie/stograd_nips.pdf
+Doesn't work well with dropout or rbms. Why?
+- lagging-average-gradients is too imprecise
+- lagging-average-gradients is for the whole network and not the
+  particular subsets with dropouts which correspond to the input
+  examples in a batch.
+
 * unroll
 ** MAYBE unroll only part of the network
 ** MAYBE example for unrolling with missing values
@@ -89,8 +103,8 @@ CLOSED: [2013-03-05 Tue 19:39]
 CLOSED: [2013-03-05 Tue 16:32]
 - CLOSING NOTE [2013-03-05 Tue 16:32]
    Matlisp only supports cmucl, sbcl and allegro.
-** TODO optimize the missing value case (SSE?)
-** TODO lookup table based exp/sigmoid
+** CANCELLED optimize the missing value case (SSE?)
+** CANCELLED lookup table based exp/sigmoid
 ** CANCELLED investigate SPARTNS
 CLOSED: [2013-03-07 Thu 21:42]
 - CLOSING NOTE [2013-03-07 Thu 21:42]
@@ -101,8 +115,9 @@ CLOSED: [2013-03-07 Thu 21:42]
 CLOSED: [2013-03-05 Tue 16:31]
 - CLOSING NOTE [2013-03-05 Tue 16:31]
 ** DONE factor out most frequent and log-likelihood-ratio based feature selection
-** TODO parallelize with threads and/or across different images
+** CANCELLED parallelize with threads and/or across different images
 ** TODO add high level interface (scikit?)
+** DONE use cuda
 * examples
 ** DONE movie review example
 ** TODO netflix example

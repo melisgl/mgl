@@ -3,6 +3,8 @@ MGL
 Common Lisp machine learning library by [[http://quotenil.com][Gábor Melis]] with some parts
 contributed by Ravenpack International. It implements:
 - Backpropagation networks (BPN)
+  - Dropout
+  - Maxout
 - Boltzmann Machines
   - Restricted Boltzmann Machines (RBM)
   - Deep Belief Networks (DBN)
@@ -14,11 +16,19 @@ contributed by Ravenpack International. It implements:
 - Gradient descent optimization
 - Conjugate gradient optimization
 - Gaussian Processes
+  - Optimizing Gaussian Processes as BPNs
 
-mgl-gnuplot, a plotting library, that does not depend on the rest of
-the code is bundled.
+MGL and the bundled libraries are under the MIT licence. See COPYING.
 
-MGL is under the MIT licence. See COPYING.
+* Bundled software
+
+With MGL-PAX and MGL-MAT libraries split off there remains only a
+single library bundled with MGL which do not depend on the rest of
+MGL:
+
+- MGL-GNUPLOT, a plotting library.
+
+There is also MGL-VISUALS which does depend on MGL.
 
 * Features
 
@@ -42,8 +52,15 @@ Run the built in tests with:
 Note, that most of the tests are rather stochastic and can fail once
 in a while.
 
-
 * BLAS
 
 MGL uses on [[https://github.com/tpapp/lla][LLA]] to interface to BLAS and LAPACK. See the README in LLA
-on how to set things up.
+on how to set things up. Note that these days OpenBLAS is easier to
+set up and just as fast as ATLAS.
+
+* CUDA
+
+CL-CUDA is a dependency for which the NVIDIA CUDA Toolkit needs to be
+installed, but MGL is fully functional even if there is no cuda
+capable gpu installed. See the MGL-MAT:WITH-CUDA macro for how to use
+it.

@@ -93,7 +93,7 @@ the `end' lump.")
   (:method (from-lumpy to-lumpy (cloud full-cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
            (from-size (size from-chunk))
-           (n-weights (array-total-size (weights cloud)))
+           (n-weights (mat-size (weights cloud)))
            (weight-symbol (gensym))
            (weight-name (cloud-weight-lump-name (name cloud) transposep))
            (size (/ n-weights from-size))
@@ -137,10 +137,10 @@ the `end' lump.")
            (linear-name (cloud-linear-lump-name (name cloud) transposep)))
       (list `((,weight-b-symbol (->weight
                                  :name ',weight-b-name
-                                 :size ,(array-total-size (weights cloud-b))))
+                                 :size ,(mat-size (weights cloud-b))))
               (,weight-a-symbol (->weight
                                  :name ',weight-a-name
-                                 :size ,(array-total-size (weights cloud-a))))
+                                 :size ,(mat-size (weights cloud-a))))
               (,shared-symbol (->activation
                                :name ',shared-name
                                :size ,(rank cloud)
@@ -363,14 +363,13 @@ the backprop network."
     (destructuring-bind (&key weight-name) args
       (let* ((lump (find-lump weight-name bpn :errorp t))
              (weights (weights cloud)))
-        (declare (type flt-vector weights))
         (multiple-value-bind (nodes start end)
             (segment-weights lump)
-          (declare (type flt-vector nodes))
-          (unless (= (array-total-size weights) (- end start))
+          (unless (= (mat-size weights) (- end start))
             (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
                    lump cloud))
-          (lla:copy! weights (aops:displace nodes (- end start) start))))))
+          (with-shape-and-displacement (nodes (- end start) start)
+            (copy! (weights cloud) nodes))))))
   (:method (bpn (cloud factored-cloud) args)
     (destructuring-bind (&key weight-b-name weight-a-name) args
       (initialize-from-cloud bpn (cloud-b cloud)
@@ -463,20 +462,22 @@ signalled."
         (set-hidden-mean dbm)
         (loop for sample in samples
               for stripe upfrom 0 do
-              (let ((k (funcall key sample))
-                    (x ()))
-                (loop for (chunk lump) in map-chunks-and-lumps
-                      do
-                      (with-stripes ((stripe chunk chunk-start chunk-end))
-                        (let ((xxx (make-flt-array
-                                    (- chunk-end chunk-start))))
-                          (replace xxx (nodes chunk)
-                                   :start2 chunk-start :end2 chunk-end)
-                          (push (list lump xxx) x))))
-                (setf (gethash k cache)
-                      (ecase if-exists
-                        ((:skip :supersede) x)
-                        ((:append) (append (gethash k cache) x))))))))
+                (let ((k (funcall key sample))
+                      (x ()))
+                  (loop for (chunk lump) in map-chunks-and-lumps
+                        do
+                           (with-stripes ((stripe chunk chunk-start chunk-end))
+                             (let* ((n (- chunk-end chunk-start))
+                                    (xxx (make-mat n :ctype flt-ctype))
+                                    (nodes (nodes chunk)))
+                               (with-shape-and-displacement (nodes n
+                                                             chunk-start)
+                                 (copy! nodes xxx))
+                               (push (list lump xxx) x))))
+                  (setf (gethash k cache)
+                        (ecase if-exists
+                          ((:skip :supersede) x)
+                          ((:append) (append (gethash k cache) x))))))))
     (when periodic-fn
       (call-periodic-fn (hash-table-count cache) periodic-fn
                         (hash-table-count cache)))))
@@ -488,11 +489,12 @@ signalled."
     (unless (nth-value 1 (gethash k cache))
       (error "No clamping cache entry for ~S" k))
     (loop for (lump map-nodes) in (gethash k cache) do
-          (with-stripes ((stripe lump lump-start lump-end))
-            (declare (type flt-vector map-nodes))
-            (assert (= (length map-nodes)
-                       (- lump-end lump-start)))
-            (replace (nodes lump) map-nodes :start1 lump-start)))))
+      (with-stripes ((stripe lump lump-start lump-end))
+        (let ((n (- lump-end lump-start))
+              (nodes (nodes lump)))
+          (assert (= (mat-size map-nodes) n))
+          (with-shape-and-displacement (nodes n lump-start)
+            (copy! map-nodes nodes)))))))
 
 (defmethod set-input :before (samples (bpn bpn-clamping-cache))
   (when (populate-map-cache-lazily-from-dbm bpn)

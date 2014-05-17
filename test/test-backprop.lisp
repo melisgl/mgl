@@ -4,10 +4,10 @@
   ((counter :initform (make-instance 'error-counter) :reader counter)
    (print-by :initform 1000 :initarg :print-by :reader print-by)))
 
-(defclass test-bp-trainer (test-base-bp-trainer bp-trainer)
+(defclass test-bp-trainer (test-base-bp-trainer segmented-gd-trainer)
   ())
 
-(defclass test-cg-bp-trainer (test-base-bp-trainer cg-bp-trainer)
+(defclass test-cg-bp-trainer (test-base-bp-trainer cg-trainer)
   ())
 
 (defclass test-bpn (bpn)
@@ -16,10 +16,10 @@
 (defmethod set-input (samples (bpn test-bpn))
   (funcall (clamper bpn) samples bpn))
 
-(defmethod train-batch :around (samples (trainer test-bp-trainer) bpn)
+(defmethod train-batch :around (samples (trainer test-bp-trainer) learner)
   (let ((counter (counter trainer)))
     (call-next-method)
-    (multiple-value-call #'add-error counter (cost bpn))
+    (multiple-value-call #'add-error counter (cost (bpn learner)))
     (let ((n-inputs (n-inputs trainer)))
       (when (zerop (mod n-inputs (print-by trainer)))
         (log-msg "COST: ~,5F (~D, ~D)~%"
@@ -28,7 +28,7 @@
                  n-inputs)
         (reset-counter counter)))))
 
-(defmethod train-batch :around (samples (trainer test-cg-bp-trainer) bpn)
+(defmethod train-batch :around (samples (trainer test-cg-bp-trainer) learner)
   (multiple-value-bind (best-w best-f)
       (call-next-method)
     (declare (ignore best-w))
@@ -51,16 +51,23 @@
   (apply #'concatenate 'list
          (map 'list (lambda (lump)
                       (let ((size (size lump)))
-                        (subseq (nodes lump)
-                                (* stripe size) (* (1+ stripe) size))))
+                        (with-facets ((nodes ((nodes lump) 'backing-array
+                                              :direction :input
+                                              :type flt-vector)))
+                          (subseq nodes
+                                  (* stripe size) (* (1+ stripe) size)))))
               (lumps bpn))))
 
 (defun bpn-derivatives (bpn stripe)
   (apply #'concatenate 'list
          (map 'list (lambda (lump)
                       (let ((size (size lump)))
-                        (subseq (derivatives lump)
-                                (* stripe size) (* (1+ stripe) size))))
+                        (with-facets ((derivatives ((derivatives lump)
+                                                    'backing-array
+                                                    :direction :input
+                                                    :type flt-vector)))
+                          (subseq derivatives
+                                  (* stripe size) (* (1+ stripe) size)))))
               (lumps bpn))))
 
 (defun test-simple (&key cg (max-n-stripes 1))
@@ -70,11 +77,14 @@
                 (my-linear (->linear :x inputs :y weights :size 1))
                 (sse (->sum-squared-error :x inputs :y my-linear))
                 (my-error (->error :x sse))))
-         (nodes (map 'list (lambda (lump) (nodes lump))
-                     (lumps net))))
+         (nodes (map 'list #'nodes (lumps net))))
     (setf (n-stripes net) 1)
-    (setf (aref (elt nodes 0) 0) #.(flt 2))
-    (setf (aref (elt nodes 1) 0) #.(flt 3))
+    (with-facets ((nodes-0 ((elt nodes 0) 'backing-array :direction :output
+                            :type flt-vector))
+                  (nodes-1 ((elt nodes 1) 'backing-array :direction :output
+                            :type flt-vector)))
+      (setf (aref nodes-0 0) #.(flt 2))
+      (setf (aref nodes-1 0) #.(flt 3)))
     (forward-bpn net)
     (assert (every #'~= (bpn-nodes net 0) '(2 3 6 9)))
     (backward-bpn net)
@@ -85,11 +95,13 @@
              (assert (eq bpn1 net))
              (let* ((inputs (find-lump 'inputs bpn1))
                     (nodes (nodes inputs)))
-               (loop for sample in samples
-                     for stripe upfrom 0
-                     do
-                        (with-stripes ((stripe inputs start))
-                          (setf (aref nodes start) sample))))))
+               (with-facets ((nodes (nodes 'backing-array :direction :output
+                                           :type flt-vector)))
+                 (loop for sample in samples
+                       for stripe upfrom 0
+                       do
+                          (with-stripes ((stripe inputs start))
+                            (setf (aref nodes start) sample)))))))
       (setf (clamper net) #'clamper)
       (train (make-instance 'counting-function-sampler
                             :max-n-samples 1000
@@ -97,7 +109,7 @@
              (if cg
                  (make-instance 'test-cg-bp-trainer
                                 :print-by 100
-                                :batch-size 10)
+                                :batch-size 100)
                  (make-instance 'test-bp-trainer
                                 :print-by 100
                                 :segmenter
@@ -106,7 +118,7 @@
                                                  :learning-rate (flt 0.01)
                                                  :momentum (flt 0.9)
                                                  :batch-size 10))))
-             net)
+             (make-instance 'bp-learner :bpn net))
       (bpn-error (make-instance 'counting-function-sampler
                                 :max-n-samples 1000
                                 :sampler #'sample)
@@ -127,39 +139,50 @@
            (expectations (find-lump 'expectations net))
            (expectations-nodes (nodes expectations)))
       (flet ((sample ()
-               (loop repeat 4 collect (loop repeat 3 collect (random (flt 5)))))
+               (loop repeat 4
+                     collect (loop repeat 3 collect (random (flt 5)))))
              (clamper (samples bpn1)
                (assert (eq bpn1 net))
-               (loop
-                for sample in samples
-                for stripe upfrom 0
-                do
-                (with-stripes ((stripe inputs input-start input-end)
-                               (stripe expectations
-                                       expectations-start
-                                       expectations-end))
-                  (loop for s in sample
-                        for si upfrom 0 do
-                        (let* ((expectations
-                                (make-array 12 :initial-element (flt 0)))
-                               (inputs
-                                (loop
-                                 for i below 4
-                                 append
-                                 (let* ((s (elt sample i))
-                                        (max (loop for x in s maximizing x))
-                                        (pos (position max s :test #'=)))
-                                   (setf (aref expectations (+ (* i 3) pos))
-                                         (flt 1))
-                                   s))))
-                          (loop for i upfrom input-start below input-end
-                                for j upfrom 0
-                                do (setf (aref inputs-nodes i) (elt inputs j)))
-                          (loop for i upfrom expectations-start
-                                below expectations-end
-                                for j upfrom 0
-                                do (setf (aref expectations-nodes i)
-                                         (aref expectations j)))))))))
+               (with-facets ((inputs-nodes (inputs-nodes 'backing-array
+                                                         :direction :output
+                                                         :type flt-vector))
+                             (expectations-nodes
+                              (expectations-nodes 'backing-array
+                                                  :direction :output
+                                                  :type flt-vector)))
+                 (loop
+                   for sample in samples
+                   for stripe upfrom 0
+                   do (with-stripes ((stripe inputs input-start input-end)
+                                     (stripe expectations
+                                             expectations-start
+                                             expectations-end))
+                        (loop
+                          for s in sample
+                          for si upfrom 0 do
+                            (let* ((expectations
+                                     (make-array 12 :initial-element (flt 0)))
+                                   (inputs
+                                     (loop
+                                       for i below 4
+                                       append
+                                       (let* ((s (elt sample i))
+                                              (max (loop for x in s
+                                                         maximizing x))
+                                              (pos (position max s :test #'=)))
+                                         (setf (aref expectations
+                                                     (+ (* i 3) pos))
+                                               (flt 1))
+                                         s))))
+                              (loop for i upfrom input-start below input-end
+                                    for j upfrom 0
+                                    do (setf (aref inputs-nodes i)
+                                             (elt inputs j)))
+                              (loop for i upfrom expectations-start
+                                      below expectations-end
+                                    for j upfrom 0
+                                    do (setf (aref expectations-nodes i)
+                                             (aref expectations j))))))))))
         (setf (clamper net) #'clamper)
         (train (make-instance 'counting-function-sampler
                               :max-n-samples 100000
@@ -180,7 +203,7 @@
                                                    :momentum (flt 0.9)
                                                    :weight-decay (flt 0)
                                                    :batch-size 10))))
-               net)
+               (make-instance 'bp-learner :bpn net))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -189,8 +212,10 @@
 (defun init-lump (name bpn deviation)
   (multiple-value-bind (array start end)
       (segment-weights (find-lump name bpn :errorp t))
-    (loop for i upfrom start below end
-          do (setf (aref array i) (flt (* deviation (gaussian-random-1)))))))
+    (with-facets ((array (array 'backing-array :direction :output
+                                :type flt-vector)))
+      (loop for i upfrom start below end
+            do (setf (aref array i) (flt (* deviation (gaussian-random-1))))))))
 
 (defun test-cross-entropy (&key cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)
@@ -210,29 +235,36 @@
                (loop repeat 3 collect (random (flt 5))))
              (clamper (samples bpn1)
                (assert (eq bpn1 net))
-               (loop
-                 for sample in samples
-                 for stripe upfrom 0
-                 do (with-stripes ((stripe inputs inputs-start inputs-end)
-                                   (stripe expectations
-                                           expectations-start
-                                           expectations-end))
-                      (let* ((expectations
-                               (make-array 3 :initial-element (flt 0)))
-                             (inputs (let* ((max (loop for x in sample
-                                                       maximizing x))
-                                            (pos (position max sample
-                                                           :test #'=)))
-                                       (setf (aref expectations pos) (flt 1))
-                                       sample)))
-                        (loop for i upfrom inputs-start below inputs-end
-                              for j upfrom 0
-                              do (setf (aref inputs-nodes i) (elt inputs j)))
-                        (loop for i upfrom expectations-start
-                                below expectations-end
-                              for j upfrom 0
-                              do (setf (aref expectations-nodes i)
-                                       (aref expectations j))))))))
+               (with-facets ((inputs-nodes (inputs-nodes 'backing-array
+                                                         :direction :output
+                                                         :type flt-vector))
+                             (expectations-nodes
+                              (expectations-nodes 'backing-array
+                                                  :direction :output
+                                                  :type flt-vector)))
+                 (loop
+                   for sample in samples
+                   for stripe upfrom 0
+                   do (with-stripes ((stripe inputs inputs-start inputs-end)
+                                     (stripe expectations
+                                             expectations-start
+                                             expectations-end))
+                        (let* ((expectations
+                                 (make-array 3 :initial-element (flt 0)))
+                               (inputs (let* ((max (loop for x in sample
+                                                         maximizing x))
+                                              (pos (position max sample
+                                                             :test #'=)))
+                                         (setf (aref expectations pos) (flt 1))
+                                         sample)))
+                          (loop for i upfrom inputs-start below inputs-end
+                                for j upfrom 0
+                                do (setf (aref inputs-nodes i) (elt inputs j)))
+                          (loop for i upfrom expectations-start
+                                  below expectations-end
+                                for j upfrom 0
+                                do (setf (aref expectations-nodes i)
+                                         (aref expectations j)))))))))
         (setf (clamper net) #'clamper)
         (init-lump 'weights net 0.01)
         (train (make-instance 'counting-function-sampler
@@ -249,7 +281,7 @@
                                                    :learning-rate (flt 0.1)
                                                    :momentum (flt 0.9)
                                                    :batch-size 100))))
-               net)
+               (make-instance 'bp-learner :bpn net))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -268,29 +300,35 @@
                 (biased-input (->+ :size 2 :args (list inputs biases)))
                 (weights (->weight :size (* 3 2)))
                 (activations (->activation :size 3
-                                              :transpose-weights-p transposep
-                                              :x biased-input
-                                              :weights weights))
+                                           :transpose-weights-p transposep
+                                           :x biased-input
+                                           :weights weights))
                 (expectations (->input :size 3))
                 (sse (->sum-squared-error :x expectations :y activations))
                 (my-error (->error :x sse)))))
     ;; Set weights
     (multiple-value-bind (nodes bias-start)
         (segment-weights (find-lump 'biases net))
-      (setf (aref nodes (+ bias-start 0)) (flt 2))
-      (setf (aref nodes (+ bias-start 1)) (flt 3)))
+      (with-facets ((nodes (nodes 'backing-array :direction :output
+                                  :type flt-vector)))
+        (setf (aref nodes (+ bias-start 0)) (flt 2))
+        (setf (aref nodes (+ bias-start 1)) (flt 3))))
     (multiple-value-bind (nodes weight-start weight-end)
         (segment-weights (find-lump 'weights net))
-      (if transposep
-          (replace nodes (mapcar #'flt '(0 1 2 3 4 5))
-                   :start1 weight-start :end1 weight-end)
-          (replace nodes (mapcar #'flt '(0 2 4 1 3 5))
-                   :start1 weight-start :end1 weight-end)))
+      (with-facets ((nodes (nodes 'backing-array :direction :output
+                                  :type flt-vector)))
+        (if transposep
+            (replace nodes (mapcar #'flt '(0 1 2 3 4 5))
+                     :start1 weight-start :end1 weight-end)
+            (replace nodes (mapcar #'flt '(0 2 4 1 3 5))
+                     :start1 weight-start :end1 weight-end))))
     ;; Clamp input
     (multiple-value-bind (nodes start)
         (segment-weights (find-lump 'inputs net))
-      (setf (aref nodes start) (flt -1))
-      (setf (aref nodes (1+ start)) (flt -4)))
+      (with-facets ((nodes (nodes 'backing-array :direction :output
+                                  :type flt-vector)))
+        (setf (aref nodes start) (flt -1))
+        (setf (aref nodes (1+ start)) (flt -4))))
     ;; Check foward pass
     (forward-bpn net)
     (assert (every #'= (bpn-nodes net 0)
@@ -315,26 +353,34 @@
                (list (random (flt 1)) (random (flt 1))))
              (clamper (samples bpn1)
                (assert (eq bpn1 net))
-               (loop for sample in samples
-                     for stripe upfrom 0
-                     do
-                     (with-stripes ((stripe inputs input-start)
-                                            (stripe expectations
-                                                    expectations-start))
-                       (destructuring-bind (x y) sample
-                         (setf (aref input-nodes input-start) x)
-                         (setf (aref input-nodes (1+ input-start)) y)
-                         (setf (aref expectations-nodes expectations-start)
-                               (+ (* 3 (+ x 2))
-                                  (* 2 (+ y -1))))
-                         (setf (aref expectations-nodes
-                                     (1+ expectations-start))
-                               (+ (* -3 (+ x 2))
-                                  (* -2 (+ y -1))))
-                         (setf (aref expectations-nodes
-                                     (+ 2 expectations-start))
-                               (+ (* -0.8 (+ x 2))
-                                  (* 1.3 (+ y -1)))))))))
+               (with-facets ((input-nodes
+                              (input-nodes 'backing-array
+                                           :direction :output
+                                           :type flt-vector))
+                             (expectations-nodes
+                              (expectations-nodes 'backing-array
+                                                  :direction :output
+                                                  :type flt-vector)))
+                 (loop for sample in samples
+                       for stripe upfrom 0
+                       do
+                          (with-stripes ((stripe inputs input-start)
+                                         (stripe expectations
+                                                 expectations-start))
+                            (destructuring-bind (x y) sample
+                              (setf (aref input-nodes input-start) x)
+                              (setf (aref input-nodes (1+ input-start)) y)
+                              (setf (aref expectations-nodes expectations-start)
+                                    (+ (* 3 (+ x 2))
+                                       (* 2 (+ y -1))))
+                              (setf (aref expectations-nodes
+                                          (1+ expectations-start))
+                                    (+ (* -3 (+ x 2))
+                                       (* -2 (+ y -1))))
+                              (setf (aref expectations-nodes
+                                          (+ 2 expectations-start))
+                                    (+ (* -0.8 (+ x 2))
+                                       (* 1.3 (+ y -1))))))))))
         (setf (clamper net) #'clamper)
         (train (make-instance 'counting-function-sampler
                               :max-n-samples (if cg 30000 100000)
@@ -350,7 +396,7 @@
                                                    :learning-rate (flt 0.01)
                                                    :momentum (flt 0.9)
                                                    :batch-size 10))))
-               net)
+               (make-instance 'bp-learner :bpn net))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -358,12 +404,13 @@
 
 (defun test-bp ()
   (declare (optimize (debug 3)))
-  (dolist (max-n-stripes '(1 10))
-    (dolist (cg '(nil t))
-      (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
-      (dolist (transposep '(nil t))
-        (assert (> 0.01 (test-activation :transposep transposep :cg cg
-                                         :max-n-stripes max-n-stripes))))
-      (assert (> 0.3 (test-softmax :cg cg :max-n-stripes max-n-stripes)))
-      (assert (> 0.1 (test-cross-entropy :cg cg
-                                         :max-n-stripes max-n-stripes))))))
+  (do-cuda ()
+    (dolist (max-n-stripes '(1 10))
+      (dolist (cg '(nil t))
+        (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
+        (dolist (transposep '(nil t))
+          (assert (> 0.01 (test-activation :transposep transposep :cg cg
+                                           :max-n-stripes max-n-stripes))))
+        (assert (> 0.3 (test-softmax :cg cg :max-n-stripes max-n-stripes)))
+        (assert (> 0.1 (test-cross-entropy :cg cg
+                                           :max-n-stripes max-n-stripes)))))))

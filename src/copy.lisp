@@ -18,9 +18,8 @@
 
 (defgeneric copy-object-slot (context original-object slot-name value)
   (:documentation "Return the value of the slot in the copied object
-and T, or NIL as the second value if the slot need not be initialized.
-The default implementation of COPY-FOR-PCD for classes calls
-COPY-SLOT-FOR-PCD.")
+and T, or NIL as the second value if the slot need not be
+initialized.")
   (:method (context original-object slot-name value)
     (values (copy context value) t)))
 
@@ -55,13 +54,13 @@ COPY-SLOT-FOR-PCD.")
 (defgeneric copy (context object)
   (:documentation "Make a deepish copy of OBJECT in CONTEXT.")
   (:method :around (context object)
-           (with-copying
-             (multiple-value-bind (copy existp)
-                 (gethash object *objects-copied*)
-               (if existp
-                   copy
-                   (setf (gethash object *objects-copied*)
-                         (call-next-method))))))
+    (with-copying
+      (multiple-value-bind (copy existp)
+          (gethash object *objects-copied*)
+        (if existp
+            copy
+            (setf (gethash object *objects-copied*)
+                  (call-next-method))))))
   (:method (context object)
     object)
   (:method (context (cons cons))
@@ -85,10 +84,10 @@ COPY-SLOT-FOR-PCD.")
                       (push-all (list new-slot-value initarg) initargs)
                       (push (list slot-name new-slot-value) inits))))))))
       (let ((instance
-             (apply #'make-instance class
-                    (append (copy-seq
-                             (copy-object-extra-initargs context object))
-                            initargs))))
+              (apply #'make-instance class
+                     (append (copy-seq
+                              (copy-object-extra-initargs context object))
+                             initargs))))
         (loop for (slot-name value) in inits
               do (setf (slot-value instance slot-name) value))
         instance))))

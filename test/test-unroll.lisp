@@ -37,5 +37,6 @@
     (unroll-dbm dbm)))
 
 (defun test-unroll ()
-  (test-unroll-dbn)
-  (test-unroll-dbm))
+  (do-cuda ()
+    (test-unroll-dbn)
+    (test-unroll-dbm)))

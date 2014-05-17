@@ -1,60 +1,123 @@
+;;;; Gradient based optimization
+;;;;
+;;;; The two important concepts are gradient source and gradient sink.
+;;;; A `sink' is a trainer that drives the training process, relying
+;;;; on the `source' to calculate the gradients.
+
 (in-package :mgl-gd)
 
-;;;; Generic gradient based optimization interface.
+;;;; Abstract interface for implementing gradient sinks
 
-(defgeneric map-segment-gradient-accumulators (fn trainer)
-  (:documentation "Call FN of lambda list (SEGMENT ACC-START
-ACCUMULATOR) on each segment trained by TRAINER."))
+(defclass gradient-sink ()
+  ((gradient-source :initarg :gradient-source :reader gradient-source))
+  (:documentation "Base class of all gradient descent trainers."))
 
-(defmacro do-segment-gradient-accumulators
-    (((segment acc-start accumulator) trainer) &body body)
-  `(map-segment-gradient-accumulators
-    (lambda (,segment ,acc-start ,accumulator)
-      (declare (type index ,acc-start)
-               (type flt-vector ,accumulator))
+(defgeneric initialize-gradient-sink (sink source segmentable)
+  (:method :before ((sink gradient-sink) source segmentable)
+    (setf (slot-value sink 'gradient-source) source))
+  (:documentation "Called automatically before training starts, this
+function sets up SINK to be suitable for SOURCE. It typically creates
+accumulator arrays in the sink for the gradients."))
+
+(defgeneric n-inputs-until-update (sink)
+  (:documentation "Return the largest number of inputs guaranteed not
+to cause a change in the learner being trained."))
+
+(defgeneric maybe-update-weights (sink n-new-inputs)
+  (:documentation "Update the weights of the learner being trained.
+N-NEW-INPUTS have been seen since the last time this was called."))
+
+
+;;;; Abstract interface for implementing gradient sources
+
+(defgeneric segmentable (source)
+  (:method (source)
+    source)
+  (:documentation "Return the segmentable model of SOURCE. By default
+it is assumed that SOURCE itself is a segmentable, so only non-trivial
+sources need to define this."))
+
+(defgeneric initialize-gradient-source (source segmentable sink)
+  (:documentation "Called automatically before training starts, this
+function sets up SOURCE to be suitable for its own
+SEGMENTABLE (returned by the function SEGMENTABLE)."))
+
+(defgeneric accumulate-gradients (batch source sink multiplier)
+  (:documentation "For each example in BATCH calculate the derivatives
+and add them (multiplied by MULTIPLIER) to the corresponding
+accumulator (in the sense of FIND-SINK-ACCUMULATOR) of SINK."))
+
+(defvar *accumulating-interesting-gradients* nil)
+
+
+;;;; Implementation of training based on the above abstract interfaces
+
+(defmethod train (sampler (sink gradient-sink) source)
+  (while (not (finishedp sampler))
+    (let ((batch (sample-batch sampler (n-inputs-until-update sink))))
+      (train-batch batch sink source))))
+
+(defmethod train :around (sampler (sink gradient-sink) source)
+  (let ((segmentable (segmentable source)))
+    (initialize-gradient-sink sink source segmentable)
+    (initialize-gradient-source source segmentable sink))
+  (call-next-method))
+
+(defmethod train-batch (batch (sink gradient-sink) learner)
+  (let ((*accumulating-interesting-gradients* t))
+    (accumulate-gradients batch (gradient-source sink) sink #.(flt 1)))
+  (maybe-update-weights sink (length batch)))
+
+
+;;;; Interface to gradient sinks for gradient sources
+
+(defgeneric map-gradient-sink (fn sink)
+  (:documentation "Call FN of lambda list (SEGMENT ACCUMULATOR
+ACC-START) on each segment and their corresponding accumulator array
+plus start index in SINK."))
+
+(defmacro do-gradient-sink (((segment accumulator acc-start) sink)
+                            &body body)
+  `(map-gradient-sink
+    (lambda (,segment ,accumulator ,acc-start)
+      (declare #+nil
+               (type flt-vector ,accumulator)
+               (type index ,acc-start))
       ,@body)
-    ,trainer))
+    ,sink))
 
-(defgeneric maybe-update-weights (trainer n-new-inputs)
-  (:documentation "Update the weights being trained. N-NEW-INPUTS have
-been seen since the last time this was called."))
-
-(defgeneric update-weights (trainer)
-  (:documentation "Called by MAYBE-UPDATE-WEIGHTS when all weights are
-to be updated at the same time."))
-
-(defgeneric find-segment-gradient-accumulator (segment trainer)
-  (:documentation "Return the start index and the accumulator
-belonging to SEGMENT in TRAINER or NIL if it is not found.")
-  (:method (segment trainer)
-    (do-segment-gradient-accumulators ((segment2 start accumulator)
-                                       trainer)
+(defgeneric find-sink-accumulator (segment source sink)
+  (:documentation "Return the accumulator and start index belonging to
+SEGMENT of SOURCE in SINK or NIL if it is not found.")
+  (:method (segment source sink)
+    (declare (ignore source))
+    (do-gradient-sink ((segment2 accumulator start) sink)
       (when (eq segment2 segment)
-        (return-from find-segment-gradient-accumulator
-          (values start accumulator))))))
+        (return-from find-sink-accumulator
+          (values accumulator start))))))
 
-(defmacro with-segment-gradient-accumulator (((start accumulator)
-                                              (segment trainer))
-                                             &body body)
-  `(multiple-value-bind (,start ,accumulator)
-       (find-segment-gradient-accumulator ,segment ,trainer)
+(defmacro with-sink-accumulator (((accumulator start) (segment source sink))
+                                 &body body)
+  `(multiple-value-bind (,accumulator ,start)
+       (find-sink-accumulator ,segment ,source ,sink)
      (declare (type (or index null) ,start)
+              #+nil
               (type (or flt-vector null) ,accumulator))
      ,@body))
 
 
-;;;; Gradient descent
+;;;; Abstract gradient descent base class
 
-(defclass gd-trainer ()
+(defclass gd-trainer (gradient-sink)
   ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (segment-set
     :reader segment-set
     :documentation "The set of segments that are to be trained. The
 ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
 indices.")
-   (weight-deltas :type flt-vector :accessor weight-deltas)
+   (weight-deltas :type mat :accessor weight-deltas)
    (accumulator
-    :type flt-vector :accessor accumulator
+    :type mat :accessor accumulator
     :documentation "An FLT vector that is accessed directly by the
 client and are used to store the sum of the computed gradient.")
    (learning-rate
@@ -85,13 +148,18 @@ weights are updated.")
     :documentation "Normally, after having gone through BATCH-SIZE
 number of inputs weights are updated. See subclasses for more correct
 descriptions."))
-  (:documentation "This is the common base class of gradient descent
-based trainers with momentum and weight decay."))
+  (:documentation "Gradient descent trainer with momentum, weight
+decay, weight penalty. Batch size and all other parameters can be
+changed during training. One may even want to subclass this trainer,
+define a method for BATCH-SIZE make it a function of N-INPUTS.
+
+Depending on BATCH-SIZE, this may be stochastic or non-stochastic
+gradient descent."))
 
 (defmethod print-object ((trainer gd-trainer) stream)
   (pprint-logical-block (stream ())
     (print-unreadable-object (trainer stream :type t :identity t)
-      (format stream "~S" (segment-set trainer))))
+      (format stream "~S" (ignore-errors (segment-set trainer)))))
   trainer)
 
 (define-descriptions (trainer gd-trainer)
@@ -102,6 +170,27 @@ based trainers with momentum and weight decay."))
   (weight-penalty (weight-penalty trainer) "~,5E")
   (n-after-upate-hook (length (after-update-hook trainer)) "~S")
   batch-size)
+
+(defmethod initialize-gradient-sink ((trainer gd-trainer) source segmentable)
+  (when (next-method-p)
+    (call-next-method))
+  (setf (slot-value trainer 'segment-set)
+        (make-instance 'segment-set :segments (list-segments segmentable)))
+  (let ((n-weights (segment-set-size (segment-set trainer))))
+    (setf (accumulator trainer) (make-mat n-weights :ctype flt-ctype))
+    (setf (weight-deltas trainer) (make-mat n-weights :ctype flt-ctype))))
+
+(defmethod segments ((trainer gd-trainer))
+  (segments (segment-set trainer)))
+
+(defmethod map-gradient-sink (fn (trainer gd-trainer))
+  (let ((segment-set (segment-set trainer))
+        (accumulator (accumulator trainer)))
+    (do-segment-set (segment :start-in-segment-set start) segment-set
+      (funcall fn segment accumulator start))))
+
+
+;;;; BATCH-GD-TRAINER
 
 (defclass batch-gd-trainer (gd-trainer)
   ((n-inputs-in-batch
@@ -118,63 +207,16 @@ through BATCH-SIZE inputs. PER-WEIGHT-BATCH-GD-TRAINER may be a better
 choice when some weights can go unused for instance due to missing
 input values."))
 
-(defclass normalized-batch-gd-trainer (batch-gd-trainer)
-  ((n-weight-uses-in-batch
-    :accessor n-weight-uses-in-batch
-    :documentation "Number of uses of the weight in its current batch."))
-  (:documentation "Like BATCH-GD-TRAINER but keeps count of how many
-times each weight was used in the batch and divides the accumulated
-gradient by this count instead of dividing by N-INPUTS-IN-BATCH. This
-only makes a difference if there are missing values in the learner
-that's being trained. The main feature that distuinguishes this class
-from PER-WEIGHT-BATCH-GD-TRAINER is that batches end at same time for
-all weights."))
+(defmethod n-inputs-until-update ((trainer batch-gd-trainer))
+  ;; BATCH-SIZE may be setf'ed to a value lower than N-INPUTS-IN-BATCH
+  (max 0 (- (batch-size trainer)
+            (n-inputs-in-batch trainer))))
 
-(defclass per-weight-batch-gd-trainer (gd-trainer)
-  ((n-weight-uses-in-batch
-    :accessor n-weight-uses-in-batch
-    :documentation "Number of uses of the weight in its current batch."))
-  (:documentation "This is much like BATCH-GD-TRAINER but it is more
-clever about when to update weights. Basically every weight has its
-own batch independent from the batches of others. It has desirable
-properties. One can for example put two neural networks together
-without adding any connections between them and the learning will
-produce results equivalent to separated case. Also, adding inputs with
-only missing values does not change anything."))
-
-(defmethod initialize-trainer ((trainer gd-trainer) segmentable)
-  (setf (slot-value trainer 'segment-set)
-        (make-instance 'segment-set :segments (list-segments segmentable)))
-  (let ((n-weights (segment-set-size (segment-set trainer))))
-    (setf (accumulator trainer) (make-flt-array n-weights))
-    (setf (weight-deltas trainer) (make-flt-array n-weights))))
-
-(defun set-up-n-weight-uses (trainer)
-  (let ((n-weights (segment-set-size (segment-set trainer))))
-    (setf (n-weight-uses-in-batch trainer)
-          (make-array n-weights :element-type 'index :initial-element 0))))
-
-(defmethod initialize-trainer ((trainer normalized-batch-gd-trainer)
-                               segmentable)
-  (call-next-method)
-  (set-up-n-weight-uses trainer))
-
-(defmethod initialize-trainer ((trainer per-weight-batch-gd-trainer)
-                               segmentable)
-  (call-next-method)
-  (set-up-n-weight-uses trainer))
-
-(defmethod segments ((trainer gd-trainer))
-  (segments (segment-set trainer)))
-
-(defmethod map-segment-gradient-accumulators (fn (trainer gd-trainer))
-  (let ((segment-set (segment-set trainer))
-        (accumulator (accumulator trainer)))
-    (do-segment-set (segment :start-in-segment-set start) segment-set
-      (funcall fn segment start accumulator))))
-
-(defmethod update-weights :before ((trainer batch-gd-trainer))
-  (map nil #'funcall (before-update-hook trainer)))
+(defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
+  (when (<= (batch-size trainer)
+            (incf (n-inputs-in-batch trainer) n-new-inputs))
+    (update-all-weights trainer))
+  (incf (n-inputs trainer) n-new-inputs))
 
 ;;; delta_w' += m * delta_w + df/dw
 ;;;
@@ -192,43 +234,70 @@ only missing values does not change anything."))
 ;;;      (* WEIGHT-DECAY WEIGHTS))
 ;;;
 ;;; plus momentum, weight-penalty.
-(defmethod update-weights ((trainer batch-gd-trainer))
+(defun update-all-weights (trainer)
+  (map nil #'funcall (before-update-hook trainer))
   (let ((accumulator (accumulator trainer))
         (weight-deltas (weight-deltas trainer))
         (learning-rate (learning-rate trainer))
         (n-inputs (flt (n-inputs-in-batch trainer)))
         (momentum (momentum trainer))
         (weight-decay (weight-decay trainer))
+        #+nil
         (weight-penalty (weight-penalty trainer)))
-    (declare (type flt-vector accumulator weight-deltas)
-             (type flt learning-rate n-inputs momentum
-                   weight-decay weight-penalty)
-             (optimize (speed 3) #.*no-array-bounds-check*))
-    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                    (segment-set trainer)
-      (with-segment-weights ((weights start end) segment)
-        (do ((i start-in-segment-set (the! index (1+ i)))
-             (j start (1+ j)))
-            ((<= end j))
-          (let ((delta (+ (* momentum (aref weight-deltas i))
-                          ;; Normally we'd multiply this by LEARNING-RATE
-                          ;; here, but doing it when updating the weights
-                          ;; plays nicer with changing learning rates.
-                          (/ (aref accumulator i)
-                             n-inputs)
-                          (* weight-decay (aref weights j))
-                          weight-penalty)))
-            (setf (aref accumulator i) #.(flt 0))
-            (setf (aref weight-deltas i) delta)
-            (decf (aref weights j) (* learning-rate delta)))))
-      (setf (n-inputs-in-batch trainer) 0)))
+    (declare (type flt learning-rate n-inputs momentum
+                   weight-decay #+nil weight-penalty))
+    (mgl-mat:scal! momentum weight-deltas)
+    (mgl-mat:axpy! (flt (/ n-inputs)) accumulator weight-deltas)
+    ;; FIXME: WEIGHT-PENALTY
+    #+nil
+    (unless (zerop weight-penalty)
+      (locally (declare (optimize (speed 3) #.*no-array-bounds-check*))
+        (dotimes (i (length weight-deltas))
+          (decf (aref weight-deltas i) weight-penalty))))
+    (with-shape-and-displacement (weight-deltas)
+      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+                      (segment-set trainer)
+        (with-segment-weights ((weights start end) segment)
+          (let ((length (- end start)))
+            (with-shape-and-displacement (weights length start)
+              (reshape-and-displace! weight-deltas length
+                                     start-in-segment-set)
+              (unless (zerop weight-decay)
+                (mgl-mat:axpy! weight-decay weights weight-deltas))
+              (mgl-mat:axpy! (- learning-rate) weight-deltas weights))))))
+    (fill! (flt 0) accumulator)
+    (setf (n-inputs-in-batch trainer) 0))
   (map nil #'funcall (after-update-hook trainer)))
+
 
-(defmethod maybe-update-weights ((trainer batch-gd-trainer) n-new-inputs)
-  (when (<= (batch-size trainer)
-            (incf (n-inputs-in-batch trainer) n-new-inputs))
-    (update-weights trainer))
-  (incf (n-inputs trainer) n-new-inputs))
+;;;; NORMALIZED-BATCH-GD-TRAINER
+
+(defclass normalized-batch-gd-trainer (batch-gd-trainer)
+  ((n-weight-uses-in-batch
+    :accessor n-weight-uses-in-batch
+    :documentation "Number of uses of the weight in its current batch."))
+  (:documentation "Like BATCH-GD-TRAINER but keeps count of how many
+times each weight was used in the batch and divides the accumulated
+gradient by this count instead of dividing by N-INPUTS-IN-BATCH. This
+only makes a difference if there are missing values in the learner
+that's being trained. The main feature that distuinguishes this class
+from PER-WEIGHT-BATCH-GD-TRAINER is that batches end at same time for
+all weights."))
+
+(defun set-up-n-weight-uses (trainer)
+  (let ((n-weights (segment-set-size (segment-set trainer))))
+    (setf (n-weight-uses-in-batch trainer)
+          (make-array n-weights :element-type 'index :initial-element 0))))
+
+(defmethod initialize-gradient-sink ((trainer normalized-batch-gd-trainer)
+                                     source segmentable)
+  (call-next-method)
+  (set-up-n-weight-uses trainer))
+
+(defmethod n-inputs-until-update ((trainer normalized-batch-gd-trainer))
+  ;; Weights are updated as in BATCH-GD-TRAINER but we need to collect
+  ;; weight usage statistics after each example.
+  1)
 
 (defmethod maybe-update-weights ((trainer normalized-batch-gd-trainer)
                                  n-new-inputs)
@@ -241,52 +310,82 @@ only missing values does not change anything."))
         (weight-decay (weight-decay trainer))
         (weight-penalty (weight-penalty trainer))
         (batch-size (batch-size trainer)))
-    (declare (type flt-vector accumulator weight-deltas)
-             (type index-vector n-weight-uses-in-batch)
+    (declare (type index-vector n-weight-uses-in-batch)
              (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
-    (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                    (segment-set trainer)
-      (with-segment-weights ((weights weights-start weights-end) segment)
-        (declare (ignore weights weights-end))
-        (map-segment-runs
-         (lambda (start end)
-           (declare (type index start end)
-                    (optimize (speed 3) #.*no-array-bounds-check*))
-           (do ((i (the! index
-                         (+ start-in-segment-set (- start weights-start)))
-                   (the! index (1+ i)))
-                (j start (1+ j)))
-               ((<= end j))
-             (setf (aref n-weight-uses-in-batch i)
-                   (the! index
-                         (+ n-new-inputs
-                            (the! index
-                                  (aref n-weight-uses-in-batch i)))))))
-         segment)))
-    (when (<= batch-size (the index (incf (n-inputs-in-batch trainer)
-                                          n-new-inputs)))
-      (setf (n-inputs-in-batch trainer) 0)
+    (with-facets ((accumulator (accumulator 'array :direction :io
+                                            :type flt-vector))
+                  (weight-deltas (weight-deltas 'array :direction :io
+                                                :type flt-vector)))
       (do-segment-set (segment :start-in-segment-set start-in-segment-set)
                       (segment-set trainer)
-        (with-segment-weights ((weights start end) segment)
-          (declare (optimize (speed 3) #.*no-array-bounds-check*))
-          (do ((i start-in-segment-set (the! index (1+ i)))
-               (j start (1+ j)))
-              ((<= end j))
-            (let ((delta (+ (* momentum (aref weight-deltas i))
-                            (* (if (zerop (aref n-weight-uses-in-batch i))
-                                   #.(flt 0)
-                                   (/ (flt (aref n-weight-uses-in-batch i))))
-                               (aref accumulator i))
-                            (* weight-decay (aref weights j))
-                            weight-penalty)))
-              (setf (aref weight-deltas i) delta)
-              (decf (aref weights j) (* learning-rate delta))
-              (setf (aref n-weight-uses-in-batch i) 0
-                    (aref accumulator i) #.(flt 0))))))
-      (map nil #'funcall (after-update-hook trainer))))
+        (with-segment-weights ((weights weights-start weights-end) segment)
+          (declare (ignore weights weights-end))
+          (map-segment-runs
+           (lambda (start end)
+             (declare (type index start end)
+                      (optimize (speed 3) #.*no-array-bounds-check*))
+             (do ((i (the! index
+                           (+ start-in-segment-set (- start weights-start)))
+                     (the! index (1+ i)))
+                  (j start (1+ j)))
+                 ((<= end j))
+               (setf (aref n-weight-uses-in-batch i)
+                     (the! index
+                           (+ n-new-inputs
+                              (the! index
+                                    (aref n-weight-uses-in-batch i)))))))
+           segment)))
+      (when (<= batch-size (the index (incf (n-inputs-in-batch trainer)
+                                            n-new-inputs)))
+        (setf (n-inputs-in-batch trainer) 0)
+        (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+                        (segment-set trainer)
+          (with-segment-weights ((weights start end) segment)
+            (declare (optimize (speed 3) #.*no-array-bounds-check*))
+            (with-facets ((weights (weights 'array :direction :io
+                                            :type flt-vector)))
+              (do ((i start-in-segment-set (the! index (1+ i)))
+                   (j start (1+ j)))
+                  ((<= end j))
+                (let ((delta (+ (* momentum (aref weight-deltas i))
+                                (* (if (zerop (aref n-weight-uses-in-batch i))
+                                       #.(flt 0)
+                                       (/ (flt
+                                           (aref n-weight-uses-in-batch i))))
+                                   (aref accumulator i))
+                                (* weight-decay (aref weights j))
+                                weight-penalty)))
+                  (setf (aref weight-deltas i) delta)
+                  (decf (aref weights j) (* learning-rate delta))
+                  (setf (aref n-weight-uses-in-batch i) 0
+                        (aref accumulator i) #.(flt 0)))))))
+        (map nil #'funcall (after-update-hook trainer)))))
   (incf (n-inputs trainer) n-new-inputs))
+
+
+;;;; PER-WEIGHT-BATCH-GD-TRAINER
+
+(defclass per-weight-batch-gd-trainer (gd-trainer)
+  ((n-weight-uses-in-batch
+    :accessor n-weight-uses-in-batch
+    :documentation "Number of uses of the weight in its current batch."))
+  (:documentation "This is much like BATCH-GD-TRAINER but it is more
+clever about when to update weights. Basically every weight has its
+own batch independent from the batches of others. It has desirable
+properties. One can for example put two neural networks together
+without adding any connections between them and the learning will
+produce results equivalent to the separated case. Also, adding inputs
+with only missing values does not change anything."))
+
+(defmethod initialize-gradient-sink ((trainer per-weight-batch-gd-trainer)
+                                     source segmentable)
+  (call-next-method)
+  (set-up-n-weight-uses trainer))
+
+(defmethod n-inputs-until-update ((trainer per-weight-batch-gd-trainer))
+  ;; Weight updates are async, don't overpromise.
+  1)
 
 (defmethod maybe-update-weights ((trainer per-weight-batch-gd-trainer)
                                  n-new-inputs)
@@ -299,59 +398,49 @@ only missing values does not change anything."))
         (weight-decay (weight-decay trainer))
         (weight-penalty (weight-penalty trainer))
         (batch-size (batch-size trainer)))
-    (declare (type flt-vector accumulator weight-deltas)
-             (type index-vector n-weight-uses-in-batch)
+    (declare (type index-vector n-weight-uses-in-batch)
              (type flt learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
-    (locally
-        (declare (optimize (speed 3) #.*no-array-bounds-check*))
+    (with-facets ((accumulator (accumulator 'array :direction :io
+                                            :type flt-vector))
+                  (weight-deltas (weight-deltas 'array :direction :io
+                                                :type flt-vector)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (do-segment-set (segment :start-in-segment-set start-in-segment-set)
                       (segment-set trainer)
         (with-segment-weights ((weights weights-start weights-end) segment)
           (declare (ignore weights-end))
-          (map-segment-runs
-           (lambda (start end)
-             (declare (type index start end))
-             (do ((i (the! index
-                           (+ start-in-segment-set (- start weights-start)))
-                     (the! index (1+ i)))
-                  (j start (1+ j)))
-                 ((<= end j))
-               (when (<= batch-size
-                         (setf (aref n-weight-uses-in-batch i)
-                               (1+ (the! index
-                                         (aref n-weight-uses-in-batch i)))))
-                 (let ((delta (+ (* momentum (aref weight-deltas i))
-                                 (/ (aref accumulator i)
-                                    (aref n-weight-uses-in-batch i))
-                                 (* weight-decay (aref weights j))
-                                 weight-penalty)))
-                   (setf (aref weight-deltas i) delta)
-                   (decf (aref weights j) (* learning-rate delta))
-                   (setf (aref n-weight-uses-in-batch i) 0
-                         (aref accumulator i) #.(flt 0))))))
-           segment))))
+          (with-facets ((weights (weights 'array :direction :io
+                                          :type flt-vector)))
+            (map-segment-runs
+             (lambda (start end)
+               (declare (type index start end))
+               (do ((i (the! index
+                             (+ start-in-segment-set (- start weights-start)))
+                       (the! index (1+ i)))
+                    (j start (1+ j)))
+                   ((<= end j))
+                 (when (<= batch-size
+                           (setf (aref n-weight-uses-in-batch i)
+                                 (1+ (the! index
+                                           (aref n-weight-uses-in-batch i)))))
+                   (let ((delta (+ (* momentum (aref weight-deltas i))
+                                   (/ (aref accumulator i)
+                                      (aref n-weight-uses-in-batch i))
+                                   (* weight-decay (aref weights j))
+                                   weight-penalty)))
+                     (setf (aref weight-deltas i) delta)
+                     (decf (aref weights j) (* learning-rate delta))
+                     (setf (aref n-weight-uses-in-batch i) 0
+                           (aref accumulator i) #.(flt 0))))))
+             segment)))))
     (map nil #'funcall (after-update-hook trainer)))
   (incf (n-inputs trainer)))
-
-(defmethod n-inputs-until-update ((trainer batch-gd-trainer))
-  ;; BATCH-SIZE may be setf'ed to a value lower than N-INPUTS-IN-BATCH
-  (max 0 (- (batch-size trainer)
-            (n-inputs-in-batch trainer))))
-
-(defmethod n-inputs-until-update ((trainer normalized-batch-gd-trainer))
-  ;; Weights are updated as in BATCH-GD-TRAINER but we need to collect
-  ;; weight usage statistics after each example.
-  1)
-
-(defmethod n-inputs-until-update ((trainer per-weight-batch-gd-trainer))
-  ;; Weight updates are async, don't overpromise.
-  1)
 
 
-;;;; Trainer
+;;;; SEGMENTED-GD-TRAINER
 
-(defclass segmented-gd-trainer ()
+(defclass segmented-gd-trainer (gradient-sink)
   ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (segmenter
     :initarg :segmenter :accessor segmenter
@@ -360,7 +449,7 @@ segment of the learner with MAP-SEGMENTS. SEGMENTER is a function that
 is called with each segment and returns a trainer or NIL. Several
 segments may be mapped to the same trainer. After the segment->trainer
 mappings are collected, each trainer is initialized by
-INITIALIZE-TRAINER with the list segments mapped to it.")
+INITIALIZE-GRADIENT-SINK with the list segments mapped to it.")
    (trainers :type list :reader trainers)
    (segments :type list :reader segments))
   (:documentation "A trainer that delegates training of segments to
@@ -373,10 +462,14 @@ not train all segments."))
 
 (defmethod describe-object :after ((trainer segmented-gd-trainer) stream)
   (when (slot-boundp trainer 'trainers)
+    (terpri stream)
     (dolist (trainer (trainers trainer))
       (describe trainer stream))))
 
-(defmethod initialize-trainer ((trainer segmented-gd-trainer) learner)
+(defmethod initialize-gradient-sink ((trainer segmented-gd-trainer) source
+                                     segmentable)
+  (when (next-method-p)
+    (call-next-method))
   (let ((segmenter (segmenter trainer))
         (trainer-segments (make-hash-table :test 'eq)))
     (map-segments (lambda (segment)
@@ -386,10 +479,10 @@ not train all segments."))
                           (setf (gethash trainer trainer-segments)
                                 nil))
                         (push segment (gethash trainer trainer-segments)))))
-                  learner)
+                  segmentable)
     (let ((trainers ()))
       (maphash (lambda (trainer segments)
-                 (initialize-trainer trainer segments)
+                 (initialize-gradient-sink trainer segments segments)
                  (push trainer trainers)
                  (values))
                trainer-segments)
@@ -411,11 +504,6 @@ not train all segments."))
             minimizing (n-inputs-until-update child-trainer))
       nil))
 
-(defmethod map-segment-gradient-accumulators (fn (trainer segmented-gd-trainer))
+(defmethod map-gradient-sink (fn (trainer segmented-gd-trainer))
   (dolist (trainer (trainers trainer))
-    (map-segment-gradient-accumulators fn trainer)))
-
-(defun find-trainer-for-segment (segment trainer)
-  (find-if (lambda (trainer)
-             (find-segment-gradient-accumulator segment trainer))
-           (trainers trainer)))
+    (map-gradient-sink fn trainer)))

@@ -134,18 +134,21 @@ entropy error. Return NIL if OBJ contains no labels.")
     :documentation "A hash table mapping labels to the cross entropy
 counters for samples with that label.")))
 
+(defvar *print-label-counters* nil)
+
 (defmethod print-counter ((counter cross-entropy-counter) stream)
   (multiple-value-bind (e c) (get-error counter)
     (if e
         (format stream "~,5E (~D)" e c)
         (format stream "~A (~D)" e c)))
-  (loop for cons in (sort (alexandria:hash-table-alist
-                           (per-label-counters counter))
-                          #'< :key #'car)
-        do (destructuring-bind (label . counter) cons
-             (format stream ",~_ (label: ~S, ~A)" label
-                     (with-output-to-string (stream)
-                       (print-counter counter stream))))))
+  (when *print-label-counters*
+    (loop for cons in (sort (alexandria:hash-table-alist
+                             (per-label-counters counter))
+                            #'< :key #'car)
+          do (destructuring-bind (label . counter) cons
+               (format stream ",~_ (label: ~S, ~A)" label
+                       (with-output-to-string (stream)
+                         (print-counter counter stream)))))))
 
 (defmethod add-error ((counter cross-entropy-counter) (err list) n)
   (destructuring-bind (overall-err label-errors) err

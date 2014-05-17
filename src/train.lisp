@@ -3,8 +3,7 @@
 ;;;; Various accessor type generic functions shared by packages
 
 (defgeneric name (object))
-(defun name= (name1 name2)
-  (equal name1 name2))
+(setf (fdefinition 'name=) #'equal)
 (defgeneric size (object))
 (defgeneric nodes (object))
 (defgeneric default-value (object))
@@ -24,19 +23,14 @@ prediction."))
 (defgeneric finishedp (sampler)
   (:documentation "See if SAMPLER has run out of examples."))
 
-(defgeneric initialize-trainer (trainer learner)
-  (:documentation "To be called before training starts this function
-sets up TRAINER to be suitable for LEARNER. Normally called
-automatically from a :BEFORE method on TRAIN."))
-
 (defgeneric train (sampler trainer learner)
-  (:method :around (sampler trainer learner)
-    (declare (ignore sampler))
-    (initialize-trainer trainer learner)
-    (call-next-method))
   (:documentation "Train LEARNER with TRAINER on the examples from
 SAMPLER. Before that TRAINER is initialized for LEARNER with
-INITIALIZE-TRAINER. Training continues until SAMPLER is finished."))
+INITIALIZE-TRAINER. Training continues until SAMPLER is finished.")
+  (:method (sampler trainer learner)
+    ;; Make training independent from mischief of other threads.
+    (let ((*random-state* (make-random-state *random-state*)))
+      (call-next-method))))
 
 (defgeneric train-batch (batch trainer learner)
   (:documentation "Called by TRAIN. Useful to hang an around method on
@@ -46,10 +40,6 @@ to monitor progress."))
   (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
 a sequence of examples even for learners not capable of batch
 operation."))
-
-(defgeneric n-inputs-until-update (trainer)
-  (:documentation "Return the largest number of inputs guaranteed not
-to cause a change in the learner being trained."))
 
 
 ;;;; Samplers
@@ -236,7 +226,7 @@ STRIPED-ARRAY of OBJECT."))
         ,@(when end `((,end (the index (stripe-end ,%stripe ,%object)))))))))
 
 (defmacro with-stripes (specs &body body)
-  "Bind start and optionally end indices of belonging to stripes in
+  "Bind start and optionally end indices belonging to stripes in
 striped objects.
 
  (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
@@ -306,7 +296,7 @@ changes state during the computation of the output. Hence not even the
 forward pass of a bpn is thread safe. There is also the restriction
 that all inputs must be of the same size.
 
-For example, if we have a function that builds bpn for an input of a
+For example, if we have a function that builds bpn a for an input of a
 certain size, then we can create a factory that creates bpns for a
 particular call. The factory probably wants keep the weights the same
 though.

@@ -18,4 +18,4 @@
                              (:file "test-unroll")
                              (:file "test-gaussian-process")
                              (:file "test"))))
-  :depends-on (#:mgl))
+  :depends-on (#:mgl #:mgl-mat-test))

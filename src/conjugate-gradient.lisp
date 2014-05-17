@@ -84,7 +84,7 @@ RHO < SIG < 1.")
            (ratio *default-ratio*)
            spare-vectors)
   "Minimize a differentiable multivariate function with conjugate
-gradient. The Polack-Ribiere flavour of conjugate gradients is used to
+gradient. The Polak-Ribiere flavour of conjugate gradients is used to
 compute search directions, and a line search using quadratic and cubic
 polynomial approximations and the Wolfe-Powell stopping criteria is
 used together with the slope ratio method for guessing initial step
@@ -287,7 +287,7 @@ playing much with RHO."
                                (min ratio
                                     (/ d3
                                        (- d0
-                                          least-positive-double-float))))
+                                          least-positive-flt))))
                          ls-failed nil))
                   (t
                    ;; restore best point so far
@@ -310,7 +310,7 @@ playing much with RHO."
 
 ;;;; Trainer
 
-(defclass cg-trainer ()
+(defclass cg-trainer (gradient-sink)
   ((n-inputs :initform 0 :initarg :n-inputs :accessor n-inputs)
    (batch-size
     :initarg :batch-size :accessor batch-size
@@ -342,11 +342,11 @@ through BATCH-SIZE inputs."))
   (- (batch-size trainer)
      (mod (n-inputs trainer) (batch-size trainer))))
 
-(defmethod map-segment-gradient-accumulators (fn (trainer cg-trainer))
+(defmethod map-gradient-sink (fn (trainer cg-trainer))
   (let ((segment-set (segment-set trainer))
         (accumulator (accumulator trainer)))
     (do-segment-set (segment :start-in-segment-set start) segment-set
-      (funcall fn segment start accumulator))))
+      (funcall fn segment accumulator start))))
 
 (defmethod segments ((trainer cg-trainer))
   (segments (segment-set trainer)))
@@ -356,46 +356,48 @@ through BATCH-SIZE inputs."))
 minimize) of all samples in BATCH and add the derivatives to
 ACCUMULATOR1 of TRAINER."))
 
-(defmethod initialize-trainer ((trainer cg-trainer) segmentable)
-  (setf (slot-value trainer 'segment-set)
-        (make-instance 'segment-set
-                       :segments (remove-if-not (segment-filter trainer)
-                                                (list-segments segmentable))))
-  (let ((n (segment-set-size (segment-set trainer))))
-    (setf (weights trainer) (make-flt-array n)
-          (spare-vectors trainer) (loop repeat 6
-                                        collect (make-flt-array n)))))
+(defmethod initialize-gradient-sink ((trainer cg-trainer) source segmentable)
+  (let ((segmentable (segmentable source)))
+    (setf (slot-value trainer 'segment-set)
+          (make-instance 'segment-set
+                         :segments (remove-if-not (segment-filter trainer)
+                                                  (list-segments segmentable))))
+    (let ((n (segment-set-size (segment-set trainer))))
+      (setf (weights trainer) (make-flt-array n)
+            (spare-vectors trainer) (loop repeat 6
+                                          collect (make-flt-array n))))))
 
 (defun process-batch (trainer learner batch weights derivatives)
   (let ((segment-set (segment-set trainer)))
     (segment-set<-weights segment-set weights)
     (setf (slot-value trainer 'accumulator) derivatives)
-    (compute-batch-cost-and-derive batch trainer learner)))
+    (let ((*accumulating-interesting-gradients* t))
+      (compute-batch-cost-and-derive batch trainer learner))))
 
 (defmethod train (sampler (trainer cg-trainer) learner)
   (while (not (finishedp sampler))
-    (let ((samples (sample-batch sampler (batch-size trainer))))
-      (train-batch samples trainer learner))))
+    (let ((batch (sample-batch sampler (batch-size trainer))))
+      (train-batch batch trainer learner))))
 
-(defmethod train-batch (samples (trainer cg-trainer) learner)
+(defmethod train-batch (batch (trainer cg-trainer) learner)
   (let ((weights (weights trainer)))
-    (cond ((= (length samples) (batch-size trainer))
+    (cond ((= (length batch) (batch-size trainer))
            (segment-set->weights (segment-set trainer) weights)
            (multiple-value-prog1
                (apply #'cg (lambda (weights derivatives)
                              (process-batch trainer learner
-                                            samples weights
+                                            batch weights
                                             derivatives))
                       weights
                       :spare-vectors (spare-vectors trainer)
                       (cg-args trainer))
              (segment-set<-weights (segment-set trainer) (weights trainer))
-             (incf (n-inputs trainer) (length samples))))
+             (incf (n-inputs trainer) (length batch))))
           (t
            ;; Updating on shorter than prescribed batches is
            ;; dangerous.
-           (warn "MGL-CG: only ~S samples in batch of size ~S. Skipping it."
-                 (length samples) (batch-size trainer))))))
+           (warn "MGL-CG: only ~S batch in batch of size ~S. Skipping it."
+                 (length batch) (batch-size trainer))))))
 
 
 ;;;; Decay
@@ -404,7 +406,7 @@ ACCUMULATOR1 of TRAINER."))
 ;;; instance in the case of a BPN by adding some lumps to include
 ;;; weight decay in the cost and get the derivatives for free but
 ;;; that's kind of wasteful as the weights and consequently the decay
-;;; does not change in the batch.
+;;; does not change in the batch. FIXME: is this true?
 (defclass decayed-cg-trainer-mixin ()
   ((segment-decay-fn
     :initform nil :initarg :segment-decay-fn :accessor segment-decay-fn
@@ -419,22 +421,27 @@ add decay on a per-segment basis."))
   (let* ((cost (flt (call-next-method)))
          (segment-decay-fn (segment-decay-fn trainer))
          (accumulator (accumulator trainer)))
-    (declare (type flt-vector accumulator)
-             (type flt cost))
-    (do-segment-set (segment :start-in-segment-set segment-start)
-        (segment-set trainer)
-      (let ((decay (funcall segment-decay-fn segment)))
-        (declare (type (or null flt) decay))
-        (when (and decay (not (zerop decay)))
-          ;; Because d(regularizer*x^2)/dx = 2*penalty*x hence
-          ;; regularizer=decay/2.
-          (let* ((decay (* (length batch) decay))
-                 (regularizer (/ decay 2)))
-            (with-segment-weights ((weights start end) segment)
-              (declare (optimize (speed 3)))
-              (loop for i upfrom start below end
-                    for j upfrom segment-start
-                    do (let ((x (aref weights i)))
-                         (incf cost (* regularizer x x))
-                         (incf (aref accumulator j) (* decay x)))))))))
+    (declare (type flt cost))
+    (with-facets ((accumulator* (accumulator 'backing-array
+                                             :direction :io
+                                             :type flt-vector)))
+      (do-segment-set (segment :start-in-segment-set segment-start)
+                      (segment-set trainer)
+        (let ((decay (funcall segment-decay-fn segment)))
+          (declare (type (or null flt) decay))
+          (when (and decay (not (zerop decay)))
+            ;; Because d(regularizer*x^2)/dx = 2*penalty*x hence
+            ;; regularizer=decay/2.
+            (let* ((decay (* (length batch) decay))
+                   (regularizer (/ decay 2)))
+              (with-segment-weights ((weights start end) segment)
+                (with-facets ((weights* (weights 'backing-array
+                                                 :direction :input
+                                                 :type flt-vector)))
+                  (declare (optimize (speed 3)))
+                  (loop for i upfrom start below end
+                        for j upfrom segment-start
+                        do (let ((x (aref weights* i)))
+                             (incf cost (* regularizer x x))
+                             (incf (aref accumulator* j) (* decay x)))))))))))
     cost))

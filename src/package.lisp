@@ -1,5 +1,5 @@
 (cl:defpackage :mgl-util
-  (:use #:common-lisp)
+  (:use #:common-lisp #:mgl-mat)
   (:export
    ;; Macrology
    #:with-gensyms
@@ -8,6 +8,7 @@
    #:special-case
    ;; Types
    #:flt
+   #:flt-ctype
    #:positive-flt
    #:most-negative-flt
    #:least-negative-flt
@@ -18,9 +19,9 @@
    #:make-flt-array
    #:index
    #:index-vector
-   ;; Declarations
    #:*no-array-bounds-check*
    #:the!
+   #:with-zero-on-underflow
    ;; Pathnames
    #:asdf-system-relative-pathname
    ;; Misc
@@ -57,7 +58,6 @@
    #:try-chance
    #:binarize-randomly
    #:gaussian-random-1
-   #:mv-gaussian-random
    #:poisson-random
    #:select-random-element
    #:binomial-log-likelihood-ratio
@@ -69,13 +69,8 @@
    #:running-stat-variance
    #:running-stat-mean
    ;; Array utilities
-   #:backing-array
-   #:fill!
-   #:to-scalar
    #:as-column-vector
    ;; I/O
-   #:read-double-float-array
-   #:write-double-float-array
    #:write-weights
    #:read-weights
    ;; Printing
@@ -111,13 +106,11 @@
   (:documentation "Simple utilities, types."))
 
 (cl:defpackage :mgl-train
-  (:use #:common-lisp #:mgl-util)
+  (:use #:common-lisp #:mgl-mat #:mgl-util)
   (:export
    #:train
    #:train-batch
    #:set-input
-   #:initialize-trainer
-   #:n-inputs-until-update
    ;; Sampler
    #:sample
    #:finishedp
@@ -180,6 +173,9 @@
    #:segment-set-size
    #:segment-set->weights
    #:segment-set<-weights
+   #:segment-set->mat
+   #:segment-set<-mat
+   #:map-segment-set-and-mat
    ;; Common generic functions
    #:batch-size
    #:cost
@@ -208,18 +204,26 @@ definitions. The three most important concepts are SAMPLERs, TRAINERs
 and LEARNERs."))
 
 (cl:defpackage :mgl-gd
-  (:use #:common-lisp #:mgl-util #:mgl-train)
+  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train)
   (:export
-   #:map-segment-gradient-accumulators
-   #:do-segment-gradient-accumulators
-   #:find-segment-gradient-accumulator
-   #:with-segment-gradient-accumulator
+   ;; Abstract interface for implementing gradient sinks
+   #:gradient-sink
+   #:initialize-gradient-sink
+   #:n-inputs-until-update
    #:maybe-update-weights
-   #:update-weights
-   ;; Gradient descent
+   ;; Abstract interface for implementing gradient sources
+   #:segmentable
+   #:initialize-gradient-source
+   #:accumulate-gradients
+   #:*accumulating-interesting-gradients*
+   ;; Interface to gradient sinks for gradient sources
+   #:map-gradient-sink
+   #:do-gradient-sink
+   #:find-sink-accumulator
+   #:with-sink-accumulator
+   ;; Abstract gradient descent base class
    #:gd-trainer
    #:n-inputs
-   #:use-accumulator2
    #:accumulator
    #:learning-rate
    #:momentum
@@ -227,23 +231,28 @@ and LEARNERs."))
    #:weight-penalty
    #:after-update-hook
    #:batch-size
+   ;; BATCH-GD-TRAINER
    #:batch-gd-trainer
    #:n-inputs-in-batch
    #:before-update-hook
+   ;; NORMALIZED-BATCH-GD-TRAINER
    #:normalized-batch-gd-trainer
-   #:per-weight-batch-gd-trainer
    #:n-weight-uses-in-batch
-   ;; Segmented trainer
+   ;; PER-WEIGHT-BATCH-GD-TRAINER
+   #:per-weight-batch-gd-trainer
+   ;; SEGMENTED-GD-TRAINER
    #:segmented-gd-trainer
    #:segmenter
    #:trainers
    #:n-inputs
-   #:find-trainer-for-segment)
-  (:documentation "Generic, gradient based optimization related
-interface and simple gradient descent based trainers."))
+   ;; SVRG-TRAINER
+   #:svrg-trainer
+   #:lag)
+  (:documentation "Generic, gradient based optimization interface and
+simple gradient descent based trainers."))
 
 (cl:defpackage :mgl-cg
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd)
+  (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-train #:mgl-gd)
   (:export
    #:cg
    #:*default-int*
@@ -264,7 +273,8 @@ interface and simple gradient descent based trainers."))
   (:documentation "Conjugate gradient based trainer."))
 
 (cl:defpackage :mgl-bm
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd
+        #:mgl-cg)
   (:nicknames #:mgl-rbm)
   (:export
    ;; Chunk
@@ -351,10 +361,11 @@ interface and simple gradient descent based trainers."))
    #:n-gibbs
    #:positive-phase
    #:negative-phase
+   #:bm-learner
    ;; Contrastive Divergence (CD) learning for RBMs
-   #:rbm-cd-trainer
+   #:rbm-cd-learner
    ;; Persistent Contrastive Divergence (PCD) learning
-   #:bm-pcd-trainer
+   #:bm-pcd-learner
    #:n-particles
    #:persistent-chains
    #:pcd
@@ -386,7 +397,8 @@ Boltzmann Machines and their stacks called Deep Belief
 Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd
+        #:mgl-cg)
   (:export
    #:lump
    #:deflump
@@ -395,7 +407,6 @@ Networks (DBN)."))
    #:default-size
    #:lump-size
    #:lump-node-array
-   #:indices-to-calculate
    #:->input
    #:update-stats-p
    #:normalize-with-stats-p
@@ -426,9 +437,8 @@ Networks (DBN)."))
    #:build-bpn
    #:forward-bpn
    #:backward-bpn
-   #:bp-trainer
+   #:bp-learner
    #:compute-derivatives
-   #:cg-bp-trainer
    #:dropout
    ;; Node types
    #:define-node-type
@@ -445,6 +455,7 @@ Networks (DBN)."))
    #:->scaled-tanh
    #:->rectified
    #:noisyp
+   #:->dropout
    #:->softplus
    #:->exp
    #:->abs
@@ -467,7 +478,8 @@ Networks (DBN)."))
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bm #:mgl-bp #:mgl-gd)
+  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-bm #:mgl-bp
+        #:mgl-gd)
   (:export
    #:chunk-lump-name
    #:unroll-dbn
@@ -483,7 +495,7 @@ Networks (DBN)."))
 networks, aka `unrolling'."))
 
 (cl:defpackage :mgl-gp
-  (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-bp)
+  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-bp)
   (:export
    #:gp
    #:gp-means

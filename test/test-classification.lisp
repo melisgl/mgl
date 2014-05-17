@@ -39,4 +39,5 @@
                           expected))))
 
 (defun test-classification ()
-  (test-roc-auc))
+  (do-cuda ()
+    (test-roc-auc)))

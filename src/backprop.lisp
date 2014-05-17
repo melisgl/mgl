@@ -8,7 +8,7 @@
 ;;;; It turns out that on sizable problems, such as the mnist one,
 ;;;; performance is memory bound. Not being able to do batch
 ;;;; processing made v0.0.1 very slow. To allow the memory/cache aware
-;;;; BLAS 3 routines work their magic, ``stripes'' were added.
+;;;; BLAS 3 routines work their magic, `stripes' were added.
 
 (in-package :mgl-bp)
 
@@ -30,46 +30,28 @@
 (defclass lump ()
   ((name :initform (next-lump-name) :initarg :name :reader name)
    (size :type index :initarg :size :reader size)
-   (n-stripes :initform 1 :type index :reader n-stripes)
-   (max-n-stripes
-    :initform 1 :type index :initarg :max-n-stripes
-    :reader max-n-stripes)
    (same-stripes-p
     :initform nil :initarg :same-stripes-p :reader same-stripes-p
     :documentation "Non-NIL iff all stripes are the same. If true, it
 effectively overrides both N-STRIPES and MAX-N-STRIPES and there is
-only one column in NODES and DERIVATIVES. Set up by the lump itself
+only one row in NODES and DERIVATIVES. Set up by the lump itself
 taking its inputs into account. Notably, ->WEIGHTS always have
 SAME-STRIPES-P T.")
    (nodes
-    :initform nil :type (or flt-vector null) :reader nodes
+    :initform nil :type mat :reader nodes
     :documentation "The values of the nodes. All nodes have values. It
 is conceptually a N-STRIPES x SIZE matrix that can be enlarged to
 MAX-N-STRIPES x SIZE by setting N-STRIPES.")
    (derivatives
-    :initform nil :type (or flt-vector null) :reader derivatives
+    :initform nil :type mat :reader derivatives
     :documentation "Derivatives of nodes, input node derivatives are
 not calculated. A 1d array representing a matrix of the same dimension
 as NODES.")
    (default-value
-       :initform #.(flt 0) :initarg :default-value :type flt
-       :reader default-value
-       :documentation "Upon creation or resize the lump's nodes get
-filled with this value.")
-   (indices-to-calculate
-    :initform nil :initarg :indices-to-calculate :type (or null index-vector)
-    :accessor indices-to-calculate
-    :documentation "NIL or a simple vector of array indices into this
-lump's range (i.e. in the 0 (1- SIZE) interval). Need not be ordered.
-If not NIL the node's value is not calculated and its derivatives are
-not propagated unless it is in INDICES-TO-CALCULATE. It has no effect
-subsequent lumps: they may use values that have not been recalculated.
-The primary use-case is to temporarily mask out an uninteresting part
-of the network.")))
-
-(declaim (inline nodes*))
-(defun nodes* (lump)
-  (the flt-vector (values (nodes lump))))
+    :initform #.(flt 0) :initarg :default-value :type flt
+    :reader default-value
+    :documentation "Upon creation or resize the lump's nodes get
+filled with this value.")))
 
 (declaim (inline derivatives*))
 (defun derivatives* (lump)
@@ -84,6 +66,19 @@ of the network.")))
        (defun ,maker-name (&rest args)
          (apply #'make-instance ',name args)))))
 
+(defmethod n-stripes ((lump lump))
+  (let ((nodes (nodes lump)))
+    (if nodes
+        (mat-dimension nodes 0)
+        1)))
+
+(defmethod max-n-stripes ((lump lump))
+  (let ((nodes (nodes lump)))
+    (if nodes
+        (/ (mat-max-size nodes)
+           (mat-dimension nodes 1))
+        1)))
+
 (defun limit-stripes (lump n)
   (if (same-stripes-p lump)
       (min 1 n)
@@ -94,13 +89,19 @@ of the network.")))
   (limit-stripes lump (n-stripes lump)))
 
 ;;; The effective maximum number of stripes, i.e. the number of
-;;; allocated columns of NODES and DERIVATIVES.
+;;; allocated rows of NODES and DERIVATIVES.
 (defun max-n-stripes* (lump)
   (limit-stripes lump (max-n-stripes lump)))
 
 (defun norm (v)
-  (sqrt (loop for i below (length v)
-              sum (expt (aref v i) 2))))
+  (with-facets ((v (v 'backing-array :direction :input
+                      :type flt-vector)))
+    (let ((sum (flt 0)))
+      (locally
+          (declare (optimize speed))
+        (dotimes (i (length v))
+          (incf sum (expt (aref v i) 2))))
+      (sqrt sum))))
 
 (defmethod print-object ((lump lump) stream)
   (pprint-logical-block (stream ())
@@ -109,23 +110,25 @@ of the network.")))
               (if (slot-boundp lump 'size)
                   (size lump)
                   :unbound))
-      (format stream "*~S(~S/~S) :norm ~,5F" (n-stripes* lump) (n-stripes lump)
-              (max-n-stripes lump) (ignore-errors (norm (nodes lump))))
-      (when (indices-to-calculate lump)
-        (format stream " ~:_(~S)" (length (indices-to-calculate lump))))))
+      (let ((mgl-cube:*let-input-through-p* t))
+        (format stream "*~S(~S/~S) :norm ~,5F" (n-stripes* lump)
+                (n-stripes lump) (max-n-stripes lump)
+                (ignore-errors (norm (nodes lump)))))))
   lump)
 
 (defmethod set-n-stripes (n-stripes (lump lump))
-  (assert (<= 0 n-stripes (max-n-stripes lump)))
-  (setf (slot-value lump 'n-stripes) n-stripes)
+  (let ((n-stripes (limit-stripes lump n-stripes)))
+    (assert (<= 0 n-stripes (max-n-stripes lump)))
+    (let ((dimensions (list n-stripes (mat-dimension (nodes lump) 1))))
+      (reshape! (nodes lump) dimensions)
+      (reshape! (derivatives lump) dimensions)))
   n-stripes)
 
 (defmethod set-max-n-stripes (max-n-stripes (lump lump))
   (let ((old-max-n-stripes* (max-n-stripes* lump))
         (size (size lump)))
-    (setf (slot-value lump 'max-n-stripes) max-n-stripes
-          (slot-value lump 'n-stripes) (min (n-stripes lump) max-n-stripes))
-    (let ((max-n-stripes* (max-n-stripes* lump)))
+    (let ((n-stripes* (n-stripes* lump))
+          (max-n-stripes* (limit-stripes lump max-n-stripes)))
       (cond ((zerop max-n-stripes*)
              (when (nodes lump)
                (setf (slot-value lump 'nodes) nil
@@ -133,18 +136,23 @@ of the network.")))
             ((or (/= max-n-stripes* old-max-n-stripes*)
                  (null (nodes lump)))
              (setf (slot-value lump 'nodes)
-                   (make-flt-array (* max-n-stripes* size)))
-             (fill! (default-value lump) (nodes lump))
+                   (make-mat (list n-stripes* size)
+                             :ctype flt-ctype
+                             :max-size (* max-n-stripes* size)
+                             :initial-element (default-value lump)))
              (setf (slot-value lump 'derivatives)
-                   (make-flt-array (* max-n-stripes* size)))
-             ;; make sure the number of columns is set properly
-             (set-n-stripes (n-stripes lump) lump)))))
+                   (make-mat (list n-stripes* size)
+                             :ctype flt-ctype
+                             :max-size (* max-n-stripes* size)))))))
   max-n-stripes)
 
 (defmethod initialize-instance :after ((lump lump) &key &allow-other-keys)
   (unless (slot-boundp lump 'size)
-    (setf (slot-value lump 'size) (default-size lump)))
+    (setf (slot-value lump 'size) (default-size lump))))
+
+(defmethod initialize-instance :around ((lump lump) &key &allow-other-keys)
   ;; ensure that the matrices are allocated
+  (call-next-method)
   (setf (max-n-stripes lump) (max-n-stripes lump))
   (when *bpn-being-built*
     (add-lump lump *bpn-being-built*)))
@@ -153,10 +161,11 @@ of the network.")))
   (nodes lump))
 
 (defmethod stripe-start (stripe (lump lump))
-  (assert (<= 0 stripe (1- (n-stripes lump))))
   (* (if (same-stripes-p lump)
          0
-         stripe)
+         (progn
+           (assert (<= 0 stripe (1- (n-stripes lump))))
+           stripe))
      (size lump)))
 
 (defmethod stripe-end (stripe (lump lump))
@@ -174,7 +183,41 @@ of the network.")))
 (defclass data-lump (lump) ())
 
 (deflump (->weight ->weight*) (data-lump)
-  ((same-stripes-p :initform t)))
+  ((same-stripes-p :initform t)
+   (dimensions :initarg dimensions :reader dimensions)))
+
+(defmethod initialize-instance :after ((weight ->weight) &key dimensions size
+                                       &allow-other-keys)
+  (setf (slot-value weight 'dimensions)
+        (if dimensions
+            (alexandria:ensure-list dimensions)
+            (list 1 size)))
+  (unless size
+    (setf (slot-value weight 'size) (reduce #'* (dimensions weight)))))
+
+(defmethod n-stripes ((weight ->weight))
+  1)
+
+(defmethod max-n-stripes ((weight ->weight))
+  1)
+
+(defmethod set-n-stripes (n-stripes (weight ->weight))
+  (declare (ignore n-stripes)))
+
+(defmethod set-max-n-stripes (max-n-stripes (weight ->weight))
+  (declare (ignore max-n-stripes))
+  (when (or (null (nodes weight))
+            (not (equal (dimensions weight)
+                        (mat-dimensions (nodes weight)))))
+    (setf (slot-value weight 'nodes)
+          (make-instance 'mat
+                         :ctype flt-ctype
+                         :dimensions (dimensions weight)
+                         :initial-element (default-value weight)))
+    (setf (slot-value weight 'derivatives)
+          (make-instance 'mat
+                         :ctype flt-ctype
+                         :dimensions (dimensions weight)))))
 
 (defvar *lumps-to-copy* ())
 
@@ -192,7 +235,7 @@ normally. If FROM-BPN is NIL, then weights are copied."
        ,@body)))
 
 (defun ->weight (&rest args)
-  (let ((to-be-copied (find mgl-bp::*next-lump-name* *lumps-to-copy*
+  (let ((to-be-copied (find *next-lump-name* *lumps-to-copy*
                             :key #'name :test #'equal)))
     (cond (to-be-copied
            (when *bpn-being-built*
@@ -207,8 +250,120 @@ normally. If FROM-BPN is NIL, then weights are copied."
 (defmethod transfer-lump ((lump data-lump)))
 
 (defmethod derive-lump ((lump data-lump)))
+
 
-(deflump ->input (data-lump)
+(deflump ->dropout (lump)
+  ((x :initarg :x :reader x)
+   (dropout
+    :type (or null flt)
+    :initform nil :initarg :dropout :reader dropout
+    :documentation "If non-NIL, then in the forward pass zero out each
+node in this chunk with DROPOUT probability. See Geoffrey Hinton's
+'Improving neural networks by preventing co-adaptation of feature
+detectors'.")
+   (mask :initform nil :reader mask)))
+
+(defmethod default-size ((lump ->dropout))
+  (size (x lump)))
+
+(defun ensure-mask (lump)
+  (when (dropout lump)
+    (let ((x (nodes (x lump))))
+      (unless (and (mask lump)
+                   (= (mat-size x)
+                      (mat-size (mask lump))))
+        (setf (slot-value lump 'mask)
+              (make-mat (mat-size x) :ctype flt-ctype)))))
+  (mask lump))
+
+(define-cuda-kernel (cuda-dropout-xorwow)
+    (void ((x :mat :io) (n int) (mask :mat :io) (dropout-probability float)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (if (< (aref mask i) dropout-probability)
+          (progn
+            (set (aref x i) 0.0)
+            (set (aref mask i) 0.0))
+          (set (aref mask i) 1.0)))))
+
+(defun dropout! (x mask dropout-probability &key (n (mat-size x)))
+  (declare (type flt dropout-probability)
+           (type index n))
+  (cond ((use-cuda-p)
+         (uniform-random! mask)
+         (cuda-dropout-xorwow x n mask dropout-probability
+                              :grid-dim (list (ceiling n 256) 1 1)
+                              :block-dim (list 256 1 1)))
+        (t
+         (with-facets ((x* (x 'backing-array :direction :io :type flt-vector))
+                       (m* (mask 'backing-array :direction :output
+                                 :type flt-vector)))
+           (declare (optimize speed #.*no-array-bounds-check*))
+           (dotimes (i n)
+             (let ((dropped (< (random #.(flt 1)) dropout-probability)))
+               (cond (dropped
+                      (setf (aref x* i) #.(flt 0))
+                      (setf (aref m* i) #.(flt 0)))
+                     (t
+                      (setf (aref m* i) #.(flt 1))))))))))
+
+(defmethod transfer-lump ((lump ->dropout))
+  (let ((x (x lump))
+        (dropout (dropout lump)))
+    (declare (type (or flt null) dropout))
+    (assert (= (size lump) (size x)))
+    (assert (not (same-stripes-p lump)))
+    (assert (not (same-stripes-p x)))
+    ;; Some subclasses (->INPUT, for instance) set X to be the same as
+    ;; LUMP.
+    (unless (eq x lump)
+      (copy! (nodes x) (nodes lump)))
+    (when dropout
+      (if *in-training-p*
+          (let ((mask (ensure-mask lump)))
+            (dropout! (nodes lump) mask dropout))
+          (scal! (- #.(flt 1) dropout) (nodes lump))))))
+
+(define-cuda-kernel (cuda-dropout-derivative-xorwow)
+    (void ((xd :mat :io) (n int) (ld :mat :input) (mask :mat :input)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (when (/= 0.0 (aref mask i))
+        (set (aref xd i) (+ (aref xd i) (aref ld i)))))))
+
+(defmethod derive-lump ((lump ->dropout))
+  (let* ((x (x lump))
+         (dropout (dropout lump))
+         (xd (derivatives x))
+         (ld (derivatives lump))
+         (n (mat-size xd))
+         (mask (mask lump)))
+    (assert (= (size lump) (size x)))
+    (if (not dropout)
+        (axpy! (flt 1) ld xd :n (* (size lump) (n-stripes lump)))
+        (if (use-cuda-p)
+            (cuda-dropout-derivative-xorwow xd n ld mask
+                                            :grid-dim (list (ceiling n 256) 1 1)
+                                            :block-dim (list 256 1 1))
+            (with-facets ((xd* (xd 'backing-array :direction :io
+                                   :type flt-vector))
+                          (ld* (ld 'backing-array :direction :input
+                                   :type flt-vector)))
+              (let ((mask (ensure-mask lump)))
+                (declare (optimize (speed 3) #.*no-array-bounds-check*))
+                (with-facets ((m* (mask 'backing-array :type flt-vector)))
+                  (loop for stripe of-type index below (n-stripes* lump) do
+                    (with-stripes ((stripe lump ls le)
+                                   (stripe x xs xe))
+                      (loop for li upfrom ls below le
+                            for xi upfrom xs below xe
+                            do (when (/= #.(flt 0) (aref m* li))
+                                 (incf (aref xd* li) (aref ld* li)))))))))))))
+
+
+;;;; ->INPUT
+
+(deflump ->input (->dropout data-lump)
   ((running-stats :reader running-stats)
    (update-stats-p :initform nil :initarg :update-stats-p
                    :accessor update-stats-p)
@@ -218,44 +373,55 @@ normally. If FROM-BPN is NIL, then weights are copied."
                    :accessor normalized-cap)))
 
 (defmethod set-input-done ((lump ->input))
-  (let ((nodes (nodes* lump))
-        (n-stripes* (n-stripes* lump))
-        (size (size lump)))
-    (when (update-stats-p lump)
-      (unless (slot-boundp lump 'running-stats)
-        (setf (slot-value lump 'running-stats)
-              (coerce (loop repeat (size lump)
-                            collect (make-instance 'running-stat))
-                      'vector)))
-      (let ((running-stats (running-stats lump)))
-        (dotimes (i size)
-          (let ((running-stat (aref running-stats i)))
-            (dotimes (j n-stripes*)
-              (add-to-running-stat (aref nodes (+ i (* j size)))
-                                   running-stat))))))
-    (when (normalize-with-stats-p lump)
-      (assert (slot-boundp lump 'running-stats))
-      (let ((running-stats (running-stats lump))
-            (cap (normalized-cap lump)))
-        (dotimes (i size)
-          (let* ((running-stat (aref running-stats i))
-                 (mean (running-stat-mean running-stat))
-                 (stddev (sqrt (running-stat-variance running-stat))))
-            (dotimes (j n-stripes*)
-              (let* ((index (+ i (* j size)))
-                     (x (if (zerop stddev)
-                            (- (aref nodes index) mean)
-                            (/ (- (aref nodes index) mean)
-                               stddev))))
-                (setf (aref nodes index)
-                      (cond ((= least-negative-flt x)
-                             #.(flt 0))
-                            ((and cap (< cap x))
-                             cap)
-                            ((and cap (< x (- cap)))
-                             (- cap))
-                            (t
-                             x)))))))))))
+  (when (or (update-stats-p lump) (normalize-with-stats-p lump))
+    ;; FIXME: cudaize
+    (with-facet (nodes ((nodes lump) 'backing-array :direction :io
+                        :type flt-vector))
+      (let ((n-stripes* (n-stripes* lump))
+            (size (size lump)))
+        (when (update-stats-p lump)
+          (unless (slot-boundp lump 'running-stats)
+            (setf (slot-value lump 'running-stats)
+                  (coerce (loop repeat (size lump)
+                                collect (make-instance 'running-stat))
+                          'vector)))
+          (let ((running-stats (running-stats lump)))
+            (dotimes (i size)
+              (let ((running-stat (aref running-stats i)))
+                (dotimes (j n-stripes*)
+                  (add-to-running-stat (aref nodes (+ i (* j size)))
+                                       running-stat))))))
+        (when (normalize-with-stats-p lump)
+          (assert (slot-boundp lump 'running-stats))
+          (let ((running-stats (running-stats lump))
+                (cap (normalized-cap lump)))
+            (dotimes (i size)
+              (let* ((running-stat (aref running-stats i))
+                     (mean (running-stat-mean running-stat))
+                     (stddev (sqrt (running-stat-variance running-stat))))
+                (dotimes (j n-stripes*)
+                  (let* ((index (+ i (* j size)))
+                         (x (if (zerop stddev)
+                                (- (aref nodes index) mean)
+                                (/ (- (aref nodes index) mean)
+                                   stddev))))
+                    (setf (aref nodes index)
+                          (cond ((= least-negative-flt x)
+                                 #.(flt 0))
+                                ((and cap (< cap x))
+                                 cap)
+                                ((and cap (< x (- cap)))
+                                 (- cap))
+                                (t
+                                 x)))))))))))))
+
+(defmethod transfer-lump ((lump ->input))
+  (setf (slot-value lump 'x) lump)
+  (call-next-method))
+
+;;; Do nothing. In particular, prevent the method for ->DROPOUT from
+;;; being called.
+(defmethod derive-lump ((lump ->input)))
 
 
 ;;;; ->ERROR
@@ -275,8 +441,10 @@ computed as the sum of nodes in the X parameter lump."))
   1)
 
 (defmethod derive-lump :around ((lump ->error))
+  ;; FIXME: This doesn't work if LUMP is connected to multiple error
+  ;; lumps. We should add IMPORTANCE or 1.
   (if (importance lump)
-      (replace (derivatives lump) (importance lump))
+      (copy! (importance lump) (derivatives lump))
       (fill! (flt 1) (derivatives lump)))
   (call-next-method))
 
@@ -289,6 +457,9 @@ computed as the sum of nodes in the X parameter lump."))
     :initarg :lumps
     :type (array lump (*)) :reader lumps
     :documentation "Lumps in reverse order")
+   (n-stripes
+    :initform 1 :type index :initarg :n-stripes
+    :reader n-stripes)
    (max-n-stripes
     :initform 1 :type index :initarg :max-n-stripes
     :reader max-n-stripes)))
@@ -304,10 +475,8 @@ computed as the sum of nodes in the X parameter lump."))
 (define-descriptions (bpn bpn)
   lumps n-stripes max-n-stripes)
 
-(defmethod n-stripes ((bpn bpn))
-  (n-stripes (aref (lumps bpn) 0)))
-
 (defmethod set-n-stripes (n-stripes (bpn bpn))
+  (setf (slot-value bpn 'n-stripes) n-stripes)
   (loop for lump across (lumps bpn)
         do (setf (n-stripes lump) n-stripes)))
 
@@ -399,7 +568,7 @@ being built. Example:
 
 (defun forward-bpn (bpn &key from-lump to-lump end-lump)
   "Propagate the values from the already clamped inputs."
-  (declare (optimize (debug 2)))
+  (declare (optimize (debug 3)))
   (let ((from-lump (if from-lump (->lump bpn from-lump) nil))
         (to-lump (if to-lump (->lump bpn to-lump) nil))
         (seen-from-lump-p (not from-lump)))
@@ -410,7 +579,8 @@ being built. Example:
           until (eq lump to-lump))))
 
 ;;; Derivatives of weights are left alone to let them accumulate which
-;;; is useful in batches such as when training by conjugate gradient.
+;;; is useful in batches such as when training with conjugate
+;;; gradient.
 (defun zero-non-weight-derivatives (bpn &key (last-lump nil last-lump-p))
   (let ((lumps (lumps bpn))
         (last-lump (if last-lump-p (->lump bpn last-lump) nil)))
@@ -418,7 +588,7 @@ being built. Example:
           for lump = (aref lumps i)
           until (and last-lump-p (eq last-lump lump))
           when (not (typep lump '->weight))
-          do (fill! (flt 0) (derivatives lump)))))
+            do (fill! (flt 0) (derivatives lump)))))
 
 (defun backward-bpn (bpn &key (last-lump nil last-lump-p))
   "Accumulate derivatives of weights."
@@ -436,12 +606,24 @@ being built. Example:
 
 ;;;; Train
 
-(defclass base-bp-trainer ()
-  ((first-trained-lump :reader first-trained-lump)))
+(defclass bp-learner ()
+  ((bpn :initarg :bpn :reader bpn)
+   (first-trained-lump :reader first-trained-lump)))
 
-(defmethod initialize-trainer ((trainer base-bp-trainer) segmentable)
-  (setf (slot-value trainer 'first-trained-lump) nil)
-  (call-next-method))
+(define-descriptions (learner bp-learner :inheritp t)
+  bpn first-trained-lump)
+
+(defmethod describe-object :after ((learner bp-learner) stream)
+  (when (slot-boundp learner 'bpn)
+    (describe (bpn learner) stream)))
+
+(defmethod segmentable ((source bp-learner))
+  (bpn source))
+
+(defmethod initialize-gradient-source ((learner bp-learner) bpn sink)
+  (when (next-method-p)
+    (call-next-method))
+  (setf (slot-value learner 'first-trained-lump) nil))
 
 (defmethod map-segments (fn (bpn bpn))
   (map nil
@@ -452,16 +634,16 @@ being built. Example:
 
 (defmethod segment-weights ((lump lump))
   (let ((nodes (nodes lump)))
-    (values nodes 0 (length nodes))))
+    (values nodes 0 (mat-size nodes))))
 
-(defun first-trained-weight-lump (trainer bpn)
+(defun first-trained-weight-lump (trainer learner)
   "Much time can be wasted computing derivatives of non-trained weight
 lumps. Return the first one that TRAINER trains."
-  (or (slot-value trainer 'first-trained-lump)
-      (setf (slot-value trainer 'first-trained-lump)
+  (or (slot-value learner 'first-trained-lump)
+      (setf (slot-value learner 'first-trained-lump)
             (find-if (lambda (lump)
                        (member lump (segments trainer)))
-                     (lumps bpn)))))
+                     (lumps (bpn learner))))))
 
 (defmethod cost (bpn)
   "Return the sum of costs for all active stripes. The cost of a
@@ -469,44 +651,47 @@ stripe is the sum of the error nodes. The second value is the number
 of stripes."
   (let ((sum (flt 0)))
     (loop for lump across (lumps bpn) do
-          (when (typep lump '->error)
-            (let ((nodes (nodes lump)))
-              (incf sum (* (if (same-stripes-p lump)
-                               (n-stripes lump)
-                               1)
-                           (clnu:sum nodes))))))
+      (when (typep lump '->error)
+        (with-facet (nodes ((nodes lump) 'backing-array :direction :input
+                            :type flt-vector))
+          (declare (type flt-vector nodes))
+          (incf sum (if (same-stripes-p lump)
+                        (* (n-stripes lump) (aref nodes 0))
+                        (loop for i below (n-stripes lump)
+                              sum (aref nodes i)))))))
     (values sum (n-stripes bpn))))
 
-(defgeneric compute-derivatives (samples trainer bpn)
-  (:method (samples trainer bpn)
-    (let ((*in-training-p* t))
-      (set-input samples bpn)
-      (forward-bpn bpn)
-      (backward-bpn bpn :last-lump (first-trained-weight-lump trainer bpn)))))
+(defgeneric compute-derivatives (samples trainer learner)
+  (:method (samples trainer (learner bp-learner))
+    (let ((*in-training-p* t)
+          (bpn (bpn learner))
+          (cost #.(flt 0)))
+      (do-executors (samples bpn)
+        (set-input samples bpn)
+        (forward-bpn bpn)
+        (incf cost (cost bpn))
+        (backward-bpn bpn :last-lump (first-trained-weight-lump
+                                      trainer learner)))
+      cost)))
 
 
 ;;;; CG trainer
 
-(defclass cg-bp-trainer (base-bp-trainer cg-trainer) ())
-
 (defun segment-set-derivatives->weights (segment-set weights)
-  (declare (type flt-vector weights)
-           (optimize (speed 3)))
   (do-segment-set (lump :start-in-segment-set start-in-segment-set) segment-set
-    (let ((derivatives (derivatives* lump)))
-      (declare (type flt-vector derivatives))
+    (with-facet (derivatives ((derivatives lump) 'backing-array
+                              :direction :input :type flt-vector))
       (replace weights derivatives
                :start1 start-in-segment-set
                :start2 0 :end2 (length derivatives)))))
 
-(defmethod compute-batch-cost-and-derive (samples trainer (bpn bpn))
-  (let ((cost #.(flt 0)))
+(defmethod compute-batch-cost-and-derive (samples trainer (learner bp-learner))
+  (let ((bpn (bpn learner))
+        (cost #.(flt 0)))
     (do-segment-set (lump) (segment-set trainer)
-      (let ((derivatives (derivatives lump)))
-        (fill! (flt 0) derivatives)))
+      (fill! (flt 0) (derivatives lump)))
     (loop for batch in (group samples (max-n-stripes bpn))
-          do (compute-derivatives batch trainer bpn)
-          (incf cost (cost bpn)))
+          do (incf cost (compute-derivatives batch trainer learner)))
     ;; By now the weight derivatives have accumulated, see
     ;; ZERO-NON-WEIGHT-DERIVATIVES.
     (segment-set-derivatives->weights (segment-set trainer)
@@ -514,65 +699,41 @@ of stripes."
     cost))
 
 
-;;;; Gradient descent trainer
+;;;; Gradient descent
 
-(defclass bp-trainer (base-bp-trainer segmented-gd-trainer) ())
-
-(defun add-and-forget-derivatives (trainer bpn)
-  ;; It would be as easy as:
-  ;;
-  ;;  (let ((ones (ones (n-stripes bpn) 1)))
-  ;;    (do-segment-gradient-accumulators ((lump acc-start accumulator) trainer)
-  ;;      (lla:gemm! (flt 1) (derivatives lump) ones (flt 1) accumulator)
-  ;;      (fill! (flt 0) (derivatives lump))))
-  ;;
-  ;; save for the one-to-many segment-trainer and segment run
-  ;; complications.
-  (do-segment-gradient-accumulators ((lump acc-start accumulator) trainer)
-    (let ((derivatives (derivatives* lump)))
-      (map-segment-runs
-       (lambda (start1 end1)
-         (declare (type index start1 end1))
-         (assert (<= (+ acc-start end1) (length accumulator)))
-         (assert (typep lump '->weight))
-         (with-stripes ((0 lump ls le))
-           (let ((a (+ ls start1))
-                 (b (+ ls end1))
-                 (c (+ acc-start start1)))
-             (declare (type index a b c)
-                      (optimize (speed 3) #.*no-array-bounds-check*))
-             (assert (< a le))
-             (assert (<= b le))
-             (loop for i of-type index upfrom a below b
-                   for j of-type index upfrom c
-                   do (incf (aref accumulator j) (aref derivatives i))))))
-       lump)))
+(defun add-and-forget-derivatives (bpn gradient-sink multiplier)
+  (declare (type flt multiplier))
+  (do-gradient-sink ((lump accumulator acc-start) gradient-sink)
+    (let* ((derivatives (derivatives lump))
+           (n (mat-size derivatives)))
+      (with-shape-and-displacement (accumulator n acc-start)
+        (axpy! multiplier derivatives accumulator))))
   ;; All weight derivatives must be zeroed, even the ones not being
   ;; trained on to avoid overflows.
   (loop for lump across (lumps bpn)
         do (when (typep lump '->weight)
              (fill! (flt 0) (derivatives lump)))))
 
-(defmethod train (sampler (trainer bp-trainer) (bpn bpn))
-  (while (not (finishedp sampler))
-    (let ((samples (sample-batch sampler (n-inputs-until-update trainer))))
-      (do-executors (samples bpn)
-        (train-batch samples trainer bpn)))))
-
-(defmethod train-batch (batch (trainer bp-trainer) (bpn bpn))
-  (loop for samples in (group batch (max-n-stripes bpn))
-        do (compute-derivatives samples trainer bpn))
-  (add-and-forget-derivatives trainer bpn)
-  (maybe-update-weights trainer (length batch)))
+(defmethod accumulate-gradients (batch (learner bp-learner)
+                                 gradient-sink multiplier)
+  (let ((bpn (bpn learner))
+        (cost #.(flt 0)))
+    (loop for samples in (group batch (max-n-stripes bpn))
+          do (incf cost (compute-derivatives samples gradient-sink learner)))
+    ;; Derivatives of weights keep accumulating in the loop above,
+    ;; they are not zeroed like non-weight derivatives, so it's ok to
+    ;; call ADD-AND-FORGET-DERIVATIVES once.
+    (add-and-forget-derivatives bpn gradient-sink multiplier)
+    cost))
 
 
 ;;;; I/O
 
 (defmethod write-weights ((lump ->weight) stream)
-  (write-double-float-array (nodes lump) stream))
+  (write-mat (nodes lump) stream))
 
 (defmethod read-weights ((lump ->weight) stream)
-  (read-double-float-array (nodes lump) stream))
+  (read-mat (nodes lump) stream))
 
 (defmethod write-weights ((bpn bpn) stream)
   (map-segments (lambda (weights)
@@ -612,74 +773,79 @@ maintained.")))
 (defmethod transfer-lump ((lump ->normalized))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (scale (scale lump))
-         (x* (nodes* x))
-         (to* (nodes* lump)))
+         (scale (scale lump)))
     (declare (type index group-size)
              (type (or flt flt-vector) scale))
     (assert (= (size lump) (size x)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                for i upfrom 0
-                do
-                   (when (zerop (mod i group-size))
-                     (let ((sum #.(flt 0)))
-                       (declare (type flt sum)
-                                (optimize (speed 3)))
-                       (loop for j upfrom xi below (+ xi group-size)
-                             do (incf sum (aref x* j)))
-                       (setq sum (/ sum scale))
-                       (loop for xj upfrom xi below (+ xi group-size)
-                             for lj upfrom li below (+ li group-size)
-                             do (setf (aref to* lj)
-                                      (/ (aref x* xj) sum)))))))))))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+          (with-stripes ((stripe lump ls le)
+                         (stripe x xs xe))
+            (loop for li upfrom ls below le
+                  for xi upfrom xs below xe
+                  for i upfrom 0
+                  do
+                     (when (zerop (mod i group-size))
+                       (let ((sum #.(flt 0)))
+                         (declare (type flt sum)
+                                  (optimize (speed 3)))
+                         (loop for j upfrom xi below (+ xi group-size)
+                               do (incf sum (aref x* j)))
+                         (setq sum (/ sum scale))
+                         (loop for xj upfrom xi below (+ xi group-size)
+                               for lj upfrom li below (+ li group-size)
+                               do (setf (aref to* lj)
+                                        (/ (aref x* xj) sum))))))))))))
 
 (defmethod derive-lump ((lump ->normalized))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (scale (scale lump))
-         (x* (nodes* x))
-         (xd* (derivatives* x))
-         (ld* (derivatives* lump)))
+         (scale (scale lump)))
     (declare (type index group-size)
              (type (or flt flt-vector) scale))
     (assert (= (size lump) (size x)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (loop for stripe of-type index below (n-stripes* lump) do
-          (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li of-type index upfrom ls below le by group-size
-                    for xi of-type index upfrom xs below xe by group-size
-                    do
-                    (let ((sum #.(flt 0))
-                          (lie (+ li group-size))
-                          (xie (+ xi group-size)))
-                      (declare (type flt sum)
-                               (optimize (speed 3)))
-                      (loop for xj upfrom xi below xie
-                            do (incf sum (aref x* xj)))
-                      (let ((sum-square (expt sum 2)))
-                        ;; derive by xj
-                        (loop for xj of-type index upfrom xi below xie do
-                              (loop for lk upfrom li below lie
-                                    for xk upfrom xi below xie do
-                                    (if (= xk xj)
-                                        (incf (aref xd* xj)
-                                              (* (aref ld* lk)
-                                                 scale
-                                                 (/ (- sum (aref x* xj))
-                                                    sum-square)))
-                                        (decf (aref xd* xj)
-                                              (* (aref ld* lk)
-                                                 scale
-                                                 (/ (aref x* xk)
-                                                    sum-square))))))))))))))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+          (with-stripes ((stripe lump ls le)
+                         (stripe x xs xe))
+            (loop for li of-type index upfrom ls below le by group-size
+                  for xi of-type index upfrom xs below xe by group-size
+                  do
+                     (let ((sum #.(flt 0))
+                           (lie (+ li group-size))
+                           (xie (+ xi group-size)))
+                       (declare (type flt sum)
+                                (optimize (speed 3)))
+                       (loop for xj upfrom xi below xie
+                             do (incf sum (aref x* xj)))
+                       (let ((sum-square (expt sum 2)))
+                         ;; derive by xj
+                         (loop for xj of-type index upfrom xi below xie do
+                           (loop for lk upfrom li below lie
+                                 for xk upfrom xi below xie do
+                                   (if (= xk xj)
+                                       (incf (aref xd* xj)
+                                             (* (aref ld* lk)
+                                                scale
+                                                (/ (- sum (aref x* xj))
+                                                   sum-square)))
+                                       (decf (aref xd* xj)
+                                             (* (aref ld* lk)
+                                                scale
+                                                (/ (aref x* xk)
+                                                   sum-square)))))))))))))))
 
 
 ;;;; Activation lump
@@ -691,9 +857,20 @@ maintained.")))
                         :reader transpose-weights-p))
   (:documentation "Perform X*WEIGHTS where X is of size M and WEIGHTS
 is a ->WEIGHT whose single stripe is taken to be of dimensions M x N
-stored in column major order. N is the size of this lump. If
+stored in row major order. N is the size of this lump. If
 TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
 computed."))
+
+(defmethod initialize-instance :after ((lump ->activation) &key
+                                       &allow-other-keys)
+  (assert (= (* (size lump) (size (x lump)))
+             (size (weights lump))))
+  (setf (slot-value (weights lump) 'dimensions)
+        (if (transpose-weights-p lump)
+            (list (size lump) (size (x lump)))
+            (list (size (x lump)) (size lump))))
+  ;; force reshaping
+  (setf (max-n-stripes (weights lump)) (max-n-stripes (weights lump))))
 
 (defmethod default-size ((lump ->activation))
   (/ (size (weights lump))
@@ -709,15 +886,14 @@ computed."))
     ;; FIXME:
     (assert (not (same-stripes-p x)))
     (if (transpose-weights-p lump)
-        (lla:gemm! (flt 1) (nodes x)
-                    (aops:reshape (nodes weights) (list nl nx))
-                    (flt 0) (nodes lump)
-                    :transpose-b? t :lda nx :ldc nl
-                    :m n-stripes :n nl :k nx)
-        (lla:gemm! (flt 1) (nodes x)
-                    (aops:reshape (nodes weights) (list nx nl))
-                    (flt 0) (nodes lump)
-                    :lda nx :ldc nl :m n-stripes :n nl :k nx))))
+        (gemm! (flt 1) (nodes x) (nodes weights)
+                       (flt 0) (nodes lump)
+                       :transpose-b? t :lda nx :ldb nx :ldc nl
+                       :m n-stripes :n nl :k nx)
+        (gemm! (flt 1) (nodes x) (nodes weights)
+                       (flt 0) (nodes lump)
+                       :lda nx :ldb nl :ldc nl
+                       :m n-stripes :n nl :k nx))))
 
 (defmethod derive-lump ((lump ->activation))
   (let* ((x (x lump))
@@ -725,34 +901,32 @@ computed."))
          (n-stripes (n-stripes lump))
          (nx (size x))
          (nl (/ (size weights)
-                nx)))
-    ;; FIXME: transform RESHAPE out
+                nx))
+         (x* (nodes x))
+         (dx* (derivatives x))
+         (w* (nodes weights))
+         (dw* (derivatives weights))
+         (dl* (derivatives lump)))
     (if (transpose-weights-p lump)
         ;; dx += a*w
-        (lla:gemm! (flt 1) (derivatives lump)
-                    (aops:reshape (nodes weights) (list nl nx))
-                    (flt 1) (derivatives x)
-                    :lda nl :ldc nx
-                    :m n-stripes :n nx :k nl)
+        (gemm! (flt 1) dl* w* (flt 1) dx*
+                       :lda nl :ldb nx :ldc nx
+                       :m n-stripes :n nx :k nl)
         ;; dx += a*w'
-        (lla:gemm! (flt 1) (derivatives lump)
-                    (aops:reshape (nodes weights) (list nx nl))
-                    (flt 1) (derivatives x)
-                    :transpose-b? t :lda nl :ldc nx
-                    :m n-stripes :n nx :k nl))
+        (gemm! (flt 1) dl* w* (flt 1) dx*
+                       :transpose-b? t :lda nl :ldb nl :ldc nx
+                       :m n-stripes :n nx :k nl))
     (if (transpose-weights-p lump)
         ;; dw += a'*x
-        (lla:gemm! (flt 1) (derivatives lump) (nodes x)
-                    (flt 1) (aops:reshape (derivatives weights) (list nl nx))
-                    :transpose-a? t
-                    :lda nl :ldb nx :ldc nx
-                    :m nl :n nx :k n-stripes)
+        (gemm! (flt 1) dl* x* (flt 1) dw*
+                       :transpose-a? t
+                       :lda nl :ldb nx :ldc nx
+                       :m nl :n nx :k n-stripes)
         ;; dw += x'*a
-        (lla:gemm! (flt 1) (nodes x) (derivatives lump)
-                    (flt 1) (aops:reshape (derivatives weights) (list nx nl))
-                    :transpose-a? t
-                    :lda nx :ldb nl :ldc nl
-                    :m nx :n nl :k n-stripes))))
+        (gemm! (flt 1) x* dl* (flt 1) dw*
+                       :transpose-a? t
+                       :lda nx :ldb nl :ldc nl
+                       :m nx :n nl :k n-stripes))))
 
 
 ;;;; Node type library
@@ -766,42 +940,46 @@ computed."))
 
 (defmethod transfer-lump ((lump ->rep))
   (let ((x (x lump)))
-    (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((x* (nodes* x))
-          (to* (nodes* lump))
-          (n (n lump))
+    ;; (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump))
           (xn (size x)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*)
                (type index n xn))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe x xs xe)
-                       (stripe lump ls le))
-          (declare (ignore xe le))
-          (dotimes (i xn)
-            (let ((v (aref x* (+ xs i))))
-              (loop for li of-type index upfrom (+ ls i) by xn
-                    repeat n
-                    do (setf (aref to* li) v)))))))))
+      (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                         :type flt-vector))
+                    (to* ((nodes lump) 'backing-array :direction :output
+                          :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes* lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls le))
+            (declare (ignore xe le))
+            (dotimes (i xn)
+              (let ((v (aref x* (+ xs i))))
+                (loop for li of-type index upfrom (+ ls i) by xn
+                      repeat n
+                      do (setf (aref to* li) v))))))))))
 
 (defmethod derive-lump ((lump ->rep))
   (let ((x (x lump)))
-    (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((xd* (derivatives* x))
-          (d* (derivatives* lump))
-          (n (n lump))
+    ;; (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump))
           (xn (size x)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*)
                (type index n xn))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe x xs xe)
-                       (stripe lump ls le))
-          (declare (ignore xe le))
-          (dotimes (i xn)
-            (let ((sum (flt 0)))
-              (loop for li of-type index upfrom (+ ls i) by xn
-                    repeat n
-                    do (incf sum (aref d* li)))
-              (setf (aref xd* (+ xs i)) sum))))))))
+      (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                          :type flt-vector))
+                    (d* ((derivatives lump) 'backing-array :direction :input
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes* lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls le))
+            (declare (ignore xe le))
+            (dotimes (i xn)
+              (let ((sum (flt 0)))
+                (loop for li of-type index upfrom (+ ls i) by xn
+                      repeat n
+                      do (incf sum (aref d* li)))
+                (incf (aref xd* (+ xs i)) sum)))))))))
 
 
 (deflump ->stretch (lump)
@@ -814,75 +992,98 @@ computed."))
 (defmethod transfer-lump ((lump ->stretch))
   (let ((x (x lump)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump))
-          (n (n lump)))
+    (let ((n (n lump)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*)
                (type index n))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe x xs xe)
-                       (stripe lump ls le))
-          (declare (ignore le))
-          (let ((li ls))
-            (loop for xi upfrom xs below xe
-                  do (let ((v (aref x* xi)))
-                       (loop repeat n
-                             do (setf (aref l* li) v)
-                                (incf li))))))))))
+      (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                         :type flt-vector))
+                    (l* ((nodes lump) 'backing-array :direction :output
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes* lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls le))
+            (declare (ignore le))
+            (let ((li ls))
+              (loop for xi upfrom xs below xe
+                    do (let ((v (aref x* xi)))
+                         (loop repeat n
+                               do (setf (aref l* li) v)
+                                  (incf li)))))))))))
 
 (defmethod derive-lump ((lump ->stretch))
   (let ((x (x lump)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((xd* (derivatives* x))
-          (d* (derivatives* lump))
-          (n (n lump)))
+    (let ((n (n lump)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*)
                (type index n))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe x xs xe)
-                       (stripe lump ls le))
-          (declare (ignore le))
-          (let ((li ls))
-            (loop for xi upfrom xs below xe
-                  do (let ((sum (flt 0)))
-                       (loop repeat n
-                             do (incf sum (aref d* li))
-                                (incf li))
-                       (incf (aref xd* xi) sum)))))))))
+      (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                          :type flt-vector))
+                    (d* ((derivatives lump) 'backing-array :direction :input
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes* lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls le))
+            (declare (ignore le))
+            (let ((li ls))
+              (loop for xi upfrom xs below xe
+                    do (let ((sum (flt 0)))
+                         (loop repeat n
+                               do (incf sum (aref d* li))
+                                  (incf li))
+                         (incf (aref xd* xi) sum))))))))))
 
 
 (deflump ->+ (lump)
-  ((args :initarg :args :reader args)))
+  ((args :initarg :args :reader args)
+   (ones :initform nil :reader ones)))
 
 (defmethod default-size ((lump ->+))
   (size (first (args lump))))
 
+(defun ensure-+-ones (lump)
+  (let ((n-stripes* (n-stripes* lump)))
+    (unless (and (ones lump)
+                 (= n-stripes*
+                    (mat-size (ones lump))))
+      (setf (slot-value lump 'ones)
+            (make-mat n-stripes* :ctype flt-ctype))
+      (fill! (flt 1) (ones lump))))
+  (ones lump))
+
 (defmethod transfer-lump ((lump ->+))
-  (let* ((to (nodes lump))
+  (let* ((nodes (nodes lump))
          (n-stripes* (n-stripes* lump))
-         (ones (make-flt-array (list n-stripes* 1) :initial-element (flt 1))))
-    (fill! (flt 0) to)
+         (ones nil))
+    (fill! (flt 0) nodes)
     (dolist (arg (args lump))
       (cond ((= n-stripes* (n-stripes* arg))
-             (lla:axpy! 1 (nodes arg) to))
+             (axpy! (flt 1) (nodes arg) nodes))
             (t
              (assert (same-stripes-p arg))
-             (lla:gemm! (flt 1) ones (nodes arg) (flt 1) to
-                         :m n-stripes* :n (size lump) :k 1
-                         :ldb (size arg) :ldc (size lump)))))))
+             (unless ones
+               (setq ones (ensure-+-ones lump)))
+             (let ((l* (nodes lump))
+                   (arg* (nodes arg)))
+               (gemm! (flt 1) ones arg* (flt 1) l*
+                              :m n-stripes* :n (size lump) :k 1
+                              :lda 1 :ldb (size arg) :ldc (size lump))))))))
 
 (defmethod derive-lump ((lump ->+))
-  (let* ((derivatives (derivatives* lump))
-         (n-stripes* (n-stripes* lump))
-         (ones (make-flt-array (list 1 n-stripes*) :initial-element (flt 1))))
+  (let* ((n-stripes* (n-stripes* lump))
+         (dl (derivatives lump))
+         (ones nil))
     (dolist (arg (args lump))
-      (cond ((= n-stripes* (n-stripes* arg))
-             (lla:axpy! 1 (derivatives lump) (derivatives arg)))
-            (t
-             (assert (same-stripes-p arg))
-             (lla:gemm! (flt 1) ones derivatives (flt 1) (derivatives arg)
-                         :m 1 :n (size arg) :k n-stripes*
-                         :ldb (size lump) :ldc (size arg)))))))
+      (let ((darg (derivatives arg)))
+        (cond ((= n-stripes* (n-stripes* arg))
+               (axpy! (flt 1) dl darg))
+              (t
+               (assert (same-stripes-p arg))
+               (unless ones
+                 (setq ones (ensure-+-ones lump)))
+               (gemm! (flt 1) ones dl (flt 1) darg
+                              :m 1 :n (size arg) :k n-stripes*
+                              :lda n-stripes* :ldb (size lump)
+                              :ldc (size arg))))))))
 
 
 (deflump ->* (lump)
@@ -900,35 +1101,44 @@ computed."))
     (cond ((= n-stripes* (n-stripes* x))
            (cond ((numberp y)
                   (fill! (flt 0) to)
-                  (lla:axpy! y (nodes x) to))
+                  (axpy! y (nodes x) to))
                  (t
-                  (let ((x* (nodes x))
-                        (y* (nodes y)))
+                  (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                                     :type flt-vector))
+                                (y* ((nodes y) 'backing-array :direction :input
+                                     :type flt-vector))
+                                (to* (to 'backing-array :direction :output
+                                         :type flt-vector)))
                     (dotimes (i (* n-stripes* (size lump)))
-                      (setf (aref to i) (* (aref x* i) (aref y* i))))))))
+                      (setf (aref to* i) (* (aref x* i) (aref y* i))))))))
           (t
            (assert nil)))))
 
 (defmethod derive-lump ((lump ->*))
-  (let* ((d* (derivatives* lump))
-         (n-stripes* (n-stripes* lump))
+  (let* ((n-stripes* (n-stripes* lump))
          (x (x lump))
-         (xd* (derivatives* x))
          (y (y lump)))
-    (cond ((= n-stripes* (n-stripes* x))
-           (cond ((numberp y)
-                  (dotimes (i (* n-stripes* (size lump)))
-                    (incf (aref xd* i) (* y (aref d* i)))))
-                 (t
-                  (let ((x* (nodes* x))
-                        (y* (nodes* y))
-                        (yd* (derivatives* y)))
+    (with-facets ((d* ((derivatives lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector)))
+      (cond ((= n-stripes* (n-stripes* x))
+             (cond ((numberp y)
                     (dotimes (i (* n-stripes* (size lump)))
-                      (incf (aref xd* i) (* (aref y* i) (aref d* i))))
-                    (dotimes (i (* n-stripes* (size lump)))
-                      (incf (aref yd* i) (* (aref x* i) (aref d* i))))))))
-          (t
-           (assert nil)))))
+                      (incf (aref xd* i) (* y (aref d* i)))))
+                   (t
+                    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                                       :type flt-vector))
+                                  (y* ((nodes y) 'backing-array :direction :input
+                                       :type flt-vector))
+                                  (yd* ((derivatives y) 'backing-array :direction :io
+                                        :type flt-vector)))
+                      (dotimes (i (* n-stripes* (size lump)))
+                        (incf (aref xd* i) (* (aref y* i) (aref d* i))))
+                      (dotimes (i (* n-stripes* (size lump)))
+                        (incf (aref yd* i) (* (aref x* i) (aref d* i))))))))
+            (t
+             (assert nil))))))
 
 (deflump ->sum (lump)
   ((x :initarg :x :reader x))
@@ -937,32 +1147,73 @@ computed."))
 (defmethod default-size ((lump ->sum))
   1)
 
+(define-cuda-kernel (cuda-sum-row)
+    (void ((x :mat :input) (m int) (n int) (y :mat :output)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i m)
+      (let ((sum 0.0)
+            (row-start (* i n)))
+        (do ((j 0 (+ j 1)))
+            ((>= j n))
+          (set sum (+ sum (aref x (+ row-start j)))))
+        (set (aref y i) sum)))))
+
 (defmethod transfer-lump ((lump ->sum))
-  (let ((x (x lump)))
+  (let* ((x (x lump))
+         (xn (nodes x))
+         (ln (nodes lump)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((x* (nodes* x))
-          (to* (nodes* lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe x xs xe))
-          (setf (aref to* stripe)
-                (let ((sum (flt 0)))
-                  (declare (type flt sum))
-                  (loop for xi upfrom xs below xe
-                        do (incf sum (aref x* xi)))
-                  sum)))))))
+    (if (use-cuda-p)
+        (let ((m (n-stripes lump)))
+          (cuda-sum-row xn m (size x) ln
+                        :grid-dim (list (ceiling m 256) 1 1)
+                        :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :output
+                            :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe x xs xe))
+              (setf (aref to* stripe)
+                    (let ((sum (flt 0)))
+                      (declare (type flt sum))
+                      (loop for xi upfrom xs below xe
+                            do (incf sum (aref x* xi)))
+                      sum))))))))
+
+(define-cuda-kernel (cuda-add-row)
+    (void ((x :mat :input) (m int) (n int) (y :mat :io)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i m)
+      (let ((d (aref x i))
+            (row-start (* i n)))
+        (do ((j 0 (+ j 1)))
+            ((>= j n))
+          (set (aref y (+ row-start j))
+               (+ d (aref y (+ row-start j)))))))))
 
 (defmethod derive-lump ((lump ->sum))
-  (let ((x (x lump)))
+  (let* ((x (x lump))
+         (xd (derivatives x))
+         (ld (derivatives lump)))
     (assert (= (n-stripes lump) (n-stripes x)))
-    (let ((xd* (derivatives* x))
-          (derivatives* (derivatives* lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (let ((d (aref derivatives* stripe)))
-          (with-stripes ((stripe x xs xe))
-            (loop for xi upfrom xs below xe
-                  do (incf (aref xd* xi) d))))))))
+    (if (use-cuda-p)
+        (let ((m (n-stripes lump))
+              (n (size x)))
+          (cuda-add-row ld m n xd
+                        :grid-dim (list (ceiling m 256) 1 1)
+                        :block-dim (list 256 1 1)))
+        (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (ld* ((derivatives lump) 'backing-array :direction :input
+                            :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (let ((d (aref ld* stripe)))
+              (with-stripes ((stripe x xs xe))
+                (loop for xi upfrom xs below xe
+                      do (incf (aref xd* xi) d)))))))))
 
 (deflump ->abs (lump)
   ((x :initarg :x :reader x)))
@@ -973,8 +1224,10 @@ computed."))
 (defmethod transfer-lump ((lump ->abs))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -986,9 +1239,12 @@ computed."))
 (defmethod derive-lump ((lump ->abs))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (ld* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1014,10 +1270,12 @@ computed."))
         (y (y lump)))
     (assert (= 1 (size lump)))
     (assert (= (size x) (size y)))
-    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (y* (nodes* y))
-          (to* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe x xs xe)
@@ -1036,15 +1294,19 @@ computed."))
         (y (y lump)))
     (assert (= 1 (size lump)))
     (assert (= (size x) (size y)))
-    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (y* (nodes* y))
-          (yd* (derivatives* y))
-          (derivatives* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (yd* ((derivatives y) 'backing-array :direction :io
+                        :type flt-vector))
+                  (dl* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-        (let ((d (aref derivatives* stripe)))
+        (let ((d (aref dl* stripe)))
           (with-stripes ((stripe x xs xe)
                          (stripe y ys ye))
             (loop for xi upfrom xs below xe
@@ -1054,107 +1316,90 @@ computed."))
                      (incf (aref yd* yi)
                            (* d (aref x* xi))))))))))
 
-(deflump ->sigmoid (lump)
-  ((x :initarg :x :reader x)
-   (dropout
-    :initform nil :initarg :dropout :reader dropout
-    :documentation "If non-NIL, then in the forward pass zero out each
-node in this chunk with DROPOUT probability. See Geoffrey Hinton's
-'Improving neural networks by preventing co-adaptation of feature
-detectors'.")))
+(deflump ->sigmoid (->dropout lump)
+  ((x :initarg :x :reader x)))
 
 (defmethod default-size ((lump ->sigmoid))
   (size (x lump)))
 
+(define-cuda-kernel (cuda-sigmoid!)
+    (void ((x :mat :input) (n int) (y :mat :output)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (let ((e (aref x i)))
+        (set (aref y i) (/ 1.0 (+ 1.0 (exp (- e)))))))))
+
+(define-lisp-kernel (lisp-sigmoid!)
+    ((x :mat :input) (start-x index) (n index) (y :mat :output) (start-y index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n))
+        for yi of-type index upfrom start-y
+        do (setf (aref y yi)
+                 (let ((xe (aref x xi)))
+                   (/ (1+ (with-zero-on-underflow (xe) (exp (- xe)))))))))
+
+(defun sigmoid! (x y)
+  (let ((n (mat-size x)))
+    (assert (= n (mat-size y)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-sigmoid! x n y :grid-dim grid-dim :block-dim block-dim))
+        (lisp-sigmoid! x (mat-displacement x) n y (mat-displacement y)))))
+
 (defmethod transfer-lump ((lump ->sigmoid))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump))
-          (dropout (dropout lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*)
-               (type (or flt null) dropout))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li)
-                         (if dropout
-                             (if *in-training-p*
-                                 (if (try-chance dropout)
-                                     #.(flt 0)
-                                     (sigmoid (aref x* xi)))
-                                 (* (- #.(flt 1) dropout)
-                                    (sigmoid (aref x* xi))))
-                             (sigmoid (aref x* xi))))))))))
+    (sigmoid! (nodes x) (nodes lump))
+    ;; Handle dropout.
+    (let ((x (x lump)))
+      (setf (slot-value lump 'x) lump)
+      (unwind-protect
+           (call-next-method)
+        (setf (slot-value lump 'x) x)))))
+
+(define-cuda-kernel (cuda-sigmoid-derivative!)
+    (void ((l :mat :input) (n int) (ld :mat :input) (xd :mat :io)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (let ((s (aref l i)))
+        (set (aref xd i) (+ (aref xd i)
+                            (* (aref ld i)
+                               s (- 1.0 s))))))))
+
+(define-lisp-kernel (lisp-sigmoid-derivative!)
+    ((l :mat :input) (start-l index) (n index)
+     (ld :mat :input) (start-ld index)
+     (xd :mat :io) (start-xd index))
+  (loop for li of-type index upfrom start-l
+          below (the! index (+ start-l n))
+        for ldi of-type index upfrom start-ld
+        for xdi of-type index upfrom start-xd
+        do (incf (aref xd xdi)
+                 ;; If dropped out, S is 0 and the derivative is fine.
+                 (let ((s (aref l li)))
+                   (* (aref ld ldi)
+                      s (- 1 s))))))
+
+(defun sigmoid-derivative! (l ld xd)
+  (let ((n (mat-size l)))
+    (assert (= n (mat-size ld)))
+    (assert (= n (mat-size xd)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-sigmoid-derivative! l n ld xd :grid-dim grid-dim
+                                    :block-dim block-dim))
+        (lisp-sigmoid-derivative! l (mat-displacement l) n
+                                  ld (mat-displacement ld)
+                                  xd (mat-displacement xd)))))
 
 (defmethod derive-lump ((lump ->sigmoid))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (incf (aref xd* li)
-                         (let ((s (aref l* li)))
-                           (* (aref ld* li)
-                              s (- 1 s))))))))))
-
-#+nil
-(defmethod transfer-lump ((lump ->sigmoid))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump))
-          (dropout (dropout lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*)
-               (type (or flt null) dropout))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li)
-                         (if dropout
-                             (if *in-training-p*
-                                 (if (try-chance dropout)
-                                     #.(flt 0)
-                                     (/ (sigmoid (aref x* xi))
-                                        (- #.(flt 1) dropout)))
-                                 (sigmoid (aref x* xi)))
-                             (sigmoid (aref x* xi))))))))))
-
-#+nil
-(defmethod derive-lump ((lump ->sigmoid))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump))
-          (dropout (dropout lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*)
-               (type (or flt null) dropout))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (unless (zerop (aref l* li))
-                     (incf (aref xd* li)
-                           (let ((s (sigmoid (aref x* xi))))
-                             #+nil
-                             (* (aref ld* li)
-                                s (- 1 s))
-                             (/ (* (aref ld* li)
-                                   s (- 1 s))
-                                (- #.(flt 1) dropout)))))))))))
+    (sigmoid-derivative! (nodes lump) (derivatives lump) (derivatives x))))
 
 (deflump ->stochastic-sigmoid (lump)
   ((x :initarg :x :reader x)))
@@ -1165,8 +1410,10 @@ detectors'.")))
 (defmethod transfer-lump ((lump ->stochastic-sigmoid))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1181,10 +1428,14 @@ detectors'.")))
 (defmethod derive-lump ((lump ->stochastic-sigmoid))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1206,35 +1457,41 @@ detectors'.")))
 (defmethod transfer-lump ((lump ->scaled-tanh))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (setf (aref l* li) (scaled-tanh (aref x* xi)))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (setf (aref l* li) (scaled-tanh (aref x* xi)))))))))
 
 (defmethod derive-lump ((lump ->scaled-tanh))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (ld* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe do
-                    (incf (aref xd* xi)
-                          (* (aref ld* li)
-                             #.(flt (/ 7137 6239))
-                             (expt (sech (* #.(flt 2/3) (aref x* xi)))
-                                   2)))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe do
+                  (incf (aref xd* xi)
+                        (* (aref ld* li)
+                           #.(flt (/ 7137 6239))
+                           (expt (sech (* #.(flt 2/3) (aref x* xi)))
+                                 2)))))))))
 (deflump ->rectified (lump)
   ((x :initarg :x :reader x)
+   #+nil
    (noisyp :initform nil :initarg :noisyp :accessor noisyp))
   (:documentation "max(0,x) activation function. If NOISYP then add
 normal(0,sigmoid(x)) noise to x."))
@@ -1242,42 +1499,68 @@ normal(0,sigmoid(x)) noise to x."))
 (defmethod default-size ((lump ->rectified))
   (size (x lump)))
 
+(define-cuda-kernel (cuda-rectify)
+    (void ((x :mat :input) (y :mat :output) (n int)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (let ((xi (aref x i)))
+        (if (< xi 0.0)
+            (set (aref y i) 0.0)
+            (set (aref y i) xi))))))
+
+(defun rectify! (x y &key (n (mat-size x)))
+  (assert (eq (mat-ctype x) (mat-ctype y)))
+  (assert (<= n (mat-size x)))
+  (assert (<= n (mat-size y)))
+  (if (use-cuda-p)
+      (cuda-rectify x y n
+                    :grid-dim (list (ceiling n 256) 1 1)
+                    :block-dim (list 256 1 1))
+      (with-facets ((x* (x 'backing-array :direction :input
+                           :type flt-vector))
+                    (y* (y 'backing-array :direction :output
+                           :type flt-vector)))
+        (dotimes (i n)
+          (setf (aref y* i) (max #.(flt 0) (aref x* i)))))))
+
 (defmethod transfer-lump ((lump ->rectified))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump))
-          (noisyp (noisyp lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li)
-                         (max #.(flt 0)
-                              (let ((xi (aref x* xi)))
-                                (+ xi
-                                   (if noisyp
-                                       (* (the! flt (gaussian-random-1))
-                                          (sqrt (max #.(flt 0.0001)
-                                                     (sigmoid xi))))
-                                       #.(flt 0))))))))))))
+    (rectify! (nodes x) (nodes lump))))
+
+(define-cuda-kernel (cuda-rectify-derivative)
+    (void ((xd :mat :io) (l :mat :input) (ld :mat :input) (n int)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (when (< 0.0 (aref l i))
+        (set (aref xd i) (+ (aref xd i)
+                            (aref ld i)))))))
 
 (defmethod derive-lump ((lump ->rectified))
-  (let ((x (x lump)))
+  (let* ((x (x lump))
+         (xd (derivatives x))
+         (ln (nodes lump))
+         (ld (derivatives lump))
+         (n (mat-size (nodes lump))))
     (assert (= (size lump) (size x)))
-    (let ((xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (when (plusp (aref l* li))
-                     (incf (aref xd* li) (aref ld* li)))))))))
+    (if (use-cuda-p)
+        (cuda-rectify-derivative xd ln ld n
+                                 :grid-dim (list (ceiling n 256) 1 1)
+                                 :block-dim (list 256 1 1))
+        (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (l* ((nodes lump) 'backing-array :direction :input
+                           :type flt-vector))
+                      (ld* ((derivatives lump) 'backing-array :direction :input
+                            :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    do (when (plusp (aref l* li))
+                         (incf (aref xd* xi) (aref ld* li))))))))))
 
 (deflump ->softplus (lump)
   ((x :initarg :x :reader x))
@@ -1289,8 +1572,10 @@ normal(0,sigmoid(x)) noise to x."))
 (defmethod transfer-lump ((lump ->softplus))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1306,10 +1591,14 @@ normal(0,sigmoid(x)) noise to x."))
 (defmethod derive-lump ((lump ->softplus))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1334,30 +1623,35 @@ normal(0,sigmoid(x)) noise to x."))
 (defmethod transfer-lump ((lump ->exp))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (setf (aref l* li) (exp (aref x* xi)))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (setf (aref l* li) (exp (aref x* xi)))))))))
 
 (defmethod derive-lump ((lump ->exp))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (let ((xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
+    (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (l* ((nodes lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
-                           (stripe x xs xe))
-              (loop for li upfrom ls below le
-                    for xi upfrom xs below xe
-                    do (incf (aref xd* li) (* (aref ld* li)
-                                              (aref l* li)))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                do (incf (aref xd* li) (* (aref ld* li)
+                                          (aref l* li)))))))))
 
 
 (declaim (inline rough-exponential))
@@ -1406,11 +1700,16 @@ normal(0,sigmoid(x)) noise to x."))
         (lsc (length-scale lump))
         (r (roughness lump)))
     (assert (= (size lump) (size x)))
-    (let ((l* (nodes* lump))
-          (x* (nodes* x))
-          (sv* (nodes* sv))
-          (lsc* (nodes* lsc))
-          (r* (nodes* r)))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (sv* ((nodes sv) 'backing-array :direction :input
+                        :type flt-vector))
+                  (lsc* ((nodes lsc) 'backing-array :direction :input
+                         :type flt-vector))
+                  (r* ((nodes r) 'backing-array :direction :input
+                       :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1435,15 +1734,24 @@ normal(0,sigmoid(x)) noise to x."))
         (lsc (length-scale lump))
         (r (roughness lump)))
     (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (sv* (nodes* sv))
-          (lsc* (nodes* lsc))
-          (r* (nodes* r))
-          (ld* (derivatives* lump))
-          (xd* (derivatives* x))
-          (svd* (derivatives* sv))
-          (lscd* (derivatives* lsc))
-          (rd* (derivatives* r)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (sv* ((nodes sv) 'backing-array :direction :input
+                        :type flt-vector))
+                  (lsc* ((nodes lsc) 'backing-array :direction :input
+                         :type flt-vector))
+                  (r* ((nodes r) 'backing-array :direction :input
+                       :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (svd* ((derivatives sv) 'backing-array :direction :io
+                         :type flt-vector))
+                  (lscd* ((derivatives lsc) 'backing-array :direction :io
+                          :type flt-vector))
+                  (rd* ((derivatives r) 'backing-array :direction :io
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1480,9 +1788,12 @@ normal(0,sigmoid(x)) noise to x."))
   (let ((x (x lump))
         (pe (period lump)))
     (assert (= (size lump) (size x)))
-    (let ((l* (nodes* lump))
-          (x* (nodes* x))
-          (pe* (nodes* pe)))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (pe* ((nodes pe) 'backing-array :direction :input
+                        :type flt-vector)))
       ;; (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1492,18 +1803,23 @@ normal(0,sigmoid(x)) noise to x."))
                 for xi upfrom xs below xe
                 for pei upfrom pes below pee
                 do (setf (aref l* li)
-                         (sin (* pi (/ (aref x* xi)
-                                       (aref pe* pei)))))))))))
+                         (sin (* #.(flt pi) (/ (aref x* xi)
+                                               (aref pe* pei)))))))))))
 
 (defmethod derive-lump ((lump ->periodic))
   (let ((x (x lump))
         (pe (period lump)))
     (assert (= (size lump) (size x)))
-    (let ((ld* (derivatives* lump))
-          (x* (nodes* x))
-          (xd* (derivatives* x))
-          (pe* (nodes* pe))
-          (ped* (derivatives* pe)))
+    (with-facets ((ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (pe* ((nodes pe) 'backing-array :direction :input
+                        :type flt-vector))
+                  (ped* ((derivatives pe) 'backing-array :direction :io
+                         :type flt-vector)))
       ;; (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
@@ -1515,13 +1831,13 @@ normal(0,sigmoid(x)) noise to x."))
                 do (let* ((xv (aref x* xi))
                           (pev (aref pe* pei))
                           (d (aref ld* li))
-                          (a (cos (/ (* pi xv)
+                          (a (cos (/ (* #.(flt pi) xv)
                                      pev))))
                      (incf (aref xd* xi)
-                           (* d (/ (* pi a)
+                           (* d (/ (* #.(flt pi) a)
                                    pev)))
                      (incf (aref ped* pei)
-                           (* d (- (/ (* pi xv a)
+                           (* d (- (/ (* #.(flt pi) xv a)
                                       (expt pev 2))))))))))))
 
 
@@ -1537,47 +1853,53 @@ normal(0,sigmoid(x)) noise to x."))
   (size (index lump)))
 
 (defmethod transfer-lump ((lump ->ref))
-  (let* ((l* (nodes* lump))
-         (index (index lump))
-         (index* (nodes* index))
+  (let* ((index (index lump))
          (into (into lump))
-         (into* (nodes* into))
          (n (size into))
          (drop-negative-index-p (drop-negative-index-p lump)))
-    (assert (= (size lump) (size index)))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe index index-s index-e)
-                     (stripe into into-s into-e))
-        (declare (ignore into-e))
-        (loop for li upfrom ls below le
-              for index-i upfrom index-s below index-e
-              do (let ((into-i (round (aref index* index-i))))
-                   (assert (and (or drop-negative-index-p (<= 0 into-i))
-                                (< into-i n)))
-                   (when (<= 0 into-i)
-                     (setf (aref l* li)
-                           (aref into* (+ into-s into-i))))))))))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (index* ((nodes index) 'backing-array :direction :input
+                           :type flt-vector))
+                  (into* ((nodes into) 'backing-array :direction :input
+                          :type flt-vector)))
+      (assert (= (size lump) (size index)))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe index index-s index-e)
+                       (stripe into into-s into-e))
+          (declare (ignore into-e))
+          (loop for li upfrom ls below le
+                for index-i upfrom index-s below index-e
+                do (let ((into-i (round (aref index* index-i))))
+                     (assert (and (or drop-negative-index-p (<= 0 into-i))
+                                  (< into-i n)))
+                     (when (<= 0 into-i)
+                       (setf (aref l* li)
+                             (aref into* (+ into-s into-i)))))))))))
 
 (defmethod derive-lump ((lump ->ref))
-  (let* ((d* (derivatives* lump))
-         (index (index lump))
-         (index* (nodes* index))
-         (into (into lump))
-         (intod* (derivatives* into)))
+  (let ((index (index lump))
+        (into (into lump)))
     (assert (= (size lump) (size index)))
     (assert (typep index '->input))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe index index-s index-e)
-                     (stripe into into-s into-e))
-        (declare (ignore into-e))
-        (loop for li upfrom ls below le
-              for index-i upfrom index-s below index-e
-              do (let ((into-i (round (aref index* index-i))))
-                   (when (<= 0 into-i)
-                     (incf (aref intod* (+ into-s into-i))
-                           (aref d* li)))))))))
+    (with-facets ((d* ((derivatives lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (index* ((nodes index) 'backing-array :direction :input
+                           :type flt-vector))
+                  (intod* ((derivatives into) 'backing-array :direction :io
+                           :type flt-vector)))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe index index-s index-e)
+                       (stripe into into-s into-e))
+          (declare (ignore into-e))
+          (loop for li upfrom ls below le
+                for index-i upfrom index-s below index-e
+                do (let ((into-i (round (aref index* index-i))))
+                     (when (<= 0 into-i)
+                       (incf (aref intod* (+ into-s into-i))
+                             (aref d* li))))))))))
 
 
 (deflump ->sum-squared-error (lump)
@@ -1592,36 +1914,44 @@ normal(0,sigmoid(x)) noise to x."))
         (y (y lump)))
     (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (y* (nodes* y))
-          (to* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe x xs xe)
-                           (stripe y ys ye))
-              (setf (aref to* stripe)
-                    (let ((sum (flt 0)))
-                      (declare (type flt sum))
-                      (loop for xi upfrom xs below xe
-                            for yi upfrom ys below ye
-                            do (incf sum (expt (- (aref x* xi)
-                                                  (aref y* yi))
-                                               2)))
-                      sum)))))))
+        (with-stripes ((stripe x xs xe)
+                       (stripe y ys ye))
+          (setf (aref to* stripe)
+                (let ((sum (flt 0)))
+                  (declare (type flt sum))
+                  (loop for xi upfrom xs below xe
+                        for yi upfrom ys below ye
+                        do (incf sum (expt (- (aref x* xi)
+                                              (aref y* yi))
+                                           2)))
+                  sum)))))))
 
 (defmethod derive-lump ((lump ->sum-squared-error))
   (let ((x (x lump))
         (y (y lump)))
     (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (y* (nodes* y))
-          (yd* (derivatives* y))
-          (derivatives* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (yd* ((derivatives y) 'backing-array :direction :io
+                        :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
-        (let ((d (aref derivatives* stripe)))
+        (let ((d (aref ld* stripe)))
           (with-stripes ((stripe x xs xe)
                          (stripe y ys ye))
             (loop for xi upfrom xs below xe
@@ -1645,9 +1975,12 @@ normal(0,sigmoid(x)) noise to x."))
         (y (y lump)))
     (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (y* (nodes* y))
-          (to* (nodes* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe x xs xe)
@@ -1666,11 +1999,16 @@ normal(0,sigmoid(x)) noise to x."))
         (y (y lump)))
     (assert (= (size x) (size y)))
     (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (y* (nodes* y))
-          (yd* (derivatives* y))
-          (derivatives* (derivatives* lump)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (y* ((nodes y) 'backing-array :direction :input
+                       :type flt-vector))
+                  (yd* ((derivatives y) 'backing-array :direction :io
+                        :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe x xs xe)
@@ -1680,114 +2018,104 @@ normal(0,sigmoid(x)) noise to x."))
                 for yi upfrom ys below ye
                 for li upfrom ls below le
                 do (incf (aref xd* xi)
-                         (* (aref derivatives* li)
+                         (* (aref ld* li)
                             2 (- (aref x* xi)
                                  (aref y* yi))))
                    (incf (aref yd* yi)
-                         (* (aref derivatives* li)
+                         (* (aref ld* li)
                             2 (- (aref y* yi)
                                  (aref x* xi))))))))))
-(deflump ->dropout (lump)
-  ((x :initarg :x :reader x)
-   (dropout
-    :type (or null flt)
-    :initform (flt 0.5) :initarg :dropout :reader dropout
-    :documentation "If non-NIL, then in the forward pass zero out each
-node in this chunk with DROPOUT probability. See Geoffrey Hinton's
-'Improving neural networks by preventing co-adaptation of feature
-detectors'.")))
-
-(defmethod default-size ((lump ->dropout))
-  (size (x lump)))
-
-(defmethod transfer-lump ((lump ->dropout))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (let ((x* (nodes* x))
-          (l* (nodes* lump))
-          (dropout (dropout lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*)
-               (type (or flt null) dropout))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li)
-                         (if dropout
-                             (if *in-training-p*
-                                 (if (try-chance dropout)
-                                     (if (zerop (random 2))
-                                         least-negative-flt
-                                         least-positive-flt)
-                                     (aref x* xi))
-                                 (* (- #.(flt 1) dropout)
-                                    (aref x* xi)))
-                             (aref x* xi)))))))))
-
-(defmethod derive-lump ((lump ->dropout))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (let ((xd* (derivatives* x))
-          (l* (nodes* lump))
-          (ld* (derivatives* lump)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do ;; KLUDGE: I'm not sure using these two as dropout
-                   ;; markers is safe.
-                   (when (and (/= least-negative-flt (aref l* li))
-                              (/= least-positive-flt (aref l* li)))
-                     (incf (aref xd* li) (aref ld* li)))))))))
 
 
 ;;;; ->MAX
 
-(deflump ->max (->normalized)
-  ((group-size :initarg :group-size :reader group-size)))
+(deflump ->max (lump)
+  ((x :initarg :x :reader x :documentation "Input comes from here.")
+   (group-size :initarg :group-size :reader group-size)))
 
 (defmethod default-size ((lump ->max))
   (/ (size (x lump)) (group-size lump)))
 
+(define-cuda-kernel (cuda-max)
+    (void ((group-size int) (x :mat :input) (n int) (y :mat :output)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let* ((i (* group-size k))
+             (max (aref x i)))
+        (do ((a 1 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (when (< max xe)
+              (set max xe))))
+        (set (aref y k) max)))))
+
 (defmethod transfer-lump ((lump ->max))
   (let* ((x (x lump))
-         (group-size (group-size lump))
-         (x* (nodes* x))
-         (to* (nodes* lump)))
+         (group-size (group-size lump)))
     (declare (type index group-size))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe x xs xe))
-        (loop for li upfrom ls below le do
-          (setf (aref to* li) most-negative-flt))
-        (loop for xi upfrom xs below xe
-              for i upfrom 0
-              do (let ((li (+ ls (floor i group-size))))
-                   (setf (aref to* li) (max (aref to* li)
-                                            (aref x* xi)))))))))
+    (if (use-cuda-p)
+        (let ((n (mat-size (nodes lump))))
+          (cuda-max group-size (nodes x) n (nodes lump)
+                    :grid-dim (list (ceiling n 256) 1 1)
+                    :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :output
+                            :type flt-vector)))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le do
+                (setf (aref to* li) most-negative-flt))
+              (loop for xi upfrom xs below xe
+                    for i upfrom 0
+                    do (let ((li (+ ls (floor i group-size))))
+                         (setf (aref to* li) (max (aref to* li)
+                                                  (aref x* xi)))))))))))
+
+(define-cuda-kernel (cuda-max-derivative)
+    (void ((group-size int) (x :mat :input) (n int) (l :mat :input)
+           (ld :mat :input) (xd :mat :io)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let ((i (* group-size k)))
+        (do ((a 0 (+ a 1)))
+            ((>= a group-size))
+          (let ((ia (+ i a)))
+            (when (= (aref x ia) (aref l k))
+              (set (aref xd ia)
+                   (+ (aref xd ia)
+                      (aref ld k))))))))))
 
 (defmethod derive-lump ((lump ->max))
   (let* ((x (x lump))
-         (group-size (group-size lump))
-         (to* (nodes* lump))
-         (x* (nodes* x))
-         (xd* (derivatives* x))
-         (d* (derivatives* lump)))
+         (group-size (group-size lump)))
     (declare (type index group-size))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe x xs xe))
-        (declare (ignore le))
-        (loop for xi upfrom xs below xe
-              for i upfrom 0
-              do (let ((li (+ ls (floor i group-size))))
-                   (when (= (aref to* li)
-                            (aref x* xi))
-                     (incf (aref xd* xi)
-                           (aref d* li)))))))))
+    (if (use-cuda-p)
+        (let ((n (mat-size (nodes lump))))
+          (cuda-max-derivative group-size (nodes x) n (nodes lump)
+                               (derivatives lump) (derivatives x)
+                               :grid-dim (list (ceiling n 256) 1 1)
+                               :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :input
+                            :type flt-vector))
+                      (xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (d* ((derivatives lump) 'backing-array :direction :input
+                           :type flt-vector)))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (declare (ignore le))
+              (loop for xi upfrom xs below xe
+                    for i upfrom 0
+                    do (let ((li (+ ls (floor i group-size))))
+                         (when (= (aref to* li)
+                                  (aref x* xi))
+                           (incf (aref xd* xi)
+                                 (aref d* li)))))))))))
 
 
 ;;;; ->SOFTMAX
@@ -1801,108 +2129,68 @@ detectors'.")))
 (defmethod transfer-lump ((lump ->softmax))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (x* (nodes* x))
-         (to* (nodes* lump))
          (scale (scale lump)))
     (declare (type index group-size)
              (type flt scale))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe x xs xe))
-        (loop for li upfrom ls below le
-              for xi upfrom xs below xe
-              for i upfrom 0
-              do (when (zerop (mod i group-size))
-                   (let ((max most-negative-flt)
-                         (sum #.(flt 0)))
-                     (declare (type flt max sum)
-                              (optimize (speed 3)))
-                     ;; It's more stable numerically to subtract the
-                     ;; max from elements in the group before
-                     ;; exponentiating.
-                     (loop for xj upfrom xi below (+ xi group-size)
-                           do (setq max (max max (aref x* xj))))
-                     (loop for xj upfrom xi below (+ xi group-size)
-                           do (incf sum (exp (- (aref x* xj) max))))
-                     (setq sum (/ sum scale))
-                     (loop for lj upfrom li below (+ li group-size)
-                           for xj upfrom xi below (+ xi group-size)
-                           for i below group-size
-                           do (let ((s (/ (exp (- (aref x* xj) max)) sum)))
-                                (declare (type positive-flt s))
-                                (setf (aref to* lj) s))))))))))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
+      (loop for stripe of-type index below (n-stripes* lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                for i upfrom 0
+                do (when (zerop (mod i group-size))
+                     (let ((max most-negative-flt)
+                           (sum #.(flt 0)))
+                       (declare (type flt max sum)
+                                (optimize (speed 3)))
+                       ;; It's more stable numerically to subtract the
+                       ;; max from elements in the group before
+                       ;; exponentiating.
+                       (loop for xj upfrom xi below (+ xi group-size)
+                             do (setq max (max max (aref x* xj))))
+                       (loop for xj upfrom xi below (+ xi group-size)
+                             do (incf sum (exp (- (aref x* xj) max))))
+                       (setq sum (/ sum scale))
+                       (loop for lj upfrom li below (+ li group-size)
+                             for xj upfrom xi below (+ xi group-size)
+                             for i below group-size
+                             do (let ((s (/ (exp (- (aref x* xj) max)) sum)))
+                                  (declare (type positive-flt s))
+                                  (setf (aref to* lj) s)))))))))))
 
 (defmethod derive-lump ((lump ->softmax))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (to* (nodes* lump))
-         (xd* (derivatives* x))
-         (d* (derivatives* lump))
          (scale (scale lump))
          (scale^2 (* scale scale)))
     (declare (type index group-size)
              (type flt scale))
-    (loop for stripe of-type index below (n-stripes* lump) do
-      (with-stripes ((stripe lump ls le)
-                     (stripe x xs xe))
-        (loop
-          for lg of-type index upfrom ls below le by group-size
-          for xg of-type index upfrom xs below xe by group-size
-          do (locally
-                 (declare (optimize (speed 3))))
-             (loop for lj upfrom lg below (+ lg group-size)
-                   for xj upfrom xg below (+ xg group-size)
-                   do (let ((e^x (aref to* lj)))
-                        (declare (type flt e^x))
-                        (incf (aref xd* xj)
-                              (* (aref d* lj)
-                                 (/ (* e^x (- scale e^x))
-                                    scale^2))))))))))
-
-
-(deflump ->cross-entropy (lump) ())
-
-#+nil
-(defmethod transfer-lump ((lump ->cross-entropy))
-  (destructuring-bind (x y) (args lump)
-    (assert (= (size lump) (size x) (size y)))
-    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (y* (nodes* y))
-          (to* (nodes* lump))
-          (size (size x)))
-      (declare (type index size)
-               (optimize (speed 3) #.*no-array-bounds-check*))
+    (with-facets ((to* ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (d* ((derivatives lump) 'backing-array :direction :input
+                       :type flt-vector)))
       (loop for stripe of-type index below (n-stripes* lump) do
-            (setf (aref to* stripe)
-                  (- (loop for i of-type index upfrom (* stripe size)
-                           below (* (1+ stripe) size)
-                           summing (* (aref x* i)
-                                      (the! flt (log (aref y* i)))))))))))
-
-#+nil
-(defmethod derive-lump ((lump ->cross-entropy))
-  (destructuring-bind (x y) (args lump)
-    (assert (= (size lump) (size x) (size y)))
-    (assert (= (n-stripes lump) (n-stripes x) (n-stripes y)))
-    (let ((x* (nodes* x))
-          (xd* (derivatives* x))
-          (y* (nodes* y))
-          (yd* (derivatives* y))
-          (derivatives* (derivatives* lump))
-          (size (size x)))
-      (declare (type index size)
-               (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-            (let ((d (aref derivatives* stripe)))
-              (loop for i of-type index upfrom (* stripe size)
-                    below (* (1+ stripe) size)
-                    do
-                    (incf (aref xd* i)
-                          (* d (- (log (aref y* i)))))
-                    (incf (aref yd* i)
-                          (* d 2 (- (/ (aref x* i)
-                                       (aref y* i)))))))))))
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe))
+          (loop
+            for lg of-type index upfrom ls below le by group-size
+            for xg of-type index upfrom xs below xe by group-size
+            do (locally
+                   (declare (optimize (speed 3))))
+               (loop for lj upfrom lg below (+ lg group-size)
+                     for xj upfrom xg below (+ xg group-size)
+                     do (let ((e^x (aref to* lj)))
+                          (declare (type flt e^x))
+                          (incf (aref xd* xj)
+                                (* (aref d* lj)
+                                   (/ (* e^x (- scale e^x))
+                                      scale^2)))))))))))
 
 
 ;;;; ->CROSS-ENTROPY-SOFTMAX
@@ -1919,7 +2207,6 @@ normalized in groups of GROUP-SIZE.")
     :documentation "A lump of the same size as INPUT-LUMP that is the
 T in -sum_{k}target_k*ln(x_k) which the the cross entropy error.")
    (class-weights
-    :initform nil
     :initarg :class-weights
     :accessor class-weights
     :documentation "If non-NIL, an FLT-VECTOR of GROUP-SIZE. Useful
@@ -1942,146 +2229,415 @@ normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
 target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
 target_k if target sums to 1."))
 
+(defmethod initialize-instance :after ((lump ->cross-entropy-softmax)
+                                       &key &allow-other-keys)
+  (unless (slot-boundp lump 'class-weights)
+    (setf (slot-value lump 'class-weights)
+          (make-mat (group-size lump) :ctype flt-ctype))
+    (fill! (flt 1) (class-weights lump))))
+
 (defmethod default-size ((lump ->cross-entropy-softmax))
   (size (x lump)))
 
 (defun ensure-softmax (lump)
   (unless (and (slot-boundp lump 'softmax)
-               (= (length (nodes* (x lump)))
-                  (length (softmax lump))))
+               (= (mat-size (nodes (x lump)))
+                  (mat-size (softmax lump))))
+    (when (slot-boundp lump 'softmax)
+      (mgl-cube:destroy-cube (softmax lump)))
     (setf (slot-value lump 'softmax)
-          (alexandria:copy-array (nodes* (x lump)))))
+          (make-instance 'mat
+                         :ctype flt-ctype
+                         :dimensions (mat-size (nodes (x lump))))))
   (softmax lump))
+
+(define-cuda-kernel (cuda-cross-entropy-softmax)
+    (void ((group-size int) (x :mat :input) (n int) (target :mat :input)
+           (class-weights :mat :input) (cross-entropy :mat :output)
+           (softmax :mat :output)))
+  (let ((i (* group-size
+              (+ (* block-dim-x block-idx-x) thread-idx-x))))
+    (when (<= (+ i group-size) n)
+      (let ((max (aref x i)))
+        ;; It's more stable numerically to subtract the max from
+        ;; elements in the group before exponentiating.
+        (do ((a 1 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (when (< max xe)
+              (set max xe))))
+        (let ((sum 0.0))
+          (do ((a 0 (+ a 1)))
+              ((>= a group-size))
+            (let ((xe (aref x (+ i a))))
+              (set sum (+ sum (exp (- xe max))))))
+          (do ((a 0 (+ a 1)))
+              ((>= a group-size))
+            (let* ((ia (+ i a))
+                   (xe (aref x ia))
+                   (s (/ (exp (- xe max)) sum)))
+              (set (aref softmax ia) s)
+              (set (aref cross-entropy ia)
+                   (- (* (aref class-weights a)
+                         (aref target ia)
+                         (log s)))))))))))
 
 (defmethod transfer-lump ((lump ->cross-entropy-softmax))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (x* (nodes* x))
-         (softmax* (ensure-softmax lump))
+         (softmax (ensure-softmax lump))
          (target (target lump))
-         (target* (nodes* target))
-         (to* (nodes* lump))
          (class-weights (class-weights lump)))
-    (declare (type index group-size)
-             (type flt-vector softmax*)
-             (type (or flt-vector null) class-weights))
-    (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe lump ls le)
-                         (stripe x xs xe)
-                         (stripe target ts te))
-            (loop for li upfrom ls below le
-                  for xi upfrom xs below xe
-                  for ti upfrom ts below te
-                  for i upfrom 0
-                  do
-                  (when (zerop (mod i group-size))
-                    (let ((max most-negative-flt)
-                          (sum #.(flt 0)))
-                      (declare (type flt max sum)
-                               (optimize (speed 3)))
-                      ;; It's more stable numerically to subtract the
-                      ;; max from elements in the group before
-                      ;; exponentiating.
-                      (loop for xj upfrom xi below (+ xi group-size)
-                            do (setq max (max max (aref x* xj))))
-                      (loop for xj upfrom xi below (+ xi group-size)
-                            do (incf sum (exp (- (aref x* xj) max))))
-                      (loop for lj upfrom li below (+ li group-size)
-                            for xj upfrom xi below (+ xi group-size)
-                            for tj upfrom ti below (+ ti group-size)
-                            for i below group-size
-                            do (let ((s (/ (exp (- (aref x* xj) max)) sum)))
-                                 (declare (type positive-flt s))
-                                 (setf (aref softmax* lj) s)
-                                 (setf (aref to* lj)
-                                       (- (* (if class-weights
-                                                 (aref class-weights i)
-                                                 #.(flt 1))
-                                             (aref target* tj)
-                                             (the flt (log s))))))))))))))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (* (n-stripes lump) (size lump))))
+          (cuda-cross-entropy-softmax
+           group-size (nodes x) n (nodes target)
+           class-weights (nodes lump) softmax
+           :grid-dim (list (ceiling (/ n group-size) 256) 1 1)
+           :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (target* ((nodes target) 'backing-array :direction :input
+                                :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :output
+                            :type flt-vector))
+                      (softmax* (softmax 'backing-array :direction :output
+                                         :type flt-vector))
+                      (class-weights* (class-weights 'backing-array
+                                                     :direction :input
+                                                     :type flt-vector)))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe)
+                           (stripe target ts te))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    for ti upfrom ts below te
+                    for i upfrom 0
+                    do (when (zerop (mod i group-size))
+                         (let ((max most-negative-flt)
+                               (sum #.(flt 0)))
+                           (declare (type flt max sum)
+                                    (optimize (speed 3)))
+                           ;; It's more stable numerically to subtract the
+                           ;; max from elements in the group before
+                           ;; exponentiating.
+                           (loop for xj upfrom xi below (+ xi group-size)
+                                 do (setq max (max max (aref x* xj))))
+                           (loop for xj upfrom xi below (+ xi group-size)
+                                 do (incf sum (exp (- (aref x* xj) max))))
+                           (loop for lj upfrom li below (+ li group-size)
+                                 for xj upfrom xi below (+ xi group-size)
+                                 for tj upfrom ti below (+ ti group-size)
+                                 for i below group-size
+                                 do (let ((s (/ (exp (- (aref x* xj) max))
+                                                sum)))
+                                      (declare (type positive-flt s))
+                                      (setf (aref softmax* lj) s)
+                                      (setf (aref to* lj)
+                                            (- (* (aref class-weights* i)
+                                                  (aref target* tj)
+                                                  (the flt
+                                                       (log s))))))))))))))))
+
+(define-cuda-kernel (cuda-cross-entropy-softmax-derivative)
+    (void ((group-size int) (xd :mat :io) (n int) (d :mat :input)
+           (target :mat :input) (class-weights :mat :input)
+           (softmax :mat :input)))
+  (let ((i (* group-size
+              (+ (* block-dim-x block-idx-x) thread-idx-x))))
+    (when (<= (+ i group-size) n)
+      (do ((a 0 (+ a 1)))
+          ((>= a group-size))
+        (let ((ia (+ i a)))
+          (do ((b 0 (+ b 1)))
+              ((>= b group-size))
+            (let ((ib (+ i b)))
+              (set (aref xd ia)
+                   (+ (aref xd ia)
+                      (* (aref d ib)
+                         (aref class-weights b)
+                         (aref target ib)
+                         (- (aref softmax ia)
+                            (if (= a b)
+                                1.0
+                                0.0))))))))))))
 
 (defmethod derive-lump ((lump ->cross-entropy-softmax))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (xd* (derivatives* x))
          (softmax (softmax lump))
-         (softmax* softmax)
          (target (target lump))
-         (target* (nodes* target))
-         (d* (derivatives* lump))
          (class-weights (class-weights lump)))
-    (declare (type index group-size)
-             (type flt-vector softmax)
-             (type (or flt-vector null) class-weights))
-    ;; FIXME: target derivative not calculated
-    (assert (typep target '->input))
-    (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe lump ls le)
-                         (stripe x xs xe)
-                         (stripe target ts te))
-            ;; loop on groups
-            (loop
-             for lg of-type index upfrom ls below le by group-size
-             for tg of-type index upfrom ts below te by group-size
-             for xg of-type index upfrom xs below xe by group-size
-             do
-             ;; calc d(XENT)/dx_j
-             (loop
-              for lj of-type index upfrom lg below (+ lg group-size)
-              for tj of-type index upfrom tg below (+ tg group-size)
-              for xj of-type index upfrom xg below (+ xg group-size)
-              do
-              ;; Since we cannot be sure that x_i sum to one and all
-              ;; elements D* are equal (which is the case if this is
-              ;; hooked into an error node directly), we cannot take
-              ;; the shortcut of d(XENT)/dx_j = softmax_j - target_j.
-              ;; Instead, we must calculate
-              ;; sum_i{target_i*(softmax_j-KDEL_ij)} where KDEL is the
-              ;; Kronecker delta.
-              (locally
-                  (declare (optimize (speed 3)))
-                (loop
-                 for li upfrom lg below (+ lg group-size)
-                 for ti upfrom tg below (+ tg group-size)
-                 for i below group-size
-                 do (incf (aref xd* xj)
-                          (* (aref d* li)
-                             (if class-weights
-                                 (aref class-weights i)
-                                 #.(flt 1))
-                             (aref target* ti)
-                             (- (aref softmax* lj)
-                                (if (= ti tj)
-                                    #.(flt 1)
-                                    #.(flt 0)))))))))))))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (* (n-stripes lump) (size lump))))
+          (cuda-cross-entropy-softmax-derivative
+           group-size (derivatives x) n (derivatives lump) (nodes target)
+           class-weights softmax
+           :grid-dim (list (ceiling (/ n group-size) 256) 1 1)
+           :block-dim (list 256 1 1)))
+        (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (target* ((nodes target) 'backing-array :direction :input
+                                :type flt-vector))
+                      (d* ((derivatives lump) 'backing-array :direction :input
+                           :type flt-vector))
+                      (softmax* (softmax 'backing-array :direction :input
+                                         :type flt-vector))
+                      (class-weights* (class-weights 'backing-array
+                                                     :direction :input
+                                                     :type flt-vector)))
+          ;; FIXME: target derivative not calculated
+          (assert (typep target '->input))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe)
+                           (stripe target ts te))
+              ;; loop on groups
+              (loop
+                for lg of-type index upfrom ls below le by group-size
+                for tg of-type index upfrom ts below te by group-size
+                for xg of-type index upfrom xs below xe by group-size
+                do
+                   ;; calc d(XENT)/dx_j
+                   (loop
+                     for lj of-type index upfrom lg below (+ lg group-size)
+                     for tj of-type index upfrom tg below (+ tg group-size)
+                     for xj of-type index upfrom xg below (+ xg group-size)
+                     do
+                        ;; Since we cannot be sure that x_i sum to one and all
+                        ;; elements D* are equal (which is the case if this is
+                        ;; hooked into an error node directly), we cannot take
+                        ;; the shortcut of d(XENT)/dx_j = softmax_j - target_j.
+                        ;; Instead, we must calculate
+                        ;; sum_i{target_i*(softmax_j-KDEL_ij)} where KDEL is the
+                        ;; Kronecker delta.
+                        (locally
+                            (declare (optimize (speed 3)))
+                          (loop
+                            for li upfrom lg below (+ lg group-size)
+                            for ti upfrom tg below (+ tg group-size)
+                            for i below group-size
+                            do (incf (aref xd* xj)
+                                     (* (aref d* li)
+                                        (aref class-weights* i)
+                                        (aref target* ti)
+                                        (- (aref softmax* lj)
+                                           (if (= ti tj)
+                                               #.(flt 1)
+                                               #.(flt 0)))))))))))))))
 
 (defmethod classification-confidences ((lump ->cross-entropy-softmax) stripe)
-  (with-stripes ((stripe lump start end))
-    (subseq (softmax lump) start end)))
+  (with-facets ((softmax ((softmax lump) 'backing-array :direction :input
+                          :type flt-vector)))
+    (with-stripes ((stripe lump start end))
+      (subseq softmax start end))))
 
 (defmethod label-distribution ((lump ->cross-entropy-softmax) stripe object)
   (declare (ignore object))
   (let ((target (target lump))
         (class-weights (class-weights lump)))
-    (with-stripes ((stripe target ts te))
-      (let ((d (subseq (nodes* target) ts te)))
-        (if class-weights
-            (map-into d #'* d class-weights)
-            d)))))
+    (with-facets ((target* ((nodes target) 'backing-array :direction :input
+                            :type flt-vector))
+                  (class-weights* (class-weights 'backing-array
+                                                 :direction :input
+                                                 :type flt-vector)))
+      (with-stripes ((stripe target ts te))
+        (let ((d (subseq target* ts te)))
+          (map-into d #'* d class-weights*))))))
 
 
-;;;; Utilities
+;;;; RENORMALIZE-ACTIVATIONS
 
-(defun collect-bpn-errors (sampler bpn &key counters-and-measurers)
-  (collect-batch-errors (lambda (samples)
-                          (do-executors (samples bpn)
-                            (set-input samples bpn)
-                            (forward-bpn bpn)))
-                        sampler bpn counters-and-measurers))
+(define-cuda-kernel (cuda-add-row-norms)
+    (void ((x :mat :input) (n-rows int) (n-columns int) (y :mat :io)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (<= i n-rows)
+      (let ((sum 0.0)
+            (row-start (* i n-columns)))
+        (do ((j 0 (+ j 1)))
+            ((>= j n-columns))
+          (set sum (+ sum
+                      (expt (aref x (+ row-start j)) 2.0))))
+        (set (aref y i) (+ (aref y i) sum))))))
+
+(defun add-row-norms (x y)
+  (let ((n-rows (mat-dimension x 0))
+        (n-columns (mat-dimension x 1)))
+    (declare (type fixnum n-rows n-columns))
+    (assert (= n-rows (mat-size y)))
+    (if (use-cuda-p)
+        (let ((n n-rows))
+          (cuda-add-row-norms x n-rows n-columns y
+                              :grid-dim (list (ceiling n 256) 1 1)
+                              :block-dim (list 256 1 1)))
+        (with-facets ((x* (x 'backing-array :direction :input
+                             :type flt-vector))
+                      (y* (y 'backing-array :direction :io
+                             :type flt-vector)))
+          (dotimes (row n-rows)
+            (let ((i (* row n-columns))
+                  (sum #.(flt 0)))
+              (declare (optimize (speed 3) #.*no-array-bounds-check*))
+              (loop repeat n-columns do
+                (incf sum (expt (aref x* i) 2))
+                (incf i))
+              (incf (aref y* row) sum)))))))
+
+(define-cuda-kernel (cuda-add-column-norms)
+    (void ((x :mat :input) (n-rows int) (n-columns int) (y :mat :io)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (<= i n-columns)
+      (let ((sum 0.0)
+            (k i))
+        (do ((j 0 (+ j 1)))
+            ((>= j n-rows))
+          (set sum (+ sum (expt (aref x k) 2.0)))
+          (set k (+ k n-columns)))
+        (set (aref y i) (+ (aref y i) sum))))))
+
+(defun add-column-norms (x y)
+  (let ((n-rows (mat-dimension x 0))
+        (n-columns (mat-dimension x 1)))
+    (declare (type fixnum n-rows n-columns))
+    (assert (= n-columns (mat-size y)))
+    (if (use-cuda-p)
+        (let ((n n-columns))
+          (cuda-add-column-norms x n-rows n-columns y
+                                 :grid-dim (list (ceiling n 256) 1 1)
+                                 :block-dim (list 256 1 1)))
+        (with-facets ((x* (x 'backing-array :direction :input
+                             :type flt-vector))
+                      (y* (y 'backing-array :direction :io
+                             :type flt-vector)))
+          (dotimes (column n-columns)
+            (let ((i column)
+                  (sum #.(flt 0)))
+              (declare (optimize (speed 3) #.*no-array-bounds-check*)
+                       (type index i))
+              (loop repeat n-rows do
+                (incf sum (expt (aref x* i) 2))
+                (incf i n-columns))
+              (setf (aref y* column) sum)))))))
+
+(define-cuda-kernel (cuda-maybe-renormalize-rows)
+    (void ((x :mat :io) (n-rows int) (n-columns int)
+           (l2-upper-bound float) (norms :mat :input)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n-rows)
+      (let ((norm (aref norms i)))
+        (when (< l2-upper-bound norm)
+          (let ((scale (/ l2-upper-bound (+ norm 0.0000001)))
+                (row-start (* i n-columns)))
+            (do ((j 0 (+ j 1)))
+                ((>= j n-columns))
+              (set (aref x (+ row-start j))
+                   (* scale (aref x (+ row-start j)))))))))))
+
+(defun maybe-renormalize-rows (mat l2-upper-bound norms)
+  (let ((n-rows (mat-dimension mat 0))
+        (n-columns (mat-dimension mat 1)))
+    (declare (type fixnum n-rows n-columns))
+    (assert (= n-rows (mat-size norms)))
+    (if (use-cuda-p)
+        (let ((n n-rows))
+          (cuda-maybe-renormalize-rows
+           mat n-rows n-columns l2-upper-bound norms
+           :grid-dim (list (ceiling n 256) 1 1)
+           :block-dim (list 256 1 1)))
+        (with-facets ((mat* (mat 'backing-array :direction :io
+                                 :type flt-vector))
+                      (norms* (norms 'backing-array :direction :input
+                                     :type flt-vector)))
+          (dotimes (i n-rows)
+            (when (< l2-upper-bound (aref norms* i))
+              (let ((scale (/ l2-upper-bound (+ (aref norms* i)
+                                                (flt 0.0000001))))
+                    (k (* i n-columns)))
+                (dotimes (j n-columns)
+                  (setf (aref mat* k) (* scale (aref mat* k)))
+                  (incf k)))))))))
+
+(define-cuda-kernel (cuda-maybe-renormalize-columns)
+    (void ((x :mat :io) (n-rows int) (n-columns int)
+           (l2-upper-bound float) (norms :mat :input)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n-columns)
+      (let ((norm (aref norms i)))
+        (when (< l2-upper-bound norm)
+          (let ((scale (/ l2-upper-bound (+ norm 0.0000001)))
+                (k i))
+            (do ((j 0 (+ j 1)))
+                ((>= j n-rows))
+              (set (aref x k) (* scale (aref x k)))
+              (set k (+ k n-columns)))))))))
+
+(defun maybe-renormalize-columns (mat l2-upper-bound norms)
+  (let ((n-rows (mat-dimension mat 0))
+        (n-columns (mat-dimension mat 1)))
+    (declare (type fixnum n-rows n-columns))
+    (assert (= n-columns (mat-size norms)))
+    (if (use-cuda-p)
+        (let ((n n-columns))
+          (cuda-maybe-renormalize-columns
+           mat n-rows n-columns l2-upper-bound norms
+           :grid-dim (list (ceiling n 256) 1 1)
+           :block-dim (list 256 1 1)))
+        (with-facets ((mat* (mat 'backing-array :direction :io
+                                 :type flt-vector))
+                      (norms* (norms 'backing-array :direction :input
+                                     :type flt-vector)))
+          (dotimes (j n-columns)
+            (when (< l2-upper-bound (aref norms* j))
+              (let ((scale (/ l2-upper-bound (+ (aref norms* j)
+                                                (flt 0.0000001))))
+                    (k j))
+                (dotimes (i n-rows)
+                  (setf (aref mat* k) (* scale (aref mat* k)))
+                  (incf k n-columns)))))))))
+
+(defun mat-and-row/column-sum-size (mat-and-row/column-list)
+  (if mat-and-row/column-list
+      (destructuring-bind (mat row/column) (first mat-and-row/column-list)
+        (ecase row/column
+          ((:row) (mat-dimension mat 0))
+          ((:column) (mat-dimension mat 1))))
+      0))
+
+(defun renormalize-mats (mat-and-row/column-list l2-upper-bound)
+  (let ((n (mat-and-row/column-sum-size mat-and-row/column-list))
+        (firstp t))
+    (with-thread-cached-mat (sums (list n 1) :ctype flt-ctype)
+      (loop for (mat row/column) in mat-and-row/column-list
+            do (with-thread-cached-mat
+                   (square (mat-dimensions mat) :ctype flt-ctype
+                           ;; no initialization?
+                           :initial-element nil)
+                 (copy! mat square)
+                 (.square! square)
+                 (assert (= n (ecase row/column
+                                ((:row) (mat-dimension mat 0))
+                                ((:column) (mat-dimension mat 1)))))
+                 (ecase row/column
+                   ((:row)
+                    (sum! square sums :axis 1 :beta (if firstp 0 1)))
+                   ((:column)
+                    (sum! square sums :axis 0 :beta (if firstp 0 1)))))
+               (setq firstp nil))
+      (when sums
+        (.sqrt! sums)
+        (loop for (mat row/column) in mat-and-row/column-list
+              do (ecase row/column
+                   ((:row)
+                    (maybe-renormalize-rows mat l2-upper-bound sums))
+                   ((:column)
+                    (maybe-renormalize-columns mat l2-upper-bound sums))))))))
 
 ;;; If the l2 norm of the incoming weight vector of the same unit is
-;;; larger than L2-UPPER-BOUND then renormalize it L2-UPPER-BOUND. The
-;;; list of ->ACTIVATIONS is assumed to be eventually fed to the
+;;; larger than L2-UPPER-BOUND then renormalize it to L2-UPPER-BOUND.
+;;; The list of ->ACTIVATIONS is assumed to be eventually fed to the
 ;;; same lump.
 ;;;
 ;;; To use it, group the activation lumps into the same GD-TRAINER and
@@ -2092,68 +2648,24 @@ target_k if target sums to 1."))
 ;;; <http://arxiv.org/pdf/1207.0580.pdf>.
 (defun renormalize-activations (->activations l2-upper-bound)
   (when (and ->activations l2-upper-bound)
-    (let ((n-outputs (size (first ->activations)))
-          (n-normalized 0))
-      ;; For each output unit get the l2 norm of all its activations.
-      (dotimes (output n-outputs)
-        (let ((sum (flt 0)))
-          (dolist (lump ->activations)
-            (let* ((weights (if (typep lump '->activation)
-                                (weights lump)
-                                lump))
-                   (weights-size (size weights))
-                   (weights* (nodes* weights))
-                   (n-inputs (/ weights-size n-outputs)))
-              ;; Iterate over the activations for the same output
-              ;; unit. Note that the weight matrix is in column major
-              ;; mode.
-              (if (and (typep lump '->activation)
-                       (transpose-weights-p lump))
-                  ;; The weights for the same output unit are in a
-                  ;; column.
-                  (let ((i (* output n-inputs)))
-                    (loop repeat n-inputs do
-                      (incf sum (expt (aref weights* i) 2))
-                      (incf i)))
-                  ;; The weights for the same output unit are in a
-                  ;; row.
-                  (let ((i output))
-                    (loop repeat n-inputs do
-                      (incf sum (expt (aref weights* i) 2))
-                      (incf i n-outputs))))))
-          (setq sum (sqrt sum))
-          ;; If the constraint is violated, iterate over the same
-          ;; units and normalize them to L2-UPPER-BOUND.
-          #+nil
-          (format t "not renormalizing (~,5F -> ~,5F) ~S~%"
-                  sum l2-upper-bound ->activations)
-          (when (< l2-upper-bound sum)
-            (let ((div (/ sum l2-upper-bound)))
-              (incf n-normalized)
-              #+nil
-              (format t "renormalizing (~,5F -> ~,5F) ~S~%"
-                      sum l2-upper-bound ->activations)
-              (dolist (lump ->activations)
-                (let* ((weights (if (typep lump '->activation)
-                                    (weights lump)
-                                    lump))
-                       (weights-size (size weights))
-                       (weights* (nodes* weights))
-                       (n-inputs (/ weights-size n-outputs)))
-                  (if (and (typep lump '->activation)
-                           (transpose-weights-p lump))
-                      (let ((i (* output n-inputs)))
-                        (loop repeat n-inputs do
-                          (setf (aref weights* i) (/ (aref weights* i) div))
-                          (incf i)))
-                      (let ((i output))
-                        (loop repeat n-inputs do
-                          (setf (aref weights* i) (/ (aref weights* i) div))
-                          (incf i n-outputs))))))
-              #+nil
-              (format t "renormalized (~,5F -> ~,5F) ~S~%"
-                      sum l2-upper-bound ->activations)))))
-      #+nil
-      (when (plusp n-normalized)
-        (format t "normalized weights for ~S neurons in ~S~%"
-                n-normalized ->activations)))))
+    (renormalize-mats
+     (loop for lump in ->activations
+           collect (let ((weights (etypecase lump
+                                    (->activation (weights lump))
+                                    (->weight lump))))
+                     (list (nodes weights)
+                           (if (and (typep lump '->activation)
+                                    (transpose-weights-p lump))
+                               :row
+                               :column))))
+     l2-upper-bound)))
+
+
+;;;; Utilities
+
+(defun collect-bpn-errors (sampler bpn &key counters-and-measurers)
+  (collect-batch-errors (lambda (samples)
+                          (do-executors (samples bpn)
+                            (set-input samples bpn)
+                            (forward-bpn bpn)))
+                        sampler bpn counters-and-measurers))

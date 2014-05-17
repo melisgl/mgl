@@ -3,7 +3,7 @@
 (asdf:defsystem #:mgl
   :name "MGL, the machine learning library"
   :author "Gabor Melis"
-  :version "0.0.6"
+  :version "0.0.7"
   :licence "MIT"
   :components ((:module "src"
                 :serial t
@@ -16,6 +16,7 @@
                              (:file "segment")
                              (:file "classification")
                              (:file "gradient-descent")
+                             (:file "svrg")
                              (:file "conjugate-gradient")
                              (:file "boltzmann-machine")
                              (:file "deep-belief-network")
@@ -23,7 +24,7 @@
                              (:file "unroll")
                              (:file "gaussian-process"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla
-                            #:ieee-floats #:mgl-gnuplot))
+                            #:mgl-gnuplot #:mgl-mat))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
   (asdf:oos 'asdf:load-op '#:mgl-test)

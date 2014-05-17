@@ -34,13 +34,26 @@ propagate to the two branches allowing them to be more optimized."
 
 ;;;; Types
 
+#+nil
+(eval-when (:compile-toplevel :load-toplevel)
+  (deftype flt () 'single-float)
+  (defconstant flt-ctype :float)
+  (deftype positive-flt () '(single-float #.least-positive-single-float))
+  (defconstant most-negative-flt most-negative-single-float)
+  (defconstant least-negative-flt least-negative-single-float)
+  (defconstant least-positive-flt least-positive-single-float)
+  (defconstant most-positive-flt most-positive-single-float))
+
 (eval-when (:compile-toplevel :load-toplevel)
   (deftype flt () 'double-float)
+  (defconstant flt-ctype :double)
   (deftype positive-flt () '(double-float #.least-positive-double-float))
   (defconstant most-negative-flt most-negative-double-float)
   (defconstant least-negative-flt least-negative-double-float)
   (defconstant least-positive-flt least-positive-double-float)
-  (defconstant most-positive-flt most-positive-double-float)
+  (defconstant most-positive-flt most-positive-double-float))
+
+(eval-when (:compile-toplevel :load-toplevel)
   (deftype flt-vector () '(simple-array flt (*)))
   (deftype flt-matrix () '(simple-array flt (* *)))
   (declaim (inline flt))
@@ -54,22 +67,36 @@ propagate to the two branches allowing them to be more optimized."
 
 (defun flt-vector (&rest args)
   (make-array (length args) :element-type 'flt :initial-contents args))
-
 
-;;;; Declarations
+(defparameter *no-array-bounds-check*
+  #+sbcl '(sb-c::insert-array-bounds-checks 0)
+  ;; (SAFETY 0) is too coarse, avoid warnings by using the
+  ;; relatively uncontroversial (SPEED 3) instead of ().
+  #-sbcl '(speed 3))
 
-(eval-when (:compile-toplevel :load-toplevel)
-  (defparameter *no-array-bounds-check*
-    #+sbcl '(sb-c::insert-array-bounds-checks 0)
-    ;; (SAFETY 0) is too coarse, avoid warnings by using the
-    ;; relatively uncontroversial (SPEED 3) instead of ().
-    #-sbcl '(speed 3)))
-
+;;; A version of THE that's trusted by the compiler.
 (defmacro the! (&rest args)
   `(#+sbcl sb-ext:truly-the
     #+cmu ext:truly-the
     #-(or sbcl cmu) the
     ,@args))
+
+;;; Beat Allegro's underflow errors into submission with a club. The
+;;; values must be known to be FLT for this to work.
+#+allegro
+(defmacro with-zero-on-underflow ((prototype) &body body)
+  (alexandria:with-gensyms (trap-underflow)
+    `(catch ',trap-underflow
+       (handler-bind ((floating-point-underflow
+                        #'(lambda (c)
+                            (declare (ignore c))
+                            (throw ',trap-underflow (float 0 ,prototype)))))
+         ,@body))))
+
+#-allegro
+(defmacro with-zero-on-underflow ((prototype) &body body)
+  (declare (ignore prototype))
+  `(locally ,@body))
 
 
 ;;;; Pathnames
@@ -316,22 +343,6 @@ classes the same."
 
 ;;;; Math
 
-;;; Beat Allegro's underflow errors into submission with a club. The
-;;; values must be known to be FLT for this to work.
-#+allegro
-(defmacro with-zero-on-underflow (&body body)
-  (alexandria:with-gensyms (trap-underflow)
-    `(catch ',trap-underflow
-       (handler-bind ((floating-point-underflow
-                        #'(lambda (c)
-                            (declare (ignore c))
-                            (throw ',trap-underflow (flt 0)))))
-         ,@body))))
-
-#-allegro
-(defmacro with-zero-on-underflow (&body body)
-  `(locally ,@body))
-
 (declaim (inline sign))
 (defun sign (x)
   (declare (type flt x))
@@ -347,7 +358,7 @@ classes the same."
 (declaim (inline sigmoid))
 (defun sigmoid (x)
   (declare (type flt x))
-  (/ (1+ (with-zero-on-underflow (exp (- x))))))
+  (/ (1+ (with-zero-on-underflow (x) (exp (- x))))))
 
 ;;; From Yann Lecun's Efficient backprop.
 (declaim (inline scaled-tanh))
@@ -367,33 +378,7 @@ classes the same."
       #.(flt 0)))
 
 (defun gaussian-random-1 ()
-  "Return a single float of zero mean and unit variance."
-  (loop
-   (let* ((x1 (1- (* #.(flt 2) (random #.(flt 1)))))
-          (x2 (1- (* #.(flt 2) (random #.(flt 1)))))
-          (w (+ (* x1 x1) (* x2 x2))))
-     (declare (type flt x1 x2)
-              (type (double-float 0d0) w)
-              (optimize (speed 3)))
-     (when (< w 1.0)
-       ;; Now we have two random numbers but return only one. The
-       ;; other would be X1 times the same.
-       (return
-         (* x2
-            (the! double-float (sqrt (/ (* -2.0 (log w)) w)))))))))
-
-(defun mv-gaussian-random (&key means covariances
-                           (covariances-left-square-root
-                            (lla:cholesky (clnu:hermitian-matrix covariances))))
-  "Return a column vector of samples from the multivariate normal
-distribution defined by MEANS (Nx1) and COVARIANCES (NxN). For
-multiple calls with the same parameter one can pass in
-COVARIANCES-LEFT-SQUARE-ROOT instead of COVARIANCES."
-  (let* ((n (array-total-size means))
-         (z (make-flt-array (list n 1))))
-    (dotimes (i n)
-      (setf (aref z i 0) (gaussian-random-1)))
-    (clnu:e+ (as-column-vector means) (lla:mm covariances-left-square-root z))))
+  (flt (mgl-mat::gaussian-random-1)))
 
 ;; Knuth's slow poisson sampler.
 (defun poisson-random (mean)
@@ -505,68 +490,8 @@ K1 and K2 before calling."
 
 ;;;; Array utilities
 
-(defun backing-array (array)
-  "Return the array in which the contents of ARRAY are stored. For
-simple arrays, this is always the array itself. The second value is
-the displacement."
-  #+sbcl
-  (sb-c::with-array-data ((v array) (start) (end))
-    (declare (ignore end))
-    (values v start))
-  #+(or cmu scl)
-  (lisp::with-array-data ((v array) (start) (end))
-    (declare (ignore end))
-    (values v start))
-  #+allegro
-  (excl::array-base array)
-  #+openmcl
-  (ccl::array-data-and-offset array)
-  #-(or sbcl allegro cmu scl openmcl)
-  (declare (ignore array))
-  #-(or sbcl cmu scl allegro openmcl)
-  (error "Not implemented."))
-
-(defun fill! (alpha x)
-  (let ((alpha (flt alpha)))
-    (multiple-value-bind (backing-array start) (backing-array x)
-      (if (typep backing-array 'flt-vector)
-          (let ((end (+ start (array-total-size x))))
-            (fill backing-array alpha :start start :end end))
-          (loop for i below (array-total-size x)
-                do (setf (row-major-aref x i) alpha))))))
-
-(defun to-scalar (matrix)
-  (assert (= 1 (array-total-size matrix)))
-  (row-major-aref matrix 0))
-
 (defun as-column-vector (a)
   (aops:reshape a (list (array-total-size a) 1)))
-
-
-;;;; Float I/O
-
-(defun write-as-bytes (integer n stream)
-  (let ((x integer))
-    (loop repeat n do
-      (write-byte (logand x #xff) stream)
-      (setq x (ash x -8)))
-    (assert (zerop x))))
-
-(defun write-double-float-array (array stream)
-  (dotimes (i (array-total-size array))
-    (write-as-bytes (ieee-floats:encode-float64 (row-major-aref array i)) 8
-                    stream)))
-
-(defun read-as-bytes (n stream)
-  (let ((x 0))
-    (loop for i below n do
-      (incf x (ash (read-byte stream) (* i 8))))
-    x))
-
-(defun read-double-float-array (array stream)
-  (dotimes (i (array-total-size array))
-    (setf (row-major-aref array i)
-          (ieee-floats:decode-float64 (read-as-bytes 8 stream)))))
 
 
 ;;;; Weight I/O

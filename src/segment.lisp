@@ -22,7 +22,8 @@ SEGMENT."))
 
 (defmacro with-segment-weights (((weights start end) segment) &body body)
   `(multiple-value-bind (,weights ,start ,end) (segment-weights ,segment)
-     (declare (type flt-vector ,weights)
+     (declare #+nil
+              (type flt-vector ,weights)
               (type index ,start ,end))
      ,@body))
 
@@ -50,6 +51,7 @@ must implement this. It is also defined on SEGMENT-SETs."))
                     (push segment segments))
                   segmentable)
     (reverse segments)))
+
 
 (defclass segment-set ()
   ((segments :initform (error "Must specify segment list.")
@@ -95,17 +97,49 @@ must implement this. It is also defined on SEGMENT-SETs."))
   (declare (type flt-vector weights)
            (optimize (speed 3)))
   (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-      segment-set
+                  segment-set
     (with-segment-weights ((array start end) segment)
-      (replace array weights :start1 start :end1 end
-               :start2 start-in-segment-set))))
+      (mgl-mat:with-facets ((array (array 'mgl-mat:backing-array
+                                          :direction :output :type flt-vector)))
+        (replace array weights :start1 start :end1 end
+                 :start2 start-in-segment-set)))))
 
 (defun segment-set->weights (segment-set weights)
   "Copy the values from SEGMENT-SET to WEIGHTS."
   (declare (type flt-vector weights)
            (optimize (speed 3)))
   (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-      segment-set
+                  segment-set
     (with-segment-weights ((array start end) segment)
-      (replace weights array :start1 start-in-segment-set
-               :start2 start :end2 end))))
+      (mgl-mat:with-facets ((array (array 'mgl-mat:backing-array
+                                          ;; :IO because it may be
+                                          ;; subseq of it.
+                                          :direction :io
+                                          :type flt-vector)))
+        (replace weights array :start1 start-in-segment-set
+                 :start2 start :end2 end)))))
+
+(defun map-segment-set-and-mat (fn x y)
+  (let ((fn (coerce fn 'function)))
+    (multiple-value-bind (segment-set mat mat-first-p)
+        (if (typep x 'mat)
+            (values y x t)
+            (values x y nil))
+      (declare (optimize (speed 3)))
+      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
+                      segment-set
+        (with-segment-weights ((m start end) segment)
+          (let ((n (- end start)))
+            (with-shape-and-displacement (m n start)
+              (with-shape-and-displacement (mat n start-in-segment-set)
+                (if mat-first-p
+                    (funcall fn mat m)
+                    (funcall fn m mat))))))))))
+
+(defun segment-set<-mat (segment-set mat)
+  "Copy the values of MAT to SEGMENT-SET."
+  (map-segment-set-and-mat #'copy! mat segment-set))
+
+(defun segment-set->mat (segment-set mat)
+  "Copy the values of SEGMENT-SET to MAT."
+  (map-segment-set-and-mat #'copy! segment-set mat))

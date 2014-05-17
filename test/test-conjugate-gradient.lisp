@@ -70,5 +70,6 @@
     (assert (= n-evaluations 5))))
 
 (defun test-cg ()
-  (test-rosenbrock-cg)
-  (test-cg-max-evaluations-per-line-search))
+  (do-cuda ()
+    (test-rosenbrock-cg)
+    (test-cg-max-evaluations-per-line-search)))

@@ -1,4 +1,4 @@
 (cl:defpackage :mgl-test
-  (:use #:common-lisp #:mgl-util :mgl-train :mgl-gd :mgl-cg :mgl-bm :mgl-bp
-        :mgl-unroll :mgl-gp)
+  (:use #:common-lisp #:mgl-util #:mgl-mat :mgl-train :mgl-gd :mgl-cg :mgl-bm
+        :mgl-bp :mgl-unroll :mgl-gp)
   (:export #:test))

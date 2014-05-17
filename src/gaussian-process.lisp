@@ -61,24 +61,31 @@ lisp functions. Can be updated, but it's not trainable."))
 
 (defmethod gp-means ((gp prior-gp) x)
   ;; mean_i = (funcall mean-fn x_i)
-  (let* ((n (length x))
+  (let* ((n (mat-size x))
          (mean-fn (mean-fn gp))
-         (means (make-flt-array n)))
-    (dotimes (i n)
-      (setf (aref means i)
-            (flt (funcall mean-fn (aref x i)))))
+         (means (make-mat n :ctype flt-ctype)))
+    (with-facets ((means (means 'backing-array :direction :output
+                                :type flt-vector))
+                  (x (x 'backing-array :direction :input
+                        :type flt-vector)))
+      (dotimes (i n)
+        (setf (aref means i)
+              (flt (funcall mean-fn (aref x i))))))
     means))
 
 (defmethod gp-covariances* ((gp prior-gp) x1 x2)
   ;; cov_ij = (funcall covariance-fn x_i x_j)
-  (let* ((n1 (length x1))
-         (n2 (length x2))
+  (let* ((n1 (mat-size x1))
+         (n2 (mat-size x2))
          (covariance-fn (covariance-fn gp))
-         (covariances (make-flt-array (list n1 n2))))
-    (dotimes (row n1)
-      (dotimes (col n2)
-        (setf (aref covariances row col)
-              (flt (funcall covariance-fn (aref x1 row) (aref x2 col))))))
+         (covariances (make-mat (list n1 n2) :ctype flt-ctype)))
+    (with-facets ((covariances (covariances 'array :direction :output))
+                  (x1 (x1 'backing-array :direction :input :type flt-vector))
+                  (x2 (x2 'backing-array :direction :input :type flt-vector)))
+      (dotimes (row n1)
+        (dotimes (col n2)
+          (setf (aref covariances row col)
+                (flt (funcall covariance-fn (aref x1 row) (aref x2 col)))))))
     covariances))
 
 
@@ -97,16 +104,15 @@ lisp functions. Can be updated, but it's not trainable."))
     :reader centered-evidence-outputs)))
 
 (defun update-gp* (gp inputs outputs means covariances)
-  (if (zerop (length inputs))
+  (if (zerop (mat-size inputs))
       gp
-      (let* ((n (length inputs))
-             (centered-outputs (make-flt-array (list n 1))))
-        (dotimes (i n)
-          (setf (row-major-aref centered-outputs i)
-                (- (row-major-aref outputs i) (row-major-aref means i))))
+      (let* ((n (mat-size inputs))
+             (centered-outputs (make-mat (list n 1) :ctype flt-ctype)))
+        (copy! outputs centered-outputs)
+        (axpy! -1 means centered-outputs)
         (make-instance 'posterior-gp
                        :prior-gp gp
-                       :inverted-covariances (lla:invert covariances)
+                       :inverted-covariances (invert covariances)
                        :evidence-inputs inputs
                        :evidence-outputs outputs
                        :centered-evidence-outputs centered-outputs))))
@@ -119,19 +125,19 @@ lisp functions. Can be updated, but it's not trainable."))
          (prior (prior-gp gp)))
     (multiple-value-bind (mean-1 cov-1-e)
         (gp-means-and-covariances prior x1 evidence-inputs)
-      (let* ((a (lla:mm cov-1-e inverted-covariances))
-             (output (lla:mm a centered-evidence-outputs)))
-        (lla:axpy! 1 mean-1 output)
+      (let* ((a (m* cov-1-e inverted-covariances))
+             (output (m* a centered-evidence-outputs)))
+        (axpy! 1 mean-1 output)
         (values
          output
          (when compute-covariances-p
            (let ((cov-1-2 (gp-covariances prior x1 x2)))
              (if (eq x1 x2)
                  ;; optimization: cov = cov-1-2 - a * cov-1-e^t
-                 (lla:gemm! -1d0 a cov-1-e 1d0 cov-1-2 :transpose-b? t)
+                 (gemm! -1d0 a cov-1-e 1d0 cov-1-2 :transpose-b? t)
                  ;; general case: cov = cov-1-2 - a * cov-e-2
                  (let ((cov-e-2 (gp-covariances prior evidence-inputs x2)))
-                   (lla:gemm! -1d0 a cov-e-2 1d0 cov-1-2)))
+                   (gemm! -1d0 a cov-e-2 1d0 cov-1-2)))
              cov-1-2)))))))
 
 (defmethod gp-means ((gp posterior-gp) x)
@@ -181,29 +187,13 @@ lisp functions. Can be updated, but it's not trainable."))
 ;;; For subclasses that use TRIVIAL-CACHED-EXECUTOR-MIXIN or such.
 (defmethod sample-to-executor-cache-key (sample (bpn-gp bpn-gp))
   (destructuring-bind (&key x1 x2 &allow-other-keys) sample
-    (list (length x1) (length x2))))
+    (list (mat-size x1) (mat-size x2))))
 
 (defun make-vector-from-lump-stripe (lump stripe)
-  (with-stripes ((stripe lump start end))
-    (let* ((nodes (nodes lump))
-           (n (- end start))
-           (v (make-flt-array n)))
-      (assert (= n (size lump)))
-      (loop for i upfrom start below end
-            for row upfrom 0
-            do (setf (aref v row) (aref nodes i)))
-      v)))
+  (copy-row (nodes lump) stripe))
 
 (defun make-matrix-from-lump-stripe (lump n-rows n-cols stripe)
-  (with-stripes ((stripe lump start end))
-    (let* ((nodes (nodes lump))
-           (n (- end start))
-           (m (make-flt-array (list n-rows n-cols))))
-      (assert (= n (size lump) (* n-rows n-cols)))
-      (loop for i upfrom start below end
-            for j upfrom 0
-            do (setf (row-major-aref m j) (aref nodes i)))
-      m)))
+  (reshape! (copy-row (nodes lump) stripe) (list n-rows n-cols)))
 
 (defun extract-means (lump stripe)
   (make-vector-from-lump-stripe lump stripe))
@@ -223,7 +213,7 @@ lisp functions. Can be updated, but it's not trainable."))
         (return-from gp-means-and-covariances*
           (values (extract-means (means gp-lump) 0)
                   (extract-covariances (covariances gp-lump) 0
-                                       (length x1) (length x2))))))))
+                                       (mat-size x1) (mat-size x2))))))))
 
 (defmethod gp-means ((bpn bpn-gp) x)
   (nth-value 0 (gp-means-and-covariances bpn x)))
@@ -263,8 +253,6 @@ lisp functions. Can be updated, but it's not trainable."))
                 for sample in (samples lump)
                 collect
                 (destructuring-bind (&key x1 x2 y1 &allow-other-keys) sample
-                  (assert (vectorp x1))
-                  (assert (vectorp y1))
                   (assert (eq x1 x2))
                   ;; We get away with pass NIL as the gp, because
                   ;; means and covariances are passed in directly and
@@ -274,55 +262,49 @@ lisp functions. Can be updated, but it's not trainable."))
                              :means (extract-means means stripe)
                              :covariances (extract-covariances
                                            covariances stripe
-                                           (length x1) (length x1)))))))
-  (let ((nodes (nodes lump)))
+                                           (mat-size x1) (mat-size x1)))))))
+  (with-facets ((nodes ((nodes lump) 'backing-array :direction :output
+                        :type flt-vector)))
     (loop for stripe of-type index below (mgl-bp::n-stripes* lump)
           for gp in (posterior-gps lump)
           do (let* ((inverted-covariances (inverted-covariances gp))
                     (centered-outputs (centered-evidence-outputs gp))
-                    (n (array-total-size centered-outputs)))
+                    (n (mat-size centered-outputs)))
                (setf (aref nodes stripe)
                      (flt
                       (* 0.5
-                         (+ (- (lla:logdet inverted-covariances))
-                            (to-scalar
-                             (lla:mmm (aops:flatten centered-outputs)
-                                      inverted-covariances
-                                      centered-outputs))
+                         (+ (- (logdet inverted-covariances))
+                            (mat-as-scalar
+                             (mm* (list centered-outputs :transpose? t)
+                                  inverted-covariances
+                                  centered-outputs))
                             (* n (log (* 2 pi)))))))))))
 
 (defmethod derive-lump ((lump ->gp))
   (let* ((means (means lump))
-         (covariances (covariances lump))
          (means-d (derivatives means))
-         (cov-d (derivatives covariances))
-         (derivatives (derivatives lump)))
-    (declare (optimize (speed 3))
-             (type flt-vector means-d cov-d derivatives))
-    (loop for stripe of-type index below (mgl-bp::n-stripes* lump)
-          for gp in (posterior-gps lump)
-          do (let* ((d (aref derivatives stripe))
-                    (inverted-covariances (inverted-covariances gp))
-                    (centered-outputs (centered-evidence-outputs gp))
-                    (centered-outputs^t (clnu:transpose centered-outputs))
-                    (dmean (lla:mm centered-outputs^t inverted-covariances))
-                    (2dcov (clnu:e- (lla:mmm inverted-covariances
-                                             centered-outputs
-                                             centered-outputs^t
-                                             inverted-covariances)
-                                    inverted-covariances)))
-               (declare (type flt-matrix dmean 2dcov))
-               (with-stripes ((stripe means ms me))
-                 (loop for mi upfrom ms below me
-                       for i upfrom 0
-                       do (decf (aref means-d mi)
-                                (* d (aref dmean 0 i)))))
-               (with-stripes ((stripe covariances cs ce))
-                 (loop for ci upfrom cs below ce
-                       for i upfrom 0
-                       do (decf (aref cov-d ci)
-                                (* d #.(flt 0.5)
-                                   (row-major-aref 2dcov i)))))))))
+         (covariances (covariances lump))
+         (cov-d (derivatives covariances)))
+    (with-facets ((derivatives ((derivatives lump) 'backing-array
+                                :direction :input :type flt-vector)))
+      (loop for stripe of-type index below (mgl-bp::n-stripes* lump)
+            for gp in (posterior-gps lump)
+            do (let* ((d (aref derivatives stripe))
+                      (inverted-covariances (inverted-covariances gp))
+                      (centered-outputs (centered-evidence-outputs gp))
+                      (dmean (m* centered-outputs inverted-covariances
+                                 :transpose-a? t))
+                      (2dcov (m- (mm* inverted-covariances
+                                      centered-outputs
+                                      (list centered-outputs :transpose? t)
+                                      inverted-covariances)
+                                 inverted-covariances)))
+                 (with-shape-and-displacement (means-d)
+                   (reshape-to-row-matrix! means-d stripe)
+                   (axpy! (- d) dmean means-d))
+                 (with-shape-and-displacement (cov-d)
+                   (reshape-to-row-matrix! cov-d stripe)
+                   (axpy! (- (* d 0.5)) 2dcov cov-d)))))))
 
 (defun find-gp-lump (bpn)
   (find-if (lambda (lump)
