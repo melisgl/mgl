@@ -61,6 +61,13 @@
 
 (in-package :mgl-example-mnist)
 
+(defmacro setq* ((symbol special) value)
+  `(progn
+     (setq ,symbol ,value)
+     (when ,special
+       (setf (symbol-value ,special) ,symbol))))
+
+
 (defparameter *mnist-data-dir*
   (merge-pathnames "mnist-data/" *example-dir*)
   "Set this to the directory where the uncompressed mnist files reside.")
@@ -109,12 +116,6 @@
       (dotimes (x 28)
         (princ (if (< 0.5 (aref a (+ (* y 28) x))) #\O #\.)))
       (terpri))))
-
-#+nil
-(dotimes (i 100)
-  (print-image-array (image-array (aref (training-images) i)))
-  (print (image-label (aref (training-images) i)))
-  (terpri))
 
 (defun read-image-arrays (stream)
   (read-magic-or-lose stream 2051)
@@ -168,6 +169,11 @@
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   *test-images*)
+
+
+(defvar *training*)
+(defvar *test*)
+
 
 
 ;;;; Sampling, clamping, utilities
@@ -232,8 +238,7 @@
 (defclass mnist-rbm (rbm) ())
 
 (defmethod set-input (samples (rbm mnist-rbm))
-  (let ((inputs (find 'inputs (visible-chunks rbm)
-                      :key #'name)))
+  (let ((inputs (find 'inputs (visible-chunks rbm) :key #'name)))
     (when inputs
       (clamp-images samples (nodes inputs)))))
 
@@ -272,8 +277,7 @@
 ;;;; DBN training
 
 (defclass mnist-rbm-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch
-                      :reader n-inputs-in-epoch)))
+  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)))
 
 (defmethod learning-rate ((trainer mnist-rbm-segment-trainer))
   (let ((x (slot-value trainer 'learning-rate)))
@@ -458,73 +462,49 @@
       (init-weights 'prediction-biases bpn 0.1)
       bpn)))
 
-(defvar *dbn/1*)
-(defvar *bpn/1*)
-
-(defparameter *mnist-1-dbn-filename*
-  (merge-pathnames "mnist-1.dbn" *mnist-save-dir*))
-
-(defparameter *mnist-1-dropout-bpn-filename*
-  (merge-pathnames "mnist-1-dropout.bpn" *mnist-save-dir*))
-
-(defparameter *mnist-1-bpn-filename*
-  (merge-pathnames "mnist-1.bpn" *mnist-save-dir*))
-
-(defun train-mnist/1 (&key load-dbn-p quick-run-p dropoutp)
-  (cond (load-dbn-p
-         (setq *dbn/1* (make-instance 'mnist-dbn/1))
-         (load-weights *mnist-1-dbn-filename* *dbn/1*)
-         (log-msg "Loaded DBN~%")
-         (map nil (lambda (counter)
-                    (log-msg "dbn test ~:_~A~%" counter))
-              (collect-dbn-mean-field-errors/labeled
-               (make-sampler (test-images)) *dbn/1*)))
-        (t
-         (setq *dbn/1* (make-instance 'mnist-dbn/1))
-         (init-mnist-dbn *dbn/1* :stddev 0.1)
-         (train-mnist-dbn *dbn/1* (training-images) (test-images)
-                          :n-epochs (if quick-run-p 2 50) :n-gibbs 1
-                          :start-level 0 :learning-rate (flt 0.1)
-                          :decay (flt 0.0002) :visible-sampling nil)
-         (unless quick-run-p
-           (save-weights *mnist-1-dbn-filename* *dbn/1*))))
-  (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
-  (cond (dropoutp
-         (train-mnist-bpn-gd *bpn/1* (training-images) (test-images)
-                             :n-softmax-epochs (if quick-run-p 1 10)
-                             :n-epochs (if quick-run-p 2 1000)
-                             :learning-rate (flt 1)
-                             :learning-rate-decay (flt 0.998)
-                             :l2-upper-bound nil
-                             :rescale-on-dropout-p t)
-         (unless quick-run-p
-           (save-weights *mnist-1-dropout-bpn-filename* *bpn/1*)))
-        (t
-         (train-mnist-bpn *bpn/1* (training-images) (test-images)
-                          :n-softmax-epochs (if quick-run-p 1 5)
-                          :n-epochs (if quick-run-p 1 37))
-         (unless quick-run-p
-           (save-weights *mnist-1-bpn-filename* *bpn/1*)))))
+(defun train-mnist/1 (&key (training *training*) (test *test*) load-dbn-p
+                      quick-run-p dropoutp dbn-var bpn-var
+                      dbn-filename bpn-filename)
+  (let ((dbn nil)
+        (bpn nil))
+    (cond (load-dbn-p
+           (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
+           (load-weights dbn-filename dbn)
+           (log-msg "Loaded DBN~%")
+           (map nil (lambda (counter)
+                      (log-msg "dbn test ~:_~A~%" counter))
+                (collect-dbn-mean-field-errors/labeled
+                 (make-sampler test) dbn)))
+          (t
+           (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
+           (init-mnist-dbn dbn :stddev 0.1)
+           (train-mnist-dbn dbn training test
+                            :n-epochs (if quick-run-p 2 50) :n-gibbs 1
+                            :start-level 0 :learning-rate (flt 0.1)
+                            :decay (flt 0.0002) :visible-sampling nil)
+           (unless quick-run-p
+             (save-weights dbn-filename dbn))))
+    (setq* (bpn bpn-var) (unroll-mnist-dbn/1 dbn))
+    (cond (dropoutp
+           (train-mnist-bpn-gd bpn training test
+                               :n-softmax-epochs (if quick-run-p 1 10)
+                               :n-epochs (if quick-run-p 2 1000)
+                               :learning-rate (flt 1)
+                               :learning-rate-decay (flt 0.998)
+                               :l2-upper-bound nil
+                               :rescale-on-dropout-p t)
+           (unless quick-run-p
+             (save-weights bpn-filename bpn)))
+          (t
+           (train-mnist-bpn bpn training test
+                            :n-softmax-epochs (if quick-run-p 1 5)
+                            :n-epochs (if quick-run-p 1 37))
+           (unless quick-run-p
+             (save-weights bpn-filename bpn))))))
 
 
 ;;;; Code for the DBN to DBM to BPN approach (paper [2]) and also for
 ;;;; dropout training with the bpn (paper [3]) with :DROPOUT T.
-
-(defvar *dbn/2*)
-(defvar *dbm/2*)
-(defvar *bpn/2*)
-
-(defparameter *mnist-2-dbn-filename*
-  (merge-pathnames "mnist-2.dbn" *mnist-save-dir*))
-
-(defparameter *mnist-2-dbm-filename*
-  (merge-pathnames "mnist-2.dbm" *mnist-save-dir*))
-
-(defparameter *mnist-2-bpn-filename*
-  (merge-pathnames "mnist-2.bpn" *mnist-save-dir*))
-
-(defparameter *mnist-2-dropout-bpn-filename*
-  (merge-pathnames "mnist-2-dropout.bpn" *mnist-save-dir*))
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
 (defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
@@ -690,87 +670,96 @@
                                   inits))
       bpn)))
 
-(defun train-mnist/2 (&key load-dbn-p load-dbm-p dropoutp quick-run-p)
-  (flet ((train-dbn ()
-           (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
-           (train-mnist-dbn
-            *dbn/2* (training-images) (test-images)
-            :start-level 0
-            :n-epochs (if quick-run-p 2 100)
-            :n-gibbs (list 1
-                           (lambda (trainer)
-                             (ceiling (1+ (n-inputs trainer))
-                                      (* 20 (length (training-images))))))
-            :learning-rate
-            (list (flt 0.05)
-                  (lambda (trainer)
-                    (/ (flt 0.05)
-                       (ceiling (1+ (n-inputs trainer))
-                                (* 20 (length (training-images)))))))
-            :decay (flt 0.001)
-            :visible-sampling t)
-           (unless quick-run-p
-             (save-weights *mnist-2-dbn-filename* *dbn/2*)))
-         (train-dbm ()
-           (train-mnist-dbm *dbm/2* (training-images) (test-images)
-                            :n-epochs (if quick-run-p 1 500))
-           (unless quick-run-p
-             (save-weights *mnist-2-dbm-filename* *dbm/2*))))
-    (cond (load-dbm-p
-           (setq *dbm/2* (make-mnist-dbm))
-           (load-weights *mnist-2-dbm-filename* *dbm/2*))
-          (load-dbn-p
-           (setq *dbm/2* (make-mnist-dbm))
-           (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
-           (load-weights *mnist-2-dbn-filename* *dbn/2*)
-           (log-msg "Loaded DBN~%")
-           (train-dbm))
-          (t
-           (setq *dbm/2* (make-mnist-dbm))
-           (setq *dbn/2* (make-mnist-dbn/2 *dbm/2*))
-           (train-dbn)
-           (train-dbm)))
-    (setq *bpn/2*
-          (unroll-mnist-dbm
-           *dbm/2*
-           :use-label-weights t
-           :initargs
-           ;; We are playing games with wrapping image objects in
-           ;; lists when sampling, so let the map cache know what's
-           ;; the key in the cache and what to pass to the dbm. We
-           ;; carefully omit labels.
-           (list :populate-key #'first
-                 :populate-convert-to-dbm-sample-fn
-                 (lambda (sample)
-                   (list (first sample)
-                         :sample-visible-p nil
-                         :omit-label-p t))
-                 :populate-map-cache-lazily-from-dbm *dbm/2*
-                 :populate-periodic-fn
-                 (make-instance 'periodic-fn :period 1000
-                                :fn (lambda (n)
-                                      (log-msg "populated: ~S~%" n))))))
-    (unless (populate-map-cache-lazily-from-dbm *bpn/2*)
-      (log-msg "Populating MAP cache~%")
-      (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector (training-images)
-                                                       (test-images))
-                          :if-exists :error))
-    (cond (dropoutp
-           (train-mnist-bpn-gd *bpn/2*
-                               :n-softmax-epochs 0
-                               :n-epochs (if quick-run-p 2 1000)
-                               :learning-rate (flt 1)
-                               :learning-rate-decay (flt 0.998)
-                               :l2-upper-bound nil
-                               :rescale-on-dropout-p t)
-           (unless quick-run-p
-             (save-weights *mnist-2-dropout-bpn-filename* *bpn/2*)))
-          (t
-           (train-mnist-bpn *bpn/2* :batch-size 10000
-                            :n-softmax-epochs (if quick-run-p 1 5)
-                            :n-epochs (if quick-run-p 1 100))
-           (unless quick-run-p
-             (save-weights *mnist-2-bpn-filename* *bpn/2*))))))
+(defun train-mnist/2 (&key (training *training*) (test *test*) load-dbn-p
+                      load-dbm-p dropoutp quick-run-p
+                      dbn-var dbm-var bpn-var
+                      dbn-filename dbm-filename bpn-filename)
+  (let ((dbn nil)
+        (dbm nil)
+        (bpn nil))
+    (flet ((train-dbn ()
+             (init-mnist-dbn dbn :stddev '(0.001 0.01) :start-level 0)
+             (train-mnist-dbn
+              dbn training test
+              :start-level 0
+              :n-epochs (if quick-run-p 2 100)
+              :n-gibbs (list 1
+                             (lambda (trainer)
+                               (ceiling (1+ (n-inputs trainer))
+                                        (* 20 (length training)))))
+              :learning-rate
+              (list (flt 0.05)
+                    (lambda (trainer)
+                      (/ (flt 0.05)
+                         (ceiling (1+ (n-inputs trainer))
+                                  (* 20 (length training))))))
+              :decay (flt 0.001)
+              :visible-sampling t)
+             (unless quick-run-p
+               (save-weights dbn-filename dbn)))
+           (train-dbm ()
+             (train-mnist-dbm dbm training test
+                              :n-epochs (if quick-run-p 1 500))
+             (unless quick-run-p
+               (save-weights dbm-filename dbm)))
+           (make-dbm ()
+             (setq* (dbm dbm-var) (make-mnist-dbm)))
+           (make-dbn ()
+             (setq* (dbn dbn-var) (make-mnist-dbn/2 dbm))))
+      (cond (load-dbm-p
+             (make-dbm)
+             (load-weights dbm-filename dbm))
+            (load-dbn-p
+             (make-dbm)
+             (make-dbn)
+             (load-weights dbn-filename dbn)
+             (log-msg "Loaded DBN~%")
+             (train-dbm))
+            (t
+             (make-dbm)
+             (make-dbn)
+             (train-dbn)
+             (train-dbm)))
+      (setq* (bpn bpn-var)
+             (unroll-mnist-dbm
+              dbm
+              :use-label-weights t
+              :initargs
+              ;; We are playing games with wrapping image objects in
+              ;; lists when sampling, so let the map cache know what's
+              ;; the key in the cache and what to pass to the dbm. We
+              ;; carefully omit labels.
+              (list :populate-key #'first
+                    :populate-convert-to-dbm-sample-fn
+                    (lambda (sample)
+                      (list (first sample)
+                            :sample-visible-p nil
+                            :omit-label-p t))
+                    :populate-map-cache-lazily-from-dbm dbm
+                    :populate-periodic-fn
+                    (make-instance 'periodic-fn :period 1000
+                                   :fn (lambda (n)
+                                         (log-msg "populated: ~S~%" n))))))
+      (unless (populate-map-cache-lazily-from-dbm bpn)
+        (log-msg "Populating MAP cache~%")
+        (populate-map-cache bpn dbm (concatenate 'vector training test)
+                            :if-exists :error))
+      (cond (dropoutp
+             (train-mnist-bpn-gd bpn training test
+                                 :n-softmax-epochs 0
+                                 :n-epochs (if quick-run-p 2 1000)
+                                 :learning-rate (flt 1)
+                                 :learning-rate-decay (flt 0.998)
+                                 :l2-upper-bound nil
+                                 :rescale-on-dropout-p t)
+             (unless quick-run-p
+               (save-weights bpn-filename bpn)))
+            (t
+             (train-mnist-bpn bpn training test :batch-size 10000
+                              :n-softmax-epochs (if quick-run-p 1 5)
+                              :n-epochs (if quick-run-p 1 100))
+             (unless quick-run-p
+               (save-weights bpn-filename bpn)))))))
 
 (defmethod negative-phase (batch (learner bm-pcd-learner)
                            (trainer mnist-dbm-trainer) multiplier)
@@ -1019,22 +1008,19 @@
           (setf (aref nodes i)
                 (flt (* stddev (gaussian-random-1)))))))))
 
-(defvar *bpn/3*)
-
-(defparameter *mnist-3-bpn-filename*
-  (merge-pathnames "mnist-3.bpn" *mnist-save-dir*))
-
-(defun train-mnist/3 (&key quick-run-p)
-  (setq *bpn/3* (build-rectified-mnist-bpn))
-  (init-bpn-weights *bpn/3* :stddev 0.01)
-  (train-mnist-bpn-gd *bpn/3* (training-images) (test-images)
-                      :n-softmax-epochs 0
-                      :n-epochs (if quick-run-p 2 3000)
-                      :learning-rate (flt 1)
-                      :learning-rate-decay (flt 0.998)
-                      :l2-upper-bound (sqrt (flt 15)))
-  (unless quick-run-p
-    (save-weights *mnist-3-bpn-filename* *bpn/3*)))
+(defun train-mnist/3 (&key (training *training*) (test *test*) quick-run-p
+                      bpn-var bpn-filename)
+  (let ((bpn nil))
+    (setq* (bpn bpn-var) (build-rectified-mnist-bpn))
+    (init-bpn-weights bpn :stddev 0.01)
+    (train-mnist-bpn-gd bpn training test
+                        :n-softmax-epochs 0
+                        :n-epochs (if quick-run-p 2 3000)
+                        :learning-rate (flt 1)
+                        :learning-rate-decay (flt 0.998)
+                        :l2-upper-bound (sqrt (flt 15)))
+    (unless quick-run-p
+      (save-weights bpn-filename bpn))))
 
 
 ;;;; Maxout
@@ -1093,53 +1079,102 @@
                               :target expectations))
     (ce-error (->error :x predictions))))
 
+(defun train-mnist/4 (&key (training *training*) (test *test*) quick-run-p
+                      bpn-var bpn-filename)
+  (let ((bpn nil))
+    (setq* (bpn bpn-var) (build-maxout-mnist-bpn))
+    (init-bpn-weights bpn :stddev 0.01)
+    (train-mnist-bpn-gd bpn training test
+                        :n-softmax-epochs 0
+                        :n-epochs (if quick-run-p 2 3000)
+                        :learning-rate (flt 1)
+                        :learning-rate-decay (flt 0.998)
+                        :l2-upper-bound (sqrt (flt 3.75)))
+    (unless quick-run-p
+      (save-weights bpn-filename bpn))))
+
+#|
+
+(defvar *dbn/1*)
+(defvar *bpn/1*)
+
+(defparameter *mnist-1-dbn-filename*
+  (merge-pathnames "mnist-1.dbn" *mnist-save-dir*))
+
+(defparameter *mnist-1-bpn-filename*
+  (merge-pathnames "mnist-1.bpn" *mnist-save-dir*))
+
+(defparameter *mnist-1-dropout-bpn-filename*
+  (merge-pathnames "mnist-1-dropout.bpn" *mnist-save-dir*))
+
+(with-cuda ()
+  (let ((*random-state* (sb-ext:seed-random-state 983274)))
+    (train-mnist/1 :training (training-images) :test (test-images)
+                   :dbn-var '*dbn/1* :bpn-var '*bpn/1*
+                   :dbn-filename *mnist-1-dbn-filename*
+                   :bpn-filename *mnist-1-bpn-filename*)))
+
+(with-cuda ()
+  (let ((*random-state* (sb-ext:seed-random-state 983274)))
+    (train-mnist/1 :training (training-images) :test (test-images)
+                   :load-dbn-p t :dropoutp t
+                   :dbn-var '*dbn/1* :bpn-var '*bpn/1*
+                   :dbn-filename *mnist-1-dbn-filename*
+                   :bpn-filename *mnist-1-dropout-bpn-filename*)))
+
+(defvar *dbn/2*)
+(defvar *dbm/2*)
+(defvar *bpn/2*)
+
+(defparameter *mnist-2-dbn-filename*
+  (merge-pathnames "mnist-2.dbn" *mnist-save-dir*))
+
+(defparameter *mnist-2-dbm-filename*
+  (merge-pathnames "mnist-2.dbm" *mnist-save-dir*))
+
+(defparameter *mnist-2-bpn-filename*
+  (merge-pathnames "mnist-2.bpn" *mnist-save-dir*))
+
+(defparameter *mnist-2-dropout-bpn-filename*
+  (merge-pathnames "mnist-2-dropout.bpn" *mnist-save-dir*))
+
+(with-cuda ()
+  (let ((*random-state* (sb-ext:seed-random-state 983274)))
+    (train-mnist/2 :training (training-images) :test (test-images)
+                   :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
+                   :dbn-filename *mnist-2-dbn-filename*
+                   :dbm-filename *mnist-2-dbm-filename*
+                   :bpn-filename *mnist-2-bpn-filename*)))
+
+(with-cuda ()
+  (let ((*random-state* (sb-ext:seed-random-state 983274)))
+    (train-mnist/2 :training (training-images) :test (test-images)
+                   :load-dbm-p t :dropoutp t
+                   :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
+                   :dbn-filename *mnist-2-dbn-filename*
+                   :dbm-filename *mnist-2-dbm-filename*
+                   :bpn-filename *mnist-2-dropout-bpn-filename*)))
+
+(defvar *bpn/3*)
+
+(defparameter *mnist-3-bpn-filename*
+  (merge-pathnames "mnist-3.bpn" *mnist-save-dir*))
+
+
+(with-cuda ()
+  (let ((*random-state* (sb-ext:seed-random-state 983274)))
+    (train-mnist/3 :training (training-images) :test (test-images)
+                   :bpn-var '*bpn/3* :bpn-filename *mnist-3-bpn-filename*)))
+
 (defvar *bpn/4*)
 
 (defparameter *mnist-4-bpn-filename*
   (merge-pathnames "mnist-4.bpn" *mnist-save-dir*))
 
-(defun train-mnist/4 (&key quick-run-p)
-  (setq *bpn/4* (build-maxout-mnist-bpn))
-  (init-bpn-weights *bpn/4* :stddev 0.01)
-  (train-mnist-bpn-gd *bpn/4* (training-images) (test-images)
-                      :n-softmax-epochs 0
-                      :n-epochs (if quick-run-p 2 3000)
-                      :learning-rate (flt 1)
-                      :learning-rate-decay (flt 0.998)
-                      :l2-upper-bound (sqrt (flt 3.75)))
-  (unless quick-run-p
-    (save-weights *mnist-4-bpn-filename* *bpn/4*)))
-
-#|
-
-(progn
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/1)))
-
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/1 :load-dbn-p t :dropoutp t)))
-
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/2)))
-
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/2 :load-dbm-p t :dropoutp t)))
-
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/3)))
-
-  (with-cuda ()
-    (let ((*random-state* (sb-ext:seed-random-state 983274)))
-      (train-mnist/4))))
-
 (with-cuda ()
   (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/2 :load-dbn-p t :dropoutp t)))
+    (train-mnist/4 :training (training-images) :test (test-images)
+                   :bpn-var '*bpn/4* :bpn-filename *mnist-4-bpn-filename*)))
 
 (require :sb-sprof)
 
@@ -1166,5 +1201,10 @@
   (cl-dot:dot-graph dgraph
                     (asdf-system-relative-pathname "example/mnist-bpn-2.png")
                     :format :png))
+
+(dotimes (i 100)
+  (print-image-array (image-array (aref (training-images) i)))
+  (print (image-label (aref (training-images) i)))
+  (terpri))
 
 |#
