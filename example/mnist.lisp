@@ -112,8 +112,8 @@
 
 #+nil
 (dotimes (i 100)
-  (print-image-array (image-array (aref *training-images* i)))
-  (print (image-label (aref *training-images* i)))
+  (print-image-array (image-array (aref (training-images) i)))
+  (print (image-label (aref (training-images) i)))
   (terpri))
 
 (defun read-image-arrays (stream)
@@ -158,28 +158,32 @@
 
 (defvar *training-images*)
 (defvar *test-images*)
+
+(defun training-images ()
+  (unless (boundp '*training-images*)
+    (setq *training-images* (load-training)))
+  *training-images*)
+
+(defun test-images ()
+  (unless (boundp '*test-images*)
+    (setq *test-images* (load-test)))
+  *test-images*)
 
 
 ;;;; Sampling, clamping, utilities
 
-(defun make-sampler (stories &key max-n omit-label-p sample-visible-p)
+(defun make-sampler (images &key (max-n (length images)) omit-label-p
+                     sample-visible-p)
   (make-instance 'counting-function-sampler
                  :max-n-samples max-n
-                 :sampler (let ((g (make-random-generator stories)))
+                 :sampler (let ((g (make-random-generator images)))
                             (lambda ()
                               (list (funcall g)
                                     :omit-label-p omit-label-p
                                     :sample-visible-p sample-visible-p)))))
 
-(defun make-training-sampler (&key omit-label-p)
-  (make-sampler (subseq *training-images* 0 1000)
-                :max-n 1000
-                :omit-label-p omit-label-p))
-
-(defun make-test-sampler (&key omit-label-p)
-  (make-sampler *test-images*
-                :max-n (length *test-images*)
-                :omit-label-p omit-label-p))
+(defun make-tiny-sampler (images &key omit-label-p)
+  (make-sampler (subseq images 0 1000) :omit-label-p omit-label-p))
 
 (defun sample-image-array (sample)
   (image-array (first sample)))
@@ -208,15 +212,17 @@
 
 ;;;; Logging
 
-(defclass mnist-base-trainer (cesc-trainer) ())
+(defclass mnist-base-trainer (cesc-trainer)
+  ((training :initarg :training :reader training)
+   (test :initarg :test :reader test)))
 
 (defmethod log-training-period ((trainer mnist-base-trainer) learner)
   (declare (ignore learner))
-  (length *training-images*))
+  (length (training trainer)))
 
 (defmethod log-test-period ((trainer mnist-base-trainer) learner)
   (declare (ignore learner))
-  (length *training-images*))
+  (length (training trainer)))
 
 
 ;;;; DBN
@@ -246,24 +252,28 @@
 (defmethod log-test-error ((trainer mnist-rbm-trainer) learner)
   (call-next-method)
   (let ((rbm (rbm learner)))
-    (log-dbn-cesc-accuracy rbm (make-training-sampler)
+    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer))
                            "training reconstruction")
-    (log-dbn-cesc-accuracy rbm (make-training-sampler :omit-label-p t)
+    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer)
+                                                   :omit-label-p t)
                            "training")
     (map nil (lambda (counter)
                (log-msg "dbn test: ~:_test ~:_~A~%" counter))
          (collect-dbn-mean-field-errors/labeled
-          (make-test-sampler) (dbn rbm) :rbm rbm
+          (make-sampler (test trainer)) (dbn rbm) :rbm rbm
           :counters-and-measurers
           (make-dbn-reconstruction-rmse-counters-and-measurers
            (dbn rbm) :rbm rbm)))
-    (log-dbn-cesc-accuracy rbm (make-test-sampler :omit-label-p t) "test")
+    (log-dbn-cesc-accuracy rbm (make-sampler (test trainer) :omit-label-p t)
+                           "test")
     (log-msg "---------------------------------------------------~%")))
 
 
 ;;;; DBN training
 
-(defclass mnist-rbm-segment-trainer (batch-gd-trainer) ())
+(defclass mnist-rbm-segment-trainer (batch-gd-trainer)
+  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch
+                      :reader n-inputs-in-epoch)))
 
 (defmethod learning-rate ((trainer mnist-rbm-segment-trainer))
   (let ((x (slot-value trainer 'learning-rate)))
@@ -272,7 +282,7 @@
         (funcall x trainer))))
 
 (defmethod momentum ((trainer mnist-rbm-segment-trainer))
-  (if (< (n-inputs trainer) (* 5 (length *training-images*)))
+  (if (< (n-inputs trainer) (* 5 (n-inputs-in-epoch trainer)))
       #.(flt 0.5)
       #.(flt 0.9)))
 
@@ -280,7 +290,7 @@
 (defmethod lag ((trainer mnist-rbm-trainer))
   (min (flt 0.99)
        (let ((n (/ (n-inputs trainer)
-                   (length *training-images*))))
+                   (n-inputs-in-epoch trainer))))
          (- 1 (expt 0.5 n)))))
 
 (defun init-mnist-dbn (dbn &key stddev (start-level 0))
@@ -305,8 +315,8 @@
                                 (flt (* (this stddev)
                                         (gaussian-random-1)))))))))))))
 
-(defun train-mnist-dbn (dbn &key n-epochs n-gibbs learning-rate decay
-                        visible-sampling (start-level 0))
+(defun train-mnist-dbn (dbn training test &key n-epochs n-gibbs learning-rate
+                        decay visible-sampling (start-level 0))
   (loop
     for rbm in (subseq (rbms dbn) start-level)
     for i upfrom start-level do
@@ -315,12 +325,15 @@
                (if (and x (listp x))
                    (elt x i)
                    x)))
-        (let* ((n (length *training-images*))
+        (let* ((n (length training))
                (trainer
                  (make-instance 'mnist-rbm-trainer
+                                :training training
+                                :test test
                                 :segmenter
                                 (lambda (cloud)
                                   (make-instance 'mnist-rbm-segment-trainer
+                                                 :n-inputs-in-epoch n
                                                  :learning-rate
                                                  (this learning-rate)
                                                  :weight-decay
@@ -329,7 +342,7 @@
                                                      (flt 0)
                                                      (this decay))
                                                  :batch-size 100)))))
-          (train (make-sampler *training-images*
+          (train (make-sampler training
                                :max-n (* n-epochs n)
                                :sample-visible-p (this visible-sampling))
                  trainer
@@ -373,7 +386,8 @@
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-cesc-error (make-test-sampler :omit-label-p t) (bpn learner)))
+       (bpn-cesc-error (make-sampler (test trainer) :omit-label-p t)
+                       (bpn learner)))
   (log-msg "---------------------------------------------------~%"))
 
 (defun init-weights (name bpn deviation)
@@ -384,14 +398,16 @@
       (loop for i upfrom start below end
             do (setf (aref array i) (flt (* deviation (gaussian-random-1))))))))
 
-(defun train-mnist-bpn (bpn &key (batch-size
-                                  (min (length *training-images*) 1000))
+(defun train-mnist-bpn (bpn training test &key
+                        (batch-size (min (length training) 1000))
                         (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
-  (train (make-sampler *training-images*
-                       :max-n (* n-softmax-epochs (length *training-images*))
+  (train (make-sampler training
+                       :max-n (* n-softmax-epochs (length training))
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
+                        :training training
+                        :test test
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size
                         :segment-filter
@@ -400,11 +416,13 @@
                               (eq (name lump) 'prediction-weights))))
          (make-instance 'bp-learner :bpn bpn))
   (log-msg "Starting to train the whole BPN~%")
-  (train (make-sampler *training-images*
+  (train (make-sampler training
                        :max-n (* (- n-epochs n-softmax-epochs)
-                                 (length *training-images*))
+                                 (length training))
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
+                        :training training
+                        :test test
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size)
          (make-instance 'bp-learner :bpn bpn)))
@@ -453,29 +471,26 @@
   (merge-pathnames "mnist-1.bpn" *mnist-save-dir*))
 
 (defun train-mnist/1 (&key load-dbn-p quick-run-p dropoutp)
-  (unless (boundp '*training-images*)
-    (setq *training-images* (load-training)))
-  (unless (boundp '*test-images*)
-    (setq *test-images* (load-test)))
   (cond (load-dbn-p
          (setq *dbn/1* (make-instance 'mnist-dbn/1))
          (load-weights *mnist-1-dbn-filename* *dbn/1*)
          (log-msg "Loaded DBN~%")
          (map nil (lambda (counter)
                     (log-msg "dbn test ~:_~A~%" counter))
-              (collect-dbn-mean-field-errors/labeled (make-test-sampler)
-                                                     *dbn/1*)))
+              (collect-dbn-mean-field-errors/labeled
+               (make-sampler (test-images)) *dbn/1*)))
         (t
          (setq *dbn/1* (make-instance 'mnist-dbn/1))
          (init-mnist-dbn *dbn/1* :stddev 0.1)
-         (train-mnist-dbn *dbn/1* :n-epochs (if quick-run-p 2 50) :n-gibbs 1
+         (train-mnist-dbn *dbn/1* (training-images) (test-images)
+                          :n-epochs (if quick-run-p 2 50) :n-gibbs 1
                           :start-level 0 :learning-rate (flt 0.1)
                           :decay (flt 0.0002) :visible-sampling nil)
          (unless quick-run-p
            (save-weights *mnist-1-dbn-filename* *dbn/1*))))
   (setq *bpn/1* (unroll-mnist-dbn/1 *dbn/1*))
   (cond (dropoutp
-         (train-mnist-bpn-gd *bpn/1*
+         (train-mnist-bpn-gd *bpn/1* (training-images) (test-images)
                              :n-softmax-epochs (if quick-run-p 1 10)
                              :n-epochs (if quick-run-p 2 1000)
                              :learning-rate (flt 1)
@@ -485,7 +500,7 @@
          (unless quick-run-p
            (save-weights *mnist-1-dropout-bpn-filename* *bpn/1*)))
         (t
-         (train-mnist-bpn *bpn/1*
+         (train-mnist-bpn *bpn/1* (training-images) (test-images)
                           :n-softmax-epochs (if quick-run-p 1 5)
                           :n-epochs (if quick-run-p 1 37))
          (unless quick-run-p
@@ -572,22 +587,26 @@
 (defmethod log-test-error ((trainer mnist-dbm-trainer) learner)
   (call-next-method)
   (let ((dbm (bm learner)))
-    (log-dbm-cesc-accuracy dbm (make-training-sampler)
+    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer))
                            "training reconstruction")
-    (log-dbm-cesc-accuracy dbm (make-training-sampler :omit-label-p t)
+    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer)
+                                                  :omit-label-p t)
                            "training")
     ;; This is too time consuming for little benefit.
     #+nil
     (map nil (lambda (counter)
                (log-msg "dbm test: ~:_test ~:_~A~%" counter))
          (collect-bm-mean-field-errors
-          (make-test-sampler) dbm
+          (make-sampler (test trainer)) dbm
           :counters-and-measurers
           (make-dbm-reconstruction-rmse-counters-and-measurers dbm)))
-    (log-dbm-cesc-accuracy dbm (make-test-sampler :omit-label-p t) "test")
+    (log-dbm-cesc-accuracy dbm (make-sampler (test trainer) :omit-label-p t)
+                           "test")
     (log-msg "---------------------------------------------------~%")))
 
-(defclass mnist-dbm-segment-trainer (batch-gd-trainer) ())
+(defclass mnist-dbm-segment-trainer (batch-gd-trainer)
+  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch
+                      :reader n-inputs-in-epoch)))
 
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
@@ -595,12 +614,11 @@
   (/ (slot-value trainer 'learning-rate)
      (min (flt 10)
           (expt 1.000015
-                (* (/ (n-inputs trainer)
-                      (length *training-images*))
+                (* (/ (n-inputs trainer) (n-inputs-in-epoch trainer))
                    600)))))
 
 (defmethod momentum ((trainer mnist-dbm-segment-trainer))
-  (if (< (n-inputs trainer) (* 5 (length *training-images*)))
+  (if (< (n-inputs trainer) (* 5 (n-inputs-in-epoch trainer)))
       #.(flt 0.5)
       #.(flt 0.9)))
 
@@ -608,47 +626,49 @@
   (declare (ignore dbm))
   (when (next-method-p)
     (call-next-method))
-  (set-input (sample-batch (make-sampler *training-images*
-                                         :max-n (length *training-images*)
-                                         :sample-visible-p t)
+  (set-input (sample-batch (make-sampler (training trainer) :sample-visible-p t)
                            (n-particles learner))
              (persistent-chains learner))
   (up-dbm (persistent-chains learner)))
 
-(defun train-mnist-dbm (dbm &key (n-epochs 500))
+(defun train-mnist-dbm (dbm training test &key (n-epochs 500))
   (log-msg "Starting to train DBM.~%")
-  (train (make-sampler *training-images*
-                       :max-n (* n-epochs (length *training-images*))
-                       :sample-visible-p t)
-         (make-instance 'mnist-dbm-trainer
-                        :segmenter
-                        (lambda (cloud)
-                          (make-instance 'mnist-dbm-segment-trainer
-                                         :learning-rate (flt 0.001)
-                                         :weight-decay
-                                         (if (conditioning-cloud-p cloud)
-                                             (flt 0)
-                                             (flt 0.0002))
-                                         :batch-size 100)))
-         (make-instance 'bm-pcd-learner
-                        :bm dbm
-                        :n-particles 100
-                        :visible-sampling t
-                        :n-gibbs 5
-                        :sparser
-                        (lambda (cloud chunk)
-                          (when (and (member (name chunk) '(f1 f2))
-                                     (not (equal 'label (name (chunk1 cloud))))
-                                     (not (equal 'label (name (chunk2 cloud)))))
-                            (make-instance
-                             'cheating-sparsity-gradient-source
-                             :cloud cloud
-                             :chunk chunk
-                             :sparsity (flt (if (eq 'f2 (name chunk))
-                                                0.1
-                                                0.2))
-                             :cost (flt 0.001)
-                             :damping (flt 0.9)))))))
+  (let ((n (length training)))
+    (train (make-sampler training :max-n (* n-epochs n) :sample-visible-p t)
+           (make-instance 'mnist-dbm-trainer
+                          :training training
+                          :test test
+                          :segmenter
+                          (lambda (cloud)
+                            (make-instance 'mnist-dbm-segment-trainer
+                                           :n-inputs-in-epoch n
+                                           :learning-rate (flt 0.001)
+                                           :weight-decay
+                                           (if (conditioning-cloud-p cloud)
+                                               (flt 0)
+                                               (flt 0.0002))
+                                           :batch-size 100)))
+           (make-instance 'bm-pcd-learner
+                          :bm dbm
+                          :n-particles 100
+                          :visible-sampling t
+                          :n-gibbs 5
+                          :sparser
+                          (lambda (cloud chunk)
+                            (when (and (member (name chunk) '(f1 f2))
+                                       (not (equal 'label
+                                                   (name (chunk1 cloud))))
+                                       (not (equal 'label
+                                                   (name (chunk2 cloud)))))
+                              (make-instance
+                               'cheating-sparsity-gradient-source
+                               :cloud cloud
+                               :chunk chunk
+                               :sparsity (flt (if (eq 'f2 (name chunk))
+                                                  0.1
+                                                  0.2))
+                               :cost (flt 0.001)
+                               :damping (flt 0.9))))))))
 
 (defun make-mnist-dbn/2 (dbm)
   (mgl-bm:dbm->dbn dbm :dbn-class 'mnist-dbn :rbm-class 'mnist-rbm/2
@@ -671,32 +691,29 @@
       bpn)))
 
 (defun train-mnist/2 (&key load-dbn-p load-dbm-p dropoutp quick-run-p)
-  (unless (boundp '*training-images*)
-    (setq *training-images* (load-training)))
-  (unless (boundp '*test-images*)
-    (setq *test-images* (load-test)))
   (flet ((train-dbn ()
            (init-mnist-dbn *dbn/2* :stddev '(0.001 0.01) :start-level 0)
            (train-mnist-dbn
-            *dbn/2*
+            *dbn/2* (training-images) (test-images)
             :start-level 0
             :n-epochs (if quick-run-p 2 100)
             :n-gibbs (list 1
                            (lambda (trainer)
                              (ceiling (1+ (n-inputs trainer))
-                                      (* 20 (length *training-images*)))))
+                                      (* 20 (length (training-images))))))
             :learning-rate
             (list (flt 0.05)
                   (lambda (trainer)
                     (/ (flt 0.05)
                        (ceiling (1+ (n-inputs trainer))
-                                (* 20 (length *training-images*))))))
+                                (* 20 (length (training-images)))))))
             :decay (flt 0.001)
             :visible-sampling t)
            (unless quick-run-p
              (save-weights *mnist-2-dbn-filename* *dbn/2*)))
          (train-dbm ()
-           (train-mnist-dbm *dbm/2* :n-epochs (if quick-run-p 1 500))
+           (train-mnist-dbm *dbm/2* (training-images) (test-images)
+                            :n-epochs (if quick-run-p 1 500))
            (unless quick-run-p
              (save-weights *mnist-2-dbm-filename* *dbm/2*))))
     (cond (load-dbm-p
@@ -735,8 +752,8 @@
                                       (log-msg "populated: ~S~%" n))))))
     (unless (populate-map-cache-lazily-from-dbm *bpn/2*)
       (log-msg "Populating MAP cache~%")
-      (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector *training-images*
-                                                       *test-images*)
+      (populate-map-cache *bpn/2* *dbm/2* (concatenate 'vector (training-images)
+                                                       (test-images))
                           :if-exists :error))
     (cond (dropoutp
            (train-mnist-bpn-gd *bpn/2*
@@ -818,7 +835,7 @@
 (defmethod lag ((trainer mnist-bpn-gd-trainer))
   (min (flt 0.99)
        (let ((n (/ (n-inputs trainer)
-                   (length *training-images*))))
+                   (length (training trainer)))))
          (- 1 (expt 0.5 n)))))
 
 (defun find-activation-lump-for-weight (->weight bpn)
@@ -863,8 +880,8 @@
         (log-msg "rescaling ~S by ~,2F~%" lump-2 scale)
         (scal! scale (nodes (mgl-bp::weights lump-2)))))))
 
-(defun train-mnist-bpn-gd (bpn &key (n-softmax-epochs 5) (n-epochs 200)
-                           (training *training-images*) l2-upper-bound
+(defun train-mnist-bpn-gd (bpn training test &key (n-softmax-epochs 5)
+                           (n-epochs 200) l2-upper-bound
                            class-weights learning-rate learning-rate-decay
                            rescale-on-dropout-p)
   (when class-weights
@@ -906,6 +923,8 @@
                        :max-n (* n-softmax-epochs n)
                        :omit-label-p t)
          (make-instance 'mnist-bpn-gd-trainer
+                        :training training
+                        :test test
                         :segmenter
                         (make-segmenter
                          (lambda (lump)
@@ -934,6 +953,8 @@
                        :max-n (* n-epochs n)
                        :omit-label-p t)
          (make-instance 'mnist-bpn-gd-trainer
+                        :training training
+                        :test test
                         :segmenter (make-segmenter #'make-trainer))
          (make-instance 'bp-learner :bpn bpn))))))
 
@@ -1004,13 +1025,10 @@
   (merge-pathnames "mnist-3.bpn" *mnist-save-dir*))
 
 (defun train-mnist/3 (&key quick-run-p)
-  (unless (boundp '*training-images*)
-    (setq *training-images* (load-training)))
-  (unless (boundp '*test-images*)
-    (setq *test-images* (load-test)))
   (setq *bpn/3* (build-rectified-mnist-bpn))
   (init-bpn-weights *bpn/3* :stddev 0.01)
-  (train-mnist-bpn-gd *bpn/3* :n-softmax-epochs 0
+  (train-mnist-bpn-gd *bpn/3* (training-images) (test-images)
+                      :n-softmax-epochs 0
                       :n-epochs (if quick-run-p 2 3000)
                       :learning-rate (flt 1)
                       :learning-rate-decay (flt 0.998)
@@ -1081,13 +1099,9 @@
   (merge-pathnames "mnist-4.bpn" *mnist-save-dir*))
 
 (defun train-mnist/4 (&key quick-run-p)
-  (unless (boundp '*training-images*)
-    (setq *training-images* (load-training)))
-  (unless (boundp '*test-images*)
-    (setq *test-images* (load-test)))
   (setq *bpn/4* (build-maxout-mnist-bpn))
   (init-bpn-weights *bpn/4* :stddev 0.01)
-  (train-mnist-bpn-gd *bpn/4*
+  (train-mnist-bpn-gd *bpn/4* (training-images) (test-images)
                       :n-softmax-epochs 0
                       :n-epochs (if quick-run-p 2 3000)
                       :learning-rate (flt 1)
