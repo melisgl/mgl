@@ -203,6 +203,11 @@ its keys. HASH-TABLE had better be a bijection."
 (defun shuffle-vector (vector)
   (nshuffle-vector (copy-seq vector)))
 
+(defun shuffle (seq)
+  (if (listp seq)
+      (coerce (nshuffle-vector (coerce seq 'vector)) 'list)
+      (shuffle-vector seq)))
+
 (defun make-seq-generator (vector)
   "Return a function that returns elements of VECTOR in order without
 end. When there are no more elements, start over."
@@ -240,41 +245,56 @@ N element."
       (when (= n (length previous-values))
         (funcall function (reverse previous-values))))))
 
-(defun break-seq (fractions seq)
+(defun break-seq (fractions seq &key weight)
   "Split SEQ into a number of subsequences. FRACTIONS is either a
-positive integer or a list of non-negative real numbers. If FRACTIONS
-is a positive integer then return a list of that many subsequences of
-equal size \(bar rounding errors), else split SEQ into subsequences,
-where the length of subsequence I is proportional to element I of
-FRACTIONS:
+  positive integer or a list of non-negative real numbers. WEIGHT is
+  NIL or a function that returns a non-negative real number when
+  called with an element from SEQ. If FRACTIONS is a positive integer
+  then return a list of that many subsequences with equal sum of
+  weights bar rounding errors, else split SEQ into subsequences, where
+  the sum of weights of subsequence I is proportional to element I of
+  FRACTIONS. If WEIGHT is NIL, then it's element is assumed to have
+  the same weight.
 
-  (BREAK-SEQ '(2 3) '(0 1 2 3 4 5 6 7 8 9))
-    => ((0 1 2 3) (4 5 6 7 8 9))"
-  (let ((length (length seq)))
-    (if (numberp fractions)
-        (let ((fraction-size (/ length fractions)))
-          (loop for fraction below fractions
-                collect (subseq seq
-                                (floor (* fraction fraction-size))
-                                (floor (* (1+ fraction) fraction-size)))))
-        (let ((sum-fractions (loop for x in fractions sum x))
-              (n-fractions (length fractions)))
-          (loop with sum = 0
-                for fraction in fractions
-                for i upfrom 0
-                collect (subseq seq
-                                (floor (* (/ sum sum-fractions)
-                                          length))
-                                ;; We want to partition SEQ: elements
-                                ;; must not be lost or duplicated. Use
-                                ;; INCF, because float precision in an
-                                ;; expression and in a variable may be
-                                ;; different.
-                                (if (= i (1- n-fractions))
-                                    length
-                                    (floor (* (/ (incf sum fraction)
-                                                 sum-fractions)
-                                              length)))))))))
+      (break-seq '(2 3) '(0 1 2 3 4 5 6 7 8 9))
+      => ((0 1 2 3) (4 5 6 7 8 9))"
+  (let* ((length (length seq))
+         (weights-total (if weight (reduce #'+ seq :key weight) length))
+         (fractions (if (numberp fractions)
+                        (make-list fractions :initial-element 1)
+                        fractions)))
+    (let ((fractions-total (reduce #'+ fractions))
+          (n-fractions (length fractions))
+          (start 0)
+          (weights-sum 0))
+      (loop for fraction-index below n-fractions
+            for fraction in fractions
+            for fractions-sum = fraction then (+ fractions-sum fraction)
+            for weights-sum-limit = (* weights-total (/ fractions-sum
+                                                        fractions-total))
+            collect
+            (subseq seq start
+                    (if (= fraction-index (1- n-fractions))
+                        ;; The last split absorbs rounding errors.
+                        length
+                        (multiple-value-setq (start weights-sum)
+                          (find-enough-weights seq start weight weights-sum
+                                               weights-sum-limit))))))))
+
+(defun find-enough-weights (seq start weight weights-sum weights-sum-limit)
+  (let ((i start)
+        (weights-sum weights-sum))
+    (map nil (lambda (x)
+               (let ((w (if weight (funcall weight x) 1)))
+                 (when (<= weights-sum-limit (+ weights-sum w))
+                   (return-from find-enough-weights
+                     (if (< (abs (- weights-sum-limit (+ weights-sum w)))
+                            (abs (- weights-sum-limit weights-sum)))
+                         (values (1+ i) (+ weights-sum w))
+                         (values i weights-sum))))
+                 (incf weights-sum w)
+                 (incf i)))
+         (subseq seq start))))
 
 (defun collect-distinct (seq &key (key #'identity) (test #'eql))
   (let ((result ()))
@@ -285,11 +305,14 @@ FRACTIONS:
     (nreverse result)))
 
 (defun stratified-split (fractions seq &key (key #'identity) (test #'eql)
-                                         randomizep)
+                         weight)
   "Similar to BREAK-SEQ, but also makes sure that keys are equally
-distributed among the paritions. It can be useful for classification
-tasks to partition the data set while keeping the distribution of
-classes the same."
+  distributed among the partitions. It can be useful for
+  classification tasks to partition the data set while keeping the
+  distribution of classes the same.
+
+  Note that the sets returned are not in random order. In fact, they
+  are sorted internally by KEY."
   (let ((keys (collect-distinct seq :key key :test test)))
     (if (zerop (length keys))
         ()
@@ -303,10 +326,7 @@ classes the same."
                                                          (funcall key x)))
                                               seq)
                                'vector)))
-                        (break-seq fractions
-                                   (if randomizep
-                                       (nshuffle-vector elements)
-                                       elements))))))
+                        (break-seq fractions elements :weight weight)))))
           (loop for i below (length (elt per-key-splits 0))
                 collect (apply #'concatenate
                                (if (listp seq)
@@ -315,6 +335,65 @@ classes the same."
                                (mapcar (lambda (splits)
                                          (elt splits i))
                                        per-key-splits)))))))
+
+(defun split-fold/mod (seq fold n-folds)
+  "Partition SEQ into two sequences: one with elements of SEQ with
+  indices whose remainder is FOLD when divided with N-FOLDS, and a
+  second one with the rest. The second one is the larger set. The
+  order of elements remains the same."
+  (assert (<= 0 fold (1- n-folds)))
+  (split-seq-by-index seq (lambda (i)
+                            (= fold (mod i n-folds)))))
+
+(defun split-fold/cont (seq fold n-folds)
+  "Imagine dividing SEQ into N-FOLDS subsequences of the same
+  size (bar rounding). Return the FOLDth such subsequence as the first
+  value and the all the subsequences concatenated into one as the
+  second value. The order of elements remains the same."
+  (assert (<= 0 fold (1- n-folds)))
+  (let ((fold-length (/ (length seq) n-folds)))
+    (split-seq-by-index seq (lambda (i)
+                              (= fold (floor i fold-length))))))
+
+(defun split-seq-by-index (seq pred)
+  "Partition SEQ into two sequences: one with the elements with
+  indices for which PRED returns true, one with the rest. The order of
+  elements remains the same."
+  (let ((true-seq ())
+        (false-seq ())
+        (i 0))
+    (map nil (lambda (x)
+               (if (funcall pred i)
+                   (push x true-seq)
+                   (push x false-seq))
+               (incf i))
+         seq)
+    (let ((true-seq (nreverse true-seq))
+          (false-seq (nreverse false-seq)))
+      (if (listp seq)
+          (values true-seq false-seq)
+          (values (coerce true-seq 'vector) (coerce false-seq 'vector))))))
+
+(defun cross-validate (data fn &key (n-folds 5)
+                       (folds (alexandria:iota n-folds))
+                       (split-fn #'split-fold/mod))
+  "Split DATA into test and training data with SPLIT-FN in N-FOLDS
+  ways. For each split, call FN with the test and training data. FN
+  returns an opaque value that's simply collected and returned.
+
+  DATA can be of any type, the only restriction is that SPLIT-FN and
+  FN must be able to work with it. SPLIT-FN is called with DATA and
+  the fold index (from [0,N-FOLDS)) and N-FOLDS.
+
+  By specifying FOLDS as a list of integers within [0,N-FOLDS), it is
+  possible to map over a subset of folds."
+  (assert (every (lambda (fold)
+                   (and (<= 0 fold) (< fold n-folds)))
+                 folds))
+  (mapcar (lambda (fold)
+            (multiple-value-call fn fold
+              (funcall split-fn data fold n-folds)))
+          folds))
 
 
 ;;;; Periodic functions

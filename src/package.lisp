@@ -40,11 +40,15 @@
    #:repeatedly
    #:nshuffle-vector
    #:shuffle-vector
+   #:shuffle
    #:make-seq-generator
    #:make-random-generator
    #:make-n-gram-mappee
    #:break-seq
    #:stratified-split
+   #:split-fold/mod
+   #:split-fold/cont
+   #:cross-validate
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn
