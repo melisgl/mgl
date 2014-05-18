@@ -181,36 +181,29 @@
                 :max-n (length *test-images*)
                 :omit-label-p omit-label-p))
 
-(defun clamp-array (image array start)
-  (declare (type flt-vector array)
-           (optimize (speed 3)))
-  (with-facets ((image-array ((image-array image) 'backing-array
-                              :direction :input :type flt-vector)))
-    (replace array image-array :start1 start)))
+(defun sample-image-array (sample)
+  (image-array (first sample)))
 
-(defun clamp-striped-nodes (images striped)
-  (assert (= (length images) (n-stripes striped)))
-  (if (use-cuda-p)
-      (let ((nodes (nodes striped)))
-        (with-shape-and-displacement (nodes)
-          (loop for image in images
-                for stripe upfrom 0
-                do (destructuring-bind (image &key omit-label-p
-                                        sample-visible-p)
-                       image
-                     (declare (ignore omit-label-p sample-visible-p))
-                     (with-stripes ((stripe striped start))
-                       (reshape-and-displace! nodes #.(* 28 28) start)
-                       (copy! (image-array image) nodes))))))
-      (with-facets ((nodes ((nodes striped) 'backing-array :direction :output
-                            :type flt-vector)))
-        (loop for image in images
-              for stripe upfrom 0
-              do (destructuring-bind (image &key omit-label-p sample-visible-p)
-                     image
-                   (declare (ignore omit-label-p sample-visible-p))
-                   (with-stripes ((stripe striped start))
-                     (clamp-array image nodes start)))))))
+(defun clamp-images (samples mat)
+  (assert (= (length samples) (mat-dimension mat 0)))
+  (map-concat #'copy! samples mat :key #'sample-image-array))
+
+(defun clamp-labels (samples mat)
+  (assert (= (length samples) (mat-dimension mat 0)))
+  (fill! 0 mat)
+  (let ((n-columns (mat-dimension mat 1))
+        (displacement (mat-displacement mat)))
+    (with-facets ((a (mat 'backing-array :direction :io :type flt-vector)))
+      (loop for sample in samples
+            for row upfrom 0
+            do (destructuring-bind (image &key omit-label-p sample-visible-p)
+                   sample
+                 (declare (ignore sample-visible-p))
+                 (when omit-label-p
+                   (setf (aref a (+ displacement
+                                    (* row n-columns)
+                                    (image-label image)))
+                         #.(flt 1))))))))
 
 
 ;;;; Logging
@@ -232,11 +225,11 @@
 
 (defclass mnist-rbm (rbm) ())
 
-(defmethod set-input (images (rbm mnist-rbm))
+(defmethod set-input (samples (rbm mnist-rbm))
   (let ((inputs (find 'inputs (visible-chunks rbm)
                       :key #'name)))
     (when inputs
-      (clamp-striped-nodes images inputs))))
+      (clamp-images samples (nodes inputs)))))
 
 (defclass mnist-rbm-trainer (mnist-base-trainer segmented-gd-trainer)
   ())
@@ -351,32 +344,11 @@
 
 (defclass mnist-bpn (bpn) ())
 
-(defmethod set-input (images (bpn mnist-bpn))
+(defmethod set-input (samples (bpn mnist-bpn))
   (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
-         (expectations (find-lump 'expectations bpn :errorp t))
-         (inputs-nodes (nodes inputs)))
-    (with-facets ((expectations-nodes ((nodes expectations) 'backing-array
-                                       :direction :output
-                                       :type flt-vector)))
-      (loop for image in images
-            for stripe upfrom 0
-            do (destructuring-bind (image &key omit-label-p sample-visible-p)
-                   image
-                 (assert omit-label-p)
-                 (assert (not sample-visible-p))
-                 (with-stripes ((stripe inputs inputs-start))
-                   (with-shape-and-displacement (inputs-nodes #.(* 28 28)
-                                                              inputs-start)
-                     (copy! (image-array image) inputs-nodes)))
-                 (with-stripes ((stripe expectations expectations-start
-                                        expectations-end))
-                   (locally (declare (optimize (speed 3)))
-                     (fill expectations-nodes #.(flt 0)
-                           :start expectations-start
-                           :end expectations-end))
-                   (setf (aref expectations-nodes
-                               (+ expectations-start (image-label image)))
-                         #.(flt 1))))))))
+         (expectations (find-lump 'expectations bpn :errorp t)))
+    (clamp-images samples (nodes inputs))
+    (clamp-labels samples (nodes expectations))))
 
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
@@ -542,23 +514,12 @@
 (defclass mnist-rbm/2 (mnist-rbm) ())
 (defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
 
-(defun clamp-labels (images chunk)
+(defun clamp-chunk-labels (samples chunk)
   (setf (indices-present chunk)
-        (if (and images (getf (rest (elt images 0)) :omit-label-p))
-            (make-array 0 :element-type 'index)
+        (if (and samples (getf (rest (elt samples 0)) :omit-label-p))
+            #.(make-array 0 :element-type 'index)
             nil))
-  (with-facets ((nodes ((nodes chunk) 'backing-array :direction :output
-                        :type flt-vector)))
-    (loop for image in images
-          for stripe upfrom 0
-          do (destructuring-bind (image &key omit-label-p sample-visible-p)
-                 image
-               (declare (ignore sample-visible-p))
-               (with-stripes ((stripe chunk start end))
-                 (unless omit-label-p
-                   (fill nodes (flt 0) :start start :end end)
-                   (setf (aref nodes (+ start (image-label image)))
-                         #.(flt 1))))))))
+  (clamp-labels samples (nodes chunk)))
 
 (defun strip-sample-visible (samples)
   (mapcar (lambda (sample)
@@ -568,15 +529,15 @@
               (list image :omit-label-p omit-label-p)))
           samples))
 
-(defmethod set-input (images (rbm mnist-rbm/2))
-  (call-next-method (strip-sample-visible images) rbm)
+(defmethod set-input (samples (rbm mnist-rbm/2))
+  (call-next-method (strip-sample-visible samples) rbm)
   ;; All samples have the same SAMPLE-VISIBLE-P, look at the first
   ;; only.
-  (when (and images (getf (rest (elt images 0)) :sample-visible-p))
+  (when (and samples (getf (rest (elt samples 0)) :sample-visible-p))
     (sample-visible rbm))
   (let ((label-chunk (find-chunk 'label rbm)))
     (when label-chunk
-      (clamp-labels images label-chunk))))
+      (clamp-chunk-labels samples label-chunk))))
 
 (defclass mnist-dbm (dbm)
   ((layers :initform (list
@@ -598,12 +559,12 @@
 (defun make-mnist-dbm ()
   (make-instance 'mnist-dbm :max-n-stripes 100))
 
-(defmethod set-input (images (dbm mnist-dbm))
-  (clamp-striped-nodes images (mgl-bm:find-chunk 'inputs dbm))
-  (when (and images (getf (rest (elt images 0)) :sample-visible-p))
+(defmethod set-input (samples (dbm mnist-dbm))
+  (clamp-images samples (nodes (mgl-bm:find-chunk 'inputs dbm)))
+  (when (and samples (getf (rest (elt samples 0)) :sample-visible-p))
     (sample-visible dbm))
   (let ((label-chunk (find-chunk 'label dbm :errorp t)))
-    (clamp-labels images label-chunk)))
+    (clamp-chunk-labels samples label-chunk)))
 
 (defclass mnist-dbm-trainer (mnist-base-trainer segmented-gd-trainer)
   ())
@@ -909,7 +870,7 @@
   (when class-weights
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) 100)
-  (let ((n (length *training-images*))
+  (let ((n (length training))
         (name-groups '(((:cloud (c0 f1))
                         (:cloud (inputs f1)))
                        ((:cloud (c1 f2))
