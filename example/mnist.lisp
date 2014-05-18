@@ -171,11 +171,6 @@
   *test-images*)
 
 
-(defvar *training*)
-(defvar *test*)
-
-
-
 ;;;; Sampling, clamping, utilities
 
 (defun make-sampler (images &key (max-n (length images)) omit-label-p
@@ -462,9 +457,8 @@
       (init-weights 'prediction-biases bpn 0.1)
       bpn)))
 
-(defun train-mnist/1 (&key (training *training*) (test *test*) load-dbn-p
-                      quick-run-p dropoutp dbn-var bpn-var
-                      dbn-filename bpn-filename)
+(defun train-mnist/1 (&key training test load-dbn-p quick-run-p dropoutp
+                      dbn-var bpn-var dbn-filename bpn-filename)
   (let ((dbn nil)
         (bpn nil))
     (cond (load-dbn-p
@@ -670,9 +664,8 @@
                                   inits))
       bpn)))
 
-(defun train-mnist/2 (&key (training *training*) (test *test*) load-dbn-p
-                      load-dbm-p dropoutp quick-run-p
-                      dbn-var dbm-var bpn-var
+(defun train-mnist/2 (&key training test load-dbn-p load-dbm-p dropoutp
+                      quick-run-p dbn-var dbm-var bpn-var
                       dbn-filename dbm-filename bpn-filename)
   (let ((dbn nil)
         (dbm nil)
@@ -1008,8 +1001,7 @@
           (setf (aref nodes i)
                 (flt (* stddev (gaussian-random-1)))))))))
 
-(defun train-mnist/3 (&key (training *training*) (test *test*) quick-run-p
-                      bpn-var bpn-filename)
+(defun train-mnist/3 (&key training test quick-run-p bpn-var bpn-filename)
   (let ((bpn nil))
     (setq* (bpn bpn-var) (build-rectified-mnist-bpn))
     (init-bpn-weights bpn :stddev 0.01)
@@ -1079,8 +1071,7 @@
                               :target expectations))
     (ce-error (->error :x predictions))))
 
-(defun train-mnist/4 (&key (training *training*) (test *test*) quick-run-p
-                      bpn-var bpn-filename)
+(defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
   (let ((bpn nil))
     (setq* (bpn bpn-var) (build-maxout-mnist-bpn))
     (init-bpn-weights bpn :stddev 0.01)
