@@ -2061,8 +2061,8 @@ of the batch. Batch size comes from the superclass."))
                (let ((sparsity (funcall (sparser learner) cloud chunk)))
                  (when sparsity
                    (push sparsity sparsities))))))
-      ;; Iterate over segments (not clouds) that happens to include the
-      ;; full clouds of a factored cloud.
+      ;; Iterate over segments (not clouds) which happens to include
+      ;; the full clouds of a factored cloud.
       (dolist (cloud (list-segments bm))
         (foo cloud (chunk1 cloud))
         (foo cloud (chunk2 cloud))))

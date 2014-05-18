@@ -35,7 +35,7 @@
     :documentation "Non-NIL iff all stripes are the same. If true, it
 effectively overrides both N-STRIPES and MAX-N-STRIPES and there is
 only one row in NODES and DERIVATIVES. Set up by the lump itself
-taking its inputs into account. Notably, ->WEIGHTS always have
+taking its inputs into account. Notably, ->WEIGHTs always have
 SAME-STRIPES-P T.")
    (nodes
     :initform nil :type mat :reader nodes
@@ -2637,7 +2637,7 @@ target_k if target sums to 1."))
                    ((:column)
                     (maybe-renormalize-columns mat l2-upper-bound sums))))))))
 
-;;; If the l2 norm of the incoming weight vector of the same unit is
+;;; If the l2 norm of the incoming weight vector of the a unit is
 ;;; larger than L2-UPPER-BOUND then renormalize it to L2-UPPER-BOUND.
 ;;; The list of ->ACTIVATIONS is assumed to be eventually fed to the
 ;;; same lump.

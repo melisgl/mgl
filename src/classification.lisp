@@ -311,4 +311,3 @@ example). Return NIL if OBJ contains no labels.")
 misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (chunks bm) :chunk-filter chunk-filter))
-

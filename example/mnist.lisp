@@ -566,8 +566,7 @@
     (log-msg "---------------------------------------------------~%")))
 
 (defclass mnist-dbm-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch
-                      :reader n-inputs-in-epoch)))
+  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)))
 
 (defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
@@ -667,12 +666,11 @@
                              (lambda (trainer)
                                (ceiling (1+ (n-inputs trainer))
                                         (* 20 (length training)))))
-              :learning-rate
-              (list (flt 0.05)
-                    (lambda (trainer)
-                      (/ (flt 0.05)
-                         (ceiling (1+ (n-inputs trainer))
-                                  (* 20 (length training))))))
+              :learning-rate (list (flt 0.05)
+                                   (lambda (trainer)
+                                     (/ (flt 0.05)
+                                        (ceiling (1+ (n-inputs trainer))
+                                                 (* 20 (length training))))))
               :decay (flt 0.001)
               :visible-sampling t)
              (unless quick-run-p
@@ -771,8 +769,7 @@
   ())
 
 (defclass mnist-bpn-gd-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch
-                      :reader n-inputs-in-epoch)
+  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)
    (n-epochs-to-reach-final-momentum
     :initarg :n-epochs-to-reach-final-momentum
     :reader n-epochs-to-reach-final-momentum)
@@ -792,8 +789,7 @@
   (let ((n-epochs-to-reach-final (n-epochs-to-reach-final-momentum trainer))
         (initial (flt 0.5))
         (final (flt 0.99))
-        (epoch (/ (n-inputs trainer)
-                  (n-inputs-in-epoch trainer))))
+        (epoch (/ (n-inputs trainer) (n-inputs-in-epoch trainer))))
     (if (< epoch n-epochs-to-reach-final)
         (let ((weight (/ epoch n-epochs-to-reach-final)))
           (+ (* initial (- 1 weight))
