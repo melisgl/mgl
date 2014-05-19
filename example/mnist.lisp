@@ -173,8 +173,9 @@
 
 ;;;; Sampling, clamping, utilities
 
-(defun make-sampler (images &key (max-n (length images)) omit-label-p
-                     sample-visible-p)
+(defun make-sampler (images &key (n-epochs 1)
+                     (max-n (* n-epochs (length images)))
+                     omit-label-p sample-visible-p)
   (make-instance 'counting-function-sampler
                  :max-n-samples max-n
                  :sampler (let ((g (make-random-generator images)))
@@ -308,7 +309,6 @@
                       (with-facets ((weights* (weights 'backing-array
                                                        :direction :output
                                                        :type flt-vector)))
-                        
                         (dotimes (i (mat-size weights))
                           (setf (aref weights* i)
                                 (flt (* (this stddev)
@@ -342,7 +342,7 @@
                                                      (this decay))
                                                  :batch-size 100)))))
           (train (make-sampler training
-                               :max-n (* n-epochs n)
+                               :n-epochs n-epochs
                                :sample-visible-p (this visible-sampling))
                  trainer
                  (make-instance 'mnist-rbm-cd-learner
@@ -401,9 +401,7 @@
                         (batch-size (min (length training) 1000))
                         (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
-  (train (make-sampler training
-                       :max-n (* n-softmax-epochs (length training))
-                       :omit-label-p t)
+  (train (make-sampler training :n-epochs n-softmax-epochs :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :training training
                         :test test
@@ -416,8 +414,7 @@
          (make-instance 'bp-learner :bpn bpn))
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler training
-                       :max-n (* (- n-epochs n-softmax-epochs)
-                                 (length training))
+                       :n-epochs (- n-epochs n-softmax-epochs)
                        :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
                         :training training
@@ -494,7 +491,8 @@
                             :n-softmax-epochs (if quick-run-p 1 5)
                             :n-epochs (if quick-run-p 1 37))
            (unless quick-run-p
-             (save-weights bpn-filename bpn))))))
+             (save-weights bpn-filename bpn))))
+    (values bpn dbn)))
 
 
 ;;;; Code for the DBN to DBM to BPN approach (paper [2]) and also for
@@ -608,7 +606,7 @@
 (defun train-mnist-dbm (dbm training test &key (n-epochs 500))
   (log-msg "Starting to train DBM.~%")
   (let ((n (length training)))
-    (train (make-sampler training :max-n (* n-epochs n) :sample-visible-p t)
+    (train (make-sampler training :n-epochs n-epochs :sample-visible-p t)
            (make-instance 'mnist-dbm-trainer
                           :training training
                           :test test
@@ -869,8 +867,7 @@
   (when class-weights
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) 100)
-  (let ((n (length training))
-        (name-groups '(((:cloud (c0 f1))
+  (let ((name-groups '(((:cloud (c0 f1))
                         (:cloud (inputs f1)))
                        ((:cloud (c1 f2))
                         (:cloud (f1 f2)))
@@ -901,9 +898,7 @@
       (unless (zerop n-softmax-epochs)
         (log-msg "Starting to train the softmax layer of BPN~%")
         (train
-         (make-sampler training
-                       :max-n (* n-softmax-epochs n)
-                       :omit-label-p t)
+         (make-sampler training :n-epochs n-softmax-epochs :omit-label-p t)
          (make-instance 'mnist-bpn-gd-trainer
                         :training training
                         :test test
@@ -931,9 +926,7 @@
       (unless (zerop n-epochs)
         (mgl-example-util:log-msg "Starting to train the whole BPN~%")
         (train
-         (make-sampler training
-                       :max-n (* n-epochs n)
-                       :omit-label-p t)
+         (make-sampler training :n-epochs n-epochs :omit-label-p t)
          (make-instance 'mnist-bpn-gd-trainer
                         :training training
                         :test test
