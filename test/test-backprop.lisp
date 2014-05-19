@@ -210,12 +210,8 @@
                    net)))))
 
 (defun init-lump (name bpn deviation)
-  (multiple-value-bind (array start end)
-      (segment-weights (find-lump name bpn :errorp t))
-    (with-facets ((array (array 'backing-array :direction :output
-                                :type flt-vector)))
-      (loop for i upfrom start below end
-            do (setf (aref array i) (flt (* deviation (gaussian-random-1))))))))
+  (gaussian-random! (segment-weights (find-lump name bpn :errorp t))
+                    :stddev deviation))
 
 (defun test-cross-entropy (&key cg (max-n-stripes 1))
   (let* ((net (build-bpn (:class 'test-bpn :max-n-stripes max-n-stripes)

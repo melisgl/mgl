@@ -305,14 +305,8 @@
                   (fill! (flt 0) (weights cloud))
                   (progn
                     (log-msg "init: ~A ~A~%" cloud (this stddev))
-                    (let ((weights (weights cloud)))
-                      (with-facets ((weights* (weights 'backing-array
-                                                       :direction :output
-                                                       :type flt-vector)))
-                        (dotimes (i (mat-size weights))
-                          (setf (aref weights* i)
-                                (flt (* (this stddev)
-                                        (gaussian-random-1)))))))))))))
+                    (gaussian-random! (weights cloud)
+                                      :stddev (this stddev))))))))
 
 (defun train-mnist-dbn (dbn training test &key n-epochs n-gibbs learning-rate
                         decay visible-sampling (start-level 0))
@@ -389,13 +383,8 @@
                        (bpn learner)))
   (log-msg "---------------------------------------------------~%"))
 
-(defun init-weights (name bpn deviation)
-  (multiple-value-bind (mat start end)
-      (segment-weights (find-lump name bpn :errorp t))
-    (with-facets ((array (mat 'backing-array :direction :output
-                              :type flt-vector)))
-      (loop for i upfrom start below end
-            do (setf (aref array i) (flt (* deviation (gaussian-random-1))))))))
+(defun init-bpn-lump-weights (name bpn stddev)
+  (gaussian-random! (nodes (find-lump name bpn :errorp t)) :stddev stddev))
 
 (defun train-mnist-bpn (bpn training test &key
                         (batch-size (min (length training) 1000))
@@ -450,8 +439,8 @@
     (log-msg "bpn inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
       (initialize-bpn-from-bm bpn dbn inits)
-      (init-weights 'prediction-weights bpn 0.1)
-      (init-weights 'prediction-biases bpn 0.1)
+      (init-bpn-lump-weights 'prediction-weights bpn 0.1)
+      (init-bpn-lump-weights 'prediction-biases bpn 0.1)
       bpn)))
 
 (defun train-mnist/1 (&key training test load-dbn-p quick-run-p dropoutp
@@ -988,11 +977,7 @@
 (defun init-bpn-weights (bpn &key stddev)
   (loop for lump across (lumps bpn) do
     (when (typep lump '->weight)
-      (with-facets ((nodes ((nodes lump) 'backing-array :direction :output
-                            :type flt-vector)))
-        (dotimes (i (array-total-size nodes))
-          (setf (aref nodes i)
-                (flt (* stddev (gaussian-random-1)))))))))
+      (gaussian-random! (nodes lump) :stddev stddev))))
 
 (defun train-mnist/3 (&key training test quick-run-p bpn-var bpn-filename)
   (let ((bpn nil))
