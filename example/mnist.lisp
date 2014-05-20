@@ -988,8 +988,11 @@
                         :l2-upper-bound (sqrt (flt 3.75)))
     (unless quick-run-p
       (save-weights bpn-filename bpn))))
+
 
-#|
+;;;; Globals for tracking progress of training and filenames
+
+;;;; MNIST/1
 
 (defvar *dbn/1*)
 (defvar *bpn/1*)
@@ -1003,24 +1006,11 @@
 (defparameter *mnist-1-dropout-bpn-filename*
   (merge-pathnames "mnist-1-dropout.bpn" *mnist-save-dir*))
 
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/1 :training (training-images) :test (test-images)
-                   :dbn-var '*dbn/1* :bpn-var '*bpn/1*
-                   :dbn-filename *mnist-1-dbn-filename*
-                   :bpn-filename *mnist-1-bpn-filename*)))
-
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/1 :training (training-images) :test (test-images)
-                   :load-dbn-p t :dropoutp t
-                   :dbn-var '*dbn/1* :bpn-var '*bpn/1*
-                   :dbn-filename *mnist-1-dbn-filename*
-                   :bpn-filename *mnist-1-dropout-bpn-filename*)))
-
 (defvar *dbn/2*)
 (defvar *dbm/2*)
 (defvar *bpn/2*)
+
+;;;; MNIST/2
 
 (defparameter *mnist-2-dbn-filename*
   (merge-pathnames "mnist-2.dbn" *mnist-save-dir*))
@@ -1034,43 +1024,84 @@
 (defparameter *mnist-2-dropout-bpn-filename*
   (merge-pathnames "mnist-2-dropout.bpn" *mnist-save-dir*))
 
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/2 :training (training-images) :test (test-images)
-                   :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
-                   :dbn-filename *mnist-2-dbn-filename*
-                   :dbm-filename *mnist-2-dbm-filename*
-                   :bpn-filename *mnist-2-bpn-filename*)))
-
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/2 :training (training-images) :test (test-images)
-                   :load-dbm-p t :dropoutp t
-                   :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
-                   :dbn-filename *mnist-2-dbn-filename*
-                   :dbm-filename *mnist-2-dbm-filename*
-                   :bpn-filename *mnist-2-dropout-bpn-filename*)))
+;;;; MNIST/3
 
 (defvar *bpn/3*)
 
 (defparameter *mnist-3-bpn-filename*
   (merge-pathnames "mnist-3.bpn" *mnist-save-dir*))
 
-
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/3 :training (training-images) :test (test-images)
-                   :bpn-var '*bpn/3* :bpn-filename *mnist-3-bpn-filename*)))
+;;;; MNIST/4
 
 (defvar *bpn/4*)
 
 (defparameter *mnist-4-bpn-filename*
   (merge-pathnames "mnist-4.bpn" *mnist-save-dir*))
 
-(with-cuda ()
-  (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (train-mnist/4 :training (training-images) :test (test-images)
-                   :bpn-var '*bpn/4* :bpn-filename *mnist-4-bpn-filename*)))
+(defun run-quick-test ()
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/1 :training (training-images) :test (test-images)
+                     :quick-run-p t)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/2 :training (training-images) :test (test-images)
+                     :quick-run-p t)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/2 :training (training-images) :test (test-images)
+                     :dropoutp t
+                     :quick-run-p t)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/3 :training (training-images) :test (test-images)
+                     :quick-run-p t)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/4 :training (training-images) :test (test-images)
+                     :quick-run-p t))))
+
+#|
+
+(run-quick-test)
+
+(progn
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/1 :training (training-images) :test (test-images)
+                     :dbn-var '*dbn/1* :bpn-var '*bpn/1*
+                     :dbn-filename *mnist-1-dbn-filename*
+                     :bpn-filename *mnist-1-bpn-filename*)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/1 :training (training-images) :test (test-images)
+                     :load-dbn-p t :dropoutp t
+                     :dbn-var '*dbn/1* :bpn-var '*bpn/1*
+                     :dbn-filename *mnist-1-dbn-filename*
+                     :bpn-filename *mnist-1-dropout-bpn-filename*)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/2 :training (training-images) :test (test-images)
+                     :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
+                     :dbn-filename *mnist-2-dbn-filename*
+                     :dbm-filename *mnist-2-dbm-filename*
+                     :bpn-filename *mnist-2-bpn-filename*)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/2 :training (training-images) :test (test-images)
+                     :load-dbm-p t :dropoutp t
+                     :dbn-var '*dbn/2* :dbm-var '*dbm/2* :bpn-var '*bpn/2*
+                     :dbn-filename *mnist-2-dbn-filename*
+                     :dbm-filename *mnist-2-dbm-filename*
+                     :bpn-filename *mnist-2-dropout-bpn-filename*)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/3 :training (training-images) :test (test-images)
+                     :bpn-var '*bpn/3* :bpn-filename *mnist-3-bpn-filename*)))
+  (with-cuda ()
+    (let ((*random-state* (sb-ext:seed-random-state 983274)))
+      (train-mnist/4 :training (training-images) :test (test-images)
+                     :bpn-var '*bpn/4* :bpn-filename *mnist-4-bpn-filename*))))
 
 (require :sb-sprof)
 
