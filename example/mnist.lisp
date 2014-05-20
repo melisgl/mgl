@@ -807,12 +807,6 @@
                    (length (training trainer)))))
          (- 1 (expt 0.5 n)))))
 
-(defun find-activation-lump-for-weight (->weight bpn)
-  (loop for lump across (lumps bpn) do
-    (when (and (typep lump '->activation)
-               (eq (mgl-bp::weights lump) ->weight))
-      (return lump))))
-
 (defun make-grouped-segmenter (name-groups segmenter)
   (let ((group-to-trainer (make-hash-table :test #'equal)))
     (lambda (segment)
@@ -824,19 +818,6 @@
         (or (gethash group group-to-trainer)
             (setf (gethash group group-to-trainer)
                   (funcall segmenter segment)))))))
-
-(defun arrange-for-renormalize-activations (bpn trainer l2-upper-bound)
-  (push (let ((->activations nil)
-              (firstp t))
-          (lambda ()
-            (when firstp
-              (setq ->activations
-                    (loop for lump in (segments trainer)
-                          collect (or (find-activation-lump-for-weight lump bpn)
-                                      lump)))
-              (setq firstp nil))
-            (renormalize-activations ->activations l2-upper-bound)))
-        (after-update-hook trainer)))
 
 (defun set-dropout-and-rescale-weights (lump dropout bpn)
   (assert (null (dropout lump)))
@@ -877,7 +858,7 @@
                              :learning-rate-decay (flt learning-rate-decay)
                              :batch-size 100)))
                (when l2-upper-bound
-                 (arrange-for-renormalize-activations
+                 (arrange-for-renormalizing-activations
                   bpn trainer l2-upper-bound))
                trainer))
            (make-segmenter (fn)
