@@ -898,7 +898,7 @@
                                   (n-units-3 1200))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
     (g1813 (->input :name '(:chunk inputs) :size 784))
-    (g1812 (->constant :name '(:chunk c0) :size 1 :default-value (flt 1.0)))
+    (g1812 (->constant :name '(:chunk c0)))
     (g1817 (->weight :name '(:cloud (inputs f1)) :size (* 784 n-units-1)))
     (g1818
      (->activation :name '(:cloud (inputs f1) :linear) :size n-units-1
@@ -910,7 +910,7 @@
     (g1816 (->+ :name '(:chunk f1 :activation) :args (list g1818 g1820)))
     (g1811* (->rectified :name '(:chunk f1*) :x g1816))
     (g1811 (->dropout :name '(:chunk f1) :x g1811* :dropout (flt 0.5)))
-    (g1810 (->constant :name '(:chunk c1) :size 1 :default-value (flt 1.0)))
+    (g1810 (->constant :name '(:chunk c1)))
     (g1823 (->weight :name '(:cloud (f1 f2)) :size (* n-units-1 n-units-2)))
     (g1824
      (->activation :name '(:cloud (f1 f2) :linear) :size n-units-2
@@ -922,7 +922,7 @@
     (g1822 (->+ :name '(:chunk f2 :activation) :args (list g1824 g1826)))
     (g1809* (->rectified :name '(:chunk f2*) :x g1822))
     (g1809 (->dropout  :name '(:chunk f2) :x g1809* :dropout (flt 0.5)))
-    (g1807 (->constant :name '(:chunk c2) :size 1 :default-value (flt 1.0)))
+    (g1807 (->constant :name '(:chunk c2)))
     (g1829 (->weight :name '(:cloud (f2 f3)) :size (* n-units-2 n-units-3)))
     (g1830
      (->activation :name '(:cloud (f2 f3) :linear) :size n-units-3
@@ -971,7 +971,7 @@
                                #+nil (n-units-3 1200) (group-size 5))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
     (g1813 (->input :name '(:chunk inputs) :size 784))
-    (g1812 (->constant :name '(:chunk c0) :size 1 :default-value (flt 1.0)))
+    (g1812 (->constant :name '(:chunk c0)))
     (g1817 (->weight :name '(:cloud (inputs f1)) :size (* 784 n-units-1)))
     (g1818
      (->activation :name '(:cloud (inputs f1) :linear) :size n-units-1
@@ -983,7 +983,7 @@
     (g1816 (->+ :name '(:chunk f1 :activation) :args (list g1818 g1820)))
     (g1811* (->max :name '(:chunk f1*) :x g1816 :group-size group-size))
     (g1811 (->dropout :name '(:chunk f1) :x g1811* :dropout (flt 0.5)))
-    (g1810 (->constant :name '(:chunk c1) :size 1 :default-value (flt 1.0)))
+    (g1810 (->constant :name '(:chunk c1)))
     (g1823 (->weight :name '(:cloud (f1 f2))
                      :size (* (/ n-units-1 group-size) n-units-2)))
     (g1824
@@ -996,7 +996,7 @@
     (g1822 (->+ :name '(:chunk f2 :activation) :args (list g1824 g1826)))
     (g1809* (->max :name '(:chunk f2*) :x g1822 :group-size group-size))
     (g1809 (->dropout  :name '(:chunk f2) :x g1809* :dropout (flt 0.5)))
-    ;; (g1807 (->constant :name '(:chunk c2) :size 1 :default-value (flt 1.0)))
+    ;; (g1807 (->constant :name '(:chunk c2)
     ;; (g1829 (->weight :name '(:cloud (f2 f3))
     ;;                  :size (* (/ n-units-2 group-size) n-units-3)))
     ;; (g1830

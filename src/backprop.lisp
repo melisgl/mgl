@@ -247,6 +247,9 @@ normally. If FROM-BPN is NIL, then weights are copied."
 (deflump ->constant (data-lump)
   ((default-value :initform #.(flt 1))))
 
+(defmethod default-size ((lump ->constant))
+  1)
+
 (defmethod transfer-lump ((lump data-lump)))
 
 (defmethod derive-lump ((lump data-lump)))
