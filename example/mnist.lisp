@@ -386,9 +386,9 @@
 (defun init-bpn-lump-weights (name bpn stddev)
   (gaussian-random! (nodes (find-lump name bpn :errorp t)) :stddev stddev))
 
-(defun train-mnist-bpn (bpn training test &key
-                        (batch-size (min (length training) 1000))
-                        (n-softmax-epochs 5) n-epochs)
+(defun train-mnist-bpn-cg (bpn training test &key
+                           (batch-size (min (length training) 1000))
+                           (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
   (train (make-sampler training :n-epochs n-softmax-epochs :omit-label-p t)
          (make-instance 'mnist-cg-bp-trainer
@@ -476,9 +476,9 @@
            (unless quick-run-p
              (save-weights bpn-filename bpn)))
           (t
-           (train-mnist-bpn bpn training test
-                            :n-softmax-epochs (if quick-run-p 1 5)
-                            :n-epochs (if quick-run-p 1 37))
+           (train-mnist-bpn-cg bpn training test
+                               :n-softmax-epochs (if quick-run-p 1 5)
+                               :n-epochs (if quick-run-p 1 37))
            (unless quick-run-p
              (save-weights bpn-filename bpn))))
     (values bpn dbn)))
@@ -735,9 +735,9 @@
              (unless quick-run-p
                (save-weights bpn-filename bpn)))
             (t
-             (train-mnist-bpn bpn training test :batch-size 10000
-                              :n-softmax-epochs (if quick-run-p 1 5)
-                              :n-epochs (if quick-run-p 1 100))
+             (train-mnist-bpn-cg bpn training test :batch-size 10000
+                                 :n-softmax-epochs (if quick-run-p 1 5)
+                                 :n-epochs (if quick-run-p 1 100))
              (unless quick-run-p
                (save-weights bpn-filename bpn)))))))
 
