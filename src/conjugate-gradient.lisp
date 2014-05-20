@@ -433,15 +433,17 @@ add decay on a per-segment basis."))
             ;; Because d(regularizer*x^2)/dx = 2*penalty*x hence
             ;; regularizer=decay/2.
             (let* ((decay (* (length batch) decay))
-                   (regularizer (/ decay 2)))
-              (with-segment-weights ((weights start end) segment)
-                (with-facets ((weights* (weights 'backing-array
-                                                 :direction :input
-                                                 :type flt-vector)))
-                  (declare (optimize (speed 3)))
-                  (loop for i upfrom start below end
-                        for j upfrom segment-start
-                        do (let ((x (aref weights* i)))
-                             (incf cost (* regularizer x x))
-                             (incf (aref accumulator* j) (* decay x)))))))))))
+                   (regularizer (/ decay 2))
+                   (weights (segment-weights segment))
+                   (start (mat-displacement weights))
+                   (end (+ start (mat-size weights))))
+              (with-facets ((weights* (weights 'backing-array
+                                               :direction :input
+                                               :type flt-vector)))
+                (declare (optimize (speed 3)))
+                (loop for i upfrom start below end
+                      for j upfrom segment-start
+                      do (let ((x (aref weights* i)))
+                           (incf cost (* regularizer x x))
+                           (incf (aref accumulator* j) (* decay x))))))))))
     cost))

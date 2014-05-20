@@ -175,11 +175,10 @@
    #:start-indices
    #:do-segment-set
    #:segment-set-size
-   #:segment-set->weights
-   #:segment-set<-weights
    #:segment-set->mat
    #:segment-set<-mat
-   #:map-segment-set-and-mat
+   #:segment-set->weights
+   #:segment-set<-weights
    ;; Common generic functions
    #:batch-size
    #:cost

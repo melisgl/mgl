@@ -303,28 +303,18 @@
                 (sse (->sum-squared-error :x expectations :y activations))
                 (my-error (->error :x sse)))))
     ;; Set weights
-    (multiple-value-bind (nodes bias-start)
-        (segment-weights (find-lump 'biases net))
-      (with-facets ((nodes (nodes 'backing-array :direction :output
-                                  :type flt-vector)))
-        (setf (aref nodes (+ bias-start 0)) (flt 2))
-        (setf (aref nodes (+ bias-start 1)) (flt 3))))
-    (multiple-value-bind (nodes weight-start weight-end)
-        (segment-weights (find-lump 'weights net))
-      (with-facets ((nodes (nodes 'backing-array :direction :output
-                                  :type flt-vector)))
-        (if transposep
-            (replace nodes (mapcar #'flt '(0 1 2 3 4 5))
-                     :start1 weight-start :end1 weight-end)
-            (replace nodes (mapcar #'flt '(0 2 4 1 3 5))
-                     :start1 weight-start :end1 weight-end))))
+    (let ((nodes (segment-weights (find-lump 'biases net))))
+      (setf (row-major-mref nodes 0) (flt 2))
+      (setf (row-major-mref nodes 1) (flt 3)))
+    (let ((inputs (segment-weights (find-lump 'weights net))))
+      (with-shape-and-displacement (inputs (mat-size inputs))
+        (replace! inputs (if transposep
+                             (mapcar #'flt '(0 1 2 3 4 5))
+                             (mapcar #'flt '(0 2 4 1 3 5))))))
     ;; Clamp input
-    (multiple-value-bind (nodes start)
-        (segment-weights (find-lump 'inputs net))
-      (with-facets ((nodes (nodes 'backing-array :direction :output
-                                  :type flt-vector)))
-        (setf (aref nodes start) (flt -1))
-        (setf (aref nodes (1+ start)) (flt -4))))
+    (let ((nodes (segment-weights (find-lump 'inputs net))))
+      (setf (row-major-mref nodes 0) (flt -1))
+      (setf (row-major-mref nodes 1) (flt -4)))
     ;; Check foward pass
     (forward-bpn net)
     (assert (every #'= (bpn-nodes net 0)

@@ -914,8 +914,7 @@ weights * visible. Visible = visible + weights^T * hidden.")))
   (funcall fn cloud))
 
 (defmethod segment-weights ((cloud full-cloud))
-  (let ((weights (weights cloud)))
-    (values weights 0 (mat-size weights))))
+  (weights cloud))
 
 (defmethod map-segment-runs (fn (cloud full-cloud))
   (do-cloud-runs ((start end) cloud)

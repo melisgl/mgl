@@ -87,9 +87,8 @@
     (maybe-update-weights svrg n)))
 
 (defun add-segment-set-to-weights (alpha segment-set weights)
-  (map-segment-set-and-mat (lambda (x y)
-                             (axpy! alpha x y))
-                           segment-set weights))
+  (map-concat (lambda (x y) (axpy! alpha x y))
+              segment-set weights :key #'segment-weights))
 
 (defun update-lagging-weights (lag svrg)
   (scal! lag (lagging-weights svrg))

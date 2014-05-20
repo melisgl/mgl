@@ -633,8 +633,7 @@ being built. Example:
        (lumps bpn)))
 
 (defmethod segment-weights ((lump lump))
-  (let ((nodes (nodes lump)))
-    (values nodes 0 (mat-size nodes))))
+  (nodes lump))
 
 (defun first-trained-weight-lump (trainer learner)
   "Much time can be wasted computing derivatives of non-trained weight

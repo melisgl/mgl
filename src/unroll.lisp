@@ -362,14 +362,12 @@ the backprop network."
   (:method (bpn (cloud full-cloud) args)
     (destructuring-bind (&key weight-name) args
       (let* ((lump (find-lump weight-name bpn :errorp t))
-             (weights (weights cloud)))
-        (multiple-value-bind (nodes start end)
-            (segment-weights lump)
-          (unless (= (mat-size weights) (- end start))
-            (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
-                   lump cloud))
-          (with-shape-and-displacement (nodes (- end start) start)
-            (copy! (weights cloud) nodes))))))
+             (weights (weights cloud))
+             (nodes (segment-weights lump)))
+        (unless (= (mat-size weights) (mat-size nodes))
+          (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
+                 lump cloud))
+        (copy! (weights cloud) nodes))))
   (:method (bpn (cloud factored-cloud) args)
     (destructuring-bind (&key weight-b-name weight-a-name) args
       (initialize-from-cloud bpn (cloud-b cloud)
