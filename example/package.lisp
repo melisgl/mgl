@@ -1,32 +1,38 @@
 (cl:defpackage :mgl-example-util
   (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd #:mgl-bm
         #:mgl-bp)
-  (:export #:*example-dir*
-           #:time->string
-           #:log-msg
-           ;; Loggign trainer
-           #:logging-trainer
-           #:log-training-error
-           #:log-training-period
-           #:log-test-error
-           #:log-test-period
-           ;; Base trainer
-           #:base-trainer
-           #:training-counters-and-measurers
-           #:prepend-name-to-counters
-           ;; Cross entropy softmax classification
-           #:softmax-label-chunk*
-           #:cesc-trainer
-           #:log-dbn-cesc-accuracy
-           #:log-dbm-cesc-accuracy
-           #:bpn-cesc-error
-           #:tack-cross-entropy-softmax-error-on
-           ;; Misc
-           #:load-weights
-           #:save-weights
-           ;; BPN setup
-           #:arrange-for-renormalizing-activations
-           #:set-dropout-and-rescale-activation-weights))
+  (:export
+   ;; Repeatable experiments
+   #:*experiment-random-seed*
+   #:run-experiment
+   #:with-experiment
+   ;; Logging
+   #:*example-dir*
+   #:time->string
+   #:log-msg
+   ;; Loggign trainer
+   #:logging-trainer
+   #:log-training-error
+   #:log-training-period
+   #:log-test-error
+   #:log-test-period
+   ;; Base trainer
+   #:base-trainer
+   #:training-counters-and-measurers
+   #:prepend-name-to-counters
+   ;; Cross entropy softmax classification
+   #:softmax-label-chunk*
+   #:cesc-trainer
+   #:log-dbn-cesc-accuracy
+   #:log-dbm-cesc-accuracy
+   #:bpn-cesc-error
+   #:tack-cross-entropy-softmax-error-on
+   ;; Misc
+   #:load-weights
+   #:save-weights
+   ;; BPN setup
+   #:arrange-for-renormalizing-activations
+   #:set-dropout-and-rescale-activation-weights))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp

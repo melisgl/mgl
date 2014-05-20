@@ -1,5 +1,27 @@
 (in-package :mgl-example-util)
 
+(defun call-repeatably (seed fn)
+  (with-cuda (:random-seed seed)
+    (let ((*random-state*
+            #+sbcl (sb-ext:seed-random-state seed)
+            #+allegro (make-random-state t seed)
+            #-(or sbcl allegro) *random-state))
+      (funcall fn))))
+
+(defmacro repeatably ((seed) &body body)
+  `(call-repeatably ,seed (lambda () ,@body)))
+
+(defvar *experiment-random-seed* 1234)
+
+(defun run-experiment (fn)
+  (repeatably (*experiment-random-seed*)
+    (funcall fn)))
+
+(defmacro with-experiment (() &body body)
+  `(repeatably (*experiment-random-seed*)
+     ,@body))
+
+
 (defun time->string (&optional (time (get-universal-time)))
   (destructuring-bind (second minute hour date month year)
       (subseq (multiple-value-list (decode-universal-time time)) 0 6)
