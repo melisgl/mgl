@@ -278,33 +278,6 @@
                       (make-bpn-cesc-counters-and-measurers)))
 
 
-;;;; Unrolling support for CESC-TRAINER
-
-(defun tack-cross-entropy-softmax-error-on (n-classes lump-name
-                                            &key (prefix '||))
-  (flet ((foo (symbol)
-           (intern (format nil "~A~A" prefix (symbol-name symbol))
-                   (symbol-package prefix))))
-    `((,(foo 'expectations) (->input :size ,n-classes))
-      (,(foo 'prediction-weights) (->weight
-                                   :size (* (size (lump ',lump-name))
-                                            ,n-classes)))
-      (,(foo 'prediction-biases) (->weight :size ,n-classes))
-      (,(foo 'prediction-activations0)
-       (->activation :weights ,(foo 'prediction-weights)
-                     :x (lump ',lump-name)
-                     :transpose-weights-p t))
-      (,(foo 'prediction-activations)
-       (->+ :args (list ,(foo 'prediction-activations0)
-                        ,(foo 'prediction-biases))))
-      (,(foo 'predictions)
-       (->cross-entropy-softmax
-        :group-size ,n-classes
-        :x ,(foo 'prediction-activations)
-        :target ,(foo 'expectations)))
-      (,(foo 'ce-error) (->error :x ,(foo 'predictions))))))
-
-
 ;;;; Utilities
 
 (defun load-weights (filename obj)

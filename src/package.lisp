@@ -421,6 +421,7 @@ Networks (DBN)."))
    #:group-size
    #:->activation
    #:transpose-weights-p
+   #:add-activations
    #:->error
    #:importance
    #:cost
@@ -475,6 +476,7 @@ Networks (DBN)."))
    #:softmax
    #:target
    #:class-weights
+   #:add-cross-entropy-softmax
    ;; Utilities
    #:collect-bpn-errors
    #:renormalize-activations)

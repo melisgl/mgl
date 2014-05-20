@@ -863,6 +863,23 @@ stored in row major order. N is the size of this lump. If
 TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
 computed."))
 
+(defun add-activations (&key name size inputs (add-bias-p t)
+                        (bpn *bpn-being-built*))
+  (when (or add-bias-p inputs)
+    (let ((*bpn-being-built* bpn)
+          (activation-lumps ()))
+      (when add-bias-p
+        (let ((w (->weight :name (list :bias name) :size size)))
+          (push w activation-lumps)))
+      (dolist (input inputs)
+        (let* ((input (->lump bpn input))
+               (name (list (name input) name))
+               (w (->weight :name name :size (* size (size input))))
+               (a (->activation :name (list name :activation)
+                                :x input :weights w)))
+          (push a activation-lumps)))
+      (->+ :name (list name :activation) :args (reverse activation-lumps)))))
+
 (defmethod initialize-instance :after ((lump ->activation) &key
                                        &allow-other-keys)
   (assert (= (* (size lump) (size (x lump)))
@@ -2230,6 +2247,27 @@ In the derive phase it computes the cross entropy error of the
 normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
 target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
 target_k if target sums to 1."))
+
+(defun add-cross-entropy-softmax (&key predictions-name expectations-name
+                                  (error-name (list predictions-name :error))
+                                  (add-expectations t)
+                                  size inputs (add-bias-p t)
+                                  (bpn *bpn-being-built*)
+                                  (add-error-p t))
+  (let* ((*bpn-being-built* bpn)
+         (activations (add-activations :name predictions-name
+                                       :size size :inputs inputs
+                                       :add-bias-p add-bias-p))
+         (expectations (if add-expectations
+                           (->input :name expectations-name :size size)
+                           (find-lump expectations-name bpn :errorp t)))
+         (predictions (->cross-entropy-softmax :name predictions-name
+                                               :group-size size
+                                               :x activations
+                                               :target expectations)))
+    (when add-error-p
+      (->error :name error-name :x predictions))
+    (values predictions expectations)))
 
 (defmethod initialize-instance :after ((lump ->cross-entropy-softmax)
                                        &key &allow-other-keys)

@@ -351,22 +351,36 @@
 (defclass mnist-bpn (bpn) ())
 
 (defmethod set-input (samples (bpn mnist-bpn))
-  (let* ((inputs (find-lump (chunk-lump-name 'inputs nil) bpn :errorp t))
+  (let* ((inputs (or (find-lump (chunk-lump-name 'inputs nil) bpn)
+                     (find-lump 'inputs bpn)))
          (expectations (find-lump 'expectations bpn :errorp t)))
     (clamp-images samples (nodes inputs))
     (clamp-labels samples (nodes expectations))))
+
+(defun tack-cross-entropy-softmax-error-on (bpn inputs)
+  (add-cross-entropy-softmax :predictions-name 'predictions
+                             :expectations-name 'expectations
+                             :size 10
+                             :inputs inputs
+                             :bpn bpn))
+
+(defun prediction-weight-p (lump)
+  (let ((name (name lump)))
+    (and (listp name)
+         (= 2 (length name))
+         (eq 'predictions (second name)))))
 
 (defun make-bpn (defs chunk-name &key class initargs)
   (let ((bpn-def `(build-bpn (:class ',class
                               :max-n-stripes 1000
                               :initargs ',initargs)
-                    ,@defs
-                    ,@(tack-cross-entropy-softmax-error-on
-                       10
-                       (chunk-lump-name chunk-name nil)
-                       :prefix '||))))
+                    ,@defs)))
     (log-msg "bpn def:~%~S~%" bpn-def)
-    (eval bpn-def)))
+    (let* ((bpn (eval bpn-def))
+           (name (chunk-lump-name chunk-name nil))
+           (lump (find-lump name bpn)))
+      (tack-cross-entropy-softmax-error-on bpn (list lump))
+      bpn)))
 
 
 ;;;; BPN training
@@ -396,10 +410,7 @@
                         :test test
                         :cg-args (list :max-n-line-searches 3)
                         :batch-size batch-size
-                        :segment-filter
-                        (lambda (lump)
-                          (or (eq (name lump) 'prediction-biases)
-                              (eq (name lump) 'prediction-weights))))
+                        :segment-filter #'prediction-weight-p)
          (make-instance 'bp-learner :bpn bpn))
   (log-msg "Starting to train the whole BPN~%")
   (train (make-sampler training
@@ -439,8 +450,10 @@
     (log-msg "bpn inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
       (initialize-bpn-from-bm bpn dbn inits)
-      (init-bpn-lump-weights 'prediction-weights bpn 0.1)
-      (init-bpn-lump-weights 'prediction-biases bpn 0.1)
+      (map nil (lambda (lump)
+                 (when (prediction-weight-p lump)
+                   (init-bpn-lump-weights (name lump) bpn 0.1)))
+           (lumps bpn))
       bpn)))
 
 (defun train-mnist/1 (&key training test load-dbn-p quick-run-p dropoutp
@@ -638,14 +651,21 @@
   (multiple-value-bind (defs inits)
       (unroll-dbm dbm :chunks (remove 'label (chunks dbm) :key #'name))
     (log-msg "inits:~%~S~%" inits)
-    (let ((bpn (make-bpn defs 'f2 :class 'mnist-bpn/2 :initargs initargs)))
+    (let ((bpn (make-bpn defs 'f2 :class 'mnist-bpn/2 :initargs initargs))
+          (name (chunk-lump-name 'f2 nil)))
+      ;; In the DBM, the label is computed top-down so make sure its
+      ;; weights we'll copy to the BPN will be transposed.
+      (setf (slot-value (find-lump `((,name predictions) :activation) bpn
+                                   :errorp t)
+                        'mgl-bp::transpose-weights-p)
+            t)
       (initialize-bpn-from-bm bpn dbm
                               (if use-label-weights
                                   (list*
                                    '(:cloud-name (label c2)
-                                     :weight-name prediction-biases)
+                                     :weight-name (:bias predictions))
                                    '(:cloud-name (label f2)
-                                     :weight-name prediction-weights)
+                                     :weight-name ((:chunk f2) predictions))
                                    inits)
                                   inits))
       bpn)))
@@ -808,9 +828,9 @@
     (lambda (segment)
       (let* ((name (name segment))
              (group (find-if (lambda (names)
-                               (member name names :test #'equal))
+                               (member name names :test #'name=))
                              name-groups)))
-        (assert group)
+        (assert group () "Can't find group for ~S." name)
         (or (gethash group group-to-trainer)
             (setf (gethash group group-to-trainer)
                   (funcall segmenter segment)))))))
@@ -823,13 +843,23 @@
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) 100)
   (let ((name-groups '(((:cloud (c0 f1))
-                        (:cloud (inputs f1)))
+                        (:cloud (inputs f1))
+                        (:bias f1)
+                        (inputs f1))
                        ((:cloud (c1 f2))
-                        (:cloud (f1 f2)))
+                        (:cloud (f1 f2))
+                        (:bias f2)
+                        (f1 f2))
                        ((:cloud (c2 f3))
-                        (:cloud (f2 f3)))
-                       (prediction-biases
-                        prediction-weights))))
+                        (:cloud (f2 f3))
+                        (:bias f3)
+                        (f2 f3))
+                       ;; for mnist/3
+                       ((:bias predictions)
+                        (f3 predictions))
+                       ;; for mnist/4
+                       ((:bias predictions)
+                        (f2 predictions)))))
     (flet ((make-trainer (lump &key softmaxp)
              (declare (ignore lump))
              (let ((trainer (make-instance
@@ -860,8 +890,7 @@
                         :segmenter
                         (make-segmenter
                          (lambda (lump)
-                           (when (or (eq (name lump) 'prediction-biases)
-                                     (eq (name lump) 'prediction-weights))
+                           (when (prediction-weight-p lump)
                              (make-trainer lump :softmaxp t)))))
          (make-instance 'bp-learner :bpn bpn)))
       (map nil (lambda (lump)
@@ -873,7 +902,9 @@
                         lump (flt 0.5) bpn)
                        (setf (slot-value lump 'dropout) (flt 0.5))))
                  (when (and (typep lump '->input)
-                            (name= (name lump) '(:chunk inputs)))
+                            (member (name lump) '((:chunk inputs)
+                                                  inputs)
+                                    :test #'name=))
                    (log-msg "dropout ~A ~A~%" lump 0.2)
                    (if rescale-on-dropout-p
                        (set-dropout-and-rescale-activation-weights
@@ -893,54 +924,21 @@
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (g1813 (->input :name '(:chunk inputs) :size 784))
-    (g1812 (->constant :name '(:chunk c0)))
-    (g1817 (->weight :name '(:cloud (inputs f1)) :size (* 784 n-units-1)))
-    (g1818
-     (->activation :name '(:cloud (inputs f1) :linear) :size n-units-1
-                   :weights g1817 :x g1813))
-    (g1819 (->weight :name '(:cloud (c0 f1)) :size n-units-1))
-    (g1820
-     (->activation :name '(:cloud (c0 f1) :linear) :size n-units-1
-                   :weights g1819 :x g1812))
-    (g1816 (->+ :name '(:chunk f1 :activation) :args (list g1818 g1820)))
-    (g1811* (->rectified :name '(:chunk f1*) :x g1816))
-    (g1811 (->dropout :name '(:chunk f1) :x g1811* :dropout (flt 0.5)))
-    (g1810 (->constant :name '(:chunk c1)))
-    (g1823 (->weight :name '(:cloud (f1 f2)) :size (* n-units-1 n-units-2)))
-    (g1824
-     (->activation :name '(:cloud (f1 f2) :linear) :size n-units-2
-                   :weights g1823 :x g1811))
-    (g1825 (->weight :name '(:cloud (c1 f2)) :size n-units-2))
-    (g1826
-     (->activation :name '(:cloud (c1 f2) :linear) :size n-units-2
-                   :weights g1825 :x g1810))
-    (g1822 (->+ :name '(:chunk f2 :activation) :args (list g1824 g1826)))
-    (g1809* (->rectified :name '(:chunk f2*) :x g1822))
-    (g1809 (->dropout  :name '(:chunk f2) :x g1809* :dropout (flt 0.5)))
-    (g1807 (->constant :name '(:chunk c2)))
-    (g1829 (->weight :name '(:cloud (f2 f3)) :size (* n-units-2 n-units-3)))
-    (g1830
-     (->activation :name '(:cloud (f2 f3) :linear) :size n-units-3
-                   :weights g1829 :x g1809))
-    (g1831 (->weight :name '(:cloud (c2 f3)) :size n-units-3))
-    (g1832
-     (->activation :name '(:cloud (c2 f3) :linear) :size n-units-3
-                   :weights g1831 :x g1807))
-    (g1828 (->+ :name '(:chunk f3 :activation) :args (list g1830 g1832)))
-    (g1808* (->rectified :name '(:chunk f3*) :x g1828))
-    (g1808 (->dropout :name '(:chunk f3) :x g1808* :dropout (flt 0.5)))
-    (expectations (->input :size 10))
-    (prediction-weights (->weight :size (* (size (lump '(:chunk f3))) 10)))
-    (prediction-biases (->weight :size 10))
-    (prediction-activations0
-     (->activation :weights prediction-weights :x (lump '(:chunk f3))))
-    (prediction-activations
-     (->+ :args (list prediction-activations0 prediction-biases)))
-    (predictions
-     (->cross-entropy-softmax :group-size 10 :x prediction-activations
-                              :target expectations))
-    (ce-error (->error :x predictions))))
+    (inputs (->input :name 'inputs :size 784))
+    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
+                                     :size n-units-1))
+    (f1* (->rectified :x f1-activations))
+    (f1 (->dropout :x f1*))
+    (f2-activations (add-activations :name 'f2 :inputs (list f1)
+                                     :size n-units-2))
+    (f2* (->rectified :x f2-activations))
+    (f2 (->dropout :x f2*))
+    (f3-activations (add-activations :name 'f3 :inputs (list f2)
+                                     :size n-units-3))
+    (f3* (->rectified :x f3-activations))
+    (f3 (->dropout :x f3*))
+    (predictions (tack-cross-entropy-softmax-error-on
+                  mgl-bp::*bpn-being-built* (list f3)))))
 
 (defun init-bpn-weights (bpn &key stddev)
   (loop for lump across (lumps bpn) do
@@ -964,58 +962,19 @@
 ;;;; Maxout
 
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
-                               #+nil (n-units-3 1200) (group-size 5))
+                               (group-size 5))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (g1813 (->input :name '(:chunk inputs) :size 784))
-    (g1812 (->constant :name '(:chunk c0)))
-    (g1817 (->weight :name '(:cloud (inputs f1)) :size (* 784 n-units-1)))
-    (g1818
-     (->activation :name '(:cloud (inputs f1) :linear) :size n-units-1
-                   :weights g1817 :x g1813))
-    (g1819 (->weight :name '(:cloud (c0 f1)) :size n-units-1))
-    (g1820
-     (->activation :name '(:cloud (c0 f1) :linear) :size n-units-1
-                   :weights g1819 :x g1812))
-    (g1816 (->+ :name '(:chunk f1 :activation) :args (list g1818 g1820)))
-    (g1811* (->max :name '(:chunk f1*) :x g1816 :group-size group-size))
-    (g1811 (->dropout :name '(:chunk f1) :x g1811* :dropout (flt 0.5)))
-    (g1810 (->constant :name '(:chunk c1)))
-    (g1823 (->weight :name '(:cloud (f1 f2))
-                     :size (* (/ n-units-1 group-size) n-units-2)))
-    (g1824
-     (->activation :name '(:cloud (f1 f2) :linear) :size n-units-2
-                   :weights g1823 :x g1811))
-    (g1825 (->weight :name '(:cloud (c1 f2)) :size n-units-2))
-    (g1826
-     (->activation :name '(:cloud (c1 f2) :linear) :size n-units-2
-                   :weights g1825 :x g1810))
-    (g1822 (->+ :name '(:chunk f2 :activation) :args (list g1824 g1826)))
-    (g1809* (->max :name '(:chunk f2*) :x g1822 :group-size group-size))
-    (g1809 (->dropout  :name '(:chunk f2) :x g1809* :dropout (flt 0.5)))
-    ;; (g1807 (->constant :name '(:chunk c2)
-    ;; (g1829 (->weight :name '(:cloud (f2 f3))
-    ;;                  :size (* (/ n-units-2 group-size) n-units-3)))
-    ;; (g1830
-    ;;  (->activation :name '(:cloud (f2 f3) :linear) :size n-units-3
-    ;;                :weights g1829 :x g1809))
-    ;; (g1831 (->weight :name '(:cloud (c2 f3)) :size n-units-3))
-    ;; (g1832
-    ;;  (->activation :name '(:cloud (c2 f3) :linear) :size n-units-3
-    ;;                :weights g1831 :x g1807))
-    ;; (g1828 (->+ :name '(:chunk f3 :activation) :args (list g1830 g1832)))
-    ;; (g1808* (->max :name '(:chunk f3*) :x g1828 :group-size group-size))
-    ;; (g1808 (->dropout :name '(:chunk f3) :x g1808* :dropout (flt 0.5)))
-    (expectations (->input :size 10))
-    (prediction-weights (->weight :size (* (size (lump '(:chunk f2))) 10)))
-    (prediction-biases (->weight :size 10))
-    (prediction-activations0
-     (->activation :weights prediction-weights :x (lump '(:chunk f2))))
-    (prediction-activations
-     (->+ :args (list prediction-activations0 prediction-biases)))
-    (predictions
-     (->cross-entropy-softmax :group-size 10 :x prediction-activations
-                              :target expectations))
-    (ce-error (->error :x predictions))))
+    (inputs (->input :name 'inputs :size 784))
+    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
+                                     :size n-units-1))
+    (f1* (->max :x f1-activations :group-size group-size))
+    (f1 (->dropout :x f1*))
+    (f2-activations (add-activations :name 'f2 :inputs (list f1)
+                                     :size n-units-2))
+    (f2* (->max :x f2-activations :group-size group-size))
+    (f2 (->dropout :x f2*))
+    (predictions (tack-cross-entropy-softmax-error-on
+                  mgl-bp::*bpn-being-built* (list f2)))))
 
 (defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
   (let ((bpn nil))
