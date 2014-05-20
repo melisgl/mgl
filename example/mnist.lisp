@@ -175,17 +175,17 @@
 
 (defun make-sampler (images &key (n-epochs 1)
                      (max-n (* n-epochs (length images)))
-                     omit-label-p sample-visible-p)
+                     discard-label-p sample-visible-p)
   (make-instance 'counting-function-sampler
                  :max-n-samples max-n
                  :sampler (let ((g (make-random-generator images)))
                             (lambda ()
                               (list (funcall g)
-                                    :omit-label-p omit-label-p
+                                    :discard-label-p discard-label-p
                                     :sample-visible-p sample-visible-p)))))
 
-(defun make-tiny-sampler (images &key omit-label-p)
-  (make-sampler (subseq images 0 1000) :omit-label-p omit-label-p))
+(defun make-tiny-sampler (images &key discard-label-p)
+  (make-sampler (subseq images 0 1000) :discard-label-p discard-label-p))
 
 (defun sample-image-array (sample)
   (image-array (first sample)))
@@ -202,10 +202,10 @@
     (with-facets ((a (mat 'backing-array :direction :io :type flt-vector)))
       (loop for sample in samples
             for row upfrom 0
-            do (destructuring-bind (image &key omit-label-p sample-visible-p)
+            do (destructuring-bind (image &key discard-label-p sample-visible-p)
                    sample
                  (declare (ignore sample-visible-p))
-                 (when omit-label-p
+                 (unless discard-label-p
                    (setf (aref a (+ displacement
                                     (* row n-columns)
                                     (image-label image)))
@@ -256,7 +256,7 @@
     (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer))
                            "training reconstruction")
     (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer)
-                                                   :omit-label-p t)
+                                                   :discard-label-p t)
                            "training")
     (map nil (lambda (counter)
                (log-msg "dbn test: ~:_test ~:_~A~%" counter))
@@ -265,7 +265,7 @@
           :counters-and-measurers
           (make-dbn-reconstruction-rmse-counters-and-measurers
            (dbn rbm) :rbm rbm)))
-    (log-dbn-cesc-accuracy rbm (make-sampler (test trainer) :omit-label-p t)
+    (log-dbn-cesc-accuracy rbm (make-sampler (test trainer) :discard-label-p t)
                            "test")
     (log-msg "---------------------------------------------------~%")))
 
@@ -393,8 +393,7 @@
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-cesc-error (make-sampler (test trainer) :omit-label-p t)
-                       (bpn learner)))
+       (bpn-cesc-error (make-sampler (test trainer)) (bpn learner)))
   (log-msg "---------------------------------------------------~%"))
 
 (defun init-bpn-lump-weights (name bpn stddev)
@@ -404,7 +403,7 @@
                            (batch-size (min (length training) 1000))
                            (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
-  (train (make-sampler training :n-epochs n-softmax-epochs :omit-label-p t)
+  (train (make-sampler training :n-epochs n-softmax-epochs)
          (make-instance 'mnist-cg-bp-trainer
                         :training training
                         :test test
@@ -413,9 +412,7 @@
                         :segment-filter #'prediction-weight-p)
          (make-instance 'bp-learner :bpn bpn))
   (log-msg "Starting to train the whole BPN~%")
-  (train (make-sampler training
-                       :n-epochs (- n-epochs n-softmax-epochs)
-                       :omit-label-p t)
+  (train (make-sampler training :n-epochs (- n-epochs n-softmax-epochs))
          (make-instance 'mnist-cg-bp-trainer
                         :training training
                         :test test
@@ -505,17 +502,17 @@
 
 (defun clamp-chunk-labels (samples chunk)
   (setf (indices-present chunk)
-        (if (and samples (getf (rest (elt samples 0)) :omit-label-p))
+        (if (and samples (getf (rest (elt samples 0)) :discard-label-p))
             #.(make-array 0 :element-type 'index)
             nil))
   (clamp-labels samples (nodes chunk)))
 
 (defun strip-sample-visible (samples)
   (mapcar (lambda (sample)
-            (destructuring-bind (image &key omit-label-p sample-visible-p)
+            (destructuring-bind (image &key discard-label-p sample-visible-p)
                 sample
               (declare (ignore sample-visible-p))
-              (list image :omit-label-p omit-label-p)))
+              (list image :discard-label-p discard-label-p)))
           samples))
 
 (defmethod set-input (samples (rbm mnist-rbm/2))
@@ -564,7 +561,7 @@
     (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer))
                            "training reconstruction")
     (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer)
-                                                  :omit-label-p t)
+                                                  :discard-label-p t)
                            "training")
     ;; This is too time consuming for little benefit.
     #+nil
@@ -574,7 +571,7 @@
           (make-sampler (test trainer)) dbm
           :counters-and-measurers
           (make-dbm-reconstruction-rmse-counters-and-measurers dbm)))
-    (log-dbm-cesc-accuracy dbm (make-sampler (test trainer) :omit-label-p t)
+    (log-dbm-cesc-accuracy dbm (make-sampler (test trainer) :discard-label-p t)
                            "test")
     (log-msg "---------------------------------------------------~%")))
 
@@ -723,16 +720,16 @@
               dbm
               :use-label-weights t
               :initargs
-              ;; We are playing games with wrapping image objects in
-              ;; lists when sampling, so let the map cache know what's
-              ;; the key in the cache and what to pass to the dbm. We
-              ;; carefully omit labels.
+              ;; We are playing games with wrapping training examples
+              ;; in lists when sampling, so let the map cache know
+              ;; what's the key in the cache and what to pass to the
+              ;; dbm. We carefully omit labels.
               (list :populate-key #'first
                     :populate-convert-to-dbm-sample-fn
                     (lambda (sample)
                       (list (first sample)
                             :sample-visible-p nil
-                            :omit-label-p t))
+                            :discard-label-p t))
                     :populate-map-cache-lazily-from-dbm dbm
                     :populate-periodic-fn
                     (make-instance 'periodic-fn :period 1000
@@ -882,17 +879,16 @@
                  fn)))
       (unless (zerop n-softmax-epochs)
         (log-msg "Starting to train the softmax layer of BPN~%")
-        (train
-         (make-sampler training :n-epochs n-softmax-epochs :omit-label-p t)
-         (make-instance 'mnist-bpn-gd-trainer
-                        :training training
-                        :test test
-                        :segmenter
-                        (make-segmenter
-                         (lambda (lump)
-                           (when (prediction-weight-p lump)
-                             (make-trainer lump :softmaxp t)))))
-         (make-instance 'bp-learner :bpn bpn)))
+        (train (make-sampler training :n-epochs n-softmax-epochs)
+               (make-instance 'mnist-bpn-gd-trainer
+                              :training training
+                              :test test
+                              :segmenter
+                              (make-segmenter
+                               (lambda (lump)
+                                 (when (prediction-weight-p lump)
+                                   (make-trainer lump :softmaxp t)))))
+               (make-instance 'bp-learner :bpn bpn)))
       (map nil (lambda (lump)
                  (when (and (typep lump '->dropout)
                             (not (typep lump '->input)))
@@ -913,13 +909,12 @@
            (lumps bpn))
       (unless (zerop n-epochs)
         (mgl-example-util:log-msg "Starting to train the whole BPN~%")
-        (train
-         (make-sampler training :n-epochs n-epochs :omit-label-p t)
-         (make-instance 'mnist-bpn-gd-trainer
-                        :training training
-                        :test test
-                        :segmenter (make-segmenter #'make-trainer))
-         (make-instance 'bp-learner :bpn bpn))))))
+        (train (make-sampler training :n-epochs n-epochs)
+               (make-instance 'mnist-bpn-gd-trainer
+                              :training training
+                              :test test
+                              :segmenter (make-segmenter #'make-trainer))
+               (make-instance 'bp-learner :bpn bpn))))))
 
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))

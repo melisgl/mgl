@@ -163,7 +163,7 @@
          start))))
 
 ;;; Samplers don't return examples, but a list of (SAMPLE &KEY
-;;; OMIT-LABEL-P SAMPLE-VISIBLE-P). Work around it.
+;;; DISCARD-LABEL-P SAMPLE-VISIBLE-P). Work around it.
 (defmethod maybe-make-misclassification-measurer ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
