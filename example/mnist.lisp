@@ -819,17 +819,6 @@
             (setf (gethash group group-to-trainer)
                   (funcall segmenter segment)))))))
 
-(defun set-dropout-and-rescale-weights (lump dropout bpn)
-  (assert (null (dropout lump)))
-  (setf (slot-value lump 'dropout) dropout)
-  (let ((scale (/ (- (flt 1) dropout))))
-    (loop for lump-2 across (lumps bpn) do
-      (when (and (typep lump-2 '->activation)
-                 (eq lump (mgl-bp::x lump-2))
-                 (typep (mgl-bp::weights lump-2) '->weight))
-        (log-msg "rescaling ~S by ~,2F~%" lump-2 scale)
-        (scal! scale (nodes (mgl-bp::weights lump-2)))))))
-
 (defun train-mnist-bpn-gd (bpn training test &key (n-softmax-epochs 5)
                            (n-epochs 200) l2-upper-bound
                            class-weights learning-rate learning-rate-decay
@@ -884,13 +873,15 @@
                             (not (typep lump '->input)))
                    (log-msg "dropout ~A ~A~%" lump 0.5)
                    (if rescale-on-dropout-p
-                       (set-dropout-and-rescale-weights lump (flt 0.5) bpn)
+                       (set-dropout-and-rescale-activation-weights
+                        lump (flt 0.5) bpn)
                        (setf (slot-value lump 'dropout) (flt 0.5))))
                  (when (and (typep lump '->input)
                             (name= (name lump) '(:chunk inputs)))
                    (log-msg "dropout ~A ~A~%" lump 0.2)
                    (if rescale-on-dropout-p
-                       (set-dropout-and-rescale-weights lump (flt 0.2) bpn)
+                       (set-dropout-and-rescale-activation-weights
+                        lump (flt 0.2) bpn)
                        (setf (slot-value lump 'dropout) (flt 0.2)))))
            (lumps bpn))
       (unless (zerop n-epochs)

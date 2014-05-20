@@ -346,3 +346,23 @@
                (eq (mgl-bp::weights lump) ->weight))
       (return lump))))
 
+(defun set-dropout-and-rescale-activation-weights (lump dropout bpn)
+  "Set the dropout of LUMP to DROPOUT. Find the activation lump to
+  which LUMP is fed and rescale its weights to compensate. There must
+  be exactly on such activation lump or this function will fail."
+  (assert (null (dropout lump)))
+  (setf (slot-value lump 'dropout) dropout)
+  (let ((scale (/ (- (flt 1) dropout)))
+        (activation-lumps
+          (loop for lump-1 across (lumps bpn)
+                when (and (typep lump-1 '->activation)
+                          (eq lump (mgl-bp::x lump-1))
+                          (typep (mgl-bp::weights lump-1) '->weight))
+                  collect lump-1)))
+    (assert (/= 0 (length activation-lumps)) ()
+            "Can't rescale activation weights for LUMP there isn't one.")
+    (assert (= 1 (length activation-lumps)) ()
+            "Can't rescale activation weights for LUMP there are two many.")
+    (let ((lump-1 (first activation-lumps)))
+      (log-msg "rescaling ~S by ~,2F~%" lump-1 scale)
+      (scal! scale (nodes (mgl-bp::weights lump-1))))))
