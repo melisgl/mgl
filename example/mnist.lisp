@@ -1,6 +1,8 @@
 ;;;; Code for the MNIST handwritten digit recognition challange.
 ;;;;
-;;;; See papers by Geoffrey Hinton, for the DBN-to-BPN approach:
+;;;; References:
+;;;;
+;;;; For the DBN-to-BPN approach:
 ;;;;
 ;;;;   To Recognize Shapes, First Learn to Generate Images,
 ;;;;   http://www.cs.toronto.edu/~hinton/absps/montrealTR.pdf
@@ -11,6 +13,17 @@
 ;;;;
 ;;;;   "Deep Boltzmann Machines",
 ;;;;   http://www.cs.toronto.edu/~hinton/absps/dbm.pdf
+;;;;
+;;;; For dropout:
+;;;;
+;;;;   "Improving neural networks by preventing co-adaptation of
+;;;;   feature detectors"
+;;;;   http://arxiv.org/pdf/1207.0580.pdf
+;;;;
+;;;; Maxout:
+;;;;
+;;;;  "Maxout Networks"
+;;;;  http://arxiv.org/abs/1302.4389
 ;;;;
 ;;;; Download the four files from http://yann.lecun.com/exdb/mnist and
 ;;;; gunzip them. Set *MNIST-DATA-DIR* to point to their directory and
@@ -26,29 +39,17 @@
 ;;;; The new, 2000->10 connections in the backprop network are trained
 ;;;; for a few batches and finally all weights are trained together.
 ;;;; Takes less than two days to train on a 2.16GHz Core Duo and
-;;;; reaches ~98.86% accuracy.
+;;;; reaches ~98.86% accuracy. With CUDA on a GTX Titan, it takes 30
+;;;; minutes with double floats.
+;;;;
+;;;; If the same model is fine-tuned with gradient descent and
+;;;; dropout, then accuracy improves to ~98.96.
 ;;;;
 ;;;; During DBN training the DBN TEST RMSE is the RMSE of the mean
 ;;;; field reconstruction of the test images while TRAINING RMSE is of
 ;;;; the stochastic reconstructions (that is, the hidden layer is
 ;;;; sampled) during training. Naturally, the stochastic one tends to
 ;;;; be higher but is cheap to compute.
-;;;;
-;;;; MGL is marginally faster (~10%) training the first RBM than the
-;;;; original matlab code when both are using single-threaded BLAS.
-;;;; Since 86% percent of the time is spent in BLAS this probably
-;;;; means only that the two BLAS implementations perform similarly.
-;;;; However, since the matlab code precomputes inputs for the stacked
-;;;; RBMs, this code is a doing a lot more on them making it ~32%
-;;;; slower on the 2nd. Probably due to the size of last layer, the
-;;;; picture changes again in the 3rd rbm: they are roughly on par.
-;;;;
-;;;; CG training of the BPN is also of the same speed except for the
-;;;; first phase where only the softmax weights are trained. Here,
-;;;; this code is about 6 times slower due to the input being clamped
-;;;; at the usual place and the BPN forwarded which is avoidable in
-;;;; this case, but it's not very important as the vast majority of
-;;;; time is spent training the whole BPN.
 ;;;;
 ;;;;
 ;;;; DBN-to-DBM-to-BPN (see TRAIN-MNIST/2)
@@ -57,7 +58,19 @@
 ;;;; translated to a BPN. It's pretty much the same training process
 ;;;; as before except that after the DBN the DBM is trained by PCD
 ;;;; before unrolling that into a BPN. Accuracy is ~99.09% a bit
-;;;; higher than the reported 99.05%.
+;;;; higher than the reported 99.05%. 
+;;;;
+;;;; Fine-tuned with dropout, it's ~99.22%.
+;;;;
+;;;;
+;;;; Rectified Dropout BPN (see TRAIN-MNIST/3)
+;;;;
+;;;; An 784-1200-1200-1200 BPN is trained directly. ~99.00%
+;;;;
+;;;;
+;;;; Maxout BPN (see TRAIN-MNIST/4)
+;;;;
+;;;; I couldn't quite reproduce the 99.06% claimed in the paper.
 
 (in-package :mgl-example-mnist)
 
@@ -285,13 +298,6 @@
   (if (< (n-inputs trainer) (* 5 (n-inputs-in-epoch trainer)))
       #.(flt 0.5)
       #.(flt 0.9)))
-
-#+nil
-(defmethod lag ((trainer mnist-rbm-trainer))
-  (min (flt 0.99)
-       (let ((n (/ (n-inputs trainer)
-                   (n-inputs-in-epoch trainer))))
-         (- 1 (expt 0.5 n)))))
 
 (defun init-mnist-dbn (dbn &key stddev (start-level 0))
   (loop for i upfrom start-level
@@ -789,10 +795,6 @@
 (defclass mnist-bpn-gd-trainer (mnist-bp-trainer segmented-gd-trainer)
   ())
 
-#+nil
-(defclass mnist-bpn-gd-trainer (mnist-bp-trainer svrg-trainer)
-  ())
-
 (defclass mnist-bpn-gd-segment-trainer (batch-gd-trainer)
   ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)
    (n-epochs-to-reach-final-momentum
@@ -820,13 +822,6 @@
           (+ (* initial (- 1 weight))
              (* final weight)))
         final)))
-
-#+nil
-(defmethod lag ((trainer mnist-bpn-gd-trainer))
-  (min (flt 0.99)
-       (let ((n (/ (n-inputs trainer)
-                   (length (training trainer)))))
-         (- 1 (expt 0.5 n)))))
 
 (defun make-grouped-segmenter (name-groups segmenter)
   (let ((group-to-trainer (make-hash-table :test #'equal)))
@@ -927,17 +922,15 @@
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (inputs (->input :name 'inputs :size 784))
+    (inputs (->input :size 784))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
     (f1* (->rectified :x f1-activations))
     (f1 (->dropout :x f1*))
-    (f2-activations (add-activations :name 'f2 :inputs (list f1)
-                                     :size n-units-2))
+    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->rectified :x f2-activations))
     (f2 (->dropout :x f2*))
-    (f3-activations (add-activations :name 'f3 :inputs (list f2)
-                                     :size n-units-3))
+    (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-3))
     (f3* (->rectified :x f3-activations))
     (f3 (->dropout :x f3*))
     (predictions (tack-cross-entropy-softmax-error-on
@@ -968,17 +961,16 @@
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                (group-size 5))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (inputs (->input :name 'inputs :size 784))
+    (inputs (->input :size 784))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
     (f1* (->max :x f1-activations :group-size group-size))
     (f1 (->dropout :x f1*))
-    (f2-activations (add-activations :name 'f2 :inputs (list f1)
-                                     :size n-units-2))
+    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->max :x f2-activations :group-size group-size))
     (f2 (->dropout :x f2*))
     (predictions (tack-cross-entropy-softmax-error-on
-                  mgl-bp::*bpn-being-built* (list f2)))))
+                  mgl-bp::*bpn-being-built* '(f2)))))
 
 (defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
   (with-experiment ()
