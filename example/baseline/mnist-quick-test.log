@@ -1,0 +1,2995 @@
+2014-05-21 08:07:19: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.1
+2014-05-21 08:07:19: init: #<FULL-CLOUD (F1 F2) :NORM 4.99276d+0> 0.1
+2014-05-21 08:07:19: init: #<FULL-CLOUD (F2 F3) :NORM 1.00118d+1> 0.1
+2014-05-21 08:07:19: Starting to train level 0 RBM in DBN.
+2014-05-21 08:07:19: Describing learner:
+#<MNIST-RBM-CD-LEARNER {105D979083}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C0 INPUTS) - (C1 F1)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  TRAINER                    = #<MNIST-RBM-TRAINER {105D84C933}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {1063C63893}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {106345E7E3}>
+
+2014-05-21 08:07:19: Describing trainer:
+#<MNIST-RBM-TRAINER {105D84C933}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+                  {105DA83503}>
+                {105DA826C3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {105DA82E83}>
+                {105DA825F3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {105DA827E3}>
+                {105DA82523}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {105DA826C3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+                  {105DA83503}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {105DA825F3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {105DA82E83}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {105DA82523}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {105DA827E3}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:07:19: n-inputs: 0
+2014-05-21 08:07:19: cuda mats: 38, copies: h->d: 0, d->h: 2
+2014-05-21 08:07:20: dbn test: test level 0 rmse: 5.16190d-1 (7840000)
+2014-05-21 08:07:20: ---------------------------------------------------
+2014-05-21 08:07:22: n-inputs: 60000
+2014-05-21 08:07:22: cuda mats: 70052, copies: h->d: 70001, d->h: 2
+2014-05-21 08:07:22: rbm: training rmse: 1.38014d-1 (47040000)
+2014-05-21 08:07:22: n-inputs: 60000
+2014-05-21 08:07:22: cuda mats: 70052, copies: h->d: 70001, d->h: 2
+2014-05-21 08:07:23: dbn test: test level 0 rmse: 8.15254d-2 (7840000)
+2014-05-21 08:07:23: ---------------------------------------------------
+2014-05-21 08:07:24: n-inputs: 120000
+2014-05-21 08:07:24: cuda mats: 70052, copies: h->d: 70001, d->h: 2
+2014-05-21 08:07:24: rbm: training rmse: 1.08287d-1 (47040000)
+2014-05-21 08:07:24: n-inputs: 120000
+2014-05-21 08:07:24: cuda mats: 70052, copies: h->d: 70001, d->h: 2
+2014-05-21 08:07:24: dbn test: test level 0 rmse: 6.93561d-2 (7840000)
+2014-05-21 08:07:24: ---------------------------------------------------
+2014-05-21 08:07:24: Starting to train level 1 RBM in DBN.
+2014-05-21 08:07:24: Describing learner:
+#<MNIST-RBM-CD-LEARNER {1062F7D323}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C1 F1) - (C2 F2)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  TRAINER                    = #<MNIST-RBM-TRAINER {1062F7D133}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {106917A943}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {106345E7E3}>
+
+2014-05-21 08:07:24: Describing trainer:
+#<MNIST-RBM-TRAINER {1062F7D133}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+                  {1062F7E733}>
+                {1062F7D913}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {1062F7E0B3}>
+                {1062F7D843}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {1062F7DA33}>
+                {1062F7D773}>)
+  SEGMENTS = (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {1062F7D913}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+                  {1062F7E733}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1062F7D843}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {1062F7E0B3}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1062F7D773}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {1062F7DA33}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:07:24: n-inputs: 0
+2014-05-21 08:07:24: cuda mats: 70052, copies: h->d: 70001, d->h: 4
+2014-05-21 08:07:24: dbn test: test level 0 rmse: 3.22664d-1 (7840000)
+2014-05-21 08:07:24: dbn test: test level 1 rmse: 4.31341d-1 (5000000)
+2014-05-21 08:07:24: ---------------------------------------------------
+2014-05-21 08:07:26: n-inputs: 60000
+2014-05-21 08:07:26: cuda mats: 70066, copies: h->d: 70002, d->h: 4
+2014-05-21 08:07:26: rbm: training rmse: 1.80520d-1 (30000000)
+2014-05-21 08:07:26: n-inputs: 60000
+2014-05-21 08:07:26: cuda mats: 70066, copies: h->d: 70002, d->h: 4
+2014-05-21 08:07:26: dbn test: test level 0 rmse: 1.00282d-1 (7840000)
+2014-05-21 08:07:26: dbn test: test level 1 rmse: 9.60840d-2 (5000000)
+2014-05-21 08:07:26: ---------------------------------------------------
+2014-05-21 08:07:27: n-inputs: 120000
+2014-05-21 08:07:27: cuda mats: 70066, copies: h->d: 70002, d->h: 4
+2014-05-21 08:07:27: rbm: training rmse: 1.45151d-1 (30000000)
+2014-05-21 08:07:27: n-inputs: 120000
+2014-05-21 08:07:27: cuda mats: 70066, copies: h->d: 70002, d->h: 4
+2014-05-21 08:07:27: dbn test: test level 0 rmse: 9.59577d-2 (7840000)
+2014-05-21 08:07:27: dbn test: test level 1 rmse: 8.33213d-2 (5000000)
+2014-05-21 08:07:27: ---------------------------------------------------
+2014-05-21 08:07:27: Starting to train level 2 RBM in DBN.
+2014-05-21 08:07:28: Describing learner:
+#<MNIST-RBM-CD-LEARNER {1063805323}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C2 F2) - (C3 F3)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  TRAINER                    = #<MNIST-RBM-TRAINER {1063805133}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {106688FA33}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C2 1(100/100)>
+                    #<SIGMOID-CHUNK F2 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C3 1(1/100)>
+                   #<SIGMOID-CHUNK F3 2000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {106345E7E3}>
+
+2014-05-21 08:07:28: Describing trainer:
+#<MNIST-RBM-TRAINER {1063805133}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+                  {1063806733}>
+                {1063805913}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                  {10638060B3}>
+                {1063805843}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                  {1063805A33}>
+                {1063805773}>)
+  SEGMENTS = (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>
+              #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {1063805913}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+                  {1063806733}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1063805843}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                  {10638060B3}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1063805773}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                  {1063805A33}>
+  LEARNING-RATE = 1.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:07:28: n-inputs: 0
+2014-05-21 08:07:28: cuda mats: 70066, copies: h->d: 70002, d->h: 6
+2014-05-21 08:07:28: dbn test: test level 0 rmse: 3.07691d-1 (7840000)
+2014-05-21 08:07:28: dbn test: test level 1 rmse: 4.28486d-1 (5000000)
+2014-05-21 08:07:28: dbn test: test level 2 rmse: 5.27221d-1 (5000000)
+2014-05-21 08:07:28: ---------------------------------------------------
+2014-05-21 08:07:30: n-inputs: 60000
+2014-05-21 08:07:30: cuda mats: 70080, copies: h->d: 70003, d->h: 6
+2014-05-21 08:07:30: rbm: training rmse: 1.46669d-1 (30000000)
+2014-05-21 08:07:30: n-inputs: 60000
+2014-05-21 08:07:30: cuda mats: 70080, copies: h->d: 70003, d->h: 6
+2014-05-21 08:07:31: dbn test: test level 0 rmse: 1.11994d-1 (7840000)
+2014-05-21 08:07:31: dbn test: test level 1 rmse: 1.11987d-1 (5000000)
+2014-05-21 08:07:31: dbn test: test level 2 rmse: 6.11843d-2 (5000000)
+2014-05-21 08:07:31: ---------------------------------------------------
+2014-05-21 08:07:33: n-inputs: 120000
+2014-05-21 08:07:33: cuda mats: 70080, copies: h->d: 70003, d->h: 6
+2014-05-21 08:07:33: rbm: training rmse: 1.22339d-1 (30000000)
+2014-05-21 08:07:33: n-inputs: 120000
+2014-05-21 08:07:33: cuda mats: 70080, copies: h->d: 70003, d->h: 6
+2014-05-21 08:07:33: dbn test: test level 0 rmse: 1.10890d-1 (7840000)
+2014-05-21 08:07:33: dbn test: test level 1 rmse: 1.09674d-1 (5000000)
+2014-05-21 08:07:33: dbn test: test level 2 rmse: 5.53830d-2 (5000000)
+2014-05-21 08:07:33: ---------------------------------------------------
+2014-05-21 08:07:34: bpn inits:
+((:CLOUD-NAME (C2 F3) :WEIGHT-NAME (:CLOUD (C2 F3)))
+ (:CLOUD-NAME (F2 F3) :WEIGHT-NAME (:CLOUD (F2 F3)))
+ (:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1))))
+2014-05-21 08:07:34: bpn def:
+(BUILD-BPN (:CLASS 'MNIST-BPN :MAX-N-STRIPES 1000 :INITARGS 'NIL)
+  (#:G68529 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G68528 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G68533 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G68534
+   (->ACTIVATION :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G68533 :X #:G68529 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68535 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G68536
+   (->ACTIVATION :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G68535 :X
+                 #:G68528 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68532 (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS (LIST #:G68534 #:G68536)))
+  (#:G68527 (->SIGMOID :NAME '(:CHUNK F1) :X #:G68532))
+  (#:G68526 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G68539 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 250000))
+  (#:G68540
+   (->ACTIVATION :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G68539 :X
+                 #:G68527 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68541 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 500))
+  (#:G68542
+   (->ACTIVATION :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G68541 :X
+                 #:G68526 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68538 (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G68540 #:G68542)))
+  (#:G68525 (->SIGMOID :NAME '(:CHUNK F2) :X #:G68538))
+  (#:G68523 (->CONSTANT :NAME '(:CHUNK C2) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G68545 (->WEIGHT :NAME '(:CLOUD (F2 F3)) :SIZE 1000000))
+  (#:G68546
+   (->ACTIVATION :NAME '(:CLOUD (F2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G68545
+                 :X #:G68525 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68547 (->WEIGHT :NAME '(:CLOUD (C2 F3)) :SIZE 2000))
+  (#:G68548
+   (->ACTIVATION :NAME '(:CLOUD (C2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G68547
+                 :X #:G68523 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G68544 (->+ :NAME '(:CHUNK F3 :ACTIVATION) :ARGS (LIST #:G68546 #:G68548)))
+  (#:G68524 (->SIGMOID :NAME '(:CHUNK F3) :X #:G68544)))
+2014-05-21 08:07:34: Starting to train the softmax layer of BPN
+2014-05-21 08:07:34: Describing learner:
+#<BP-LEARNER {100DC547D3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 1000 {100C38EC13}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 1000 {100C38EC13}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN {100C38EC13}>
+BPN description:
+  LUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE
+              784*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C0) :SIZE 1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+              392000*1(1/1) :norm 99.72707>
+            #<->ACTIVATION (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+              500*1(1/1) :norm 28.91689>
+            #<->ACTIVATION (:CLOUD #3# . #2#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->SIGMOID (:CHUNK F1) :SIZE 500*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C1) :SIZE 1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+              250000*1(1/1) :norm 72.91960>
+            #<->ACTIVATION (:CLOUD #5# . #2#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+              500*1(1/1) :norm 5.10964>
+            #<->ACTIVATION (:CLOUD #6# . #2#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->+ (:CHUNK F2 . #4#) :SIZE 500*1(1/1000) :norm 0.00000>
+            #<->SIGMOID (:CHUNK F2) :SIZE 500*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C2) :SIZE 1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+              1000000*1(1/1) :norm 117.74306>
+            #<->ACTIVATION (:CLOUD #7# . #2#) :SIZE
+              2000*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+              2000*1(1/1) :norm 6.30210>
+            #<->ACTIVATION (:CLOUD #8# . #2#) :SIZE
+              2000*1(1/1000) :norm 0.00000>
+            #<->+ (:CHUNK F3 . #4#) :SIZE 2000*1(1/1000) :norm 0.00000>
+            #<->SIGMOID #9=(:CHUNK F3) :SIZE
+              2000*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.37696>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->WEIGHT #10=(#9# PREDICTIONS) :SIZE
+              20000*1(1/1) :norm 14.01150>
+            #<->ACTIVATION (#10# :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->INPUT EXPECTATIONS :SIZE 10*1(1/1000) :norm 0.00000>
+            #<->CROSS-ENTROPY-SOFTMAX #:G68549 :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1(1/1000) :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 1000
+2014-05-21 08:07:34: Describing trainer:
+#<MNIST-CG-BP-TRAINER {100DC54693}>
+CG-TRAINER description:
+  N-INPUTS = 0
+  BATCH-SIZE = 1000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.37696>
+                   #<->WEIGHT ((:CHUNK F3) PREDICTIONS) :SIZE
+                     20000*1(1/1) :norm 14.01150>)
+                  {100DC581A3}>
+2014-05-21 08:07:34: n-inputs: 0
+2014-05-21 08:07:34: cuda mats: 13, copies: h->d: 6, d->h: 6
+2014-05-21 08:07:34: bpn test: test classification accuracy: 9.43% (10000)
+2014-05-21 08:07:34: bpn test: test cross entropy: 2.76480d+0 (10000.0d0)
+2014-05-21 08:07:34: ---------------------------------------------------
+2014-05-21 08:07:35: best-f: 1.08510d+3, n-evaluations: 13
+2014-05-21 08:07:35: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:35: best-f: 6.42921d+2, n-evaluations: 12
+2014-05-21 08:07:35: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:35: best-f: 5.61040d+2, n-evaluations: 11
+2014-05-21 08:07:35: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:35: best-f: 4.68475d+2, n-evaluations: 10
+2014-05-21 08:07:35: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:36: best-f: 4.09721d+2, n-evaluations: 9
+2014-05-21 08:07:36: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:36: best-f: 4.10600d+2, n-evaluations: 10
+2014-05-21 08:07:36: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:36: best-f: 3.83598d+2, n-evaluations: 10
+2014-05-21 08:07:36: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:36: best-f: 3.54085d+2, n-evaluations: 10
+2014-05-21 08:07:36: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:37: best-f: 2.72173d+2, n-evaluations: 11
+2014-05-21 08:07:37: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:37: best-f: 2.83306d+2, n-evaluations: 10
+2014-05-21 08:07:37: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:37: best-f: 3.56951d+2, n-evaluations: 10
+2014-05-21 08:07:37: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:37: best-f: 2.91066d+2, n-evaluations: 9
+2014-05-21 08:07:37: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:37: best-f: 2.92612d+2, n-evaluations: 9
+2014-05-21 08:07:37: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:38: best-f: 2.54058d+2, n-evaluations: 10
+2014-05-21 08:07:38: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:38: best-f: 2.71601d+2, n-evaluations: 8
+2014-05-21 08:07:38: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:38: best-f: 3.10566d+2, n-evaluations: 10
+2014-05-21 08:07:38: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:38: best-f: 2.63699d+2, n-evaluations: 8
+2014-05-21 08:07:38: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:39: best-f: 2.77036d+2, n-evaluations: 9
+2014-05-21 08:07:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:39: best-f: 2.44606d+2, n-evaluations: 9
+2014-05-21 08:07:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:39: best-f: 2.62982d+2, n-evaluations: 10
+2014-05-21 08:07:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:39: best-f: 2.43770d+2, n-evaluations: 9
+2014-05-21 08:07:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:39: best-f: 2.27856d+2, n-evaluations: 8
+2014-05-21 08:07:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:40: best-f: 2.43402d+2, n-evaluations: 10
+2014-05-21 08:07:40: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:40: best-f: 2.48865d+2, n-evaluations: 11
+2014-05-21 08:07:40: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:40: best-f: 2.65938d+2, n-evaluations: 10
+2014-05-21 08:07:40: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:40: best-f: 2.24045d+2, n-evaluations: 10
+2014-05-21 08:07:40: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:41: best-f: 2.28807d+2, n-evaluations: 10
+2014-05-21 08:07:41: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:41: best-f: 2.31521d+2, n-evaluations: 10
+2014-05-21 08:07:41: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:41: best-f: 2.41781d+2, n-evaluations: 10
+2014-05-21 08:07:41: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:41: best-f: 1.93571d+2, n-evaluations: 10
+2014-05-21 08:07:41: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:42: best-f: 2.43055d+2, n-evaluations: 10
+2014-05-21 08:07:42: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:42: best-f: 2.21488d+2, n-evaluations: 9
+2014-05-21 08:07:42: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:42: best-f: 2.16674d+2, n-evaluations: 9
+2014-05-21 08:07:42: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:42: best-f: 2.09630d+2, n-evaluations: 9
+2014-05-21 08:07:42: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:43: best-f: 2.06453d+2, n-evaluations: 9
+2014-05-21 08:07:43: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:43: best-f: 1.90401d+2, n-evaluations: 10
+2014-05-21 08:07:43: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:43: best-f: 1.84919d+2, n-evaluations: 9
+2014-05-21 08:07:43: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:43: best-f: 2.03663d+2, n-evaluations: 9
+2014-05-21 08:07:43: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:43: best-f: 1.64232d+2, n-evaluations: 9
+2014-05-21 08:07:43: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:44: best-f: 1.87141d+2, n-evaluations: 9
+2014-05-21 08:07:44: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:44: best-f: 1.44223d+2, n-evaluations: 9
+2014-05-21 08:07:44: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:44: best-f: 2.13956d+2, n-evaluations: 9
+2014-05-21 08:07:44: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:44: best-f: 1.90431d+2, n-evaluations: 10
+2014-05-21 08:07:44: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:45: best-f: 1.80757d+2, n-evaluations: 10
+2014-05-21 08:07:45: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:45: best-f: 1.86004d+2, n-evaluations: 8
+2014-05-21 08:07:45: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:45: best-f: 2.33202d+2, n-evaluations: 9
+2014-05-21 08:07:45: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:45: best-f: 1.82353d+2, n-evaluations: 10
+2014-05-21 08:07:45: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:45: best-f: 1.82849d+2, n-evaluations: 8
+2014-05-21 08:07:45: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:46: best-f: 1.79465d+2, n-evaluations: 10
+2014-05-21 08:07:46: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:46: best-f: 2.06143d+2, n-evaluations: 10
+2014-05-21 08:07:46: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:46: best-f: 1.95393d+2, n-evaluations: 9
+2014-05-21 08:07:46: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:46: best-f: 1.87287d+2, n-evaluations: 10
+2014-05-21 08:07:46: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:47: best-f: 2.13673d+2, n-evaluations: 10
+2014-05-21 08:07:47: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:47: best-f: 1.87070d+2, n-evaluations: 8
+2014-05-21 08:07:47: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:47: best-f: 1.52812d+2, n-evaluations: 9
+2014-05-21 08:07:47: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:47: best-f: 1.78268d+2, n-evaluations: 10
+2014-05-21 08:07:47: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:47: best-f: 1.74092d+2, n-evaluations: 8
+2014-05-21 08:07:47: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:48: best-f: 1.60554d+2, n-evaluations: 10
+2014-05-21 08:07:48: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:48: best-f: 1.50235d+2, n-evaluations: 10
+2014-05-21 08:07:48: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:48: best-f: 1.71041d+2, n-evaluations: 9
+2014-05-21 08:07:48: n-line-searches: 3 (succesful 3)
+2014-05-21 08:07:48: n-inputs: 60000
+2014-05-21 08:07:48: cuda mats: 70049, copies: h->d: 71753, d->h: 2897
+2014-05-21 08:07:48: bpn train: training classification accuracy:
+                     89.97% (574000)
+2014-05-21 08:07:48: bpn train: training cross entropy: 3.32339d-1 (574000.0d0)
+2014-05-21 08:07:48: n-inputs: 60000
+2014-05-21 08:07:48: cuda mats: 70049, copies: h->d: 71753, d->h: 2897
+2014-05-21 08:07:48: bpn test: test classification accuracy: 93.89% (10000)
+2014-05-21 08:07:48: bpn test: test cross entropy: 2.07762d-1 (10000.0d0)
+2014-05-21 08:07:48: ---------------------------------------------------
+2014-05-21 08:07:48: Starting to train the whole BPN
+2014-05-21 08:07:48: Describing learner:
+#<BP-LEARNER {106716F7D3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN :N-STRIPES 1000 :MAX-N-STRIPES 1000 {100C38EC13}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :N-STRIPES 1000 :MAX-N-STRIPES 1000 {100C38EC13}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN {100C38EC13}>
+BPN description:
+  LUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE
+              784*1000(1000/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C0) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+              392000*1(1/1) :norm 99.72707>
+            #<->ACTIVATION (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+              500*1000(1000/1000) :norm 2980.25987>
+            #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+              500*1(1/1) :norm 28.91689>
+            #<->ACTIVATION (:CLOUD #3# . #2#) :SIZE
+              500*1000(1000/1000) :norm 914.43246>
+            #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+              500*1000(1000/1000) :norm 2494.81075>
+            #<->SIGMOID (:CHUNK F1) :SIZE
+              500*1000(1000/1000) :norm 374.86842>
+            #<->CONSTANT (:CHUNK C1) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+              250000*1(1/1) :norm 72.91960>
+            #<->ACTIVATION (:CLOUD #5# . #2#) :SIZE
+              500*1000(1000/1000) :norm 3512.55483>
+            #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+              500*1(1/1) :norm 5.10964>
+            #<->ACTIVATION (:CLOUD #6# . #2#) :SIZE
+              500*1000(1000/1000) :norm 161.58086>
+            #<->+ (:CHUNK F2 . #4#) :SIZE
+              500*1000(1000/1000) :norm 3460.33186>
+            #<->SIGMOID (:CHUNK F2) :SIZE
+              500*1000(1000/1000) :norm 302.23673>
+            #<->CONSTANT (:CHUNK C2) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+              1000000*1(1/1) :norm 117.74306>
+            #<->ACTIVATION (:CLOUD #7# . #2#) :SIZE
+              2000*1000(1000/1000) :norm 9490.77584>
+            #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+              2000*1(1/1) :norm 6.30210>
+            #<->ACTIVATION (:CLOUD #8# . #2#) :SIZE
+              2000*1000(1000/1000) :norm 199.28993>
+            #<->+ (:CHUNK F3 . #4#) :SIZE
+              2000*1000(1000/1000) :norm 9654.02645>
+            #<->SIGMOID #9=(:CHUNK F3) :SIZE
+              2000*1000(1000/1000) :norm 370.06311>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.39974>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 12.64080>
+            #<->WEIGHT #10=(#9# PREDICTIONS) :SIZE
+              20000*1(1/1) :norm 17.00677>
+            #<->ACTIVATION (#10# :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 399.35997>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 401.51321>
+            #<->INPUT EXPECTATIONS :SIZE
+              10*1000(1000/1000) :norm 31.62278>
+            #<->CROSS-ENTROPY-SOFTMAX #:G68549 :SIZE
+              10*1000(1000/1000) :norm 19.15085>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1000(1000/1000) :norm 19.15085>)
+  N-STRIPES = 1000
+  MAX-N-STRIPES = 1000
+2014-05-21 08:07:48: Describing trainer:
+#<MNIST-CG-BP-TRAINER {106716F673}>
+CG-TRAINER description:
+  N-INPUTS = 0
+  BATCH-SIZE = 1000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000*1(1/1) :norm 99.72707>
+                   #<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500*1(1/1) :norm 28.91689>
+                   #<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                     250000*1(1/1) :norm 72.91960>
+                   #<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     500*1(1/1) :norm 5.10964>
+                   #<->WEIGHT (:CLOUD (F2 F3)) :SIZE
+                     1000000*1(1/1) :norm 117.74306>
+                   #<->WEIGHT (:CLOUD (C2 F3)) :SIZE
+                     2000*1(1/1) :norm 6.30210>
+                   #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.39974>
+                   #<->WEIGHT ((:CHUNK F3) PREDICTIONS) :SIZE
+                     20000*1(1/1) :norm 17.00677>)
+                  {106716F9F3}>
+2014-05-21 08:07:48: n-inputs: 0
+2014-05-21 08:07:48: cuda mats: 70049, copies: h->d: 71765, d->h: 2934
+2014-05-21 08:07:49: bpn test: test classification accuracy: 93.89% (10000)
+2014-05-21 08:07:49: bpn test: test cross entropy: 2.07762d-1 (10000.0d0)
+2014-05-21 08:07:49: ---------------------------------------------------
+2014-05-21 08:07:50: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.001
+2014-05-21 08:07:50: init: #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0> 0.01
+2014-05-21 08:07:50: init: #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0> 0.01
+2014-05-21 08:07:50: Starting to train level 0 RBM in DBN.
+2014-05-21 08:07:50: Describing learner:
+#<MNIST-RBM-CD-LEARNER {1062BF4B03}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C0 INPUTS) - (C1 F1)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  TRAINER                    = #<MNIST-RBM-TRAINER {1062BF4913}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM/2 {100790F0C3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {100797D743}>
+
+2014-05-21 08:07:50: Describing trainer:
+#<MNIST-RBM-TRAINER {1062BF4913}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+                  {1062BF7973}>
+                {1062BF6983}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {1062BF72F3}>
+                {1062BF68B3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {1062BF6AA3}>
+                {1062BF67E3}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {1062BF6983}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+                  {1062BF7973}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1062BF68B3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {1062BF72F3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1062BF67E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {1062BF6AA3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:07:50: n-inputs: 0
+2014-05-21 08:07:50: cuda mats: 5, copies: h->d: 0, d->h: 2
+2014-05-21 08:07:50: dbn test: test level 0 rmse: 4.80910d-1 (7840000)
+2014-05-21 08:07:50: ---------------------------------------------------
+2014-05-21 08:07:53: n-inputs: 60000
+2014-05-21 08:07:53: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:07:53: rbm: training rmse: 3.11882d-1 (47040000)
+2014-05-21 08:07:53: n-inputs: 60000
+2014-05-21 08:07:53: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:07:53: dbn test: test level 0 rmse: 1.19100d-1 (7840000)
+2014-05-21 08:07:53: ---------------------------------------------------
+2014-05-21 08:07:55: n-inputs: 120000
+2014-05-21 08:07:55: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:07:55: rbm: training rmse: 2.56601d-1 (47040000)
+2014-05-21 08:07:55: n-inputs: 120000
+2014-05-21 08:07:55: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:07:55: dbn test: test level 0 rmse: 9.80720d-2 (7840000)
+2014-05-21 08:07:55: ---------------------------------------------------
+2014-05-21 08:07:55: Starting to train level 1 RBM in DBN.
+2014-05-21 08:07:55: Describing learner:
+#<MNIST-RBM-CD-LEARNER {106D345323}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C1 F1 LABEL) - (C2 F2)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = #<CLOSURE (LAMBDA (TRAINER) :IN TRAIN-MNIST/2) {1062BEFB9B}>
+  TRAINER                    = #<MNIST-RBM-TRAINER {106D345133}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = "#<error printing object>"
+
+#<MNIST-RBM/2 {1077E78253}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>
+                    #<SOFTMAX-LABEL-CHUNK* LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>
+            #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {100797D743}>
+
+2014-05-21 08:07:55: Describing trainer:
+#<MNIST-RBM-TRAINER {106D345133}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+                  {106D3475D3}>
+                {106D345AB3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {106D346F53}>
+                {106D3459E3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>)
+                  {106D3468D3}>
+                {106D345913}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {106D346253}>
+                {106D345843}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {106D345BD3}>
+                {106D345773}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {106D345AB3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+                  {106D3475D3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {106D3459E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {106D346F53}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {106D345913}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>)
+                  {106D3468D3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {106D345843}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {106D346253}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {106D345773}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {106D345BD3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:07:55: n-inputs: 0
+2014-05-21 08:07:55: cuda mats: 70028, copies: h->d: 70006, d->h: 5
+2014-05-21 08:07:55: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 9.70% (1000)
+2014-05-21 08:07:55: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.28129d+0 (1000.0d0)
+2014-05-21 08:07:55: dbn: training
+                     chunk LABEL classification accuracy: 9.70% (1000)
+2014-05-21 08:07:55: dbn: training
+                     chunk LABEL cross entropy: 2.30390d+0 (1000.0d0)
+2014-05-21 08:07:55: dbn test: test level 0 rmse: 3.30825d-1 (7840000)
+2014-05-21 08:07:55: dbn test: test level 1 rmse: 4.30669d-1 (5100000)
+2014-05-21 08:07:55: dbn: test
+                     chunk LABEL classification accuracy: 9.80% (10000)
+2014-05-21 08:07:56: dbn: test chunk LABEL cross entropy: 2.30887d+0 (10000.0d0)
+2014-05-21 08:07:56: ---------------------------------------------------
+2014-05-21 08:07:58: n-inputs: 60000
+2014-05-21 08:07:58: cuda mats: 70054, copies: h->d: 70943, d->h: 1656
+2014-05-21 08:07:58: rbm: training rmse: 4.50201d-1 (30600000)
+2014-05-21 08:07:58: rbm: training chunk LABEL classification accuracy:
+                     67.04% (60000)
+2014-05-21 08:07:58: rbm: training chunk LABEL cross entropy:
+                     1.13834d+1 (60000.0d0)
+2014-05-21 08:07:58: n-inputs: 60000
+2014-05-21 08:07:58: cuda mats: 70054, copies: h->d: 70943, d->h: 1656
+2014-05-21 08:07:58: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 91.90% (1000)
+2014-05-21 08:07:58: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.80946d-1 (1000.0d0)
+2014-05-21 08:07:58: dbn: training
+                     chunk LABEL classification accuracy: 90.20% (1000)
+2014-05-21 08:07:58: dbn: training
+                     chunk LABEL cross entropy: 3.50126d-1 (1000.0d0)
+2014-05-21 08:07:58: dbn test: test level 0 rmse: 1.18752d-1 (7840000)
+2014-05-21 08:07:58: dbn test: test level 1 rmse: 1.07304d-1 (5100000)
+2014-05-21 08:07:58: dbn: test
+                     chunk LABEL classification accuracy: 91.52% (10000)
+2014-05-21 08:07:58: dbn: test chunk LABEL cross entropy: 3.16891d-1 (10000.0d0)
+2014-05-21 08:07:59: ---------------------------------------------------
+2014-05-21 08:08:01: n-inputs: 120000
+2014-05-21 08:08:01: cuda mats: 70054, copies: h->d: 71875, d->h: 3307
+2014-05-21 08:08:01: rbm: training rmse: 3.92388d-1 (30600000)
+2014-05-21 08:08:01: rbm: training chunk LABEL classification accuracy:
+                     82.67% (60000)
+2014-05-21 08:08:01: rbm: training chunk LABEL cross entropy:
+                     5.98730d+0 (60000.0d0)
+2014-05-21 08:08:01: n-inputs: 120000
+2014-05-21 08:08:01: cuda mats: 70054, copies: h->d: 71875, d->h: 3307
+2014-05-21 08:08:01: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 94.00% (1000)
+2014-05-21 08:08:01: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.10110d-1 (1000.0d0)
+2014-05-21 08:08:01: dbn: training
+                     chunk LABEL classification accuracy: 92.40% (1000)
+2014-05-21 08:08:01: dbn: training
+                     chunk LABEL cross entropy: 2.75415d-1 (1000.0d0)
+2014-05-21 08:08:01: dbn test: test level 0 rmse: 1.15099d-1 (7840000)
+2014-05-21 08:08:01: dbn test: test level 1 rmse: 8.93954d-2 (5100000)
+2014-05-21 08:08:02: dbn: test
+                     chunk LABEL classification accuracy: 93.40% (10000)
+2014-05-21 08:08:02: dbn: test chunk LABEL cross entropy: 2.54685d-1 (10000.0d0)
+2014-05-21 08:08:02: ---------------------------------------------------
+2014-05-21 08:08:02: Starting to train DBM.
+2014-05-21 08:08:02: Describing learner:
+#<BM-PCD-LEARNER {10672A17D3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+  SPARSITY-GRADIENT-SOURCES  = (#<CHEATING-SPARSITY-GRADIENT-SOURCE (C0 F1) F1 {1068CD4AE3}>..
+  SPARSER                    = #<FUNCTION (LAMBDA (CLOUD CHUNK) :IN TRAIN-MNIST-DBM) {1068F28B5B}>
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 5
+  N-PARTICLES                = 100
+  PERSISTENT-CHAINS          = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = (#<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C0 F1) F1 {1068CD4AE3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (INPUTS F1) F1 {1068CD6F63}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C1 F2) F2 {1068CD8033}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (F1 C2) F1 {1068CD8F33}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 #1=(F1 F2) F1 {1068CD9E33}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE #1#
+                                 F2 {1068CDAD33}>)
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 5
+
+BM-PCD-LEARNER description:
+  N-PARTICLES = 100
+
+#<MNIST-DBM {10738600A3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>
+                    #<SOFTMAX-LABEL-CHUNK* LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>
+                   #<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>
+            #<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+            #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+            #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+            #<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>
+            #<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CD4AE3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CD6F63}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CD8033}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CD8F33}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CD9E33}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1068CDAD33}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+2014-05-21 08:08:03: Describing trainer:
+#<MNIST-DBM-TRAINER {10671A9343}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+                  {1068B0DBC3}>
+                {1068B07E93}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>)
+                  {1068B0D543}>
+                {1068B07DC3}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>)
+                  {1068B0CEC3}>
+                {1068B07CF3}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>)
+                  {1068B0C843}>
+                {1068B07C23}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>)
+                  {1068B0C1C3}>
+                {1068B07B53}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>)
+                  {1068B0BB43}>
+                {1068B07A83}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>)
+                  {1068B0AFE3}>
+                {1068B079B3}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+                  {1068B09B73}>
+                {1068B078E3}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>
+              #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+              #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07E93}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+                  {1068B0DBC3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07DC3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>)
+                  {1068B0D543}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07CF3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>)
+                  {1068B0CEC3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07C23}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>)
+                  {1068B0C843}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07B53}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>)
+                  {1068B0C1C3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B07A83}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>)
+                  {1068B0BB43}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B079B3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>)
+                  {1068B0AFE3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1068B078E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+                  {1068B09B73}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:08:03: n-inputs: 0
+2014-05-21 08:08:03: cuda mats: 135, copies: h->d: 106, d->h: 1
+2014-05-21 08:08:03: dbm test: training reconstruction
+                     chunk LABEL classification accuracy: 95.00% (1000)
+2014-05-21 08:08:03: dbm test: training reconstruction
+                     chunk LABEL cross entropy: 1.81601d-1 (1000.0d0)
+2014-05-21 08:08:03: dbm test: training
+                     chunk LABEL classification accuracy: 92.50% (1000)
+2014-05-21 08:08:03: dbm test: training
+                     chunk LABEL cross entropy: 2.68718d-1 (1000.0d0)
+2014-05-21 08:08:05: dbm test: test
+                     chunk LABEL classification accuracy: 93.43% (10000)
+2014-05-21 08:08:05: dbm test: test
+                     chunk LABEL cross entropy: 2.53121d-1 (10000.0d0)
+2014-05-21 08:08:05: ---------------------------------------------------
+2014-05-21 08:08:22: n-inputs: 60000
+2014-05-21 08:08:22: cuda mats: 70109, copies: h->d: 70848, d->h: 1552
+2014-05-21 08:08:22: dbm train: training level 0 rmse: 1.65862d-1 (47040000)
+2014-05-21 08:08:22: dbm train: training level 1 rmse: 1.18748d-2 (30600000)
+2014-05-21 08:08:22: dbm train: training chunk LABEL classification accuracy:
+                     95.63% (60000)
+2014-05-21 08:08:22: dbm train: training chunk LABEL cross entropy:
+                     1.72165d-1 (60000.0d0)
+2014-05-21 08:08:22: n-inputs: 60000
+2014-05-21 08:08:22: cuda mats: 70109, copies: h->d: 70848, d->h: 1552
+2014-05-21 08:08:23: dbm test: training reconstruction
+                     chunk LABEL classification accuracy: 95.20% (1000)
+2014-05-21 08:08:23: dbm test: training reconstruction
+                     chunk LABEL cross entropy: 1.66945d-1 (1000.0d0)
+2014-05-21 08:08:23: dbm test: training
+                     chunk LABEL classification accuracy: 92.60% (1000)
+2014-05-21 08:08:23: dbm test: training
+                     chunk LABEL cross entropy: 2.58506d-1 (1000.0d0)
+2014-05-21 08:08:25: dbm test: test
+                     chunk LABEL classification accuracy: 93.59% (10000)
+2014-05-21 08:08:25: dbm test: test
+                     chunk LABEL cross entropy: 2.48387d-1 (10000.0d0)
+2014-05-21 08:08:25: ---------------------------------------------------
+2014-05-21 08:08:25: inits:
+((:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1)))
+ (:CLOUD-NAME (F1 C2) :WEIGHT-NAME (:CLOUD (F1 C2) :TRANSPOSE))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2) :TRANSPOSE)))
+2014-05-21 08:08:25: bpn def:
+(BUILD-BPN (:CLASS 'MNIST-BPN/2 :MAX-N-STRIPES 1000 :INITARGS
+            '(:POPULATE-KEY #<FUNCTION FIRST>
+              :POPULATE-CONVERT-TO-DBM-SAMPLE-FN
+              #<FUNCTION (LAMBDA (SAMPLE) :IN TRAIN-MNIST/2) {1002CE0EAB}>
+              :POPULATE-MAP-CACHE-LAZILY-FROM-DBM
+              #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+              :POPULATE-PERIODIC-FN #<PERIODIC-FN {10270EB4B3}>))
+  (#:G159383 (->INPUT :NAME '(:CHUNK F2 :MAP) :SIZE 1000))
+  (#:G159382 (->CONSTANT :NAME '(:CHUNK C2 :MAP) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G159379 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G159377 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G159380 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G159390 (->WEIGHT :NAME '(:CLOUD (F1 F2) :TRANSPOSE) :SIZE 500000))
+  (#:G159391
+   (->ACTIVATION :NAME '(:CLOUD (F1 F2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G159390 :X #:G159383 :TRANSPOSE-WEIGHTS-P T))
+  (#:G159392 (->WEIGHT :NAME '(:CLOUD (F1 C2) :TRANSPOSE) :SIZE 500))
+  (#:G159393
+   (->ACTIVATION :NAME '(:CLOUD (F1 C2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G159392 :X #:G159382 :TRANSPOSE-WEIGHTS-P T))
+  (#:G159394 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G159395
+   (->ACTIVATION :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G159394 :X #:G159379 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G159396 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G159397
+   (->ACTIVATION :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G159396
+                 :X #:G159377 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G159389
+   (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS
+        (LIST #:G159391 #:G159393 #:G159395 #:G159397)))
+  (#:G159378 (->SIGMOID :NAME '(:CHUNK F1) :X #:G159389))
+  (#:G159399 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 500000))
+  (#:G159400
+   (->ACTIVATION :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G159399
+                 :X #:G159378 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G159401 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 1000))
+  (#:G159402
+   (->ACTIVATION :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G159401
+                 :X #:G159380 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G159398
+   (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G159400 #:G159402)))
+  (#:G159381 (->SIGMOID :NAME '(:CHUNK F2) :X #:G159398)))
+2014-05-21 08:08:25: Starting to train the softmax layer of BPN
+2014-05-21 08:08:25: Describing learner:
+#<BP-LEARNER {10272807B3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN/2 :N-STRIPES 1 :MAX-N-STRIPES 1000 {1027258233}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :N-STRIPES 1 :MAX-N-STRIPES 1000 {1027258233}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN/2 {1027258233}>
+BPN description:
+  LUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE
+              1000*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C2 :MAP) :SIZE
+              1*1(1/1000) :norm 31.62278>
+            #<->INPUT (:CHUNK INPUTS) :SIZE
+              784*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C0) :SIZE 1*1(1/1000) :norm 31.62278>
+            #<->CONSTANT (:CHUNK C1) :SIZE 1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+              500000*1(1/1) :norm 41.70124>
+            #<->ACTIVATION (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+              500*1(1/1) :norm 3.04333>
+            #<->ACTIVATION (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+              392000*1(1/1) :norm 54.88146>
+            #<->ACTIVATION (:CLOUD #5# . #3#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+              500*1(1/1) :norm 18.99623>
+            #<->ACTIVATION (:CLOUD #6# . #3#) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+              500*1(1/1000) :norm 0.00000>
+            #<->SIGMOID (:CHUNK F1) :SIZE 500*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #1#) :SIZE 500000*1(1/1) :norm 41.70124>
+            #<->ACTIVATION (:CLOUD #1# . #3#) :SIZE
+              1000*1(1/1000) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+              1000*1(1/1) :norm 10.03684>
+            #<->ACTIVATION (:CLOUD #8# . #3#) :SIZE
+              1000*1(1/1000) :norm 0.00000>
+            #<->+ (:CHUNK F2 . #7#) :SIZE 1000*1(1/1000) :norm 0.00000>
+            #<->SIGMOID #9=(:CHUNK F2) :SIZE
+              1000*1(1/1000) :norm 0.00000>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1(1/1000) :norm 31.62278>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.08883>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->WEIGHT #10=(#9# PREDICTIONS) :SIZE
+              10000*1(1/1) :norm 7.49711>
+            #<->ACTIVATION (#10# :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->INPUT EXPECTATIONS :SIZE 10*1(1/1000) :norm 0.00000>
+            #<->CROSS-ENTROPY-SOFTMAX #:G159403 :SIZE
+              10*1(1/1000) :norm 0.00000>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1(1/1000) :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 1000
+2014-05-21 08:08:25: Describing trainer:
+#<MNIST-CG-BP-TRAINER {1027280673}>
+CG-TRAINER description:
+  N-INPUTS = 0
+  BATCH-SIZE = 10000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.08883>
+                   #<->WEIGHT ((:CHUNK F2) PREDICTIONS) :SIZE
+                     10000*1(1/1) :norm 7.49711>)
+                  {1027281F23}>
+2014-05-21 08:08:25: n-inputs: 0
+2014-05-21 08:08:25: cuda mats: 16, copies: h->d: 7, d->h: 8
+2014-05-21 08:08:25: populated: 0
+2014-05-21 08:08:25: populated: 1000
+2014-05-21 08:08:26: populated: 2000
+2014-05-21 08:08:26: populated: 3000
+2014-05-21 08:08:26: populated: 4000
+2014-05-21 08:08:26: populated: 5000
+2014-05-21 08:08:27: populated: 6000
+2014-05-21 08:08:27: populated: 7000
+2014-05-21 08:08:27: populated: 8000
+2014-05-21 08:08:28: populated: 9000
+2014-05-21 08:08:28: populated: 10000
+2014-05-21 08:08:28: bpn test: test classification accuracy: 93.59% (10000)
+2014-05-21 08:08:28: bpn test: test cross entropy: 2.48388d-1 (10000.0d0)
+2014-05-21 08:08:28: ---------------------------------------------------
+2014-05-21 08:08:28: populated: 11000
+2014-05-21 08:08:28: populated: 12000
+2014-05-21 08:08:29: populated: 13000
+2014-05-21 08:08:29: populated: 14000
+2014-05-21 08:08:29: populated: 15000
+2014-05-21 08:08:29: populated: 16000
+2014-05-21 08:08:30: populated: 17000
+2014-05-21 08:08:30: populated: 18000
+2014-05-21 08:08:30: populated: 19000
+2014-05-21 08:08:30: populated: 20000
+2014-05-21 08:08:33: best-f: 2.46093d+3, n-evaluations: 11
+2014-05-21 08:08:33: n-line-searches: 3 (succesful 3)
+2014-05-21 08:08:34: populated: 21000
+2014-05-21 08:08:34: populated: 22000
+2014-05-21 08:08:34: populated: 23000
+2014-05-21 08:08:34: populated: 24000
+2014-05-21 08:08:35: populated: 25000
+2014-05-21 08:08:35: populated: 26000
+2014-05-21 08:08:35: populated: 27000
+2014-05-21 08:08:35: populated: 28000
+2014-05-21 08:08:36: populated: 29000
+2014-05-21 08:08:36: populated: 30000
+2014-05-21 08:08:39: best-f: 2.28661d+3, n-evaluations: 10
+2014-05-21 08:08:39: n-line-searches: 3 (succesful 3)
+2014-05-21 08:08:39: populated: 31000
+2014-05-21 08:08:39: populated: 32000
+2014-05-21 08:08:40: populated: 33000
+2014-05-21 08:08:40: populated: 34000
+2014-05-21 08:08:40: populated: 35000
+2014-05-21 08:08:40: populated: 36000
+2014-05-21 08:08:41: populated: 37000
+2014-05-21 08:08:41: populated: 38000
+2014-05-21 08:08:41: populated: 39000
+2014-05-21 08:08:41: populated: 40000
+2014-05-21 08:08:44: best-f: 2.21417d+3, n-evaluations: 10
+2014-05-21 08:08:44: n-line-searches: 3 (succesful 3)
+2014-05-21 08:08:44: populated: 41000
+2014-05-21 08:08:45: populated: 42000
+2014-05-21 08:08:45: populated: 43000
+2014-05-21 08:08:45: populated: 44000
+2014-05-21 08:08:45: populated: 45000
+2014-05-21 08:08:46: populated: 46000
+2014-05-21 08:08:46: populated: 47000
+2014-05-21 08:08:46: populated: 48000
+2014-05-21 08:08:46: populated: 49000
+2014-05-21 08:08:47: populated: 50000
+2014-05-21 08:08:49: best-f: 2.28448d+3, n-evaluations: 10
+2014-05-21 08:08:49: n-line-searches: 3 (succesful 3)
+2014-05-21 08:08:50: populated: 51000
+2014-05-21 08:08:50: populated: 52000
+2014-05-21 08:08:50: populated: 53000
+2014-05-21 08:08:50: populated: 54000
+2014-05-21 08:08:51: populated: 55000
+2014-05-21 08:08:51: populated: 56000
+2014-05-21 08:08:51: populated: 57000
+2014-05-21 08:08:51: populated: 58000
+2014-05-21 08:08:52: populated: 59000
+2014-05-21 08:08:52: populated: 60000
+2014-05-21 08:08:55: best-f: 2.15493d+3, n-evaluations: 10
+2014-05-21 08:08:55: n-line-searches: 3 (succesful 3)
+2014-05-21 08:08:55: populated: 61000
+2014-05-21 08:08:55: populated: 62000
+2014-05-21 08:08:55: populated: 63000
+2014-05-21 08:08:56: populated: 64000
+2014-05-21 08:08:56: populated: 65000
+2014-05-21 08:08:56: populated: 66000
+2014-05-21 08:08:56: populated: 67000
+2014-05-21 08:08:57: populated: 68000
+2014-05-21 08:08:57: populated: 69000
+2014-05-21 08:08:57: populated: 70000
+2014-05-21 08:09:00: best-f: 2.14548d+3, n-evaluations: 9
+2014-05-21 08:09:00: n-line-searches: 3 (succesful 3)
+2014-05-21 08:09:00: n-inputs: 60000
+2014-05-21 08:09:00: cuda mats: 140071, copies: h->d: 71461, d->h: 3349
+2014-05-21 08:09:00: bpn train: training classification accuracy:
+                     93.58% (600000)
+2014-05-21 08:09:00: bpn train: training cross entropy: 2.33429d-1 (600000.0d0)
+2014-05-21 08:09:00: n-inputs: 60000
+2014-05-21 08:09:00: cuda mats: 140071, copies: h->d: 71461, d->h: 3349
+2014-05-21 08:09:00: bpn test: test classification accuracy: 94.28% (10000)
+2014-05-21 08:09:00: bpn test: test cross entropy: 2.13286d-1 (10000.0d0)
+2014-05-21 08:09:00: ---------------------------------------------------
+2014-05-21 08:09:00: Starting to train the whole BPN
+2014-05-21 08:09:00: Describing learner:
+#<BP-LEARNER {101BF29833}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN/2 :N-STRIPES 1000 :MAX-N-STRIPES 1000 {1027258233}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :N-STRIPES 1000 :MAX-N-STRIPES 1000 {1027258233}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN/2 {1027258233}>
+BPN description:
+  LUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE
+              1000*1000(1000/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C2 :MAP) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->INPUT (:CHUNK INPUTS) :SIZE
+              784*1000(1000/1000) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C0) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->CONSTANT (:CHUNK C1) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+              500000*1(1/1) :norm 41.70124>
+            #<->ACTIVATION (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+              500*1000(1000/1000) :norm 1777.01361>
+            #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+              500*1(1/1) :norm 3.04333>
+            #<->ACTIVATION (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+              500*1000(1000/1000) :norm 96.23843>
+            #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+              392000*1(1/1) :norm 54.88146>
+            #<->ACTIVATION (:CLOUD #5# . #3#) :SIZE
+              500*1000(1000/1000) :norm 2449.24763>
+            #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+              500*1(1/1) :norm 18.99623>
+            #<->ACTIVATION (:CLOUD #6# . #3#) :SIZE
+              500*1000(1000/1000) :norm 600.71351>
+            #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+              500*1000(1000/1000) :norm 3834.75148>
+            #<->SIGMOID (:CHUNK F1) :SIZE
+              500*1000(1000/1000) :norm 370.90479>
+            #<->WEIGHT (:CLOUD #1#) :SIZE 500000*1(1/1) :norm 41.70124>
+            #<->ACTIVATION (:CLOUD #1# . #3#) :SIZE
+              1000*1000(1000/1000) :norm 2964.76567>
+            #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+              1000*1(1/1) :norm 10.03684>
+            #<->ACTIVATION (:CLOUD #8# . #3#) :SIZE
+              1000*1000(1000/1000) :norm 317.39272>
+            #<->+ (:CHUNK F2 . #7#) :SIZE
+              1000*1000(1000/1000) :norm 3176.69922>
+            #<->SIGMOID #9=(:CHUNK F2) :SIZE
+              1000*1000(1000/1000) :norm 320.16374>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1000(1000/1000) :norm 31.62278>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.12145>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 3.84064>
+            #<->WEIGHT #10=(#9# PREDICTIONS) :SIZE
+              10000*1(1/1) :norm 8.46292>
+            #<->ACTIVATION (#10# :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 623.52103>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1000(1000/1000) :norm 623.24529>
+            #<->INPUT EXPECTATIONS :SIZE
+              10*1000(1000/1000) :norm 31.62278>
+            #<->CROSS-ENTROPY-SOFTMAX #:G159403 :SIZE
+              10*1000(1000/1000) :norm 22.50799>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1000(1000/1000) :norm 22.50799>)
+  N-STRIPES = 1000
+  MAX-N-STRIPES = 1000
+2014-05-21 08:09:00: Describing trainer:
+#<MNIST-CG-BP-TRAINER {101BF296D3}>
+CG-TRAINER description:
+  N-INPUTS = 0
+  BATCH-SIZE = 10000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE))
+                     :SIZE 500000*1(1/1) :norm 41.70124>
+                   #<->WEIGHT (:CLOUD (F1 C2) . #2#) :SIZE
+                     500*1(1/1) :norm 3.04333>
+                   #<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000*1(1/1) :norm 54.88146>
+                   #<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500*1(1/1) :norm 18.99623>
+                   #<->WEIGHT (:CLOUD #1#) :SIZE
+                     500000*1(1/1) :norm 41.70124>
+                   #<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     1000*1(1/1) :norm 10.03684>
+                   #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.12145>
+                   #<->WEIGHT ((:CHUNK F2) PREDICTIONS) :SIZE
+                     10000*1(1/1) :norm 8.46292>)
+                  {101BF29A53}>
+2014-05-21 08:09:00: n-inputs: 0
+2014-05-21 08:09:00: cuda mats: 140071, copies: h->d: 71473, d->h: 3384
+2014-05-21 08:09:00: bpn test: test classification accuracy: 94.28% (10000)
+2014-05-21 08:09:00: bpn test: test cross entropy: 2.13286d-1 (10000.0d0)
+2014-05-21 08:09:00: ---------------------------------------------------
+2014-05-21 08:09:04: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.001
+2014-05-21 08:09:04: init: #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0> 0.01
+2014-05-21 08:09:04: init: #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0> 0.01
+2014-05-21 08:09:04: Starting to train level 0 RBM in DBN.
+2014-05-21 08:09:04: Describing learner:
+#<MNIST-RBM-CD-LEARNER {1052D84143}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C0 INPUTS) - (C1 F1)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  TRAINER                    = #<MNIST-RBM-TRAINER {1052D83F53}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM/2 {104B417DE3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {104B42ADF3}>
+
+2014-05-21 08:09:04: Describing trainer:
+#<MNIST-RBM-TRAINER {1052D83F53}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+                  {1052D85C33}>
+                {1052D84933}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {1052D855B3}>
+                {1052D84863}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {1052D84A53}>
+                {1052D84793}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {1052D84933}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25386d-1>)
+                  {1052D85C33}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1052D84863}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {1052D855B3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {1052D84793}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {1052D84A53}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:09:04: n-inputs: 0
+2014-05-21 08:09:04: cuda mats: 5, copies: h->d: 0, d->h: 2
+2014-05-21 08:09:04: dbn test: test level 0 rmse: 4.80910d-1 (7840000)
+2014-05-21 08:09:04: ---------------------------------------------------
+2014-05-21 08:09:07: n-inputs: 60000
+2014-05-21 08:09:07: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:09:07: rbm: training rmse: 3.11882d-1 (47040000)
+2014-05-21 08:09:07: n-inputs: 60000
+2014-05-21 08:09:07: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:09:07: dbn test: test level 0 rmse: 1.19100d-1 (7840000)
+2014-05-21 08:09:07: ---------------------------------------------------
+2014-05-21 08:09:09: n-inputs: 120000
+2014-05-21 08:09:09: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:09:09: rbm: training rmse: 2.56601d-1 (47040000)
+2014-05-21 08:09:09: n-inputs: 120000
+2014-05-21 08:09:09: cuda mats: 70028, copies: h->d: 70006, d->h: 2
+2014-05-21 08:09:09: dbn test: test level 0 rmse: 9.80720d-2 (7840000)
+2014-05-21 08:09:09: ---------------------------------------------------
+2014-05-21 08:09:09: Starting to train level 1 RBM in DBN.
+2014-05-21 08:09:09: Describing learner:
+#<MNIST-RBM-CD-LEARNER {10587A5323}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C1 F1 LABEL) - (C2 F2)>
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = #<CLOSURE (LAMBDA (TRAINER) :IN TRAIN-MNIST/2) {1052D7F26B}>
+  TRAINER                    = #<MNIST-RBM-TRAINER {10587A5133}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = "#<error printing object>"
+
+#<MNIST-RBM/2 {10A770E2E3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>
+                    #<SOFTMAX-LABEL-CHUNK* LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>
+            #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {104B42ADF3}>
+
+2014-05-21 08:09:09: Describing trainer:
+#<MNIST-RBM-TRAINER {10587A5133}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+                  {10587A75D3}>
+                {10587A5AB3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {10587A6F53}>
+                {10587A59E3}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>)
+                  {10587A68D3}>
+                {10587A5913}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {10587A6253}>
+                {10587A5843}>
+              #<MNIST-RBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {10587A5BD3}>
+                {10587A5773}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-TRAINER {10587A5AB3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0>)
+                  {10587A75D3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {10587A59E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {10587A6F53}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {10587A5913}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07140d+0>)
+                  {10587A68D3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 1.00000d-3
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {10587A5843}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {10587A6253}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-RBM-SEGMENT-TRAINER {10587A5773}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {10587A5BD3}>
+  LEARNING-RATE = 5.00000d-2
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:09:09: n-inputs: 0
+2014-05-21 08:09:09: cuda mats: 70028, copies: h->d: 70006, d->h: 5
+2014-05-21 08:09:09: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 9.70% (1000)
+2014-05-21 08:09:09: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.28129d+0 (1000.0d0)
+2014-05-21 08:09:09: dbn: training
+                     chunk LABEL classification accuracy: 9.70% (1000)
+2014-05-21 08:09:09: dbn: training
+                     chunk LABEL cross entropy: 2.30390d+0 (1000.0d0)
+2014-05-21 08:09:09: dbn test: test level 0 rmse: 3.30825d-1 (7840000)
+2014-05-21 08:09:09: dbn test: test level 1 rmse: 4.30669d-1 (5100000)
+2014-05-21 08:09:10: dbn: test
+                     chunk LABEL classification accuracy: 9.80% (10000)
+2014-05-21 08:09:10: dbn: test chunk LABEL cross entropy: 2.30887d+0 (10000.0d0)
+2014-05-21 08:09:10: ---------------------------------------------------
+2014-05-21 08:09:12: n-inputs: 60000
+2014-05-21 08:09:12: cuda mats: 70054, copies: h->d: 70943, d->h: 1656
+2014-05-21 08:09:12: rbm: training rmse: 4.50201d-1 (30600000)
+2014-05-21 08:09:12: rbm: training chunk LABEL classification accuracy:
+                     67.04% (60000)
+2014-05-21 08:09:12: rbm: training chunk LABEL cross entropy:
+                     1.13834d+1 (60000.0d0)
+2014-05-21 08:09:12: n-inputs: 60000
+2014-05-21 08:09:12: cuda mats: 70054, copies: h->d: 70943, d->h: 1656
+2014-05-21 08:09:12: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 91.90% (1000)
+2014-05-21 08:09:12: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.80946d-1 (1000.0d0)
+2014-05-21 08:09:12: dbn: training
+                     chunk LABEL classification accuracy: 90.20% (1000)
+2014-05-21 08:09:12: dbn: training
+                     chunk LABEL cross entropy: 3.50126d-1 (1000.0d0)
+2014-05-21 08:09:12: dbn test: test level 0 rmse: 1.18752d-1 (7840000)
+2014-05-21 08:09:12: dbn test: test level 1 rmse: 1.07304d-1 (5100000)
+2014-05-21 08:09:13: dbn: test
+                     chunk LABEL classification accuracy: 91.52% (10000)
+2014-05-21 08:09:13: dbn: test chunk LABEL cross entropy: 3.16891d-1 (10000.0d0)
+2014-05-21 08:09:13: ---------------------------------------------------
+2014-05-21 08:09:15: n-inputs: 120000
+2014-05-21 08:09:15: cuda mats: 70054, copies: h->d: 71875, d->h: 3307
+2014-05-21 08:09:15: rbm: training rmse: 3.92388d-1 (30600000)
+2014-05-21 08:09:15: rbm: training chunk LABEL classification accuracy:
+                     82.67% (60000)
+2014-05-21 08:09:15: rbm: training chunk LABEL cross entropy:
+                     5.98730d+0 (60000.0d0)
+2014-05-21 08:09:15: n-inputs: 120000
+2014-05-21 08:09:15: cuda mats: 70054, copies: h->d: 71875, d->h: 3307
+2014-05-21 08:09:15: dbn: training reconstruction
+                     chunk LABEL classification accuracy: 94.00% (1000)
+2014-05-21 08:09:15: dbn: training reconstruction
+                     chunk LABEL cross entropy: 2.10110d-1 (1000.0d0)
+2014-05-21 08:09:15: dbn: training
+                     chunk LABEL classification accuracy: 92.40% (1000)
+2014-05-21 08:09:15: dbn: training
+                     chunk LABEL cross entropy: 2.75415d-1 (1000.0d0)
+2014-05-21 08:09:15: dbn test: test level 0 rmse: 1.15099d-1 (7840000)
+2014-05-21 08:09:15: dbn test: test level 1 rmse: 8.93954d-2 (5100000)
+2014-05-21 08:09:16: dbn: test
+                     chunk LABEL classification accuracy: 93.40% (10000)
+2014-05-21 08:09:16: dbn: test chunk LABEL cross entropy: 2.54685d-1 (10000.0d0)
+2014-05-21 08:09:16: ---------------------------------------------------
+2014-05-21 08:09:16: Starting to train DBM.
+2014-05-21 08:09:16: Describing learner:
+#<BM-PCD-LEARNER {1055B97C83}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+  SPARSITY-GRADIENT-SOURCES  = (#<CHEATING-SPARSITY-GRADIENT-SOURCE (C0 F1) F1 {1055CFDF53}>..
+  SPARSER                    = #<FUNCTION (LAMBDA (CLOUD CHUNK) :IN TRAIN-MNIST-DBM) {100301189B}>
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 5
+  N-PARTICLES                = 100
+  PERSISTENT-CHAINS          = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = (#<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C0 F1) F1 {1055CFDF53}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (INPUTS F1) F1 {1055CFF153}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C1 F2) F2 {1055D00053}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (F1 C2) F1 {1055D00F53}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 #1=(F1 F2) F1 {1055D01E53}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE #1#
+                                 F2 {1055D02D53}>)
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 5
+
+BM-PCD-LEARNER description:
+  N-PARTICLES = 100
+
+#<MNIST-DBM {1011B16173}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>
+                    #<SOFTMAX-LABEL-CHUNK* LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>
+                   #<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>
+            #<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+            #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+            #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+            #<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>
+            #<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055CFDF53}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055CFF153}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055D00053}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055D00F53}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055D01E53}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1055D02D53}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000d-1
+  COST = 1.00000d-3
+  DAMPING = 9.00000d-1
+2014-05-21 08:09:16: Describing trainer:
+#<MNIST-DBM-TRAINER {1055B97B63}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+                  {1055C3A5A3}>
+                {1055C37703}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>)
+                  {1055C39F23}>
+                {1055C37633}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>)
+                  {1055C398A3}>
+                {1055C37563}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>)
+                  {1055C39223}>
+                {1055C37493}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>)
+                  {1055C38BA3}>
+                {1055C373C3}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>)
+                  {1055C38523}>
+                {1055C372F3}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>)
+                  {1055C37EA3}>
+                {1055C37223}>
+              #<MNIST-DBM-SEGMENT-TRAINER
+                #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+                  {1055C37823}>
+                {1055C37153}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>
+              #<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>
+              #<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37703}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.44652d+0>)
+                  {1055C3A5A3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37633}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 9.32221d-2>)
+                  {1055C39F23}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37563}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18503d+1>)
+                  {1055C398A3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37493}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 3.08555d+0>)
+                  {1055C39223}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C373C3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 1.00158d+1>)
+                  {1055C38BA3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C372F3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.47670d+1>)
+                  {1055C38523}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 2.00000d-4
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37223}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.45336d+0>)
+                  {1055C37EA3}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-DBM-SEGMENT-TRAINER {1055C37153}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.90657d+1>)
+                  {1055C37823}>
+  LEARNING-RATE = 1.00000d-3
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:09:16: n-inputs: 0
+2014-05-21 08:09:16: cuda mats: 135, copies: h->d: 106, d->h: 1
+2014-05-21 08:09:17: dbm test: training reconstruction
+                     chunk LABEL classification accuracy: 95.00% (1000)
+2014-05-21 08:09:17: dbm test: training reconstruction
+                     chunk LABEL cross entropy: 1.81601d-1 (1000.0d0)
+2014-05-21 08:09:17: dbm test: training
+                     chunk LABEL classification accuracy: 92.50% (1000)
+2014-05-21 08:09:17: dbm test: training
+                     chunk LABEL cross entropy: 2.68718d-1 (1000.0d0)
+2014-05-21 08:09:19: dbm test: test
+                     chunk LABEL classification accuracy: 93.43% (10000)
+2014-05-21 08:09:19: dbm test: test
+                     chunk LABEL cross entropy: 2.53121d-1 (10000.0d0)
+2014-05-21 08:09:19: ---------------------------------------------------
+2014-05-21 08:09:36: n-inputs: 60000
+2014-05-21 08:09:36: cuda mats: 70109, copies: h->d: 70849, d->h: 1552
+2014-05-21 08:09:36: dbm train: training level 0 rmse: 1.65862d-1 (47040000)
+2014-05-21 08:09:36: dbm train: training level 1 rmse: 1.18748d-2 (30600000)
+2014-05-21 08:09:36: dbm train: training chunk LABEL classification accuracy:
+                     95.63% (60000)
+2014-05-21 08:09:36: dbm train: training chunk LABEL cross entropy:
+                     1.72165d-1 (60000.0d0)
+2014-05-21 08:09:36: n-inputs: 60000
+2014-05-21 08:09:36: cuda mats: 70109, copies: h->d: 70849, d->h: 1552
+2014-05-21 08:09:36: dbm test: training reconstruction
+                     chunk LABEL classification accuracy: 95.20% (1000)
+2014-05-21 08:09:36: dbm test: training reconstruction
+                     chunk LABEL cross entropy: 1.66945d-1 (1000.0d0)
+2014-05-21 08:09:36: dbm test: training
+                     chunk LABEL classification accuracy: 92.60% (1000)
+2014-05-21 08:09:36: dbm test: training
+                     chunk LABEL cross entropy: 2.58506d-1 (1000.0d0)
+2014-05-21 08:09:38: dbm test: test
+                     chunk LABEL classification accuracy: 93.59% (10000)
+2014-05-21 08:09:38: dbm test: test
+                     chunk LABEL cross entropy: 2.48387d-1 (10000.0d0)
+2014-05-21 08:09:38: ---------------------------------------------------
+2014-05-21 08:09:39: inits:
+((:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1)))
+ (:CLOUD-NAME (F1 C2) :WEIGHT-NAME (:CLOUD (F1 C2) :TRANSPOSE))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2) :TRANSPOSE)))
+2014-05-21 08:09:39: bpn def:
+(BUILD-BPN (:CLASS 'MNIST-BPN/2 :MAX-N-STRIPES 1000 :INITARGS
+            '(:POPULATE-KEY #<FUNCTION FIRST>
+              :POPULATE-CONVERT-TO-DBM-SAMPLE-FN
+              #<FUNCTION (LAMBDA (SAMPLE) :IN TRAIN-MNIST/2) {1002CE0EAB}>
+              :POPULATE-MAP-CACHE-LAZILY-FROM-DBM
+              #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+              :POPULATE-PERIODIC-FN #<PERIODIC-FN {10ABA8B4B3}>))
+  (#:G281049 (->INPUT :NAME '(:CHUNK F2 :MAP) :SIZE 1000))
+  (#:G281048 (->CONSTANT :NAME '(:CHUNK C2 :MAP) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G281045 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G281043 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G281046 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G281056 (->WEIGHT :NAME '(:CLOUD (F1 F2) :TRANSPOSE) :SIZE 500000))
+  (#:G281057
+   (->ACTIVATION :NAME '(:CLOUD (F1 F2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G281056 :X #:G281049 :TRANSPOSE-WEIGHTS-P T))
+  (#:G281058 (->WEIGHT :NAME '(:CLOUD (F1 C2) :TRANSPOSE) :SIZE 500))
+  (#:G281059
+   (->ACTIVATION :NAME '(:CLOUD (F1 C2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G281058 :X #:G281048 :TRANSPOSE-WEIGHTS-P T))
+  (#:G281060 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G281061
+   (->ACTIVATION :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS
+                 #:G281060 :X #:G281045 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G281062 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G281063
+   (->ACTIVATION :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G281062
+                 :X #:G281043 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G281055
+   (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS
+        (LIST #:G281057 #:G281059 #:G281061 #:G281063)))
+  (#:G281044 (->SIGMOID :NAME '(:CHUNK F1) :X #:G281055))
+  (#:G281065 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 500000))
+  (#:G281066
+   (->ACTIVATION :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G281065
+                 :X #:G281044 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G281067 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 1000))
+  (#:G281068
+   (->ACTIVATION :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G281067
+                 :X #:G281046 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G281064
+   (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G281066 #:G281068)))
+  (#:G281047 (->SIGMOID :NAME '(:CHUNK F2) :X #:G281064)))
+2014-05-21 08:09:39: dropout #<->INPUT (:CHUNK INPUTS) :SIZE
+                               784*1(1/100) :norm 0.00000> 0.2
+2014-05-21 08:09:39: rescaling #<->ACTIVATION (:CLOUD (INPUTS F1) :LINEAR)
+                                 :SIZE 500*1(1/100) :norm 0.00000> by 1.25
+2014-05-21 08:09:39: dropout #<->SIGMOID (:CHUNK F1) :SIZE
+                               500*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:09:39: rescaling #<->ACTIVATION (:CLOUD (F1 F2) :LINEAR) :SIZE
+                                 1000*1(1/100) :norm 0.00000> by 2.00
+2014-05-21 08:09:39: dropout #<->SIGMOID (:CHUNK F2) :SIZE
+                               1000*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:09:39: rescaling #<->ACTIVATION
+                                 (((:CHUNK F2) PREDICTIONS) :ACTIVATION) :SIZE
+                                 10*1(1/100) :norm 0.00000> by 2.00
+2014-05-21 08:09:39: Starting to train the whole BPN
+2014-05-21 08:09:39: Describing learner:
+#<BP-LEARNER {102720DAE3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN/2 :N-STRIPES 1 :MAX-N-STRIPES 100 {10ABBE6B13}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :N-STRIPES 1 :MAX-N-STRIPES 100 {10ABBE6B13}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN/2 {10ABBE6B13}>
+BPN description:
+  LUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE
+              1000*1(1/100) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C2 :MAP) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->INPUT (:CHUNK INPUTS) :SIZE 784*1(1/100) :norm 0.00000>
+            #<->CONSTANT (:CHUNK C0) :SIZE 1*1(1/100) :norm 10.00000>
+            #<->CONSTANT (:CHUNK C1) :SIZE 1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+              500000*1(1/1) :norm 41.70124>
+            #<->ACTIVATION (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+              500*1(1/100) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+              500*1(1/1) :norm 3.04333>
+            #<->ACTIVATION (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+              500*1(1/100) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+              392000*1(1/1) :norm 68.60182>
+            #<->ACTIVATION (:CLOUD #5# . #3#) :SIZE
+              500*1(1/100) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+              500*1(1/1) :norm 18.99623>
+            #<->ACTIVATION (:CLOUD #6# . #3#) :SIZE
+              500*1(1/100) :norm 0.00000>
+            #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+              500*1(1/100) :norm 0.00000>
+            #<->SIGMOID (:CHUNK F1) :SIZE 500*1(1/100) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #1#) :SIZE 500000*1(1/1) :norm 83.40248>
+            #<->ACTIVATION (:CLOUD #1# . #3#) :SIZE
+              1000*1(1/100) :norm 0.00000>
+            #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+              1000*1(1/1) :norm 10.03684>
+            #<->ACTIVATION (:CLOUD #8# . #3#) :SIZE
+              1000*1(1/100) :norm 0.00000>
+            #<->+ (:CHUNK F2 . #7#) :SIZE 1000*1(1/100) :norm 0.00000>
+            #<->SIGMOID #9=(:CHUNK F2) :SIZE
+              1000*1(1/100) :norm 0.00000>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.08883>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->WEIGHT #10=(#9# PREDICTIONS) :SIZE
+              10000*1(1/1) :norm 14.99423>
+            #<->ACTIVATION (#10# :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->INPUT EXPECTATIONS :SIZE 10*1(1/100) :norm 0.00000>
+            #<->CROSS-ENTROPY-SOFTMAX #:G281069 :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1(1/100) :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+2014-05-21 08:09:39: Describing trainer:
+#<MNIST-BPN-GD-TRAINER {102720D9C3}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT ((:CHUNK F2) PREDICTIONS) :SIZE
+                     10000*1(1/1) :norm 14.99423>)
+                  {10287F6303}>
+                {10287F1803}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.08883>)
+                  {10287F5C83}>
+                {10287F16F3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     1000*1(1/1) :norm 10.03684>)
+                  {10287F5603}>
+                {10287F15E3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD #1=(F1 F2)) :SIZE
+                     500000*1(1/1) :norm 83.40248>)
+                  {10287F4F83}>
+                {10287F14D3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500*1(1/1) :norm 18.99623>)
+                  {10287F4903}>
+                {10287F13C3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000*1(1/1) :norm 68.60182>)
+                  {10287F4283}>
+                {10287F12B3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 C2) . #2=(:TRANSPOSE)) :SIZE
+                     500*1(1/1) :norm 3.04333>)
+                  {10287F3C03}>
+                {10287F11A3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD #1# . #2#) :SIZE
+                     500000*1(1/1) :norm 41.70124>)
+                  {10287F2CF3}>
+                {10287F1093}>)
+  SEGMENTS = (#<->WEIGHT ((:CHUNK F2) PREDICTIONS) :SIZE
+                10000*1(1/1) :norm 14.99423>
+              #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                10*1(1/1) :norm 0.08883>
+              #<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                1000*1(1/1) :norm 10.03684>
+              #<->WEIGHT (:CLOUD #1=(F1 F2)) :SIZE
+                500000*1(1/1) :norm 83.40248>
+              #<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                500*1(1/1) :norm 18.99623>
+              #<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                392000*1(1/1) :norm 68.60182>
+              #<->WEIGHT (:CLOUD (F1 C2) . #2=(:TRANSPOSE)) :SIZE
+                500*1(1/1) :norm 3.04333>
+              #<->WEIGHT (:CLOUD #1# . #2#) :SIZE
+                500000*1(1/1) :norm 41.70124>)
+
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F1803}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT ((:CHUNK F2) PREDICTIONS) :SIZE
+                     10000*1(1/1) :norm 14.99423>)
+                  {10287F6303}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F16F3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.08883>)
+                  {10287F5C83}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F15E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     1000*1(1/1) :norm 10.03684>)
+                  {10287F5603}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F14D3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                     500000*1(1/1) :norm 83.40248>)
+                  {10287F4F83}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F13C3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500*1(1/1) :norm 18.99623>)
+                  {10287F4903}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F12B3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000*1(1/1) :norm 68.60182>)
+                  {10287F4283}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F11A3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 C2) :TRANSPOSE) :SIZE
+                     500*1(1/1) :norm 3.04333>)
+                  {10287F3C03}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10287F1093}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 F2) :TRANSPOSE) :SIZE
+                     500000*1(1/1) :norm 41.70124>)
+                  {10287F2CF3}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+2014-05-21 08:09:39: n-inputs: 0
+2014-05-21 08:09:39: cuda mats: 16, copies: h->d: 7, d->h: 8
+2014-05-21 08:09:39: populated: 0
+2014-05-21 08:09:39: populated: 1000
+2014-05-21 08:09:39: populated: 2000
+2014-05-21 08:09:40: populated: 3000
+2014-05-21 08:09:40: populated: 4000
+2014-05-21 08:09:40: populated: 5000
+2014-05-21 08:09:40: populated: 6000
+2014-05-21 08:09:41: populated: 7000
+2014-05-21 08:09:41: populated: 8000
+2014-05-21 08:09:41: populated: 9000
+2014-05-21 08:09:42: populated: 10000
+2014-05-21 08:09:42: bpn test: test classification accuracy: 93.59% (10000)
+2014-05-21 08:09:42: bpn test: test cross entropy: 2.48388d-1 (10000.0d0)
+2014-05-21 08:09:42: ---------------------------------------------------
+2014-05-21 08:09:42: populated: 11000
+2014-05-21 08:09:42: populated: 12000
+2014-05-21 08:09:42: populated: 13000
+2014-05-21 08:09:43: populated: 14000
+2014-05-21 08:09:43: populated: 15000
+2014-05-21 08:09:43: populated: 16000
+2014-05-21 08:09:44: populated: 17000
+2014-05-21 08:09:44: populated: 18000
+2014-05-21 08:09:44: populated: 19000
+2014-05-21 08:09:44: populated: 20000
+2014-05-21 08:09:45: populated: 21000
+2014-05-21 08:09:45: populated: 22000
+2014-05-21 08:09:45: populated: 23000
+2014-05-21 08:09:46: populated: 24000
+2014-05-21 08:09:46: populated: 25000
+2014-05-21 08:09:46: populated: 26000
+2014-05-21 08:09:47: populated: 27000
+2014-05-21 08:09:47: populated: 28000
+2014-05-21 08:09:47: populated: 29000
+2014-05-21 08:09:47: populated: 30000
+2014-05-21 08:09:48: populated: 31000
+2014-05-21 08:09:48: populated: 32000
+2014-05-21 08:09:48: populated: 33000
+2014-05-21 08:09:49: populated: 34000
+2014-05-21 08:09:49: populated: 35000
+2014-05-21 08:09:49: populated: 36000
+2014-05-21 08:09:50: populated: 37000
+2014-05-21 08:09:50: populated: 38000
+2014-05-21 08:09:50: populated: 39000
+2014-05-21 08:09:50: populated: 40000
+2014-05-21 08:09:51: populated: 41000
+2014-05-21 08:09:51: populated: 42000
+2014-05-21 08:09:51: populated: 43000
+2014-05-21 08:09:52: populated: 44000
+2014-05-21 08:09:52: populated: 45000
+2014-05-21 08:09:52: populated: 46000
+2014-05-21 08:09:53: populated: 47000
+2014-05-21 08:09:53: populated: 48000
+2014-05-21 08:09:53: populated: 49000
+2014-05-21 08:09:53: populated: 50000
+2014-05-21 08:09:54: populated: 51000
+2014-05-21 08:09:54: populated: 52000
+2014-05-21 08:09:54: populated: 53000
+2014-05-21 08:09:55: populated: 54000
+2014-05-21 08:09:55: populated: 55000
+2014-05-21 08:09:55: populated: 56000
+2014-05-21 08:09:56: populated: 57000
+2014-05-21 08:09:56: populated: 58000
+2014-05-21 08:09:56: populated: 59000
+2014-05-21 08:09:56: populated: 60000
+2014-05-21 08:09:57: populated: 61000
+2014-05-21 08:09:57: populated: 62000
+2014-05-21 08:09:57: populated: 63000
+2014-05-21 08:09:59: populated: 64000
+2014-05-21 08:09:59: populated: 65000
+2014-05-21 08:09:59: populated: 66000
+2014-05-21 08:09:59: populated: 67000
+2014-05-21 08:10:00: populated: 68000
+2014-05-21 08:10:00: populated: 69000
+2014-05-21 08:10:00: populated: 70000
+2014-05-21 08:10:00: n-inputs: 60000
+2014-05-21 08:10:00: cuda mats: 140110, copies: h->d: 71431, d->h: 3409
+2014-05-21 08:10:00: bpn train: training classification accuracy: 90.16% (60000)
+2014-05-21 08:10:00: bpn train: training cross entropy: 3.18849d-1 (60000.0d0)
+2014-05-21 08:10:00: n-inputs: 60000
+2014-05-21 08:10:00: cuda mats: 140110, copies: h->d: 71431, d->h: 3409
+2014-05-21 08:10:01: bpn test: test classification accuracy: 94.77% (10000)
+2014-05-21 08:10:01: bpn test: test cross entropy: 1.80027d-1 (10000.0d0)
+2014-05-21 08:10:01: ---------------------------------------------------
+2014-05-21 08:10:05: n-inputs: 120000
+2014-05-21 08:10:05: cuda mats: 140110, copies: h->d: 72131, d->h: 5409
+2014-05-21 08:10:05: bpn train: training classification accuracy: 92.24% (60000)
+2014-05-21 08:10:05: bpn train: training cross entropy: 2.56692d-1 (60000.0d0)
+2014-05-21 08:10:05: n-inputs: 120000
+2014-05-21 08:10:05: cuda mats: 140110, copies: h->d: 72131, d->h: 5409
+2014-05-21 08:10:05: bpn test: test classification accuracy: 95.70% (10000)
+2014-05-21 08:10:05: bpn test: test cross entropy: 1.48425d-1 (10000.0d0)
+2014-05-21 08:10:05: ---------------------------------------------------
+2014-05-21 08:10:08: dropout #<->DROPOUT F1 :SIZE
+                               1200*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:10:08: dropout #<->DROPOUT F2 :SIZE
+                               1200*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:10:08: dropout #<->DROPOUT F3 :SIZE
+                               1200*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:10:08: Starting to train the whole BPN
+2014-05-21 08:10:08: Describing learner:
+#<BP-LEARNER {1029075243}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 100 {10135A23D3}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 100 {10135A23D3}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN {10135A23D3}>
+BPN description:
+  LUMPS = #(#<->INPUT INPUTS :SIZE 784*1(1/100) :norm 0.00000>
+            #<->CONSTANT (F1 :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS F1) :SIZE 1200*1(1/1) :norm 0.33623>
+            #<->ACTIVATION ((:BIAS F1) :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->WEIGHT #1=(INPUTS F1) :SIZE
+              940800*1(1/1) :norm 9.69614>
+            #<->ACTIVATION (#1# :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->+ (F1 :ACTIVATION) :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->RECTIFIED F1* :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->DROPOUT F1 :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->CONSTANT (F2 :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS F2) :SIZE 1200*1(1/1) :norm 0.34652>
+            #<->ACTIVATION ((:BIAS F2) :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->WEIGHT #2=(F1 F2) :SIZE 1440000*1(1/1) :norm 11.99640>
+            #<->ACTIVATION (#2# :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->+ (F2 :ACTIVATION) :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->RECTIFIED F2* :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->DROPOUT F2 :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->CONSTANT (F3 :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS F3) :SIZE 1200*1(1/1) :norm 0.34684>
+            #<->ACTIVATION ((:BIAS F3) :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->WEIGHT #3=(F2 F3) :SIZE 1440000*1(1/1) :norm 12.01317>
+            #<->ACTIVATION (#3# :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->+ (F3 :ACTIVATION) :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->RECTIFIED F3* :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->DROPOUT F3 :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.02552>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->WEIGHT #4=(F3 PREDICTIONS) :SIZE
+              12000*1(1/1) :norm 1.09611>
+            #<->ACTIVATION (#4# :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->INPUT EXPECTATIONS :SIZE 10*1(1/100) :norm 0.00000>
+            #<->CROSS-ENTROPY-SOFTMAX PREDICTIONS :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1(1/100) :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+2014-05-21 08:10:08: Describing trainer:
+#<MNIST-BPN-GD-TRAINER {1029075123}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (F3 PREDICTIONS) :SIZE
+                     12000*1(1/1) :norm 1.09611>
+                   #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.02552>)
+                  {10290F0A93}>
+                {1029077453}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (F2 F3) :SIZE
+                     1440000*1(1/1) :norm 12.01317>
+                   #<->WEIGHT (:BIAS F3) :SIZE
+                     1200*1(1/1) :norm 0.34684>)
+                  {10290F03D3}>
+                {1029077283}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE
+                     1440000*1(1/1) :norm 11.99640>
+                   #<->WEIGHT (:BIAS F2) :SIZE
+                     1200*1(1/1) :norm 0.34652>)
+                  {1029077D13}>
+                {10290770B3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800*1(1/1) :norm 9.69614>
+                   #<->WEIGHT (:BIAS F1) :SIZE
+                     1200*1(1/1) :norm 0.33623>)
+                  {1029077653}>
+                {1029076A63}>)
+  SEGMENTS = (#<->WEIGHT (F3 PREDICTIONS) :SIZE
+                12000*1(1/1) :norm 1.09611>
+              #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                10*1(1/1) :norm 0.02552>
+              #<->WEIGHT (F2 F3) :SIZE 1440000*1(1/1) :norm 12.01317>
+              #<->WEIGHT (:BIAS F3) :SIZE 1200*1(1/1) :norm 0.34684>
+              #<->WEIGHT (F1 F2) :SIZE 1440000*1(1/1) :norm 11.99640>
+              #<->WEIGHT (:BIAS F2) :SIZE 1200*1(1/1) :norm 0.34652>
+              #<->WEIGHT (INPUTS F1) :SIZE 940800*1(1/1) :norm 9.69614>
+              #<->WEIGHT (:BIAS F1) :SIZE 1200*1(1/1) :norm 0.33623>)
+
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1029077453}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F3 PREDICTIONS) :SIZE
+                     12000*1(1/1) :norm 1.09611>
+                   #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.02552>)
+                  {10290F0A93}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1029077283}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F2 F3) :SIZE
+                     1440000*1(1/1) :norm 12.01317>
+                   #<->WEIGHT (:BIAS F3) :SIZE
+                     1200*1(1/1) :norm 0.34684>)
+                  {10290F03D3}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {10290770B3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE
+                     1440000*1(1/1) :norm 11.99640>
+                   #<->WEIGHT (:BIAS F2) :SIZE
+                     1200*1(1/1) :norm 0.34652>)
+                  {1029077D13}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1029076A63}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800*1(1/1) :norm 9.69614>
+                   #<->WEIGHT (:BIAS F1) :SIZE
+                     1200*1(1/1) :norm 0.33623>)
+                  {1029077653}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+2014-05-21 08:10:08: n-inputs: 0
+2014-05-21 08:10:08: cuda mats: 1, copies: h->d: 0, d->h: 0
+2014-05-21 08:10:09: bpn test: test classification accuracy: 11.35% (10000)
+2014-05-21 08:10:09: bpn test: test cross entropy: 2.30260d+0 (10000.0d0)
+2014-05-21 08:10:09: ---------------------------------------------------
+2014-05-21 08:10:17: n-inputs: 60000
+2014-05-21 08:10:17: cuda mats: 70084, copies: h->d: 70724, d->h: 2001
+2014-05-21 08:10:17: bpn train: training classification accuracy: 57.14% (60000)
+2014-05-21 08:10:17: bpn train: training cross entropy: 1.17444d+0 (60000.0d0)
+2014-05-21 08:10:17: n-inputs: 60000
+2014-05-21 08:10:17: cuda mats: 70084, copies: h->d: 70724, d->h: 2001
+2014-05-21 08:10:17: bpn test: test classification accuracy: 93.31% (10000)
+2014-05-21 08:10:17: bpn test: test cross entropy: 2.19825d-1 (10000.0d0)
+2014-05-21 08:10:17: ---------------------------------------------------
+2014-05-21 08:10:23: n-inputs: 120000
+2014-05-21 08:10:23: cuda mats: 70084, copies: h->d: 71424, d->h: 4001
+2014-05-21 08:10:23: bpn train: training classification accuracy: 93.59% (60000)
+2014-05-21 08:10:23: bpn train: training cross entropy: 2.14582d-1 (60000.0d0)
+2014-05-21 08:10:23: n-inputs: 120000
+2014-05-21 08:10:23: cuda mats: 70084, copies: h->d: 71424, d->h: 4001
+2014-05-21 08:10:24: bpn test: test classification accuracy: 96.21% (10000)
+2014-05-21 08:10:24: bpn test: test cross entropy: 1.22633d-1 (10000.0d0)
+2014-05-21 08:10:24: ---------------------------------------------------
+2014-05-21 08:10:25: dropout #<->DROPOUT F1 :SIZE
+                               240*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:10:25: dropout #<->DROPOUT F2 :SIZE
+                               240*1(1/100) :norm 0.00000> 0.5
+2014-05-21 08:10:25: Starting to train the whole BPN
+2014-05-21 08:10:25: Describing learner:
+#<BP-LEARNER {1064FF2EE3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                 = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 100 {1034083343}>
+  FIRST-TRAINED-LUMP  = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :N-STRIPES 1 :MAX-N-STRIPES 100 {1034083343}>
+  FIRST-TRAINED-LUMP = NIL
+#<MNIST-BPN {1034083343}>
+BPN description:
+  LUMPS = #(#<->INPUT INPUTS :SIZE 784*1(1/100) :norm 0.00000>
+            #<->CONSTANT (F1 :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS F1) :SIZE 1200*1(1/1) :norm 0.33623>
+            #<->ACTIVATION ((:BIAS F1) :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->WEIGHT #1=(INPUTS F1) :SIZE
+              940800*1(1/1) :norm 9.69614>
+            #<->ACTIVATION (#1# :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->+ (F1 :ACTIVATION) :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->MAX F1* :SIZE 240*1(1/100) :norm 0.00000>
+            #<->DROPOUT F1 :SIZE 240*1(1/100) :norm 0.00000>
+            #<->CONSTANT (F2 :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS F2) :SIZE 1200*1(1/1) :norm 0.34652>
+            #<->ACTIVATION ((:BIAS F2) :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->WEIGHT #2=(F1 F2) :SIZE 288000*1(1/1) :norm 5.38081>
+            #<->ACTIVATION (#2# :ACTIVATION) :SIZE
+              1200*1(1/100) :norm 0.00000>
+            #<->+ (F2 :ACTIVATION) :SIZE 1200*1(1/100) :norm 0.00000>
+            #<->MAX F2* :SIZE 240*1(1/100) :norm 0.00000>
+            #<->DROPOUT F2 :SIZE 240*1(1/100) :norm 0.00000>
+            #<->CONSTANT (PREDICTIONS :CONSTANT) :SIZE
+              1*1(1/100) :norm 10.00000>
+            #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+              10*1(1/1) :norm 0.02870>
+            #<->ACTIVATION ((:BIAS PREDICTIONS) :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->WEIGHT #3=(F2 PREDICTIONS) :SIZE
+              2400*1(1/1) :norm 0.49779>
+            #<->ACTIVATION (#3# :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->+ (PREDICTIONS :ACTIVATION) :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->INPUT EXPECTATIONS :SIZE 10*1(1/100) :norm 0.00000>
+            #<->CROSS-ENTROPY-SOFTMAX PREDICTIONS :SIZE
+              10*1(1/100) :norm 0.00000>
+            #<->ERROR (PREDICTIONS :ERROR) :SIZE
+              1*1(1/100) :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+2014-05-21 08:10:25: Describing trainer:
+#<MNIST-BPN-GD-TRAINER {1064FF2DC3}>
+SEGMENTED-GD-TRAINER description:
+  N-INPUTS = 0
+  TRAINERS = (#<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (F2 PREDICTIONS) :SIZE
+                     2400*1(1/1) :norm 0.49779>)
+                  {1064FF4E33}>
+                {1064FF3883}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.02870>)
+                  {1064FF47B3}>
+                {1064FF36E3}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE
+                     288000*1(1/1) :norm 5.38081>
+                   #<->WEIGHT (:BIAS F2) :SIZE
+                     1200*1(1/1) :norm 0.34652>)
+                  {1064FF4113}>
+                {1064FF3513}>
+              #<MNIST-BPN-GD-SEGMENT-TRAINER
+                #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800*1(1/1) :norm 9.69614>
+                   #<->WEIGHT (:BIAS F1) :SIZE
+                     1200*1(1/1) :norm 0.33623>)
+                  {1064FF3A53}>
+                {1064FF3343}>)
+  SEGMENTS = (#<->WEIGHT (F2 PREDICTIONS) :SIZE
+                2400*1(1/1) :norm 0.49779>
+              #<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                10*1(1/1) :norm 0.02870>
+              #<->WEIGHT (F1 F2) :SIZE 288000*1(1/1) :norm 5.38081>
+              #<->WEIGHT (:BIAS F2) :SIZE 1200*1(1/1) :norm 0.34652>
+              #<->WEIGHT (INPUTS F1) :SIZE 940800*1(1/1) :norm 9.69614>
+              #<->WEIGHT (:BIAS F1) :SIZE 1200*1(1/1) :norm 0.33623>)
+
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1064FF3883}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F2 PREDICTIONS) :SIZE
+                     2400*1(1/1) :norm 0.49779>)
+                  {1064FF4E33}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1064FF36E3}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTIONS) :SIZE
+                     10*1(1/1) :norm 0.02870>)
+                  {1064FF47B3}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1064FF3513}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE
+                     288000*1(1/1) :norm 5.38081>
+                   #<->WEIGHT (:BIAS F2) :SIZE
+                     1200*1(1/1) :norm 0.34652>)
+                  {1064FF4113}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+#<MNIST-BPN-GD-SEGMENT-TRAINER {1064FF3343}>
+GD-TRAINER description:
+  N-INPUTS = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800*1(1/1) :norm 9.69614>
+                   #<->WEIGHT (:BIAS F1) :SIZE
+                     1200*1(1/1) :norm 0.33623>)
+                  {1064FF3A53}>
+  LEARNING-RATE = 5.00000d-1
+  MOMENTUM = 5.00000d-1
+  WEIGHT-DECAY = 0.00000d+0
+  WEIGHT-PENALTY = 0.00000d+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 100
+2014-05-21 08:10:25: n-inputs: 0
+2014-05-21 08:10:25: cuda mats: 1, copies: h->d: 0, d->h: 0
+2014-05-21 08:10:25: bpn test: test classification accuracy: 10.28% (10000)
+2014-05-21 08:10:25: bpn test: test cross entropy: 2.30250d+0 (10000.0d0)
+2014-05-21 08:10:25: ---------------------------------------------------
+2014-05-21 08:10:30: n-inputs: 60000
+2014-05-21 08:10:30: cuda mats: 70067, copies: h->d: 70721, d->h: 2001
+2014-05-21 08:10:30: bpn train: training classification accuracy: 76.48% (60000)
+2014-05-21 08:10:30: bpn train: training cross entropy: 6.88324d-1 (60000.0d0)
+2014-05-21 08:10:30: n-inputs: 60000
+2014-05-21 08:10:30: cuda mats: 70067, copies: h->d: 70721, d->h: 2001
+2014-05-21 08:10:30: bpn test: test classification accuracy: 95.56% (10000)
+2014-05-21 08:10:30: bpn test: test cross entropy: 1.51480d-1 (10000.0d0)
+2014-05-21 08:10:30: ---------------------------------------------------
+2014-05-21 08:10:34: n-inputs: 120000
+2014-05-21 08:10:34: cuda mats: 70067, copies: h->d: 71421, d->h: 4001
+2014-05-21 08:10:34: bpn train: training classification accuracy: 94.95% (60000)
+2014-05-21 08:10:34: bpn train: training cross entropy: 1.73985d-1 (60000.0d0)
+2014-05-21 08:10:34: n-inputs: 120000
+2014-05-21 08:10:34: cuda mats: 70067, copies: h->d: 71421, d->h: 4001
+2014-05-21 08:10:34: bpn test: test classification accuracy: 96.33% (10000)
+2014-05-21 08:10:34: bpn test: test cross entropy: 1.24012d-1 (10000.0d0)
+2014-05-21 08:10:34: ---------------------------------------------------
