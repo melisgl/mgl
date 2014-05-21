@@ -491,6 +491,7 @@
                                  :learning-rate (flt 1)
                                  :learning-rate-decay (flt 0.998)
                                  :l2-upper-bound nil
+                                 :set-dropout-p t
                                  :rescale-on-dropout-p t)
              (unless quick-run-p
                (save-weights bpn-filename bpn)))
@@ -760,6 +761,7 @@
                                    :learning-rate (flt 1)
                                    :learning-rate-decay (flt 0.998)
                                    :l2-upper-bound nil
+                                   :set-dropout-p t
                                    :rescale-on-dropout-p t)
                (unless quick-run-p
                  (save-weights bpn-filename bpn)))
@@ -823,75 +825,66 @@
              (* final weight)))
         final)))
 
-(defun make-grouped-segmenter (name-groups segmenter)
-  (let ((group-to-trainer (make-hash-table :test #'equal)))
+(defun make-grouped-segmenter (group-name-fn segmenter)
+  (let ((group-name-to-trainer (make-hash-table :test #'equal)))
     (lambda (segment)
-      (let* ((name (name segment))
-             (group (find-if (lambda (names)
-                               (member name names :test #'name=))
-                             name-groups)))
-        (assert group () "Can't find group for ~S." name)
-        (or (gethash group group-to-trainer)
-            (setf (gethash group group-to-trainer)
+      (let ((group-name (funcall group-name-fn segment)))
+        (or (gethash group-name group-name-to-trainer)
+            (setf (gethash group-name group-name-to-trainer)
                   (funcall segmenter segment)))))))
+
+(defun make-dwim-grouped-segmenter (segmenter)
+  (make-grouped-segmenter #'weight-lump-target-name segmenter))
+
+(defun weight-lump-target-name (lump)
+  (let ((name (name lump)))
+    (assert (listp name))
+    (assert (= 2 (length name)))
+    (if (eq (first name) :cloud)
+        (second (second name))
+        (second name))))
 
 (defun train-mnist-bpn-gd (bpn training test &key (n-softmax-epochs 5)
                            (n-epochs 200) l2-upper-bound
                            class-weights learning-rate learning-rate-decay
+                           set-dropout-p
                            rescale-on-dropout-p)
   (when class-weights
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) 100)
-  (let ((name-groups '(((:cloud (c0 f1))
-                        (:cloud (inputs f1))
-                        (:bias f1)
-                        (inputs f1))
-                       ((:cloud (c1 f2))
-                        (:cloud (f1 f2))
-                        (:bias f2)
-                        (f1 f2))
-                       ((:cloud (c2 f3))
-                        (:cloud (f2 f3))
-                        (:bias f3)
-                        (f2 f3))
-                       ;; for mnist/3
-                       ((:bias predictions)
-                        (f3 predictions))
-                       ;; for mnist/4
-                       ((:bias predictions)
-                        (f2 predictions)))))
-    (flet ((make-trainer (lump &key softmaxp)
-             (declare (ignore lump))
-             (let ((trainer (make-instance
-                             'mnist-bpn-gd-segment-trainer
-                             :n-inputs-in-epoch (length training)
-                             :n-epochs-to-reach-final-momentum
-                             (min 500
-                                  (/ (if softmaxp n-softmax-epochs n-epochs)
-                                     2))
-                             :learning-rate (flt learning-rate)
-                             :learning-rate-decay (flt learning-rate-decay)
-                             :batch-size 100)))
-               (when l2-upper-bound
-                 (arrange-for-renormalizing-activations
-                  bpn trainer l2-upper-bound))
-               trainer))
-           (make-segmenter (fn)
-             (if l2-upper-bound
-                 (make-grouped-segmenter name-groups fn)
-                 fn)))
-      (unless (zerop n-softmax-epochs)
-        (log-msg "Starting to train the softmax layer of BPN~%")
-        (train (make-sampler training :n-epochs n-softmax-epochs)
-               (make-instance 'mnist-bpn-gd-trainer
-                              :training training
-                              :test test
-                              :segmenter
-                              (make-segmenter
-                               (lambda (lump)
-                                 (when (prediction-weight-p lump)
-                                   (make-trainer lump :softmaxp t)))))
-               (make-instance 'bp-learner :bpn bpn)))
+  (flet ((make-trainer (lump &key softmaxp)
+           (declare (ignore lump))
+           (let ((trainer (make-instance
+                           'mnist-bpn-gd-segment-trainer
+                           :n-inputs-in-epoch (length training)
+                           :n-epochs-to-reach-final-momentum
+                           (min 500
+                                (/ (if softmaxp n-softmax-epochs n-epochs)
+                                   2))
+                           :learning-rate (flt learning-rate)
+                           :learning-rate-decay (flt learning-rate-decay)
+                           :batch-size 100)))
+             (when l2-upper-bound
+               (arrange-for-renormalizing-activations
+                bpn trainer l2-upper-bound))
+             trainer))
+         (make-segmenter (fn)
+           (if l2-upper-bound
+               (make-dwim-grouped-segmenter fn)
+               fn)))
+    (unless (zerop n-softmax-epochs)
+      (log-msg "Starting to train the softmax layer of BPN~%")
+      (train (make-sampler training :n-epochs n-softmax-epochs)
+             (make-instance 'mnist-bpn-gd-trainer
+                            :training training
+                            :test test
+                            :segmenter
+                            (make-segmenter
+                             (lambda (lump)
+                               (when (prediction-weight-p lump)
+                                 (make-trainer lump :softmaxp t)))))
+             (make-instance 'bp-learner :bpn bpn)))
+    (when set-dropout-p
       (map nil (lambda (lump)
                  (when (and (typep lump '->dropout)
                             (not (typep lump '->input)))
@@ -909,30 +902,30 @@
                        (set-dropout-and-rescale-activation-weights
                         lump (flt 0.2) bpn)
                        (setf (slot-value lump 'dropout) (flt 0.2)))))
-           (lumps bpn))
-      (unless (zerop n-epochs)
-        (mgl-example-util:log-msg "Starting to train the whole BPN~%")
-        (train (make-sampler training :n-epochs n-epochs)
-               (make-instance 'mnist-bpn-gd-trainer
-                              :training training
-                              :test test
-                              :segmenter (make-segmenter #'make-trainer))
-               (make-instance 'bp-learner :bpn bpn))))))
+           (lumps bpn)))
+    (unless (zerop n-epochs)
+      (mgl-example-util:log-msg "Starting to train the whole BPN~%")
+      (train (make-sampler training :n-epochs n-epochs)
+             (make-instance 'mnist-bpn-gd-trainer
+                            :training training
+                            :test test
+                            :segmenter (make-segmenter #'make-trainer))
+             (make-instance 'bp-learner :bpn bpn)))))
 
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (inputs (->input :size 784))
+    (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
     (f1* (->rectified :x f1-activations))
-    (f1 (->dropout :x f1*))
+    (f1 (->dropout :x f1* :dropout (flt 0.5)))
     (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->rectified :x f2-activations))
-    (f2 (->dropout :x f2*))
+    (f2 (->dropout :x f2* :dropout (flt 0.5)))
     (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-3))
     (f3* (->rectified :x f3-activations))
-    (f3 (->dropout :x f3*))
+    (f3 (->dropout :x f3* :dropout (flt 0.5)))
     (predictions (tack-cross-entropy-softmax-error-on
                   mgl-bp::*bpn-being-built* (list f3)))))
 
@@ -961,14 +954,14 @@
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                (group-size 5))
   (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
-    (inputs (->input :size 784))
+    (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
     (f1* (->max :x f1-activations :group-size group-size))
-    (f1 (->dropout :x f1*))
+    (f1 (->dropout :x f1* :dropout (flt 0.5)))
     (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->max :x f2-activations :group-size group-size))
-    (f2 (->dropout :x f2*))
+    (f2 (->dropout :x f2* :dropout (flt 0.5)))
     (predictions (tack-cross-entropy-softmax-error-on
                   mgl-bp::*bpn-being-built* '(f2)))))
 
