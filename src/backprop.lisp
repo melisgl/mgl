@@ -2675,18 +2675,19 @@ target_k if target sums to 1."))
                    ((:column)
                     (maybe-renormalize-columns mat l2-upper-bound sums))))))))
 
-;;; If the l2 norm of the incoming weight vector of the a unit is
-;;; larger than L2-UPPER-BOUND then renormalize it to L2-UPPER-BOUND.
-;;; The list of ->ACTIVATIONS is assumed to be eventually fed to the
-;;; same lump.
-;;;
-;;; To use it, group the activation lumps into the same GD-TRAINER and
-;;; hang this function on AFTER-UPDATE-HOOK.
-;;;
-;;; See "Improving neural networks by preventing co-adaptation of
-;;; feature detectors (Hinton, 2012)",
-;;; <http://arxiv.org/pdf/1207.0580.pdf>.
 (defun renormalize-activations (->activations l2-upper-bound)
+  "If the l2 norm of the incoming weight vector of the a unit is
+  larger than L2-UPPER-BOUND then renormalize it to L2-UPPER-BOUND.
+  The list of ->ACTIVATIONS is assumed to be eventually fed to the
+  same lump.
+
+  To use it, group the activation lumps into the same GD-TRAINER and
+  hang this function on AFTER-UPDATE-HOOK, that latter of which is
+  done for you ARRANGE-FOR-RENORMALIZING-ACTIVATIONS.
+
+  See \"Improving neural networks by preventing co-adaptation of
+  feature detectors (Hinton, 2012)\",
+  <http://arxiv.org/pdf/1207.0580.pdf>."
   (when (and ->activations l2-upper-bound)
     (renormalize-mats
      (loop for lump in ->activations
@@ -2699,6 +2700,31 @@ target_k if target sums to 1."))
                                :row
                                :column))))
      l2-upper-bound)))
+
+(defun arrange-for-renormalizing-activations (bpn trainer l2-upper-bound)
+  "By pushing a lambda to AFTER-UPDATE-HOOK of TRAINER arrange for all
+  weights beings trained by TRAINER to be renormalized (as in
+  RENORMALIZE-ACTIVATIONS with L2-UPPER-BOUND).
+
+  It is assumed that if the weights either belong to an activation
+  lump or are simply added to the activations (i.e. they are biases)."
+  (push (let ((->activations nil)
+              (firstp t))
+          (lambda ()
+            (when firstp
+              (setq ->activations
+                    (loop for lump in (segments trainer)
+                          collect (or (find-activation-lump-for-weight lump bpn)
+                                      lump)))
+              (setq firstp nil))
+            (renormalize-activations ->activations l2-upper-bound)))
+        (after-update-hook trainer)))
+
+(defun find-activation-lump-for-weight (->weight bpn)
+  (loop for lump across (lumps bpn) do
+    (when (and (typep lump '->activation)
+               (eq (mgl-bp::weights lump) ->weight))
+      (return lump))))
 
 
 ;;;; Utilities

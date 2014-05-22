@@ -316,31 +316,6 @@
 
 ;;;; BPN setup
 
-(defun arrange-for-renormalizing-activations (bpn trainer l2-upper-bound)
-  "By pushing a lambda to AFTER-UPDATE-HOOK of TRAINER arrange for the
-  all weights beings trained by TRAINER to be renormalized (as in
-  RENORMALIZE-ACTIVATIONS with L2-UPPER-BOUND).
-
-  It is assumed that if the weights either belong to an activation
-  lump or are simply added to the activations (i.e. they are biases)."
-  (push (let ((->activations nil)
-              (firstp t))
-          (lambda ()
-            (when firstp
-              (setq ->activations
-                    (loop for lump in (segments trainer)
-                          collect (or (find-activation-lump-for-weight lump bpn)
-                                      lump)))
-              (setq firstp nil))
-            (renormalize-activations ->activations l2-upper-bound)))
-        (after-update-hook trainer)))
-
-(defun find-activation-lump-for-weight (->weight bpn)
-  (loop for lump across (lumps bpn) do
-    (when (and (typep lump '->activation)
-               (eq (mgl-bp::weights lump) ->weight))
-      (return lump))))
-
 (defun set-dropout-and-rescale-activation-weights (lump dropout bpn)
   "Set the dropout of LUMP to DROPOUT. Find the activation lump to
   which LUMP is fed and rescale its weights to compensate. There must

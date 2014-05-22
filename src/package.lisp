@@ -479,7 +479,8 @@ Networks (DBN)."))
    #:add-cross-entropy-softmax
    ;; Utilities
    #:collect-bpn-errors
-   #:renormalize-activations)
+   #:renormalize-activations
+   #:arrange-for-renormalizing-activations)
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll

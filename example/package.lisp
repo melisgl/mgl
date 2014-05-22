@@ -31,7 +31,6 @@
    #:load-weights
    #:save-weights
    ;; BPN setup
-   #:arrange-for-renormalizing-activations
    #:set-dropout-and-rescale-activation-weights))
 
 (cl:defpackage :mgl-example-spiral
