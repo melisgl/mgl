@@ -29,9 +29,7 @@
    #:tack-cross-entropy-softmax-error-on
    ;; Misc
    #:load-weights
-   #:save-weights
-   ;; BPN setup
-   #:set-dropout-and-rescale-activation-weights))
+   #:save-weights))
 
 (cl:defpackage :mgl-example-spiral
   (:use #:common-lisp #:mgl-util #:mgl-train #:mgl-gd #:mgl-bm #:mgl-bp

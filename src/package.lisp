@@ -491,6 +491,8 @@ Networks (DBN)."))
    #:unroll-dbn
    #:unroll-dbm
    #:initialize-bpn-from-bm
+   ;; BPN setup
+   #:set-dropout-and-rescale-activation-weights
    ;; SET-INPUT support for BPN converted from a DBM with MAP lumps
    #:bpn-clamping-cache
    #:clamping-cache
