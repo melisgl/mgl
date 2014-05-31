@@ -95,7 +95,8 @@
 ;;;; BASE-TRAINER
 
 (defclass base-trainer (logging-trainer)
-  ((training-counters-and-measurers :reader training-counters-and-measurers)))
+  ((training-counters-and-measurers :initform nil
+                                    :reader training-counters-and-measurers)))
 
 (defun log-cuda ()
   (when (use-cuda-p)

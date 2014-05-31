@@ -2210,6 +2210,12 @@ normal(0,sigmoid(x)) noise to x."))
                                 (* (aref d* lj)
                                    (/ (* e^x (- scale e^x))
                                       scale^2)))))))))))
+
+(defmethod classification-confidences ((lump ->softmax) stripe)
+  (with-facets ((nodes ((nodes lump) 'backing-array :direction :input
+                        :type flt-vector)))
+    (with-stripes ((stripe lump start end))
+      (subseq nodes start end))))
 
 
 ;;;; ->CROSS-ENTROPY-SOFTMAX
