@@ -1420,6 +1420,13 @@ computed."))
     (assert (= (size lump) (size x)))
     (sigmoid-derivative! (nodes lump) (derivatives lump) (derivatives x))))
 
+(defmethod classification-confidences ((lump ->sigmoid) stripe)
+  (with-facets ((nodes ((nodes lump) 'backing-array :direction :input
+                        :type flt-vector)))
+    (with-stripes ((stripe lump start end))
+      (subseq nodes start end))))
+
+
 (deflump ->stochastic-sigmoid (lump)
   ((x :initarg :x :reader x)))
 
