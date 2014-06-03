@@ -169,12 +169,18 @@ counters for samples with that label.")))
 
 ;;;; ROC
 
-(defun roc-auc (seq pred &key (key #'identity))
+(defun roc-auc (seq pred &key (key #'identity) weight)
   "Return the area under the ROC curve for the dataset represented by
 SEQ. PRED is a predicate function for deciding whether an element of
-SEQ belongs to the class in question. KEY returns the a number for
-each element which is the predictor's idea of how much that element is
+SEQ belongs to the class in question. KEY returns a number for each
+element which is the predictor's idea of how much that element is
 likely to belong to the class, it's not necessarily a probability.
+
+If WEIGHT is NIL, then all elements of SEQ count as 1 towards the
+unnormalized sum within AUC. Else WEIGHT must be a function like KEY,
+but it should return the importance (a positive real number) of
+elements. If the weight of an element is 2 then it's as if there were
+two instances of that element in SEQ.
 
 The algorithm is based on algorithm 2 in the paper 'An introduction to
 ROC analysis' by Tom Fawcett."
@@ -204,15 +210,16 @@ ROC analysis' by Tom Fawcett."
                         (/ (+ pos-count prev-pos-count) 2)))))
       (map nil
            (lambda (x)
-             (let ((score (funcall key x)))
+             (let ((score (funcall key x))
+                   (w (if weight (funcall weight x) 1)))
                (when (or (null prev-score) (/= prev-score score))
                  (add)
                  (setq prev-score score
                        prev-pos-count pos-count
-                       prev-neg-count neg-count)))
-             (if (funcall pred x)
-                 (incf pos-count)
-                 (incf neg-count)))
+                       prev-neg-count neg-count))
+               (if (funcall pred x)
+                   (incf pos-count w)
+                   (incf neg-count w))))
            seq)
       (add))
     (if (or (zerop pos-count) (zerop neg-count))
