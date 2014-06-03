@@ -94,13 +94,14 @@ filled with this value.")))
   (limit-stripes lump (max-n-stripes lump)))
 
 (defun norm (v)
-  (with-facets ((v (v 'backing-array :direction :input
-                      :type flt-vector)))
-    (let ((sum (flt 0)))
+  (with-facets ((v* (v 'backing-array :direction :input :type flt-vector)))
+    (let* ((sum (flt 0))
+           (start (mat-displacement v))
+           (end (+ start (mat-size v))))
       (locally
           (declare (optimize speed))
-        (dotimes (i (length v))
-          (incf sum (expt (aref v i) 2))))
+        (loop for i of-type index upfrom start below end
+              do (incf sum (expt (aref v* i) 2))))
       (sqrt sum))))
 
 (defmethod print-object ((lump lump) stream)
