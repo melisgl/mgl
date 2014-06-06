@@ -1484,38 +1484,78 @@ computed."))
 (defmethod transfer-lump ((lump ->scaled-tanh))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                       :type flt-vector))
-                  (l* ((nodes lump) 'backing-array :direction :output
-                       :type flt-vector)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li) (scaled-tanh (aref x* xi)))))))))
+    (scaled-tanh! (nodes x) (nodes lump))))
+
+(defun scaled-tanh! (x y)
+  (let ((n (mat-size x)))
+    (assert (= n (mat-size y)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-scaled-tanh! x n y :grid-dim grid-dim :block-dim block-dim))
+        (lisp-scaled-tanh! x (mat-displacement x) n y (mat-displacement y)))))
+
+(define-cuda-kernel (cuda-scaled-tanh!)
+    (void ((x :mat :input) (n int) (y :mat :output)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (let ((xe (aref x i)))
+        (set (aref y i) (* 1.7159 (tanh (* 0.6666666 xe))))))))
+
+(define-lisp-kernel (lisp-scaled-tanh!)
+    ((x :mat :input) (start-x index) (n index) (y :mat :output) (start-y index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n))
+        for yi of-type index upfrom start-y
+        do (let ((xe (aref x xi)))
+             (setf (aref y yi) (* 1.7159 (tanh (* 0.6666666 xe)))))))
 
 (defmethod derive-lump ((lump ->scaled-tanh))
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
-    (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                       :type flt-vector))
-                  (xd* ((derivatives x) 'backing-array :direction :io
-                        :type flt-vector))
-                  (ld* ((derivatives lump) 'backing-array :direction :input
-                        :type flt-vector)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe do
-                  (incf (aref xd* xi)
-                        (* (aref ld* li)
-                           #.(flt (/ 7137 6239))
-                           (expt (sech (* #.(flt 2/3) (aref x* xi)))
-                                 2)))))))))
+    (scaled-tanh-derivative! (nodes x) (derivatives lump) (derivatives x))))
+
+(defun scaled-tanh-derivative! (x ld xd)
+  (let ((n (mat-size x)))
+    (assert (= n (mat-size ld)))
+    (assert (= n (mat-size xd)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-scaled-tanh-derivative! x n ld xd :grid-dim grid-dim
+                                    :block-dim block-dim))
+        (lisp-scaled-tanh-derivative! x (mat-displacement x) n
+                                  ld (mat-displacement ld)
+                                  xd (mat-displacement xd)))))
+
+(define-cuda-kernel (cuda-scaled-tanh-derivative!)
+    (void ((x :mat :input) (n int) (ld :mat :input) (xd :mat :io)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (let ((xe (aref x i)))
+        (set (aref xd i)
+             (+ (aref xd i)
+                (* (aref ld i)
+                   1.1439333
+                   (expt (/ (cosh (* 0.6666667 xe))) 2.0))))))))
+
+(define-lisp-kernel (lisp-scaled-tanh-derivative!)
+    ((x :mat :input) (start-l index) (n index)
+     (ld :mat :input) (start-ld index)
+     (xd :mat :io) (start-xd index))
+  (loop for li of-type index upfrom start-l
+          below (the! index (+ start-l n))
+        for ldi of-type index upfrom start-ld
+        for xdi of-type index upfrom start-xd
+        do (incf (aref xd xdi)
+                 (let ((xe (aref x xdi)))
+                   (* (aref ld ldi)
+                      1.1439333
+                      (expt (/ (cosh (* 0.6666667 xe))) 2))))))
+
+
 (deflump ->rectified (lump)
   ((x :initarg :x :reader x)
    #+nil
