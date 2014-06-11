@@ -294,6 +294,7 @@ simple gradient descent based trainers."))
    #:conditioning-chunk
    #:sigmoid-chunk
    #:gaussian-chunk
+   #:relu-chunk
    #:scale
    #:group-size
    #:exp-normalized-group-chunk

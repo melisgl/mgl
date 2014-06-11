@@ -232,6 +232,9 @@ its activation."))
   (:documentation "Nodes are real valued. The sample of a node is its
 activation plus guassian noise of unit variance."))
 
+(defclass relu-chunk (chunk) ()
+  (:documentation ""))
+
 (defun ensure-random-numbers (chunk &key (div 1))
   (let ((nodes (nodes chunk)))
     (let ((rn (random-numbers chunk)))
@@ -367,6 +370,13 @@ distribution. When called NODES contains the activations.")
   (:method ((chunk gaussian-chunk))
     ;; nothing to do: NODES already contains the activation
     )
+  (:method ((chunk relu-chunk))
+    (with-facets ((nodes* ((nodes chunk) 'backing-array :direction :io
+                           :type flt-vector)))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes* i)
+                (max #.(flt 0) (aref nodes* i)))))))
   (:method ((chunk normalized-group-chunk))
     ;; NODES is already set up, only normalization within groups of
     ;; GROUP-SIZE remains.
@@ -503,6 +513,15 @@ whose means are in NODES.")
           (setf (aref nodes* i)
                 (+ (aref nodes* i)
                    (gaussian-random-1)))))))
+  (:method ((chunk relu-chunk))
+    (with-facets ((nodes* ((nodes chunk) 'backing-array :direction :io
+                           :type flt-vector)))
+      (do-stripes (chunk)
+        (do-chunk (i chunk)
+          (setf (aref nodes* i)
+                (max #.(flt 0)
+                     (+ (aref nodes* i)
+                        (gaussian-random-1))))))))
   (:method ((chunk softmax-chunk))
     (let ((nodes (nodes chunk))
           (group-size (group-size chunk))

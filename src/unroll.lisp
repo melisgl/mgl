@@ -58,6 +58,8 @@ clamp inits, the third is a list of inits.")
   (:method ((chunk gaussian-chunk) sym name size activation-symbol)
     ;; this is identity
     `((,sym (->+ :name ',name :args (list ,activation-symbol)))))
+  (:method ((chunk relu-chunk) sym name size activation-symbol)
+    `((,sym (->rectified :name ',name :x ,activation-symbol))))
   (:method ((chunk exp-normalized-group-chunk) sym name size activation-symbol)
     (let ((exp-symbol (gensym)))
       (values
