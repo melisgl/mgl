@@ -1123,14 +1123,7 @@ computed."))
                   (fill! (flt 0) to)
                   (axpy! y (nodes x) to))
                  (t
-                  (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                                     :type flt-vector))
-                                (y* ((nodes y) 'backing-array :direction :input
-                                     :type flt-vector))
-                                (to* (to 'backing-array :direction :output
-                                         :type flt-vector)))
-                    (dotimes (i (* n-stripes* (size lump)))
-                      (setf (aref to* i) (* (aref x* i) (aref y* i))))))))
+                  (geem! 1 (nodes x) (nodes y) 0 to))))
           (t
            (assert nil)))))
 
@@ -1138,27 +1131,14 @@ computed."))
   (let* ((n-stripes* (n-stripes* lump))
          (x (x lump))
          (y (y lump)))
-    (with-facets ((d* ((derivatives lump) 'backing-array :direction :input
-                       :type flt-vector))
-                  (xd* ((derivatives x) 'backing-array :direction :io
-                        :type flt-vector)))
-      (cond ((= n-stripes* (n-stripes* x))
-             (cond ((numberp y)
-                    (dotimes (i (* n-stripes* (size lump)))
-                      (incf (aref xd* i) (* y (aref d* i)))))
-                   (t
-                    (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                                       :type flt-vector))
-                                  (y* ((nodes y) 'backing-array :direction :input
-                                       :type flt-vector))
-                                  (yd* ((derivatives y) 'backing-array :direction :io
-                                        :type flt-vector)))
-                      (dotimes (i (* n-stripes* (size lump)))
-                        (incf (aref xd* i) (* (aref y* i) (aref d* i))))
-                      (dotimes (i (* n-stripes* (size lump)))
-                        (incf (aref yd* i) (* (aref x* i) (aref d* i))))))))
-            (t
-             (assert nil))))))
+    (cond ((= n-stripes* (n-stripes* x))
+           (cond ((numberp y)
+                  (axpy! y (derivatives lump) (derivatives x)))
+                 (t
+                  (geem! 1 (derivatives lump) (nodes y) 1 (derivatives x))
+                  (geem! 1 (derivatives lump) (nodes x) 1 (derivatives y)))))
+          (t
+           (assert nil)))))
 
 (deflump ->sum (lump)
   ((x :initarg :x :reader x))
