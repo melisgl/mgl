@@ -456,11 +456,11 @@ Networks (DBN)."))
    #:->sum
    #:->linear
    #:->sigmoid
-   #:->stochastic-sigmoid
    #:->scaled-tanh
    #:->rectified
    #:noisyp
    #:->dropout
+   #:->sample-binary
    #:->softplus
    #:->exp
    #:->abs
@@ -469,7 +469,6 @@ Networks (DBN)."))
    #:->periodic
    #:->sum-squared-error
    #:->squared-error
-   #:->dropout
    #:->max
    #:->softmax
    #:->cross-entropy

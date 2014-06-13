@@ -363,6 +363,69 @@ detectors'.")
                             for xi upfrom xs below xe
                             do (when (/= #.(flt 0) (aref m* li))
                                  (incf (aref xd* li) (aref ld* li)))))))))))))
+
+(deflump ->sample-binary (lump)
+  ((x :initarg :x :reader x)
+   (randoms :initform nil :reader randoms)))
+
+(defmethod default-size ((lump ->sample-binary))
+  (size (x lump)))
+
+(defun ensure-randoms (lump)
+  (let ((x (nodes (x lump))))
+    (unless (and (randoms lump)
+                 (= (mat-size x)
+                    (mat-size (randoms lump))))
+      (setf (slot-value lump 'randoms)
+            (make-mat (mat-size x) :ctype flt-ctype))))
+  (randoms lump))
+
+(defmethod transfer-lump ((lump ->sample-binary))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (assert (not (same-stripes-p lump)))
+    (assert (not (same-stripes-p x)))
+    (unless (eq x lump)
+      (copy! (nodes x) (nodes lump)))
+    (when *in-training-p*
+      (let ((randoms (ensure-randoms lump)))
+        (uniform-random! randoms)
+        (.<! randoms (nodes lump))))))
+
+(defmethod derive-lump ((lump ->sample-binary))
+  (let* ((x (x lump))
+         (xd (derivatives x))
+         (l (nodes lump))
+         (ld (derivatives lump))
+         (n (mat-size xd)))
+    (assert (= (size lump) (size x)))
+    ;; (axpy! 1 ld xd)
+    ;; #+nil
+    (if (use-cuda-p)
+        (cuda-sample-binary-derivative xd n l ld
+                                       :grid-dim (list (ceiling n 256) 1 1)
+                                       :block-dim (list 256 1 1))
+        (with-facets ((xd* (xd 'backing-array :direction :io
+                               :type flt-vector))
+                      (l* (l 'backing-array :direction :input
+                             :type flt-vector))
+                      (ld* (ld 'backing-array :direction :input
+                               :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    do (when (/= #.(flt 0) (aref l* li))
+                         (incf (aref xd* li) (aref ld* li))))))))))
+
+(define-cuda-kernel (cuda-sample-binary-derivative)
+    (void ((xd :mat :io) (n int) (l :mat :input)  (ld :mat :input)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (when (/= 0.0 (aref l i))
+        (set (aref xd i) (+ (aref xd i) (aref ld i)))))))
 
 
 ;;;; ->INPUT
@@ -1408,52 +1471,6 @@ computed."))
       (subseq nodes start end))))
 
 
-(deflump ->stochastic-sigmoid (lump)
-  ((x :initarg :x :reader x)))
-
-(defmethod default-size ((lump ->stochastic-sigmoid))
-  (size (x lump)))
-
-(defmethod transfer-lump ((lump ->stochastic-sigmoid))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                       :type flt-vector))
-                  (l* ((nodes lump) 'backing-array :direction :output
-                       :type flt-vector)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (setf (aref l* li)
-                         (if *in-training-p*
-                             (binarize-randomly (sigmoid (aref x* xi)))
-                             (sigmoid (aref x* xi))))))))))
-
-(defmethod derive-lump ((lump ->stochastic-sigmoid))
-  (let ((x (x lump)))
-    (assert (= (size lump) (size x)))
-    (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                       :type flt-vector))
-                  (xd* ((derivatives x) 'backing-array :direction :io
-                        :type flt-vector))
-                  (l* ((nodes lump) 'backing-array :direction :input
-                       :type flt-vector))
-                  (ld* ((derivatives lump) 'backing-array :direction :input
-                        :type flt-vector)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (loop for stripe of-type index below (n-stripes* lump) do
-        (with-stripes ((stripe lump ls le)
-                       (stripe x xs xe))
-          (loop for li upfrom ls below le
-                for xi upfrom xs below xe
-                do (unless (zerop (aref l* li))
-                     (incf (aref xd* li)
-                           (let ((s (sigmoid (aref x* xi))))
-                             (* (aref ld* li)
-                                s (- 1 s)))))))))))
 
 (deflump ->scaled-tanh (lump)
   ((x :initarg :x :reader x)))
