@@ -328,41 +328,17 @@ detectors'.")
             (dropout! (nodes lump) mask dropout))
           (scal! (- #.(flt 1) dropout) (nodes lump))))))
 
-(define-cuda-kernel (cuda-dropout-derivative-xorwow)
-    (void ((xd :mat :io) (n int) (ld :mat :input) (mask :mat :input)))
-  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
-    (when (< i n)
-      (when (/= 0.0 (aref mask i))
-        (set (aref xd i) (+ (aref xd i) (aref ld i)))))))
-
 (defmethod derive-lump ((lump ->dropout))
   (let* ((x (x lump))
          (dropout (dropout lump))
          (xd (derivatives x))
          (ld (derivatives lump))
-         (n (mat-size xd))
          (mask (mask lump)))
     (assert (= (size lump) (size x)))
     (if (not dropout)
-        (axpy! (flt 1) ld xd :n (* (size lump) (n-stripes lump)))
-        (if (use-cuda-p)
-            (cuda-dropout-derivative-xorwow xd n ld mask
-                                            :grid-dim (list (ceiling n 256) 1 1)
-                                            :block-dim (list 256 1 1))
-            (with-facets ((xd* (xd 'backing-array :direction :io
-                                   :type flt-vector))
-                          (ld* (ld 'backing-array :direction :input
-                                   :type flt-vector)))
-              (let ((mask (ensure-mask lump)))
-                (declare (optimize (speed 3) #.*no-array-bounds-check*))
-                (with-facets ((m* (mask 'backing-array :type flt-vector)))
-                  (loop for stripe of-type index below (n-stripes* lump) do
-                    (with-stripes ((stripe lump ls le)
-                                   (stripe x xs xe))
-                      (loop for li upfrom ls below le
-                            for xi upfrom xs below xe
-                            do (when (/= #.(flt 0) (aref m* li))
-                                 (incf (aref xd* li) (aref ld* li)))))))))))))
+        (axpy! 1 ld xd :n (* (size lump) (n-stripes lump)))
+        (geem! 1 mask ld 1 xd))))
+
 
 (deflump ->sample-binary (lump)
   ((x :initarg :x :reader x)
