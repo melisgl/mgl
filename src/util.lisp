@@ -313,6 +313,11 @@ N element."
 
   Note that the sets returned are not in random order. In fact, they
   are sorted internally by KEY."
+  (map-elements-with-key seq (lambda (elements)
+                               (break-seq fractions elements :weight weight))
+                         :key key :test test))
+
+(defun map-elements-with-key (seq fn &key (key #'identity) (test #'eql))
   (let ((keys (collect-distinct seq :key key :test test)))
     (if (zerop (length keys))
         ()
@@ -326,7 +331,7 @@ N element."
                                                          (funcall key x)))
                                               seq)
                                'vector)))
-                        (break-seq fractions elements :weight weight)))))
+                        (funcall fn elements)))))
           (loop for i below (length (elt per-key-splits 0))
                 collect (apply #'concatenate
                                (if (listp seq)
@@ -394,6 +399,45 @@ N element."
             (multiple-value-call fn fold
               (funcall split-fn data fold n-folds)))
           folds))
+
+(defun bag (seq fn &key (ratio 1) n weight key (test #'eql))
+  (let ((random-state (make-random-state nil)))
+    (flet ((foo ()
+             (if key
+                 (funcall fn (let ((*random-state* random-state))
+                               (sample-stratified-bag seq :ratio ratio
+                                                      :weight weight
+                                                      :key key :test test)))
+                 (funcall fn (let ((*random-state* random-state))
+                               (sample-bag seq :ratio ratio :weight weight))))))
+      (if n
+          (loop repeat n collect (foo))
+          (loop (foo))))))
+
+(defun sample-bag (seq &key (ratio 1) weight)
+  (let* ((seq* (coerce seq 'vector))
+         (n (length seq*))
+         (sum-weights (if weight
+                          (loop for element across seq*
+                                sum (funcall weight element))
+                          n))
+         (limit (* sum-weights ratio))
+         (sum 0)
+         (bag ()))
+    (while (< sum limit)
+      (let ((element (aref seq* (random n))))
+        (push element bag)
+        (incf sum (if weight (funcall weight element) 1))))
+    (if (listp seq)
+        (nreverse bag)
+        (coerce (nreverse bag) 'vector))))
+
+(defun sample-stratified-bag (seq &key (ratio 1) weight
+                              (key #'identity) (test #'eql))
+  (map-elements-with-key seq (lambda (elements)
+                               (sample-bag elements :ratio ratio
+                                           :weight weight))
+                         :key key :test test))
 
 
 ;;;; Periodic functions

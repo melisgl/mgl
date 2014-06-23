@@ -49,6 +49,9 @@
    #:split-fold/mod
    #:split-fold/cont
    #:cross-validate
+   #:sample-bag
+   #:sample-stratified-bag
+   #:bag
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn
