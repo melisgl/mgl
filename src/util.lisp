@@ -313,33 +313,34 @@ N element."
 
   Note that the sets returned are not in random order. In fact, they
   are sorted internally by KEY."
-  (map-elements-with-key seq (lambda (elements)
-                               (break-seq fractions elements :weight weight))
-                         :key key :test test))
+  (let ((per-key-splits
+          (map-elements-with-key
+           seq (lambda (elements)
+                 (break-seq fractions elements :weight weight))
+           :key key :test test)))
+    (loop for i below (length (elt per-key-splits 0))
+          collect (apply #'concatenate
+                         (if (listp seq)
+                             'list
+                             `(vector ,(array-element-type seq)))
+                         (mapcar (lambda (splits)
+                                   (elt splits i))
+                                 per-key-splits)))))
 
 (defun map-elements-with-key (seq fn &key (key #'identity) (test #'eql))
   (let ((keys (collect-distinct seq :key key :test test)))
     (if (zerop (length keys))
         ()
-        (let ((per-key-splits
-                (loop for k in keys
-                      collect
-                      (let ((elements
-                              (coerce
-                               (remove-if-not (lambda (x)
-                                                (funcall test k
-                                                         (funcall key x)))
-                                              seq)
-                               'vector)))
-                        (funcall fn elements)))))
-          (loop for i below (length (elt per-key-splits 0))
-                collect (apply #'concatenate
-                               (if (listp seq)
-                                   'list
-                                   `(vector ,(array-element-type seq)))
-                               (mapcar (lambda (splits)
-                                         (elt splits i))
-                                       per-key-splits)))))))
+        (loop for k in keys
+              collect
+              (let ((elements
+                      (coerce
+                       (remove-if-not (lambda (x)
+                                        (funcall test k
+                                                 (funcall key x)))
+                                      seq)
+                       'vector)))
+                (funcall fn elements))))))
 
 (defun split-fold/mod (seq fold n-folds)
   "Partition SEQ into two sequences: one with elements of SEQ with
@@ -434,10 +435,38 @@ N element."
 
 (defun sample-stratified-bag (seq &key (ratio 1) weight
                               (key #'identity) (test #'eql))
-  (map-elements-with-key seq (lambda (elements)
-                               (sample-bag elements :ratio ratio
-                                           :weight weight))
-                         :key key :test test))
+  (let ((per-key-bags
+          (map-elements-with-key seq (lambda (elements)
+                                       (sample-bag elements :ratio ratio
+                                                   :weight weight))
+                                 :key key :test test)))
+    (apply #'concatenate (if (listp seq)
+                             'list
+                             `(vector ,(array-element-type seq)))
+           per-key-bags)))
+
+(defun cv-bag (data fn &key (n-folds 5) n (split-fn #'split-fold/mod))
+  (let ((folds (alexandria:iota n-folds))
+        (random-state (make-random-state nil)))
+    (flet ((shuffle-data ()
+             (let ((*random-state* random-state))
+               (shuffle data))))
+      (if n
+          (loop repeat n
+                nconc (let ((data (shuffle-data)))
+                        (mapcar (lambda (fold)
+                                  (multiple-value-call fn fold
+                                    (funcall split-fn data fold n-folds)))
+                                folds)))
+          (loop
+            (let ((data (shuffle-data)))
+              (map 'nil (lambda (fold)
+                          (multiple-value-call fn fold
+                            (funcall split-fn data fold n-folds)))
+                   folds)))))))
+
+#+nil
+(cv-bag '(0 1 2 3 4 5 6 7 8 9) (lambda (&rest args) (print args)) :n 10)
 
 
 ;;;; Periodic functions

@@ -52,6 +52,7 @@
    #:sample-bag
    #:sample-stratified-bag
    #:bag
+   #:cv-bag
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn
