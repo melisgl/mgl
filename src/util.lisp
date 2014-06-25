@@ -615,10 +615,10 @@ K1 and K2 before calling."
           mean 0
           m2 0)))
 
-(defun add-to-running-stat (x stat)
+(defun add-to-running-stat (x stat &key (weight 1))
   (with-slots (n mean m2) stat
-    (incf n)
-    (let ((delta (- x mean)))
+    (incf n weight)
+    (let ((delta (* weight (- x mean))))
       (incf mean (/ delta n))
       (incf m2 (* delta (- x mean))))))
 
