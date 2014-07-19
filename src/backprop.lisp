@@ -2196,6 +2196,126 @@ normal(0,sigmoid(x)) noise to x."))
                                  (aref d* li)))))))))))
 
 
+;;;; ->MAX-CHANNEL
+
+(deflump ->max-channel (lump)
+  ((x :initarg :x :reader x :documentation "Input comes from here.")
+   (group-size :initarg :group-size :reader group-size)))
+
+(defmethod default-size ((lump ->max-channel))
+  (size (x lump)))
+
+(define-cuda-kernel (cuda-max-channel)
+    (void ((group-size int) (x :mat :input) (n int) (y :mat :output)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let* ((i (* group-size k))
+             (max (aref x i)))
+        (do ((a 1 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (when (< max xe)
+              (set max xe))))
+        (do ((a 0 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (if (= max xe)
+                (set (aref y (+ i a)) xe)
+                (set (aref y (+ i a)) 0.0))))))))
+
+(define-lisp-kernel (lisp-max-channel)
+    ((group-size index)
+     (x :mat :input) (start-x index) (n index)
+     (y :mat :output) (start-y index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n)) by group-size
+        for yi of-type index upfrom start-y by group-size
+        do (let ((max (aref x xi)))
+             (do ((a 1 (+ a 1)))
+                 ((>= a group-size))
+               (let ((xe (aref x (+ xi a))))
+                 (when (< max xe)
+                   (setq max xe))))
+             (do ((a 0 (+ a 1)))
+                 ((>= a group-size))
+               (let ((xe (aref x (+ xi a))))
+                 (if (= max xe)
+                     (setf (aref y (+ yi a)) xe)
+                     (setf (aref y (+ yi a)) 0.0)))))))
+
+(defmethod transfer-lump ((lump ->max-channel))
+  (let* ((x (x lump))
+         (group-size (group-size lump)))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (/ (mat-size (nodes lump)) group-size)))
+          (cuda-max-channel group-size (nodes x) n (nodes lump)
+                            :grid-dim (list (ceiling n 256) 1 1)
+                            :block-dim (list 256 1 1)))
+        (lisp-max-channel
+         group-size (nodes x) (mat-displacement (nodes x)) (mat-size (nodes x))
+         (nodes lump) (mat-displacement (nodes lump))))))
+
+(define-cuda-kernel (cuda-max-channel-derivative)
+    (void ((group-size int) (x :mat :input) (n int)
+           (ld :mat :input) (xd :mat :io)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let* ((i (* group-size k))
+             (max (aref x i)))
+        (do ((a 1 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (when (< max xe)
+              (set max xe))))
+        (do ((a 0 (+ a 1)))
+            ((>= a group-size))
+          (let* ((ia (+ i a))
+                 (xe (aref x ia)))
+            (when (= max xe)
+              (set (aref xd ia)
+                   (+ (aref xd ia)
+                      (aref ld ia))))))))))
+
+(define-lisp-kernel (lisp-max-channel-derivative)
+    ((group-size index)
+     (x :mat :input) (start-x index) (n index)
+     (ld :mat :input) (start-ld index)
+     (xd :mat :io) (start-xd index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n)) by group-size
+        for ldi of-type index upfrom start-ld by group-size
+        for xdi of-type index upfrom start-xd by group-size
+        do (let ((max (aref x xi)))
+             (do ((a 1 (+ a 1)))
+                 ((>= a group-size))
+               (let ((xe (aref x (+ xi a))))
+                 (when (< max xe)
+                   (setq max xe))))
+             (do ((a 0 (+ a 1)))
+                 ((>= a group-size))
+               (let ((xe (aref x (+ xi a))))
+                 (when (= max xe)
+                   (setf (aref xd (+ xdi a))
+                         (+ (aref xd (+ xdi a))
+                            (aref ld (+ ldi a))))))))))
+
+(defmethod derive-lump ((lump ->max-channel))
+  (let* ((x (x lump))
+         (group-size (group-size lump)))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (/ (mat-size (nodes lump)) group-size)))
+          (cuda-max-channel-derivative group-size (nodes x) n
+                                       (derivatives lump) (derivatives x)
+                                       :grid-dim (list (ceiling n 256) 1 1)
+                                       :block-dim (list 256 1 1)))
+        (lisp-max-channel-derivative
+         group-size (nodes x) (mat-displacement (nodes x)) (mat-size (nodes x))
+         (derivatives lump) (mat-displacement (derivatives lump))
+         (derivatives x) (mat-displacement (derivatives x))))))
+
+
 ;;;; ->SOFTMAX
 
 (deflump ->softmax (->normalized)
