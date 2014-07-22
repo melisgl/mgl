@@ -340,6 +340,44 @@ detectors'.")
         (geem! 1 mask ld 1 xd))))
 
 
+(deflump ->multiply-with-gaussian (lump)
+  ((x :initarg :x :reader x)
+   (variance
+    :type (or null flt)
+    :initform nil :initarg :variance :reader variance)
+   (multipliers :initform nil :reader multipliers)))
+
+(defmethod default-size ((lump ->multiply-with-gaussian))
+  (size (x lump)))
+
+(defun ensure-multipliers (lump)
+  (when (variance lump)
+    (let ((x (nodes (x lump))))
+      (unless (and (multipliers lump)
+                   (= (mat-size x)
+                      (mat-size (multipliers lump))))
+        (setf (slot-value lump 'multipliers)
+              (make-mat (mat-size x) :ctype flt-ctype)))))
+  (multipliers lump))
+
+(defun mgn! (l x multipliers variance)
+  (gaussian-random! multipliers :mean 1 :stddev (sqrt variance))
+  (geem! 1 multipliers x 0 l))
+
+(defmethod transfer-lump ((lump ->multiply-with-gaussian))
+  (if *in-training-p*
+      (mgn! (nodes lump) (nodes (x lump)) (ensure-multipliers lump) (variance lump))
+      (copy! (nodes (x lump)) (nodes lump))))
+
+(defmethod derive-lump ((lump ->multiply-with-gaussian))
+  (let* ((x (x lump))
+         (xd (derivatives x))
+         (ld (derivatives lump))
+         (multipliers (multipliers lump)))
+    (assert (= (size lump) (size x)))
+    (geem! 1 multipliers ld 1 xd)))
+
+
 (deflump ->sample-binary (lump)
   ((x :initarg :x :reader x)
    (randoms :initform nil :reader randoms)))

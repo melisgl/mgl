@@ -464,6 +464,7 @@ Networks (DBN)."))
    #:->rectified
    #:noisyp
    #:->dropout
+   #:->multiply-with-gaussian
    #:->sample-binary
    #:->softplus
    #:->exp
