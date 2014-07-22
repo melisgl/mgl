@@ -476,6 +476,7 @@ Networks (DBN)."))
    #:->squared-error
    #:->max
    #:->max-channel
+   #:->min
    #:->softmax
    #:->cross-entropy
    #:->cross-entropy-softmax

@@ -2316,6 +2316,97 @@ normal(0,sigmoid(x)) noise to x."))
          (derivatives x) (mat-displacement (derivatives x))))))
 
 
+;;;; ->MIN
+
+(deflump ->min (lump)
+  ((x :initarg :x :reader x :documentation "Input comes from here.")
+   (group-size :initarg :group-size :reader group-size)))
+
+(defmethod default-size ((lump ->min))
+  (/ (size (x lump)) (group-size lump)))
+
+(define-cuda-kernel (cuda-min)
+    (void ((group-size int) (x :mat :input) (n int) (y :mat :output)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let* ((i (* group-size k))
+             (min (aref x i)))
+        (do ((a 1 (+ a 1)))
+            ((>= a group-size))
+          (let ((xe (aref x (+ i a))))
+            (when (< xe min)
+              (set min xe))))
+        (set (aref y k) min)))))
+
+(defmethod transfer-lump ((lump ->min))
+  (let* ((x (x lump))
+         (group-size (group-size lump)))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (mat-size (nodes lump))))
+          (cuda-min group-size (nodes x) n (nodes lump)
+                    :grid-dim (list (ceiling n 256) 1 1)
+                    :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :output
+                            :type flt-vector)))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le do
+                (setf (aref to* li) most-negative-flt))
+              (loop for xi upfrom xs below xe
+                    for i upfrom 0
+                    do (let ((li (+ ls (floor i group-size))))
+                         (setf (aref to* li) (min (aref to* li)
+                                                  (aref x* xi)))))))))))
+
+(define-cuda-kernel (cuda-min-derivative)
+    (void ((group-size int) (x :mat :input) (n int) (l :mat :input)
+           (ld :mat :input) (xd :mat :io)))
+  (let ((k (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< k n)
+      (let ((i (* group-size k)))
+        (do ((a 0 (+ a 1)))
+            ((>= a group-size))
+          (let ((ia (+ i a)))
+            (when (= (aref x ia) (aref l k))
+              (set (aref xd ia)
+                   (+ (aref xd ia)
+                      (aref ld k))))))))))
+
+(defmethod derive-lump ((lump ->min))
+  (let* ((x (x lump))
+         (group-size (group-size lump)))
+    (declare (type index group-size))
+    (if (use-cuda-p)
+        (let ((n (mat-size (nodes lump))))
+          (cuda-min-derivative group-size (nodes x) n (nodes lump)
+                               (derivatives lump) (derivatives x)
+                               :grid-dim (list (ceiling n 256) 1 1)
+                               :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :input
+                            :type flt-vector))
+                      (xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (d* ((derivatives lump) 'backing-array :direction :input
+                           :type flt-vector)))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (declare (ignore le))
+              (loop for xi upfrom xs below xe
+                    for i upfrom 0
+                    do (let ((li (+ ls (floor i group-size))))
+                         (when (= (aref to* li)
+                                  (aref x* xi))
+                           (incf (aref xd* xi)
+                                 (aref d* li)))))))))))
+
+
 ;;;; ->SOFTMAX
 
 (deflump ->softmax (->normalized)
