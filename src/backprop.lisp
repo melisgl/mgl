@@ -1392,6 +1392,82 @@ computed."))
                            (* d (aref y* yi)))
                      (incf (aref yd* yi)
                            (* d (aref x* xi))))))))))
+
+
+(deflump ->sin (->dropout lump)
+  ((x :initarg :x :reader x)))
+
+(defmethod default-size ((lump ->sin))
+  (size (x lump)))
+
+(define-cuda-kernel (cuda-sin!)
+    (void ((x :mat :input) (n int) (y :mat :output)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (let ((e (aref x i)))
+        (set (aref y i) (sin e))))))
+
+(define-lisp-kernel (lisp-sin!)
+    ((x :mat :input) (start-x index) (n index) (y :mat :output) (start-y index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n))
+        for yi of-type index upfrom start-y
+        do (setf (aref y yi)
+                 (let ((xe (aref x xi)))
+                   (sin xe)))))
+
+(defun sin! (x y)
+  (let ((n (mat-size x)))
+    (assert (= n (mat-size y)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-sin! x n y :grid-dim grid-dim :block-dim block-dim))
+        (lisp-sin! x (mat-displacement x) n y (mat-displacement y)))))
+
+(defmethod transfer-lump ((lump ->sin))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (sin! (nodes x) (nodes lump))))
+
+(define-cuda-kernel (cuda-sin-derivative!)
+    (void ((x :mat :input) (n int) (ld :mat :input) (xd :mat :io)))
+  (let ((stride (* block-dim-x grid-dim-x)))
+    (do ((i (+ (* block-dim-x block-idx-x) thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (set (aref xd i) (+ (aref xd i)
+                          (* (aref ld i) (cos (aref x i))))))))
+
+(define-lisp-kernel (lisp-sin-derivative!)
+    ((x :mat :input) (start-x index) (n index)
+     (ld :mat :input) (start-ld index)
+     (xd :mat :io) (start-xd index))
+  (loop for xi of-type index upfrom start-x
+          below (the! index (+ start-x n))
+        for ldi of-type index upfrom start-ld
+        for xdi of-type index upfrom start-xd
+        do (incf (aref xd xdi) (* (aref ld ldi) (aref x xi)))))
+
+(defun sin-derivative! (x ld xd)
+  (let ((n (mat-size x)))
+    (assert (= n (mat-size ld)))
+    (assert (= n (mat-size xd)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-sin-derivative! x n ld xd :grid-dim grid-dim
+                                :block-dim block-dim))
+        (lisp-sin-derivative! x (mat-displacement x) n
+                              ld (mat-displacement ld)
+                              xd (mat-displacement xd)))))
+
+(defmethod derive-lump ((lump ->sin))
+  (let ((x (x lump)))
+    (assert (= (size lump) (size x)))
+    (sin-derivative! (nodes x) (derivatives lump) (derivatives x))))
+
+
 
 (deflump ->sigmoid (->dropout lump)
   ((x :initarg :x :reader x)))

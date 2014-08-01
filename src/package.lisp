@@ -469,6 +469,7 @@ Networks (DBN)."))
    #:->softplus
    #:->exp
    #:->abs
+   #:->sin
    #:->rough-exponential
    #:->ref
    #:->periodic
