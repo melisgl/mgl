@@ -522,11 +522,9 @@ computed as the sum of nodes in the X parameter lump."))
   1)
 
 (defmethod derive-lump :around ((lump ->error))
-  ;; FIXME: This doesn't work if LUMP is connected to multiple error
-  ;; lumps. We should add IMPORTANCE or 1.
   (if (importance lump)
-      (copy! (importance lump) (derivatives lump))
-      (fill! (flt 1) (derivatives lump)))
+      (axpy! 1 (importance lump) (derivatives lump))
+      (.+! 1 (derivatives lump)))
   (call-next-method))
 
 
