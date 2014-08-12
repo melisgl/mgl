@@ -521,6 +521,11 @@ computed as the sum of nodes in the X parameter lump."))
 (defmethod default-size ((lump ->error))
   1)
 
+(defmethod transfer-lump :around ((lump ->error))
+  (call-next-method)
+  (when (importance lump)
+    (.*! (importance lump) (nodes lump))))
+
 (defmethod derive-lump :around ((lump ->error))
   (if (importance lump)
       (axpy! 1 (importance lump) (derivatives lump))
