@@ -328,19 +328,32 @@ N element."
                                  per-key-splits)))))
 
 (defun map-elements-with-key (seq fn &key (key #'identity) (test #'eql))
-  (let ((keys (collect-distinct seq :key key :test test)))
-    (if (zerop (length keys))
-        ()
-        (loop for k in keys
-              collect
-              (let ((elements
-                      (coerce
-                       (remove-if-not (lambda (x)
-                                        (funcall test k
-                                                 (funcall key x)))
-                                      seq)
-                       'vector)))
-                (funcall fn elements))))))
+  (if (member test (list 'eq #'eq 'eql #'eql 'equal #'equal))
+      ;; FIXME: non-deterministic due to reliance on EQ[L] hash
+      ;; tables.
+      (let ((h (make-hash-table :test test)))
+        (map nil (lambda (x)
+                   (push x (gethash (funcall key x) h)))
+             seq)
+        (let ((result ()))
+          (maphash (lambda (key seq)
+                     (declare (ignore key))
+                     (push (funcall fn (nreverse seq)) result))
+                   h)
+          (nreverse result)))
+      (let ((keys (collect-distinct seq :key key :test test)))
+        (if (zerop (length keys))
+            ()
+            (loop for k in keys
+                  collect
+                  (let ((elements
+                          (coerce
+                           (remove-if-not (lambda (x)
+                                            (funcall test k
+                                                     (funcall key x)))
+                                          seq)
+                           'vector)))
+                    (funcall fn elements)))))))
 
 (defun split-fold/mod (seq fold n-folds)
   "Partition SEQ into two sequences: one with elements of SEQ with
