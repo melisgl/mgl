@@ -882,18 +882,22 @@ weights * visible. Visible = visible + weights^T * hidden.")))
                   (incf (aref to* i) (* sum scale1))))))))
   (values))
 
-(defgeneric accumulate-cloud-statistics* (cloud v1 v2 multiplier
-                                          start accumulator))
+(defgeneric accumulate-cloud-statistics* (cloud v1 v2 v1-scratch importances
+                                          multiplier start accumulator))
 
-(defmethod accumulate-cloud-statistics* ((cloud full-cloud) v1 v2 multiplier
-                                         start accumulator)
+(defmethod accumulate-cloud-statistics* ((cloud full-cloud) v1 v2 v1-scratch
+                                         importances multiplier start
+                                         accumulator)
   (declare (type flt multiplier)
            (type index start))
   (if (use-blas-on-chunk-p (chunk1 cloud))
       (let ((size1 (size (chunk1 cloud)))
             (size2 (size (chunk2 cloud))))
         (with-shape-and-displacement (accumulator (list size1 size2) start)
-          (gemm! multiplier v1 v2 (flt 1) accumulator
+          (gemm! multiplier (if importances
+                                (scale-rows! importances v1 v1-scratch)
+                                v1)
+                 v2 (flt 1) accumulator
                  :transpose-a? t :lda size1 :ldb size2 :ldc size2
                  :m size1 :n size2 :k (n-stripes (chunk1 cloud)))))
       (with-facets ((v1* (v1 'backing-array :direction :input :type flt-vector))
@@ -901,6 +905,7 @@ weights * visible. Visible = visible + weights^T * hidden.")))
                     (accumulator* (accumulator 'backing-array :direction :io
                                                :type flt-vector)))
         (declare (optimize (speed 3) #.*no-array-bounds-check*))
+        (assert (null importances))
         (cond ((= multiplier (flt 1))
                (special-case (zerop start)
                  (do-cloud/chunk1 (i cloud)
@@ -1074,7 +1079,9 @@ connections between chunks. During initialization cloud specs are
 allowed in the list.")
    (has-hidden-to-hidden-p :reader has-hidden-to-hidden-p)
    (has-visible-to-visible-p :reader has-visible-to-visible-p)
-   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
+   (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes)
+   (importances :initform nil :initarg :importances
+                :accessor importances))
   (:documentation "The network is assembled from CHUNKS (nodes of the
 same behaviour) and CLOUDs (connections between two chunks). To
 instantiate, arrange for VISIBLE-CHUNKS, HIDDEN-CHUNKS, CLOUDS (either
@@ -1854,8 +1861,10 @@ contrastive divergence."))
     (when (and accumulator start)
       (let ((v1 (means-or-samples learner bm (chunk1 cloud)))
             (v2 (means-or-samples learner bm (chunk2 cloud))))
-        (accumulate-cloud-statistics* cloud v1 v2 multiplier
-                                      start accumulator)))))
+        (accumulate-cloud-statistics* cloud v1 v2
+                                      (ensure-scratch (chunk1 cloud))
+                                      (importances bm)
+                                      multiplier start accumulator)))))
 
 (defmethod accumulate-cloud-statistics (learner bm (cloud factored-cloud)
                                         gradient-sink multiplier)
@@ -2107,8 +2116,8 @@ of the batch. Batch size comes from the superclass."))
         (flush-sparsity sparsity accumulator start n-inputs-in-batch
                         multiplier)))))
 
-(defgeneric accumulate-sparsity-statistics (sparsity multiplier)
-  (:method ((sparsity normal-sparsity-gradient-source) multiplier)
+(defgeneric accumulate-sparsity-statistics (sparsity importances multiplier)
+  (:method ((sparsity normal-sparsity-gradient-source) importances multiplier)
     (let* ((chunk (chunk sparsity))
            (cloud (cloud sparsity))
            (sparsity-target (sparsity-target sparsity))
@@ -2116,13 +2125,15 @@ of the batch. Batch size comes from the superclass."))
       (assert (not (eq (nodes chunk) (old-nodes chunk))))
       (copy-chunk-nodes chunk (means chunk) (old-nodes chunk))
       (.+! (- sparsity-target) old-nodes)
-      (multiple-value-bind (v1 v2)
+      (multiple-value-bind (v1 v2 v1-scratch)
           (if (eq chunk (chunk1 cloud))
-              (values (old-nodes chunk) (means (chunk2 cloud)))
-              (values (means (chunk1 cloud)) (old-nodes chunk)))
-        (accumulate-cloud-statistics* cloud v1 v2 multiplier
-                                      0 (products sparsity)))))
-  (:method ((sparsity cheating-sparsity-gradient-source) multiplier)
+              (values (old-nodes chunk) (means (chunk2 cloud))
+                      (ensure-scratch chunk))
+              (values (means (chunk1 cloud)) (old-nodes chunk)
+                      (ensure-scratch (chunk1 cloud))))
+        (accumulate-cloud-statistics* cloud v1 v2 v1-scratch importances
+                                      multiplier 0 (products sparsity)))))
+  (:method ((sparsity cheating-sparsity-gradient-source) importances multiplier)
     ;; FLUSH-SPARSITY takes the multiplier into account.
     (declare (ignore multiplier))
     (let* ((chunk (chunk sparsity))
@@ -2145,7 +2156,7 @@ of the batch. Batch size comes from the superclass."))
 (defmethod accumulate-positive-phase-statistics
     ((learner sparse-bm-learner) gradient-sink multiplier)
   (dolist (sparsity (sparsity-gradient-sources learner))
-    (accumulate-sparsity-statistics sparsity multiplier)))
+    (accumulate-sparsity-statistics sparsity (bm learner) multiplier)))
 
 
 ;;;; Common base classes for MCMC based BM trainers

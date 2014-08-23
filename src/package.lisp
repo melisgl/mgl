@@ -332,6 +332,7 @@ simple gradient descent based trainers."))
    #:clouds
    #:do-clouds
    #:find-cloud
+   #:importances
    ;; Operating an BM
    #:set-visible-mean/1
    #:set-hidden-mean/1
