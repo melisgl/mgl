@@ -1718,6 +1718,86 @@ normal(0,sigmoid(x)) noise to x."))
                     for xi upfrom xs below xe
                     do (when (plusp (aref l* li))
                          (incf (aref xd* xi) (aref ld* li))))))))))
+
+
+(deflump ->split-sign (lump)
+  ((x :initarg :x :reader x)))
+
+(defmethod default-size ((lump ->split-sign))
+  (* 2 (size (x lump))))
+
+(define-cuda-kernel (cuda-sign-split)
+    (void ((x :mat :input) (y :mat :output) (n int)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (let ((xi (aref x i)))
+        (if (< xi 0.0)
+            (progn
+              (set (aref y (* 2 i)) 0.0)
+              (set (aref y (+ (* 2 i) 1)) (- xi)))
+            (progn
+              (set (aref y (* 2 i)) xi)
+              (set (aref y (+ (* 2 i) 1)) 0.0)))))))
+
+(defun sign-split! (x y &key (n (mat-size x)))
+  (assert (eq (mat-ctype x) (mat-ctype y)))
+  (assert (<= n (mat-size x)))
+  (assert (<= n (mat-size y)))
+  (if (use-cuda-p)
+      (cuda-sign-split x y n
+                    :grid-dim (list (ceiling n 256) 1 1)
+                    :block-dim (list 256 1 1))
+      (assert nil)
+      #+nil
+      (with-facets ((x* (x 'backing-array :direction :input
+                           :type flt-vector))
+                    (y* (y 'backing-array :direction :output
+                           :type flt-vector)))
+        (dotimes (i n)
+          (setf (aref y* i) (max #.(flt 0) (aref x* i)))))))
+
+(defmethod transfer-lump ((lump ->split-sign))
+  (let ((x (x lump)))
+    (assert (= (size lump) (* 2 (size x))))
+    (sign-split! (nodes x) (nodes lump))))
+
+(define-cuda-kernel (cuda-sign-split-derivative)
+    (void ((xd :mat :io) (x :mat :input) (ld :mat :input) (n int)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i n)
+      (if (< (aref x i) 0.0)
+          (set (aref xd i) (- (aref xd i)
+                              (aref ld (+ (* 2 i) 1))))
+          (set (aref xd i) (+ (aref xd i)
+                              (aref ld (* 2 i))))))))
+
+(defmethod derive-lump ((lump ->split-sign))
+  (let* ((x (x lump))
+         (xd (derivatives x))
+         (ld (derivatives lump))
+         (n (mat-size (nodes x))))
+    (assert (= (size lump) (* 2 (size x))))
+    (if (use-cuda-p)
+        (cuda-sign-split-derivative xd (nodes x) ld n
+                                    :grid-dim (list (ceiling n 256) 1 1)
+                                    :block-dim (list 256 1 1))
+        (assert nil)
+        #+nil
+        (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                            :type flt-vector))
+                      (l* ((nodes lump) 'backing-array :direction :input
+                           :type flt-vector))
+                      (ld* ((derivatives lump) 'backing-array :direction :input
+                            :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe lump ls le)
+                           (stripe x xs xe))
+              (loop for li upfrom ls below le
+                    for xi upfrom xs below xe
+                    do (when (plusp (aref l* li))
+                         (incf (aref xd* xi) (aref ld* li))))))))))
+
 
 (deflump ->softplus (lump)
   ((x :initarg :x :reader x))

@@ -463,6 +463,7 @@ Networks (DBN)."))
    #:->sigmoid
    #:->scaled-tanh
    #:->rectified
+   #:->split-sign
    #:noisyp
    #:->dropout
    #:->multiply-with-gaussian
