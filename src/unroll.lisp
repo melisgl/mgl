@@ -404,9 +404,9 @@ was returned by UNROLL-DBN or UNROLL-DBM."
                           (typep (mgl-bp::weights lump-1) '->weight))
                   collect lump-1)))
     (assert (/= 0 (length activation-lumps)) ()
-            "Can't rescale activation weights for LUMP there isn't one.")
+            "Can't rescale activation weights for LUMP there is none.")
     (assert (= 1 (length activation-lumps)) ()
-            "Can't rescale activation weights for LUMP there are two many.")
+            "Can't rescale activation weights for LUMP there are too many.")
     (let ((lump-1 (first activation-lumps)))
       (scal! scale (nodes (mgl-bp::weights lump-1))))))
 
