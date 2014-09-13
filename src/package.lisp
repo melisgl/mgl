@@ -48,6 +48,7 @@
    #:stratified-split
    #:split-fold/mod
    #:split-fold/cont
+   #:smear-strata
    #:cross-validate
    #:sample-bag
    #:sample-stratified-bag

@@ -219,16 +219,16 @@ end. When there are no more elements, start over."
           (aref vector n)
         (setf n (mod (1+ n) l))))))
 
-(defun make-random-generator (seq)
+(defun make-random-generator (seq &key (reorder #'shuffle))
   "Return a function that returns elements of VECTOR in random order
 without end. When there are no more elements, start over with a
 different random order."
-  (let* ((vector (shuffle (coerce seq 'vector)))
+  (let* ((vector (funcall reorder (copy-seq (coerce seq 'vector))))
          (l (length vector))
          (n 0))
     (lambda ()
       (when (zerop n)
-        (setq vector (nshuffle-vector vector)))
+        (setq vector (funcall reorder vector)))
       (prog1
           (aref vector n)
         (setf n (mod (1+ n) l))))))
@@ -354,6 +354,68 @@ N element."
                                           seq)
                            'vector)))
                     (funcall fn elements)))))))
+
+(defun smear-strata (seq &key (key #'identity) (test #'eql))
+  (merge-xxx (map-elements-with-key seq #'identity
+                                    :key key :test test)
+             :result-type (if (listp seq) 'list 'vector)))
+
+(defun merge-xxx (seqs &key result-type)
+  (let* ((n (length seqs))
+         (lengths (map 'vector #'length seqs))
+         (seq-indices (make-array n :initial-element 0))
+         (result-length (reduce #'+ lengths))
+         (result (make-array result-length))
+         (result-index 0))
+    (flet ((find-next ()
+             (let ((min nil)
+                   (min-i nil))
+               (loop for i below n
+                     for index across seq-indices
+                     for length across lengths
+                     do (let ((x (/ index length)))
+                          (when (or (null min) (< x min))
+                            (setq min x)
+                            (setq min-i i))))
+               min-i)))
+      (let ((seqs (map 'vector (lambda (seq)
+                                 (coerce seq 'vector))
+                       seqs)))
+        (loop while (< result-index result-length)
+              do (let ((i (find-next)))
+                   (setf (aref result result-index)
+                         (aref (aref seqs i) (aref seq-indices i)))
+                   (incf result-index)
+                   (incf (aref seq-indices i))))))
+    (if (and (not (eq result-type 'vector)) (listp (first seqs)))
+        (coerce result 'list)
+        result)))
+
+#|
+
+(assert (equal (merge-xxx '((0 2 4 6 8 10 12)
+                            (1 3 5 7 9 11 13)))
+               '(0 1 2 3 4 5 6 7 8 9 10 11 12 13)))
+
+(assert (equal (merge-xxx '((0 2 3 5 6)
+                            (1 4)))
+               '(0 1 2 3 4 5 6)))
+
+(assert (equal (smear-strata '(0 2 3 5 6 1 4)
+                             :key (lambda (x)
+                                    (if (member x '(1 4))
+                                        t
+                                        nil)))
+               '(0 1 2 3 4 5 6)))
+
+(assert (equal (smear-strata (vector 0 2 3 5 6 1 4)
+                             :key (lambda (x)
+                                    (if (member x '(1 4))
+                                        t
+                                        nil)))
+               (vector 0 1 2 3 4 5 6)))
+
+|#
 
 (defun split-fold/mod (seq fold n-folds)
   "Partition SEQ into two sequences: one with elements of SEQ with
