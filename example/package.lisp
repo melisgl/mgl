@@ -26,7 +26,6 @@
    #:log-dbn-cesc-accuracy
    #:log-dbm-cesc-accuracy
    #:bpn-cesc-error
-   #:tack-cross-entropy-softmax-error-on
    ;; Misc
    #:load-weights
    #:save-weights))
