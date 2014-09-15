@@ -217,7 +217,7 @@
 #|
 
 ;;; Train the covariance function with backprop.
-(with-cuda ()
+(with-cuda* ()
   (let ((*random-state* (sb-ext:seed-random-state 983274)))
     (test-simple-bpn-gp)))
 

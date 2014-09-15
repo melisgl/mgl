@@ -1,7 +1,7 @@
 (in-package :mgl-example-util)
 
 (defun call-repeatably (seed fn)
-  (with-cuda (:random-seed seed)
+  (with-cuda* (:random-seed seed)
     (let ((*random-state*
             #+sbcl (sb-ext:seed-random-state seed)
             #+allegro (make-random-state t seed)

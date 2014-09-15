@@ -11,4 +11,4 @@
   `(loop for enabled in (if (cl-cuda:cuda-available-p)
                             '(nil t)
                             '(nil))
-         do (with-cuda (:enabled enabled) ,@body)))
+         do (with-cuda* (:enabled enabled) ,@body)))
