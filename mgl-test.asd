@@ -8,6 +8,7 @@
                 :serial t
                 :components ((:file "package")
                              (:file "util")
+                             (:file "test-resample")
                              (:file "test-util")
                              (:file "test-copy")
                              (:file "test-classification")

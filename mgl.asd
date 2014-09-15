@@ -8,6 +8,7 @@
   :components ((:module "src"
                 :serial t
                 :components ((:file "package")
+                             (:file "resample")
                              (:file "util")
                              (:file "copy")
                              (:file "confusion-matrix")
@@ -24,7 +25,7 @@
                              (:file "unroll")
                              (:file "gaussian-process"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla
-                            #:mgl-gnuplot #:mgl-mat))
+                            #:mgl-gnuplot #:mgl-mat #:mgl-pax))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
   (asdf:oos 'asdf:load-op '#:mgl-test)

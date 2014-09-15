@@ -1,3 +1,7 @@
+(mgl-pax:define-package :mgl-resample
+  (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
+  (:use :cl :mgl-pax))
+
 (cl:defpackage :mgl-util
   (:use #:common-lisp #:mgl-mat)
   (:export
@@ -38,22 +42,9 @@
    #:hash-table->vector
    #:reverse-hash-table
    #:repeatedly
-   #:nshuffle-vector
-   #:shuffle-vector
-   #:shuffle
    #:make-seq-generator
    #:make-random-generator
    #:make-n-gram-mappee
-   #:break-seq
-   #:stratified-split
-   #:split-fold/mod
-   #:split-fold/cont
-   #:smear-strata
-   #:cross-validate
-   #:sample-bag
-   #:sample-stratified-bag
-   #:bag
-   #:cv-bag
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn

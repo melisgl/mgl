@@ -2,6 +2,7 @@
 
 (defun test ()
   (mgl-mat::test)
+  (test-resample)
   (test-util)
   (test-classification)
   (test-cg)
