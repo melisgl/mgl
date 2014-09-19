@@ -71,6 +71,11 @@
 ;;;; Maxout BPN (see TRAIN-MNIST/4)
 ;;;;
 ;;;; I couldn't quite reproduce the 99.06% claimed in the paper.
+;;;;
+;;;;
+;;;; Max-channel BPN (see TRAIN-MNIST/5)
+;;;;
+;;;; 99.16%
 
 (in-package :mgl-example-mnist)
 
@@ -848,12 +853,13 @@
                            (n-epochs 200) l2-upper-bound
                            class-weights learning-rate learning-rate-decay
                            set-dropout-p
-                           rescale-on-dropout-p)
+                           input-weight-penalty
+                           rescale-on-dropout-p
+                           (batch-size 100))
   (when class-weights
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
-  (setf (max-n-stripes bpn) 100)
+  (setf (max-n-stripes bpn) batch-size)
   (flet ((make-trainer (lump &key softmaxp)
-           (declare (ignore lump))
            (let ((trainer (make-instance
                            'mnist-bpn-gd-segment-trainer
                            :n-inputs-in-epoch (length training)
@@ -863,15 +869,34 @@
                                    2))
                            :learning-rate (flt learning-rate)
                            :learning-rate-decay (flt learning-rate-decay)
-                           :batch-size 100)))
+                           :weight-penalty (if (and input-weight-penalty
+                                                    (member (name lump)
+                                                            '((inputs f1))
+                                                            :test #'name=))
+                                               (flt input-weight-penalty)
+                                               (flt 0))
+                           :batch-size batch-size)))
              (when l2-upper-bound
                (arrange-for-renormalizing-activations
                 bpn trainer l2-upper-bound))
+             #+nil
+             (when (member (name lump) '((inputs f1))
+                           :test #'name=)
+               (push (let ((mask (make-sparse-column-mask (nodes lump) 392)))
+                       (.*! mask (nodes lump))
+                       (lambda ()
+                         (.*! mask (nodes lump))))
+                     (after-update-hook trainer)))
              trainer))
          (make-segmenter (fn)
-           (if l2-upper-bound
-               (make-dwim-grouped-segmenter fn)
-               fn)))
+           (let ((dwim (make-dwim-grouped-segmenter fn)))
+             (lambda (lump)
+               (if (and l2-upper-bound
+                        (not (and input-weight-penalty
+                                  (member (name lump) '((inputs f1) (:bias f1))
+                                          :test #'name=))))
+                   (funcall dwim lump)
+                   (funcall fn lump))))))
     (unless (zerop n-softmax-epochs)
       (log-msg "Starting to train the softmax layer of BPN~%")
       (train (make-sampler training :n-epochs n-softmax-epochs)
@@ -929,6 +954,20 @@
     (predictions (tack-cross-entropy-softmax-error-on
                   mgl-bp::*bpn-being-built* (list f3)))))
 
+;;; Return a matrix of the same shape as MAT that's zero everywhere,
+;;; except in at most N randomly chosen positions in each column where
+;;; it's one.
+(defun make-sparse-column-mask (mat n)
+  (let ((mask (make-mat (mat-dimensions mat) :ctype (mat-ctype mat))))
+    (destructuring-bind (n-rows n-columns) (mat-dimensions mat)
+      (with-facets ((mask* (mask 'backing-array :direction :io)))
+        (loop for column below n-columns do
+          (loop repeat n
+                do (setf (aref mask* (+ (* (random n-rows) n-columns)
+                                        column))
+                         (flt 1))))))
+    mask))
+
 (defun init-bpn-weights (bpn &key stddev)
   (loop for lump across (lumps bpn) do
     (when (typep lump '->weight)
@@ -953,7 +992,7 @@
 
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                (group-size 5))
-  (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
+  (build-bpn (:class 'mnist-bpn)
     (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
@@ -975,7 +1014,44 @@
                           :n-epochs (if quick-run-p 2 3000)
                           :learning-rate (flt 1)
                           :learning-rate-decay (flt 0.998)
-                          :l2-upper-bound (sqrt (flt 3.75)))
+                          :l2-upper-bound (sqrt (flt 3.75))
+                          :batch-size 100)
+      (unless quick-run-p
+        (save-weights bpn-filename bpn)))))
+
+
+;;;; Max-channel
+
+(defun build-max-channel-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
+                                    (group-size 2))
+  (build-bpn (:class 'mnist-bpn)
+    (inputs (->input :size 784 :dropout (flt 0.2)))
+    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
+                                     :size n-units-1))
+    (f1* (->max-channel :x f1-activations :group-size group-size))
+    (f1 (->dropout :x f1* :dropout (flt 0.5)))
+    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
+    (f2* (->max-channel :x f2-activations :group-size group-size))
+    (f2 (->dropout :x f2* :dropout (flt 0.5)))
+    (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-2))
+    (f3* (->max-channel :x f3-activations :group-size group-size))
+    (f3 (->dropout :x f3* :dropout (flt 0.5)))
+    (predictions (tack-cross-entropy-softmax-error-on
+                  mgl-bp::*bpn-being-built* '(f3)))))
+
+(defun train-mnist/5 (&key training test quick-run-p bpn-var bpn-filename)
+  (with-experiment ()
+    (let ((bpn nil))
+      (setq* (bpn bpn-var) (build-max-channel-mnist-bpn))
+      (init-bpn-weights bpn :stddev 0.01)
+      (train-mnist-bpn-gd bpn training test
+                          :n-softmax-epochs 0
+                          :n-epochs (if quick-run-p 2 3000)
+                          :learning-rate (flt 1)
+                          :learning-rate-decay (flt 0.998)
+                          :l2-upper-bound (sqrt (flt 3.75))
+                          :input-weight-penalty (flt 0.000001)
+                          :batch-size 96)
       (unless quick-run-p
         (save-weights bpn-filename bpn)))))
 
