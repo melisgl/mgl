@@ -203,7 +203,7 @@ end. When there are no more elements, start over."
           (aref vector n)
         (setf n (mod (1+ n) l))))))
 
-(defun make-random-generator (seq &key (reorder #'alexandria:shuffle))
+(defun make-random-generator (seq &key (reorder #'mgl-resample:shuffle))
   "Return a function that returns elements of VECTOR in random order
 without end. When there are no more elements, start over with a
 different random order."
