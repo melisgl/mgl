@@ -1,6 +1,6 @@
 (in-package :mgl-resample)
 
-(defsection @mgl-resample ()
+(defsection @mgl-resample (:title "Resampling")
   "The focus of this package is on resampling methods such as
   cross-validation and bagging which can be used for model evaluation,
   model selection, and also as a simple form of ensembling. Data
@@ -11,6 +11,30 @@
   (@mgl-resample-bagging section)
   (@mgl-resample-cv-bagging section)
   (@mgl-resample-misc section))
+
+
+(defsection @mgl-resample-shuffling (:title "Shuffling")
+  (shuffle function)
+  (shuffle! function))
+
+(defun shuffle (seq)
+  "Copy of SEQ and shuffle it using Fisher-Yates algorithm."
+  (if (listp seq)
+      (coerce (shuffle-vector! (coerce seq 'vector)) 'list)
+      (shuffle-vector! (copy-seq seq))))
+
+(defun shuffle! (seq)
+  "Shuffle SEQ using Fisher-Yates algorithm."
+  (if (listp seq)
+      (coerce (shuffle-vector! (coerce seq 'vector)) 'list)
+      (shuffle-vector! seq)))
+
+(defun shuffle-vector! (vector)
+  (loop for idx downfrom (1- (length vector)) to 1
+        for other = (random (1+ idx))
+        do (unless (= idx other)
+             (rotatef (aref vector idx) (aref vector other))))
+  vector)
 
 
 (defsection @mgl-resample-partitions (:title "Partitions")
@@ -343,7 +367,7 @@
 (defun sample-without-replacement* (ratio seq &key weight
                                     (random-state *random-state*))
   (let* ((seq* (let ((*random-state* random-state))
-                 (alexandria:shuffle (coerce-to-fresh-vector seq))))
+                 (shuffle! (coerce-to-fresh-vector seq))))
          (n (length seq*))
          (sum-weights (if weight
                           (loop for element across seq*
