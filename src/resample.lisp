@@ -113,7 +113,8 @@
 
       (stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
       => ((0 2 4 6 8) (1 3 5 7 9))"
-  (if (member test (list 'eq #'eq 'eql #'eql 'equal #'equal))
+  (if (and (member test (list 'eq #'eq 'eql #'eql 'equal #'equal))
+           nil)
       ;; FIXME: non-deterministic due to reliance on EQ[L] hash
       ;; tables.
       (let ((h (make-hash-table :test test)))
