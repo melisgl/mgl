@@ -33,25 +33,25 @@
    (same-stripes-p
     :initform nil :initarg :same-stripes-p :reader same-stripes-p
     :documentation "Non-NIL iff all stripes are the same. If true, it
-effectively overrides both N-STRIPES and MAX-N-STRIPES and there is
-only one row in NODES and DERIVATIVES. Set up by the lump itself
-taking its inputs into account. Notably, ->WEIGHTs always have
-SAME-STRIPES-P T.")
+    effectively overrides both N-STRIPES and MAX-N-STRIPES and there
+    is only one row in NODES and DERIVATIVES. Set up by the lump
+    itself taking its inputs into account. Notably, ->WEIGHTs always
+    have SAME-STRIPES-P T.")
    (nodes
     :initform nil :type mat :reader nodes
     :documentation "The values of the nodes. All nodes have values. It
-is conceptually a N-STRIPES x SIZE matrix that can be enlarged to
-MAX-N-STRIPES x SIZE by setting N-STRIPES.")
+    is conceptually a N-STRIPES x SIZE matrix that can be enlarged to
+    MAX-N-STRIPES x SIZE by setting N-STRIPES.")
    (derivatives
     :initform nil :type mat :reader derivatives
     :documentation "Derivatives of nodes, input node derivatives are
-not calculated. A 1d array representing a matrix of the same dimension
-as NODES.")
+    not calculated. A 1d array representing a matrix of the same
+    dimension as NODES.")
    (default-value
     :initform #.(flt 0) :initarg :default-value :type flt
     :reader default-value
     :documentation "Upon creation or resize the lump's nodes get
-filled with this value.")))
+    filled with this value.")))
 
 (declaim (inline derivatives*))
 (defun derivatives* (lump)
@@ -224,8 +224,8 @@ filled with this value.")))
 
 (defmacro with-weights-copied ((from-bpn) &body body)
   "In BODY ->WEIGHT will first look up if a weight lump of the same
-name exists in FROM-BPN and return that, or else create a weight lump
-normally. If FROM-BPN is NIL, then weights are copied."
+  name exists in FROM-BPN and return that, or else create a weight
+  lump normally. If FROM-BPN is NIL, then weights are copied."
   (alexandria:with-gensyms (%from-bpn)
     `(let* ((,%from-bpn ,from-bpn)
             (*lumps-to-copy*
@@ -262,9 +262,9 @@ normally. If FROM-BPN is NIL, then weights are copied."
     :type (or null flt)
     :initform nil :initarg :dropout :reader dropout
     :documentation "If non-NIL, then in the forward pass zero out each
-node in this chunk with DROPOUT probability. See Geoffrey Hinton's
-'Improving neural networks by preventing co-adaptation of feature
-detectors'.")
+    node in this chunk with DROPOUT probability. See Geoffrey Hinton's
+    'Improving neural networks by preventing co-adaptation of feature
+    detectors'.")
    (mask :initform nil :reader mask)))
 
 (defmethod default-size ((lump ->dropout))
@@ -514,9 +514,10 @@ detectors'.")
     :accessor importance
     :documentation "If non-NIL, an FLT-VECTOR of n-stripes."))
   (:documentation "An error node is usually a leaf in the graph of
-lumps. Contrary to non-error leaf lumps it gets a non-zero derivative:
-1. Error lumps have exactly one node \(in each stripe) whose value is
-computed as the sum of nodes in the X parameter lump."))
+  lumps. Contrary to non-error leaf lumps it gets a non-zero
+  derivative: 1. Error lumps have exactly one node \(in each stripe)
+  whose value is computed as the sum of nodes in the X parameter
+  lump."))
 
 (defmethod default-size ((lump ->error))
   1)
@@ -590,7 +591,7 @@ computed as the sum of nodes in the X parameter lump."))
 
 (defun add-lump (lump bpn)
   "Add LUMP to BPN. MAX-N-STRIPES of LUMP gets set to equal that of
-the previous last, non-weight lump of BPN."
+  the previous last, non-weight lump of BPN."
   (when (find-lump (name lump) bpn)
     (error "Cannot add ~S: ~%
             a lump of same name has already been added to this network." lump))
@@ -606,19 +607,19 @@ the previous last, non-weight lump of BPN."
 (defmacro build-bpn ((&key (class ''bpn) initargs
                         (max-n-stripes 1)) &body lumps)
   "Syntactic sugar to assemble BPNs from lumps. Like LET* it is a
-sequence of bindings (of symbols to lumps). The names of the lumps
-created default to the symbol of the binding. In case a lump is not
-bound to a symbol (because it was created in a nested expression), the
-local function LUMP finds the lump with the given name in the bpn
-being built. Example:
+  sequence of bindings (of symbols to lumps). The names of the lumps
+  created default to the symbol of the binding. In case a lump is not
+  bound to a symbol (because it was created in a nested expression),
+  the local function LUMP finds the lump with the given name in the
+  bpn being built. Example:
 
-  (mgl-bp:build-bpn ()
-    (features (mgl-bp:->input :size n-features))
-    (biases (mgl-bp:->weight :size n-features))
-    (weights (mgl-bp:->weight :size (* n-hiddens n-features)))
-    (activations0 (mgl-bp:->activation :weights weights :x features))
-    (activations (mgl-bp:->+ :args (list biases activations0)))
-    (output (mgl-bp:->sigmoid :x activations)))"
+      (mgl-bp:build-bpn ()
+        (features (mgl-bp:->input :size n-features))
+        (biases (mgl-bp:->weight :size n-features))
+        (weights (mgl-bp:->weight :size (* n-hiddens n-features)))
+        (activations0 (mgl-bp:->activation :weights weights :x features))
+        (activations (mgl-bp:->+ :args (list biases activations0)))
+        (output (mgl-bp:->sigmoid :x activations)))"
   (let ((bindings
           (mapcar (lambda (lump)
                     (destructuring-bind (symbol init-form) lump
@@ -721,7 +722,7 @@ being built. Example:
 
 (defun first-trained-weight-lump (trainer learner)
   "Much time can be wasted computing derivatives of non-trained weight
-lumps. Return the first one that TRAINER trains."
+  lumps. Return the first one that TRAINER trains."
   (or (slot-value learner 'first-trained-lump)
       (setf (slot-value learner 'first-trained-lump)
             (find-if (lambda (lump)
@@ -730,8 +731,8 @@ lumps. Return the first one that TRAINER trains."
 
 (defmethod cost (bpn)
   "Return the sum of costs for all active stripes. The cost of a
-stripe is the sum of the error nodes. The second value is the number
-of stripes."
+  stripe is the sum of the error nodes. The second value is the number
+  of stripes."
   (let ((sum (flt 0)))
     (loop for lump across (lumps bpn) do
       (when (typep lump '->error)
@@ -839,9 +840,9 @@ of stripes."
     :type (or flt flt-vector)
     :initarg :scale :accessor scale
     :documentation "The sum of nodes after normalization. Can be
-changed during training, for instance when clamping. If it is a vector
-then its length must be MAX-N-STRIPES which automatically
-maintained.")))
+    changed during training, for instance when clamping. If it is a
+    vector then its length must be MAX-N-STRIPES which automatically
+    maintained.")))
 
 (defmethod default-size ((lump ->normalized))
   (size (x lump)))
@@ -939,10 +940,10 @@ maintained.")))
    (transpose-weights-p :initform nil :initarg :transpose-weights-p
                         :reader transpose-weights-p))
   (:documentation "Perform X*WEIGHTS where X is of size M and WEIGHTS
-is a ->WEIGHT whose single stripe is taken to be of dimensions M x N
-stored in row major order. N is the size of this lump. If
-TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
-computed."))
+  is a ->WEIGHT whose single stripe is taken to be of dimensions M x N
+  stored in row major order. N is the size of this lump. If
+  TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
+  computed."))
 
 (defun add-activations (&key name size inputs (add-bias-p t)
                         (bpn *bpn-being-built*))
@@ -1651,7 +1652,7 @@ computed."))
    #+nil
    (noisyp :initform nil :initarg :noisyp :accessor noisyp))
   (:documentation "max(0,x) activation function. If NOISYP then add
-normal(0,sigmoid(x)) noise to x."))
+  normal(0,sigmoid(x)) noise to x."))
 
 (defmethod default-size ((lump ->rectified))
   (size (x lump)))
@@ -2659,33 +2660,34 @@ normal(0,sigmoid(x)) noise to x."))
    (softmax
     :reader softmax
     :documentation "A matrix of the same size as X, EXP'ed and
-normalized in groups of GROUP-SIZE.")
+    normalized in groups of GROUP-SIZE.")
    (target
     :initarg :target :reader target
     :documentation "A lump of the same size as INPUT-LUMP that is the
-T in -sum_{k}target_k*ln(x_k) which the the cross entropy error.")
+    T in -sum_{k}target_k*ln(x_k) which the the cross entropy error.")
    (class-weights
     :initarg :class-weights
     :accessor class-weights
     :documentation "If non-NIL, an FLT-VECTOR of GROUP-SIZE. Useful
-TARGET's distribution is different on the training and test sets. Just
-set w_i to test_frequency_i/training_frequency_i.")
+    TARGET's distribution is different on the training and test sets.
+    Just set w_i to test_frequency_i/training_frequency_i.")
    (normalized-lump :reader normalized-lump))
   (:documentation "A specialized lump that is equivalent to hooking
-->EXP with NORMALIZED-LUMP and ->CROSS-ENTROPY but is numerically
-stable. See <http://groups.google.com/group/comp.ai.neural-nets/msg/a7594ebea01fef04?dmode=source>
+  ->EXP with NORMALIZED-LUMP and ->CROSS-ENTROPY but is numerically
+  stable. See
+  <http://groups.google.com/group/comp.ai.neural-nets/msg/a7594ebea01fef04?dmode=source>
 
-It has two parameters X and TARGET. In the transfer phase it computes
-the EXP of each input node and normalizes them as if by
-NORMALIZED-LUMP. These intermediate values are placed into SOFTMAX.
-The value node K is nodes_k = - target_k * ln(softmax_k). Since the
-sum of this is cross entropy: - sum_k target_k * ln(softmax_k), simply
-plug this lump into an ->ERROR.
+  It has two parameters X and TARGET. In the transfer phase it
+  computes the EXP of each input node and normalizes them as if by
+  NORMALIZED-LUMP. These intermediate values are placed into SOFTMAX.
+  The value node K is nodes_k = - target_k * ln(softmax_k). Since the
+  sum of this is cross entropy: - sum_k target_k * ln(softmax_k),
+  simply plug this lump into an ->ERROR.
 
-In the derive phase it computes the cross entropy error of the
-normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
-target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
-target_k if target sums to 1."))
+  In the derive phase it computes the cross entropy error of the
+  normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
+  target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
+  target_k if target sums to 1."))
 
 (defun add-cross-entropy-softmax (&key predictions-name expectations-name
                                   (error-name (list predictions-name :error))
