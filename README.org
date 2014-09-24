@@ -4,7 +4,9 @@ Common Lisp machine learning library by [[http://quotenil.com][Gábor Melis]] wi
 contributed by Ravenpack International. It implements:
 - Backpropagation networks (BPN)
   - Dropout
+  - Rectified linear units
   - Maxout
+  - Max-channel
 - Boltzmann Machines
   - Restricted Boltzmann Machines (RBM)
   - Deep Belief Networks (DBN)
@@ -14,6 +16,7 @@ contributed by Ravenpack International. It implements:
   - Contrastive Divergence (CD) learning
   - Persistent Contrastive Divergence (PCD) learning
 - Gradient descent optimization
+  - Nesterov momentum
 - Conjugate gradient optimization
 - Gaussian Processes
   - Optimizing Gaussian Processes as BPNs
@@ -62,5 +65,5 @@ set up and just as fast as ATLAS.
 
 CL-CUDA is a dependency for which the NVIDIA CUDA Toolkit needs to be
 installed, but MGL is fully functional even if there is no cuda
-capable gpu installed. See the MGL-MAT:WITH-CUDA macro for how to use
+capable gpu installed. See the MGL-MAT:WITH-CUDA* macro for how to use
 it.
