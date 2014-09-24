@@ -208,7 +208,7 @@
                        (list :fold fold test training))
                       :folds '(2 3)
                       :pass-fold t)
-      => ((:fold 2 (2) (0 1 3 4)) 
+      => ((:fold 2 (2) (0 1 3 4))
           (:fold 3 (3) (0 1 2 4)))
 
   Finally, the way the data is split can be customized. By default
