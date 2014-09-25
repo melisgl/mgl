@@ -30,7 +30,3 @@
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
   (asdf:oos 'asdf:load-op '#:mgl-test)
   (funcall (intern (symbol-name '#:test) (find-package '#:mgl-test))))
-
-(defmethod asdf:operation-done-p ((o asdf:test-op)
-                                  (c (eql (asdf:find-system '#:mgl))))
-  (values nil))
