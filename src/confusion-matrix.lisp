@@ -3,12 +3,13 @@
 (defclass confusion-matrix ()
   ((counts :initform (make-hash-table :test #'equal) :reader counts))
   (:documentation "A confusion matrix keeps count of classification
-results. The correct class is called `target' and the output of the
-classifier is called `prediction'. Classes are compared with EQUAL."))
+  results. The correct class is called `target' and the output of the
+  classifier is called `prediction'. Classes are compared with
+  EQUAL."))
 
 (defgeneric sort-confusion-classes (matrix classes)
   (:documentation "Return a list of CLASSES sorted for presentation
-purposes.")
+  purposes.")
   (:method ((matrix confusion-matrix) classes)
     (sort (copy-seq classes) #'string<=
           :key (lambda (class)
@@ -29,8 +30,8 @@ purposes.")
 
 (defgeneric map-confusion-matrix (fn matrix)
   (:documentation "Call FN with TARGET, PREDICTION, COUNT paramaters
-for each cell in the confusion matrix. Cells with a zero count may be
-ommitted.")
+  for each cell in the confusion matrix. Cells with a zero count may
+  be ommitted.")
   (:method (fn (matrix confusion-matrix))
     (maphash (lambda (key value)
                (funcall fn (car key) (cdr key) value))
@@ -38,8 +39,8 @@ ommitted.")
 
 (defgeneric confusion-matrix-classes (matrix)
   (:documentation "A list of all classes. The default is to collect
-classes from the counts. This can be overridden if, for instance, some
-classes are not present in the results.")
+  classes from the counts. This can be overridden if, for instance,
+  some classes are not present in the results.")
   (:method ((matrix confusion-matrix))
     (let ((all-classes ()))
       (map-confusion-matrix (lambda (target prediction count)
@@ -51,15 +52,15 @@ classes are not present in the results.")
 
 (defun confusion-matrix-accuracy (matrix &key filter)
   "Return the overall accuracy of the results in MATRIX. It's computed
-as the number of correctly classified cases (hits) divided by the name
-of cases. Return the number of hits and the number of cases as the
-second and third value. If FILTER function is given, then call it with
-the target and the prediction of the cell. Disregard cell for which
-FILTER returns NIL.
+  as the number of correctly classified cases (hits) divided by the
+  name of cases. Return the number of hits and the number of cases as
+  the second and third value. If FILTER function is given, then call
+  it with the target and the prediction of the cell. Disregard cell
+  for which FILTER returns NIL.
 
-Precision and recall can be easily computed by giving the right
-filter, although those are provided in separate convenience
-functions."
+  Precision and recall can be easily computed by giving the right
+  filter, although those are provided in separate convenience
+  functions."
   (let ((n-hits 0)
         (total 0))
     (map-confusion-matrix (lambda (target prediction count)
@@ -75,7 +76,7 @@ functions."
 
 (defun confusion-matrix-precision (matrix prediction)
   "Return the accuracy over the cases when the classifier said
-PREDICTION."
+  PREDICTION."
   (confusion-matrix-accuracy matrix
                              :filter (lambda (target prediction2)
                                        (declare (ignore target))
@@ -83,7 +84,7 @@ PREDICTION."
 
 (defun confusion-matrix-recall (matrix target)
   "Return the accuracy over the cases when the correct class is
-TARGET."
+  TARGET."
   (confusion-matrix-accuracy matrix
                              :filter (lambda (target2 prediction)
                                        (declare (ignore prediction))

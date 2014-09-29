@@ -2,9 +2,9 @@
 
 (defun count-features (documents mapper)
   "Return scored features as an EQUAL hash table whose keys are
-features of DOCUMENTS and values are counts of occurrences of
-features. MAPPER takes a function and a document and calls function
-with features of the document."
+  features of DOCUMENTS and values are counts of occurrences of
+  features. MAPPER takes a function and a document and calls function
+  with features of the document."
   (let ((features (make-hash-table :test #'equal)))
     (map nil (lambda (document)
                (funcall mapper
@@ -33,9 +33,9 @@ with features of the document."
                              &key (classes
                                    (all-document-classes documents class-fn)))
   "Return scored features as an EQUAL hash table whose keys are
-features of DOCUMENTS and values are their log likelihood ratios.
-MAPPER takes a function and a document and calls function with
-features of the document."
+  features of DOCUMENTS and values are their log likelihood ratios.
+  MAPPER takes a function and a document and calls function with
+  features of the document."
   (when (< (length classes) 2)
     (error "LLR feature selection needs at least 2 classes."))
   (flet ((document-class-index (document)
@@ -87,9 +87,9 @@ features of the document."
                                              (all-document-classes documents
                                                                    class-fn)))
   "Return scored features as an EQUAL hash table whose keys are
-features of DOCUMENTS and values are their log likelihood ratios.
-MAPPER takes a function and a document and calls function with
-features of the document."
+  features of DOCUMENTS and values are their log likelihood ratios.
+  MAPPER takes a function and a document and calls function with
+  features of the document."
   (when (< (length classes) 2)
     (error "LLR feature selection needs at least 2 classes."))
   (flet ((document-class-index (document)
@@ -129,10 +129,10 @@ features of the document."
 
 (defun index-scored-features (feature-scores n &key (start 0))
   "Take scored features as a feature -> score hash table \(returned by
-COUNT-FEATURES or COMPUTE-FEATURE-LLR, for instance) and return a
-feature -> index hash table that maps the first N \(or less) features
-with the highest scores to distinct dense indices starting from
-START."
+  COUNT-FEATURES or COMPUTE-FEATURE-LLR, for instance) and return a
+  feature -> index hash table that maps the first N \(or less)
+  features with the highest scores to distinct dense indices starting
+  from START."
   (let ((sorted (stable-sort (hash-table->vector feature-scores)
                              #'> :key #'cdr)))
     (flet ((vector->hash-table (v)
@@ -161,15 +161,16 @@ START."
 
 (defun encode/bag-of-words (document mapper feature->index &key (kind :binary))
   "Return a sparse vector that represents the encoded DOCUMENT. Get
-the features of DOCUMENT from MAPPER, convert each feature to an index
-by FEATURE->INDEX. FEATURE->INDEX may return NIL if the feature is not
-used. The result is a vector of index/value conses. Indexes are unique
-within the vector and are in increasing order. Depending on KIND value
-is calculated differently: for :FREQUENCY it is the number of times
-the corresponding feature was found in DOCUMENT, for :BINARY it is
-always 1. :NORMALIZED-FREQUENCY and :NORMALIZED-BINARY are like the
-unnormalized counterparts except that as the final step values in the
-assembled sparse vector are normalized to sum to 1."
+  the features of DOCUMENT from MAPPER, convert each feature to an
+  index by FEATURE->INDEX. FEATURE->INDEX may return NIL if the
+  feature is not used. The result is a vector of index/value conses.
+  Indexes are unique within the vector and are in increasing order.
+  Depending on KIND value is calculated differently: for :FREQUENCY it
+  is the number of times the corresponding feature was found in
+  DOCUMENT, for :BINARY it is always 1. :NORMALIZED-FREQUENCY
+  and :NORMALIZED-BINARY are like the unnormalized counterparts except
+  that as the final step values in the assembled sparse vector are
+  normalized to sum to 1."
   (assert (member kind '(:binary :frequency
                          :normalized-binary :normalized-frequency
                          :compacted-binary)))

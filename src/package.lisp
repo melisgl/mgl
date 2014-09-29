@@ -199,8 +199,8 @@
    #:roc-auc
    #:roc-auc-counter)
   (:documentation "Generic training related interfaces and basic
-definitions. The three most important concepts are SAMPLERs, TRAINERs
-and LEARNERs."))
+  definitions. The three most important concepts are SAMPLERs,
+  TRAINERs and LEARNERs."))
 
 (cl:defpackage :mgl-gd
   (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train)
@@ -248,7 +248,7 @@ and LEARNERs."))
    #:svrg-trainer
    #:lag)
   (:documentation "Generic, gradient based optimization interface and
-simple gradient descent based trainers."))
+  simple gradient descent based trainers."))
 
 (cl:defpackage :mgl-cg
   (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-train #:mgl-gd)
@@ -394,8 +394,8 @@ simple gradient descent based trainers."))
    #:make-dbn-reconstruction-misclassification-counters-and-measurers
    #:collect-dbn-mean-field-errors/labeled)
   (:documentation "Fully General Boltzmann Machines, Restricted
-Boltzmann Machines and their stacks called Deep Belief
-Networks (DBN)."))
+  Boltzmann Machines and their stacks called Deep Belief
+  Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
   (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd
@@ -502,7 +502,7 @@ Networks (DBN)."))
    #:populate-map-cache-lazily-from-dbm
    #:populate-map-cache)
   (:documentation "Translating Boltzmann Machines to a Backprop
-networks, aka `unrolling'."))
+  networks, aka `unrolling'."))
 
 (cl:defpackage :mgl-gp
   (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-bp)
@@ -525,4 +525,4 @@ networks, aka `unrolling'."))
    #:gp-confidences-as-plot-data
    #:gp-samples-as-plot-data)
   (:documentation "Gaussian processes with support for training with
-backpropagation."))
+  backpropagation."))

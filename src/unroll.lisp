@@ -38,21 +38,21 @@
 
 (defun cloud-weight-lump-name (cloud-name transposep)
   "The name of the lump that represents the weights of CLOUD or its
-transpose. CLOUD comes from the rbm in the DBN."
+  transpose. CLOUD comes from the rbm in the DBN."
   `(:cloud ,cloud-name ,@(when transposep '(:transpose))))
 
 (defun cloud-linear-lump-name (cloud-name transposep)
   "The name of the lump that represents part of the activation of a
-chunk. CLOUD comes from the rbm in the DBN. TRANSPOSEP determines from
-which direction the activation crosses the cloud."
+  chunk. CLOUD comes from the rbm in the DBN. TRANSPOSEP determines
+  from which direction the activation crosses the cloud."
   (append (cloud-weight-lump-name cloud-name transposep) '(:linear)))
 
 (defgeneric chunk->bpn-definition (chunk sym name size activation-symbol)
   (:documentation "Return a bpn definition form (that is a list of
-lump definition forms) for CHUNK that takes a single activation
-parameter given by the symbol ACTIVATION-SYMBOL with NAME and SIZE.
-Only called for non-conditioning chunks. Second value is a list of
-clamp inits, the third is a list of inits.")
+  lump definition forms) for CHUNK that takes a single activation
+  parameter given by the symbol ACTIVATION-SYMBOL with NAME and SIZE.
+  Only called for non-conditioning chunks. Second value is a list of
+  clamp inits, the third is a list of inits.")
   (:method ((chunk sigmoid-chunk) sym name size activation-symbol)
     `((,sym (->sigmoid :name ',name :x ,activation-symbol))))
   (:method ((chunk gaussian-chunk) sym name size activation-symbol)
@@ -88,10 +88,10 @@ clamp inits, the third is a list of inits.")
 
 (defgeneric incoming->bpn-defintion (from-lumpy to-lumpy cloud transposep)
   (:documentation "Return a list of four elemenets. The first is a
-list of lump definitions that represent the flow from FROM-LUMPY
-through CLOUD. The chunk of FROM-LUMPY may be either of the end points
-of CLOUD. The third values is the cloud inits. The third is name of
-the `end' lump.")
+  list of lump definitions that represent the flow from FROM-LUMPY
+  through CLOUD. The chunk of FROM-LUMPY may be either of the end
+  points of CLOUD. The third values is the cloud inits. The third is
+  name of the `end' lump.")
   (:method (from-lumpy to-lumpy (cloud full-cloud) transposep)
     (let* ((from-chunk (lumpy-chunk from-lumpy))
            (from-size (size from-chunk))
@@ -247,25 +247,25 @@ the `end' lump.")
 
 (defun unroll-dbn (dbn &key bottom-up-only)
   "Unroll DBN recursively and turn it into a feed-forward
-backpropagation network. A single RBM in DBN of the form VISIBLE <->
-HIDDEN is transformed into a VISIBLE -> HIDDEN ->
-RECONSTRUCTION-OF-VISIBLE network. While the undirected connection <->
-has a common weight matrix for both directions, in the backprop
-network the weights pertaining to ->'s are distinct but are
-initialized from the same <-> (with one being the tranpose of it).
+  backpropagation network. A single RBM in DBN of the form VISIBLE <->
+  HIDDEN is transformed into a VISIBLE -> HIDDEN ->
+  RECONSTRUCTION-OF-VISIBLE network. While the undirected connection
+  <-> has a common weight matrix for both directions, in the backprop
+  network the weights pertaining to ->'s are distinct but are
+  initialized from the same <-> (with one being the tranpose of it).
 
-If BOTTOM-UP-ONLY then don't generate the part of the network that
-represents the top-down flow, that is, skip the reconstructions.
+  If BOTTOM-UP-ONLY then don't generate the part of the network that
+  represents the top-down flow, that is, skip the reconstructions.
 
-Return backprop network lump definition forms, as the second value
-`inits': initialization specifications suitable for
-INITIALIZE-BPN-FROM-BM.
+  Return backprop network lump definition forms, as the second value
+  `inits': initialization specifications suitable for
+  INITIALIZE-BPN-FROM-BM.
 
-If there is no corresponding chunk in the layer below or there is no
-rbm below then the chunk is translated into an INPUT lump. Desired
-outputs and error node are not added. The first element of RMBS is the
-topmost one (last of the DBN), the one that goes into the middle of
-the backprop network."
+  If there is no corresponding chunk in the layer below or there is no
+  rbm below then the chunk is translated into an INPUT lump. Desired
+  outputs and error node are not added. The first element of RMBS is
+  the topmost one (last of the DBN), the one that goes into the middle
+  of the backprop network."
   (let ((lumpies '()))
     (flet ((ensure-lumpy (depth chunk)
              (let ((lumpy (ensure-lumpy lumpies
@@ -379,7 +379,7 @@ the backprop network."
 
 (defun initialize-bpn-from-bm (bpn bm inits)
   "Initialize BPN from the weights of BM according to cloud INITS that
-was returned by UNROLL-DBN or UNROLL-DBM."
+  was returned by UNROLL-DBN or UNROLL-DBM."
   (dolist (init inits)
     (multiple-value-bind (known unknown)
         (split-plist init '(:cloud-name))
@@ -415,7 +415,7 @@ was returned by UNROLL-DBN or UNROLL-DBM."
 
 (defun collect-map-chunks-and-lumps (bpn dbm)
   "Return a list of chunk, lump sublists. Elements are MAP lumps in
-BPN and the corresponding chunk in DBM."
+  BPN and the corresponding chunk in DBM."
   (let ((chunks-and-lumps ()))
     (dolist (chunk (set-difference (hidden-chunks dbm)
                                    (conditioning-chunks dbm)))
@@ -447,8 +447,8 @@ BPN and the corresponding chunk in DBM."
     :initarg :populate-periodic-fn
     :reader populate-periodic-fn))
   (:documentation "This slot is a sample -> (lump array)* list hash
-table. Inherit from this and set input will clamp the arrays to the
-respective lumps for the right sample."))
+  table. Inherit from this and set input will clamp the arrays to the
+  respective lumps for the right sample."))
 
 (defun populate-map-cache (bpn dbm samples &key (key (populate-key bpn))
                            (convert-to-dbm-sample-fn
@@ -456,13 +456,13 @@ respective lumps for the right sample."))
                            (if-exists :skip)
                            (periodic-fn (populate-periodic-fn bpn)))
   "Populate the CLAMPING-CACHE of the MAP lumps of BPN unrolled from
-DBM. The values for the MAP lumps are taken from mean field of the
-correspending chunk of the DBM. What happens when the cache already
-has an entry for a sample is determined by IF-EXISTS: if :SKIP, the
-default, the cache is unchanged; if :SUPERSEDE, the cache entry is
-replaced by the calculated contents; if :APPEND, the new (lump array)
-entries are appended to the existing ones; if :ERROR, an error is
-signalled."
+  DBM. The values for the MAP lumps are taken from mean field of the
+  correspending chunk of the DBM. What happens when the cache already
+  has an entry for a sample is determined by IF-EXISTS: if :SKIP, the
+  default, the cache is unchanged; if :SUPERSEDE, the cache entry is
+  replaced by the calculated contents; if :APPEND, the new (lump
+  array) entries are appended to the existing ones; if :ERROR, an
+  error is signalled."
   (let ((sampler (make-sequence-sampler samples))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))

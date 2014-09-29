@@ -16,17 +16,17 @@
 
 (defgeneric sample (sampler)
   (:documentation "The SAMPLER - if not FINISHEDP - returns an object
-that represents a sample from the world to be experienced or in other
-words simply something the can be used as input for training or
-prediction."))
+  that represents a sample from the world to be experienced or in
+  other words simply something the can be used as input for training
+  or prediction."))
 
 (defgeneric finishedp (sampler)
   (:documentation "See if SAMPLER has run out of examples."))
 
 (defgeneric train (sampler trainer learner)
   (:documentation "Train LEARNER with TRAINER on the examples from
-SAMPLER. Before that TRAINER is initialized for LEARNER with
-INITIALIZE-TRAINER. Training continues until SAMPLER is finished.")
+  SAMPLER. Before that TRAINER is initialized for LEARNER with
+  INITIALIZE-TRAINER. Training continues until SAMPLER is finished.")
   (:method (sampler trainer learner)
     ;; Make training independent from mischief of other threads.
     (let ((*random-state* (make-random-state *random-state*)))
@@ -34,12 +34,12 @@ INITIALIZE-TRAINER. Training continues until SAMPLER is finished.")
 
 (defgeneric train-batch (batch trainer learner)
   (:documentation "Called by TRAIN. Useful to hang an around method on
-to monitor progress."))
+  to monitor progress."))
 
 (defgeneric set-input (samples learner)
   (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
-a sequence of examples even for learners not capable of batch
-operation."))
+  a sequence of examples even for learners not capable of batch
+  operation."))
 
 
 ;;;; Samplers
@@ -58,8 +58,8 @@ operation."))
    (max-n-samples :initform nil :initarg :max-n-samples
                   :accessor max-n-samples))
   (:documentation "Keep track of how many samples have been generated
-and say FINISHEDP if it's not less than MAX-N-INPUTS (that is
-optional)."))
+  and say FINISHEDP if it's not less than MAX-N-INPUTS (that is
+  optional)."))
 
 (defmethod print-object ((sampler counting-sampler) stream)
   (pprint-logical-block (stream ())
@@ -80,7 +80,7 @@ optional)."))
 
 (defun sample-batch (sampler max-size)
   "Return a sequence of samples of length at most MAX-SIZE or less if
-SAMPLER runs out."
+  SAMPLER runs out."
   (loop repeat max-size
         while (not (finishedp sampler))
         collect (sample sampler)))
@@ -110,7 +110,7 @@ SAMPLER runs out."
    (n-sum-errors
     :initform 0 :reader n-sum-errors
     :documentation "The total number of observations whose errors
-contributed to SUM-ERROR.")))
+    contributed to SUM-ERROR.")))
 
 (defgeneric print-counter (counter stream))
 
@@ -181,41 +181,41 @@ contributed to SUM-ERROR.")))
 
 (defgeneric max-n-stripes (object)
   (:documentation "The number of stripes with which the OBJECT is
-capable of dealing simultaneously."))
+  capable of dealing simultaneously."))
 
 (defgeneric set-max-n-stripes (max-n-stripes object)
   (:documentation "Allocate the necessary stuff to allow for N-STRIPES
-number of stripes to be worked with simultaneously in OBJECT."))
+  number of stripes to be worked with simultaneously in OBJECT."))
 
 (defsetf max-n-stripes (object) (store)
   `(set-max-n-stripes ,store ,object))
 
 (defgeneric n-stripes (object)
   (:documentation "The number of stripes currently present in OBJECT.
-This is at most MAX-N-STRIPES."))
+  This is at most MAX-N-STRIPES."))
 
 (defgeneric set-n-stripes (n-stripes object)
   (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
-that are in use in OBJECT."))
+  that are in use in OBJECT."))
 
 (defsetf n-stripes (object) (store)
   `(set-n-stripes ,store ,object))
 
 (defgeneric find-striped (name object)
   (:documentation "Return the striped component of OBJECT whose name
-is NAME."))
+  is NAME."))
 
 (defgeneric striped-array (object)
   (:documentation "Return the array in which the stripes of OBJECT are
-stored."))
+  stored."))
 
 (defgeneric stripe-start (stripe object)
   (:documentation "Return the start index of STRIPE in STRIPED-ARRAY
-of OBJECT."))
+  of OBJECT."))
 
 (defgeneric stripe-end (stripe object)
   (:documentation "Return the end index (exclusive) of STRIPE in
-STRIPED-ARRAY of OBJECT."))
+  STRIPED-ARRAY of OBJECT."))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun stripe-binding (stripe object start &optional end)
@@ -227,12 +227,12 @@ STRIPED-ARRAY of OBJECT."))
 
 (defmacro with-stripes (specs &body body)
   "Bind start and optionally end indices belonging to stripes in
-striped objects.
+  striped objects.
 
- (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
-               (STRIPE2 OBJECT2 START2 END2)
-               ...)
-  ...)"
+      (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
+                    (STRIPE2 OBJECT2 START2 END2)
+                    ...)
+       ...)"
   `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
                   specs)
      ,@body))
@@ -242,8 +242,8 @@ striped objects.
 
 (defun map-batches-for-learner (fn sampler learner)
   "Call FN with batches of samples suitable for LEARNER. The number of
-samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER runs
-out."
+  samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER
+  runs out."
   (loop until (finishedp sampler) do
     (funcall fn (sample-batch sampler (max-n-stripes learner)))))
 
@@ -269,13 +269,13 @@ out."
   counters-and-measurers)
 
 (defun collect-batch-errors (fn sampler learner counters-and-measurers)
-  "Sample from SAMPLER until it runs out. Call FN with each batch of samples.
-COUNTERS-AND-MEASURERS is a sequence of conses of a counter and
-function. The function takes one parameter: a sequence of samples and
-is called after each call to FN. Measurers return two values: the
-cumulative error and the counter, suitable as the second and third
-argument to ADD-ERROR. Finally, return the counters. Return the list
-of counters from COUNTERS-AND-MEASURERS."
+  "Sample from SAMPLER until it runs out. Call FN with each batch of
+  samples. COUNTERS-AND-MEASURERS is a sequence of conses of a counter
+  and function. The function takes one parameter: a sequence of
+  samples and is called after each call to FN. Measurers return two
+  values: the cumulative error and the counter, suitable as the second
+  and third argument to ADD-ERROR. Finally, return the counters.
+  Return the list of counters from COUNTERS-AND-MEASURERS."
   (when counters-and-measurers
     (do-batches-for-learner (samples (sampler learner))
       (funcall fn samples)
@@ -287,24 +287,25 @@ of counters from COUNTERS-AND-MEASURERS."
 
 (defgeneric map-over-executors (fn samples object)
   (:documentation "Divide SAMPLES between executors. And call FN with
-the samples and the executor for which the samples are.
+  the samples and the executor for which the samples are.
 
-Some objects conflate function and call: the forward pass of a bpn
-computes output from inputs so it is like a function but it also
-doubles as a function call in the sense that the bpn (function) object
-changes state during the computation of the output. Hence not even the
-forward pass of a bpn is thread safe. There is also the restriction
-that all inputs must be of the same size.
+  Some objects conflate function and call: the forward pass of a bpn
+  computes output from inputs so it is like a function but it also
+  doubles as a function call in the sense that the bpn (function)
+  object changes state during the computation of the output. Hence not
+  even the forward pass of a bpn is thread safe. There is also the
+  restriction that all inputs must be of the same size.
 
-For example, if we have a function that builds bpn a for an input of a
-certain size, then we can create a factory that creates bpns for a
-particular call. The factory probably wants keep the weights the same
-though.
+  For example, if we have a function that builds bpn a for an input of
+  a certain size, then we can create a factory that creates bpns for a
+  particular call. The factory probably wants keep the weights the
+  same though.
 
-Another possibility MAP-OVER-EXECUTORS allows is to parallelize
-execution.
+  Another possibility MAP-OVER-EXECUTORS allows is to parallelize
+  execution.
 
-The default implementation simply calls FN with SAMPLES and OBJECT.")
+  The default implementation simply calls FN with SAMPLES and
+  OBJECT.")
   (:method (fn samples object)
     (funcall fn samples object)))
 

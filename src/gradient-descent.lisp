@@ -16,16 +16,16 @@
   (:method :before ((sink gradient-sink) source segmentable)
     (setf (slot-value sink 'gradient-source) source))
   (:documentation "Called automatically before training starts, this
-function sets up SINK to be suitable for SOURCE. It typically creates
-accumulator arrays in the sink for the gradients."))
+  function sets up SINK to be suitable for SOURCE. It typically
+  creates accumulator arrays in the sink for the gradients."))
 
 (defgeneric n-inputs-until-update (sink)
   (:documentation "Return the largest number of inputs guaranteed not
-to cause a change in the learner being trained."))
+  to cause a change in the learner being trained."))
 
 (defgeneric maybe-update-weights (sink n-new-inputs)
   (:documentation "Update the weights of the learner being trained.
-N-NEW-INPUTS have been seen since the last time this was called."))
+  N-NEW-INPUTS have been seen since the last time this was called."))
 
 
 ;;;; Abstract interface for implementing gradient sources
@@ -34,18 +34,18 @@ N-NEW-INPUTS have been seen since the last time this was called."))
   (:method (source)
     source)
   (:documentation "Return the segmentable model of SOURCE. By default
-it is assumed that SOURCE itself is a segmentable, so only non-trivial
-sources need to define this."))
+  it is assumed that SOURCE itself is a segmentable, so only
+  non-trivial sources need to define this."))
 
 (defgeneric initialize-gradient-source (source segmentable sink)
   (:documentation "Called automatically before training starts, this
-function sets up SOURCE to be suitable for its own
-SEGMENTABLE (returned by the function SEGMENTABLE)."))
+  function sets up SOURCE to be suitable for its own
+  SEGMENTABLE (returned by the function SEGMENTABLE)."))
 
 (defgeneric accumulate-gradients (batch source sink multiplier)
   (:documentation "For each example in BATCH calculate the derivatives
-and add them (multiplied by MULTIPLIER) to the corresponding
-accumulator (in the sense of FIND-SINK-ACCUMULATOR) of SINK."))
+  and add them (multiplied by MULTIPLIER) to the corresponding
+  accumulator (in the sense of FIND-SINK-ACCUMULATOR) of SINK."))
 
 (defvar *accumulating-interesting-gradients* nil)
 
@@ -73,8 +73,8 @@ accumulator (in the sense of FIND-SINK-ACCUMULATOR) of SINK."))
 
 (defgeneric map-gradient-sink (fn sink)
   (:documentation "Call FN of lambda list (SEGMENT ACCUMULATOR
-ACC-START) on each segment and their corresponding accumulator array
-plus start index in SINK."))
+  ACC-START) on each segment and their corresponding accumulator array
+  plus start index in SINK."))
 
 (defmacro do-gradient-sink (((segment accumulator acc-start) sink)
                             &body body)
@@ -88,7 +88,7 @@ plus start index in SINK."))
 
 (defgeneric find-sink-accumulator (segment source sink)
   (:documentation "Return the accumulator and start index belonging to
-SEGMENT of SOURCE in SINK or NIL if it is not found.")
+  SEGMENT of SOURCE in SINK or NIL if it is not found.")
   (:method (segment source sink)
     (declare (ignore source))
     (do-gradient-sink ((segment2 accumulator start) sink)
@@ -113,17 +113,18 @@ SEGMENT of SOURCE in SINK or NIL if it is not found.")
    (segment-set
     :reader segment-set
     :documentation "The set of segments that are to be trained. The
-ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
-indices.")
+    ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
+    indices.")
    (weight-deltas :type mat :accessor weight-deltas)
    (accumulator
     :type mat :accessor accumulator
     :documentation "An FLT vector that is accessed directly by the
-client and are used to store the sum of the computed gradient.")
+    client and are used to store the sum of the computed gradient.")
    (learning-rate
     :initform #.(flt 0.1) :initarg :learning-rate :accessor learning-rate
     :documentation "This is normally divided by the number of inputs
-in the batch or the number of uses the weight in question has seen.")
+    in the batch or the number of uses the weight in question has
+    seen.")
    (momentum
     :initform #.(flt 0) :initarg :momentum :accessor momentum)
    (momentum-type
@@ -132,32 +133,32 @@ in the batch or the number of uses the weight in question has seen.")
    (weight-decay
     :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
     :documentation "WEIGHT-DECAY * WEIGHT is added to the gradient to
-penalize large weights. It's as if the function whose minima is sought
-had sum_i{0.5 * WEIGHT-DECAY * WEIGHT_i^2} added to it.")
+    penalize large weights. It's as if the function whose minima is
+    sought had sum_i{0.5 * WEIGHT-DECAY * WEIGHT_i^2} added to it.")
    (weight-penalty
     :initform #.(flt 0) :initarg :weight-penalty :accessor weight-penalty
     :documentation "WEIGHT-PENALTY is added to the gradient pushing
-the weight towards negative infinity. It's as if the function whose
-minima is sought had sum_i{WEIGHT-PENALTY*WEIGHT_i} added to it.
-Putting it on feature biases consitutes a sparsity constraint on the
-features.")
+    the weight towards negative infinity. It's as if the function
+    whose minima is sought had sum_i{WEIGHT-PENALTY*WEIGHT_i} added to
+    it. Putting it on feature biases consitutes a sparsity constraint
+    on the features.")
    (after-update-hook
     :type 'list
     :initform () :initarg :after-update-hook :accessor after-update-hook
     :documentation "A list of functions with no arguments called after
-weights are updated.")
+    weights are updated.")
    (batch-size
     :initarg :batch-size :accessor batch-size
     :documentation "Normally, after having gone through BATCH-SIZE
-number of inputs weights are updated. See subclasses for more correct
-descriptions."))
+    number of inputs weights are updated. See subclasses for more
+    correct descriptions."))
   (:documentation "Gradient descent trainer with momentum, weight
-decay, weight penalty. Batch size and all other parameters can be
-changed during training. One may even want to subclass this trainer,
-define a method for BATCH-SIZE make it a function of N-INPUTS.
+  decay, weight penalty. Batch size and all other parameters can be
+  changed during training. One may even want to subclass this trainer,
+  define a method for BATCH-SIZE make it a function of N-INPUTS.
 
-Depending on BATCH-SIZE, this may be stochastic or non-stochastic
-gradient descent."))
+  Depending on BATCH-SIZE, this may be stochastic or non-stochastic
+  gradient descent."))
 
 (defmethod print-object ((trainer gd-trainer) stream)
   (pprint-logical-block (stream ())
@@ -204,12 +205,13 @@ gradient descent."))
     :type list :initform () :initarg :before-update-hook
     :accessor before-update-hook
     :documentation "A list of functions of no parameters. Each
-function is called just before UPDATE-WEIGHTS takes place. Convenient
-to hang some additional gradient accumulating code on."))
+    function is called just before UPDATE-WEIGHTS takes place.
+    Convenient to hang some additional gradient accumulating code
+    on."))
   (:documentation "Updates all weights simultaneously after chewing
-through BATCH-SIZE inputs. PER-WEIGHT-BATCH-GD-TRAINER may be a better
-choice when some weights can go unused for instance due to missing
-input values."))
+  through BATCH-SIZE inputs. PER-WEIGHT-BATCH-GD-TRAINER may be a
+  better choice when some weights can go unused for instance due to
+  missing input values."))
 
 (defmethod n-inputs-until-update ((trainer batch-gd-trainer))
   ;; BATCH-SIZE may be setf'ed to a value lower than N-INPUTS-IN-BATCH
@@ -322,12 +324,12 @@ input values."))
     :accessor n-weight-uses-in-batch
     :documentation "Number of uses of the weight in its current batch."))
   (:documentation "Like BATCH-GD-TRAINER but keeps count of how many
-times each weight was used in the batch and divides the accumulated
-gradient by this count instead of dividing by N-INPUTS-IN-BATCH. This
-only makes a difference if there are missing values in the learner
-that's being trained. The main feature that distuinguishes this class
-from PER-WEIGHT-BATCH-GD-TRAINER is that batches end at same time for
-all weights."))
+  times each weight was used in the batch and divides the accumulated
+  gradient by this count instead of dividing by N-INPUTS-IN-BATCH.
+  This only makes a difference if there are missing values in the
+  learner that's being trained. The main feature that distuinguishes
+  this class from PER-WEIGHT-BATCH-GD-TRAINER is that batches end at
+  same time for all weights."))
 
 (defun set-up-n-weight-uses (trainer)
   (let ((n-weights (segment-set-size (segment-set trainer))))
@@ -416,12 +418,12 @@ all weights."))
     :accessor n-weight-uses-in-batch
     :documentation "Number of uses of the weight in its current batch."))
   (:documentation "This is much like BATCH-GD-TRAINER but it is more
-clever about when to update weights. Basically every weight has its
-own batch independent from the batches of others. It has desirable
-properties. One can for example put two neural networks together
-without adding any connections between them and the learning will
-produce results equivalent to the separated case. Also, adding inputs
-with only missing values does not change anything."))
+  clever about when to update weights. Basically every weight has its
+  own batch independent from the batches of others. It has desirable
+  properties. One can for example put two neural networks together
+  without adding any connections between them and the learning will
+  produce results equivalent to the separated case. Also, adding
+  inputs with only missing values does not change anything."))
 
 (defmethod initialize-gradient-sink ((trainer per-weight-batch-gd-trainer)
                                      source segmentable)
@@ -488,17 +490,18 @@ with only missing values does not change anything."))
    (segmenter
     :initarg :segmenter :accessor segmenter
     :documentation "When this trainer is initialized it loops over the
-segment of the learner with MAP-SEGMENTS. SEGMENTER is a function that
-is called with each segment and returns a trainer or NIL. Several
-segments may be mapped to the same trainer. After the segment->trainer
-mappings are collected, each trainer is initialized by
-INITIALIZE-GRADIENT-SINK with the list segments mapped to it.")
+    segment of the learner with MAP-SEGMENTS. SEGMENTER is a function
+    that is called with each segment and returns a trainer or NIL.
+    Several segments may be mapped to the same trainer. After the
+    segment->trainer mappings are collected, each trainer is
+    initialized by INITIALIZE-GRADIENT-SINK with the list segments
+    mapped to it.")
    (trainers :type list :reader trainers)
    (segments :type list :reader segments))
   (:documentation "A trainer that delegates training of segments to
-other trainers. Useful to delegate training of different segments to
-different trainers (capable of working with segmantables) or simply to
-not train all segments."))
+  other trainers. Useful to delegate training of different segments to
+  different trainers (capable of working with segmantables) or simply
+  to not train all segments."))
 
 (define-descriptions (trainer segmented-gd-trainer)
   n-inputs trainers segments)

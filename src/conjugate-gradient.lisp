@@ -13,14 +13,14 @@
   "Extrapolate maximum EXT times the current step-size.")
 (defvar *default-sig* (flt 0.1)
   "SIG and RHO are the constants controlling the Wolfe-Powell
-conditions. SIG is the maximum allowed absolute ratio between previous
-and new slopes (derivatives in the search direction), thus setting SIG
-to low (positive) values forces higher precision in the
-line-searches.")
+  conditions. SIG is the maximum allowed absolute ratio between
+  previous and new slopes (derivatives in the search direction), thus
+  setting SIG to low (positive) values forces higher precision in the
+  line-searches.")
 (defvar *default-rho* (flt 0.05)
   "RHO is the minimum allowed fraction of the expected (from the slope
-at the initial point in the linesearch). Constants must satisfy 0 <
-RHO < SIG < 1.")
+  at the initial point in the linesearch). Constants must satisfy 0 <
+  RHO < SIG < 1.")
 (defvar *default-ratio* (flt 10)
   "Maximum allowed slope ratio.")
 (defvar *default-max-n-line-searches* nil)
@@ -84,56 +84,56 @@ RHO < SIG < 1.")
            (ratio *default-ratio*)
            spare-vectors)
   "Minimize a differentiable multivariate function with conjugate
-gradient. The Polak-Ribiere flavour of conjugate gradients is used to
-compute search directions, and a line search using quadratic and cubic
-polynomial approximations and the Wolfe-Powell stopping criteria is
-used together with the slope ratio method for guessing initial step
-sizes. Additionally a bunch of checks are made to make sure that
-exploration is taking place and that extrapolation will not be
-unboundedly large.
+  gradient. The Polak-Ribiere flavour of conjugate gradients is used
+  to compute search directions, and a line search using quadratic and
+  cubic polynomial approximations and the Wolfe-Powell stopping
+  criteria is used together with the slope ratio method for guessing
+  initial step sizes. Additionally a bunch of checks are made to make
+  sure that exploration is taking place and that extrapolation will
+  not be unboundedly large.
 
-FN is a function of two parameters: WEIGHTS and DERIVATIVES.
-WEIGHTS is an FLT-VECTOR of the same size as W that is where the
-search start from. DERIVATIVES is also and FLT-VECTOR of that size and
-it is where FN shall place the partial derivatives. FN returns the
-value (of type FLT) of the function that is being minimized.
+  FN is a function of two parameters: WEIGHTS and DERIVATIVES. WEIGHTS
+  is an FLT-VECTOR of the same size as W that is where the search
+  start from. DERIVATIVES is also and FLT-VECTOR of that size and it
+  is where FN shall place the partial derivatives. FN returns the
+  value (of type FLT) of the function that is being minimized.
 
-CG performs a number of line searches and invokes FN at each step. A
-line search invokes FN at most MAX-N-EVALUATIONS-PER-LINE-SEARCH
-number of times and can succeed in improving the minimum by the
-sufficient margin or it can fail. Note, the even a failed line search
-may improve further and hence change the weights it's just that the
-improvement was deemed too small. CG stops when either:
+  CG performs a number of line searches and invokes FN at each step. A
+  line search invokes FN at most MAX-N-EVALUATIONS-PER-LINE-SEARCH
+  number of times and can succeed in improving the minimum by the
+  sufficient margin or it can fail. Note, the even a failed line
+  search may improve further and hence change the weights it's just
+  that the improvement was deemed too small. CG stops when either:
 
-- two line searches fail in a row
-- MAX-N-LINE-SEARCHES is reached
-- MAX-N-EVALUATIONS is reached
+  - two line searches fail in a row
+  - MAX-N-LINE-SEARCHES is reached
+  - MAX-N-EVALUATIONS is reached
 
-CG returns an FLT-VECTOR that contains the best weights, the minimum
-\(of type FLT), the number of line searches performed, the number of
-succesful line searches and the number of evaluations.
+  CG returns an FLT-VECTOR that contains the best weights, the minimum
+  (of type FLT), the number of line searches performed, the number of
+  succesful line searches and the number of evaluations.
 
-When using MAX-N-EVALUATIONS remember that there is an extra
-evaluation of FN before the first line search.
+  When using MAX-N-EVALUATIONS remember that there is an extra
+  evaluation of FN before the first line search.
 
-SPARE-VECTORS is a list of preallocated FLT-VECTORs of the same size
-as W. Passing 6 of them covers the current need of the algorithm and
-it will not cons up vectors of size W at all.
+  SPARE-VECTORS is a list of preallocated FLT-VECTORs of the same size
+  as W. Passing 6 of them covers the current need of the algorithm and
+  it will not cons up vectors of size W at all.
 
-NOTE: If the function terminates within a few iterations, it could be
-an indication that the function values and derivatives are not
-consistent \(ie, there may be a bug in the implementation of FN
-function).
+  NOTE: If the function terminates within a few iterations, it could
+  be an indication that the function values and derivatives are not
+  consistent (ie, there may be a bug in the implementation of FN
+  function).
 
-SIG and RHO are the constants controlling the Wolfe-Powell conditions.
-SIG is the maximum allowed absolute ratio between previous and new
-slopes (derivatives in the search direction), thus setting SIG to low
-\(positive) values forces higher precision in the line-searches. RHO is
-the minimum allowed fraction of the expected (from the slope at the
-initial point in the linesearch). Constants must satisfy 0 < RHO < SIG
-< 1. Tuning of SIG (depending on the nature of the function to be
-optimized) may speed up the minimization; it is probably not worth
-playing much with RHO."
+  SIG and RHO are the constants controlling the Wolfe-Powell
+  conditions. SIG is the maximum allowed absolute ratio between
+  previous and new slopes (derivatives in the search direction), thus
+  setting SIG to low (positive) values forces higher precision in the
+  line-searches. RHO is the minimum allowed fraction of the
+  expected (from the slope at the initial point in the linesearch).
+  Constants must satisfy 0 < RHO < SIG < 1. Tuning of SIG (depending
+  on the nature of the function to be optimized) may speed up the
+  minimization; it is probably not worth playing much with RHO."
   ;; The code falls naturally into 3 parts, after the initial line
   ;; search is started in the direction of steepest descent. 1) we
   ;; first enter a while loop which uses point 1 (p1) and (p2) to
@@ -315,13 +315,13 @@ playing much with RHO."
    (batch-size
     :initarg :batch-size :accessor batch-size
     :documentation "After having gone through BATCH-SIZE number of
-inputs weights are updated.")
+    inputs weights are updated.")
    (cg-args :initform '() :initarg :cg-args :accessor cg-args)
    (segment-filter
     :initform (constantly t)
     :initarg :segment-filter :reader segment-filter
     :documentation "A predicate function on segments that filters out
-uninteresting segments. Called from INITIALIZE-TRAINER.")
+    uninteresting segments. Called from INITIALIZE-TRAINER.")
    (segment-set :reader segment-set :documentation "Segments to train.")
    (weights :initform nil :accessor weights :type (or null flt-vector))
    (spare-vectors
@@ -330,9 +330,9 @@ uninteresting segments. Called from INITIALIZE-TRAINER.")
    (accumulator
     :initform nil :reader accumulator
     :documentation "This is where COMPUTE-BATCH-COST-AND-DERIVE should
-leave the derivatives."))
+    leave the derivatives."))
   (:documentation "Updates all weights simultaneously after chewing
-through BATCH-SIZE inputs."))
+  through BATCH-SIZE inputs."))
 
 (define-descriptions (trainer cg-trainer)
   n-inputs batch-size cg-args segment-set)
@@ -353,8 +353,8 @@ through BATCH-SIZE inputs."))
 
 (defgeneric compute-batch-cost-and-derive (batch trainer learner)
   (:documentation "Return the total cost (that LEARNER is trying to
-minimize) of all samples in BATCH and add the derivatives to
-ACCUMULATOR1 of TRAINER."))
+  minimize) of all samples in BATCH and add the derivatives to
+  ACCUMULATOR1 of TRAINER."))
 
 (defmethod initialize-gradient-sink ((trainer cg-trainer) source segmentable)
   (let ((segmentable (segmentable source)))
@@ -411,10 +411,10 @@ ACCUMULATOR1 of TRAINER."))
   ((segment-decay-fn
     :initform nil :initarg :segment-decay-fn :accessor segment-decay-fn
     :documentation "If not NIL it's a designator for a function that
-returns a decay of type FLT for a given segment. For convenience NIL
-is also treated as 0 decay."))
+    returns a decay of type FLT for a given segment. For convenience
+    NIL is also treated as 0 decay."))
   (:documentation "Mix this before a CG based trainer to conveniently
-add decay on a per-segment basis."))
+  add decay on a per-segment basis."))
 
 (defmethod compute-batch-cost-and-derive
     (batch (trainer decayed-cg-trainer-mixin) learner)

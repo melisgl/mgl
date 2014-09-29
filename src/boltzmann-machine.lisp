@@ -9,41 +9,41 @@
    (nodes
     :reader nodes
     :documentation "A value for each node in the chunk. First,
-activations are put here (weights*inputs) then the mean of the
-probability distribution is calculated from the activation and finally
-\(optionally) a sample is taken from the probability distribution. All
-these values are stored in this vector. This is also where SET-INPUT
-is supposed to clamp the values. Note that not only the values in the
-matrix but also the matrix object itself can change when the network
-is used.")
+    activations are put here (weights*inputs) then the mean of the
+    probability distribution is calculated from the activation and
+    finally (optionally) a sample is taken from the probability
+    distribution. All these values are stored in this vector. This is
+    also where SET-INPUT is supposed to clamp the values. Note that
+    not only the values in the matrix but also the matrix object
+    itself can change when the network is used.")
    (old-nodes
     :reader old-nodes
     :documentation "The previous value of each node. Used to provide
-parallel computation semantics when there are intralayer connections.
-Swapped with NODES or MEANS at times.")
+    parallel computation semantics when there are intralayer
+    connections. Swapped with NODES or MEANS at times.")
    (means
     :reader means
     :documentation "Saved values of the means (see SET-MEAN) last
-computed.")
+    computed.")
    (inputs
     :reader inputs
     :documentation "This is where the after method of SET-INPUT saves
-the input for later use by RECONSTRUCTION-ERROR, INPUTS->NODES. It is
-NIL in CONDITIONING-CHUNKS.")
+    the input for later use by RECONSTRUCTION-ERROR, INPUTS->NODES. It
+    is NIL in CONDITIONING-CHUNKS.")
    (random-numbers :initform nil :accessor random-numbers)
    (scratch
     :initform nil
     :accessor scratch
     :documentation "Another matrix that parallels NODES. Used as a
-temporary.")
+    temporary.")
    (indices-present
     :initform nil :initarg :indices-present :type (or null index-vector)
     :accessor indices-present
     :documentation "NIL or a simple vector of array indices into the
-layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that if
-it is non-NIL then N-STRIPES must be 1."))
+    layer's NODES. Need not be ordered. SET-INPUT sets it. Note, that
+    if it is non-NIL then N-STRIPES must be 1."))
   (:documentation "A chunk is a set of nodes of the same type in a
-Boltzmann Machine. This is an abstract base class."))
+  Boltzmann Machine. This is an abstract base class."))
 
 (defmethod max-n-stripes ((chunk chunk))
   (/ (mat-max-size (nodes chunk))
@@ -158,8 +158,8 @@ Boltzmann Machine. This is an abstract base class."))
 
 (defclass conditioning-chunk (chunk) ()
   (:documentation "Nodes in CONDITIONING-CHUNK never change their
-values on their own so they are to be clamped. Including this chunk in
-the visible layer allows `conditional' RBMs."))
+  values on their own so they are to be clamped. Including this chunk
+  in the visible layer allows `conditional' RBMs."))
 
 (defun conditioning-chunk-p (chunk)
   (typep chunk 'conditioning-chunk))
@@ -213,8 +213,8 @@ the visible layer allows `conditional' RBMs."))
 (defclass constant-chunk (conditioning-chunk)
   ((default-value :initform #.(flt 1) :reader default-value))
   (:documentation "A special kind of CONDITIONING-CHUNK whose NODES
-are always DEFAULT-VALUE. This conveniently allows biases in the
-opposing layer."))
+  are always DEFAULT-VALUE. This conveniently allows biases in the
+  opposing layer."))
 
 (define-descriptions (chunk conditioning-chunk :inheritp t)
   default-value)
@@ -225,12 +225,12 @@ opposing layer."))
 
 (defclass sigmoid-chunk (chunk) ()
   (:documentation "Nodes in a sigmoid chunk have two possible samples:
-0 and 1. The probability of a node being on is given by the sigmoid of
-its activation."))
+  0 and 1. The probability of a node being on is given by the sigmoid
+  of its activation."))
 
 (defclass gaussian-chunk (chunk) ()
   (:documentation "Nodes are real valued. The sample of a node is its
-activation plus guassian noise of unit variance."))
+  activation plus guassian noise of unit variance."))
 
 (defclass relu-chunk (chunk) ()
   (:documentation ""))
@@ -255,15 +255,15 @@ activation plus guassian noise of unit variance."))
     :initform #.(flt 1) :type (or flt mat)
     :initarg :scale :accessor scale
     :documentation "The sum of the means after normalization. Can be
-changed during training, for instance when clamping. If it is a vector
-then its length must be MAX-N-STRIPES which is automatically
-maintained when changing the number of stripes.")
+    changed during training, for instance when clamping. If it is a
+    vector then its length must be MAX-N-STRIPES which is
+    automatically maintained when changing the number of stripes.")
    (group-size
     :initform (error "GROUP-SIZE must be specified.")
     :initarg :group-size
     :reader group-size))
   (:documentation "Means are normalized to SCALE within node groups of
-GROUP-SIZE."))
+  GROUP-SIZE."))
 
 (define-descriptions (chunk normalized-group-chunk :inheritp t)
   scale group-size)
@@ -279,8 +279,8 @@ GROUP-SIZE."))
 
 (defclass softmax-chunk (exp-normalized-group-chunk) ()
   (:documentation "Binary units with normalized (EXP ACTIVATION)
-firing probabilities representing a multinomial distribution. That is,
-samples have exactly one 1 in each group of GROUP-SIZE."))
+  firing probabilities representing a multinomial distribution. That
+  is, samples have exactly one 1 in each group of GROUP-SIZE."))
 
 (defclass constrained-poisson-chunk (exp-normalized-group-chunk) ()
   (:documentation "Poisson units with normalized (EXP ACTIVATION) means."))
@@ -292,10 +292,10 @@ samples have exactly one 1 in each group of GROUP-SIZE."))
    (next-node-inputs :reader next-node-inputs)
    (has-inputs-p :initform nil :reader has-inputs-p))
   (:documentation "After a SET-HIDDEN-MEAN, the means of
-HIDDEN-SOURCE-CHUNK are stored in NEXT-NODE-INPUTS and on the next
-SET-INPUT copied onto NODES. If there are multiple SET-HIDDEN-MEAN
-calls between two SET-INPUT calls then only the first set of values
-are remembered."))
+  HIDDEN-SOURCE-CHUNK are stored in NEXT-NODE-INPUTS and on the next
+  SET-INPUT copied onto NODES. If there are multiple SET-HIDDEN-MEAN
+  calls between two SET-INPUT calls then only the first set of values
+  are remembered."))
 
 (defmethod resize-chunk ((chunk temporal-chunk) size max-n-stripes)
   (call-next-method)
@@ -354,7 +354,7 @@ are remembered."))
 
 (defgeneric set-chunk-mean (chunk)
   (:documentation "Set NODES of CHUNK to the means of the probability
-distribution. When called NODES contains the activations.")
+  distribution. When called NODES contains the activations.")
   (:method :after ((chunk chunk))
     (nodes->means chunk))
   (:method ((chunk conditioning-chunk)))
@@ -491,7 +491,7 @@ distribution. When called NODES contains the activations.")
 
 (defgeneric sample-chunk (chunk)
   (:documentation "Sample from the probability distribution of CHUNK
-whose means are in NODES.")
+  whose means are in NODES.")
   (:method ((chunk conditioning-chunk)))
   (:method ((chunk sigmoid-chunk))
     (cond ((use-blas-on-chunk-p chunk)
@@ -601,11 +601,11 @@ whose means are in NODES.")
    (scale1
     :type flt :initform #.(flt 1) :initarg :scale1 :reader scale1
     :documentation "When CHUNK1 is being activated count activations
-coming from this cloud multiplied by SCALE1.")
+    coming from this cloud multiplied by SCALE1.")
    (scale2
     :type flt :initform #.(flt 1) :initarg :scale2 :reader scale2
     :documentation "When CHUNK2 is being activated count activations
-coming from this cloud multiplied by SCALE2.")
+    coming from this cloud multiplied by SCALE2.")
    (cached-version1 :initform (gensym) :accessor cached-version1)
    (cached-version2 :initform (gensym) :accessor cached-version2)
    (cached-activations1
@@ -615,8 +615,9 @@ coming from this cloud multiplied by SCALE2.")
     :initform nil
     :reader cached-activations2))
   (:documentation "A set of connections between two chunks. The chunks
-may be the same, be both visible or both hidden subject to constraints
-imposed by the type of boltzmann machine the cloud is part of."))
+  may be the same, be both visible or both hidden subject to
+  constraints imposed by the type of boltzmann machine the cloud is
+  part of."))
 
 (defmethod print-object ((cloud cloud) stream)
   (pprint-logical-block (stream ())
@@ -638,11 +639,11 @@ imposed by the type of boltzmann machine the cloud is part of."))
 (defun activate-cloud (cloud reversep &key
                        (from-fn #'old-nodes) (to-fn #'nodes))
   "From CHUNK1 calculate the activations of CHUNK2 and _add_ them to
-CHUNK2. If REVERSEP then swap the roles of the chunks. FROM-FN and
-TO-FN are the accessors to use to get the nodes value arrays (one of
-#'NODES, #'OLD-NODES, #'MEANS. In the simplest case it adds
-weights (of CLOUD) * OLD-NODES (of CHUNK1) to the nodes of the hidden
-chunk."
+  CHUNK2. If REVERSEP then swap the roles of the chunks. FROM-FN and
+  TO-FN are the accessors to use to get the nodes value arrays (one of
+  #'NODES, #'OLD-NODES, #'MEANS. In the simplest case it adds
+  weights (of CLOUD) * OLD-NODES (of CHUNK1) to the nodes of the
+  hidden chunk."
   (multiple-value-bind (from-chunk to-chunk)
       (if reversep
           (values (chunk2 cloud) (chunk1 cloud))
@@ -658,8 +659,8 @@ chunk."
 
 (defun hijack-means-to-activation (chunks clouds)
   "Set NODES of CHUNKS to the activations calculated from CLOUDS. Skip
-chunks that don't need activations. If ADDP don't zero NODES first,
-but add to it."
+  chunks that don't need activations. If ADDP don't zero NODES first,
+  but add to it."
   ;; Zero activations or copy cached activations coming from
   ;; conditioning chunks.
   (dolist (chunk chunks)
@@ -751,9 +752,10 @@ but add to it."
   ((weights
     :initarg :weights :reader weights
     :documentation "A chunk is represented as a row vector
-\(disregarding the multi-striped case). If the visible chunk is 1xN
-and the hidden is 1xM then the weight matrix is NxM. Hidden = hidden +
-weights * visible. Visible = visible + weights^T * hidden.")))
+    disregarding the multi-striped case). If the visible chunk is 1xN
+    and the hidden is 1xM then the weight matrix is NxM. Hidden =
+    hidden + weights * visible. Visible = visible + weights^T *
+    hidden.")))
 
 (defun norm (matrix)
   (with-facets ((a (matrix 'backing-array :direction :input :type flt-vector)))
@@ -957,16 +959,16 @@ weights * visible. Visible = visible + weights^T * hidden.")))
   ((cloud-a
     :type full-cloud :initarg :cloud-a :reader cloud-a
     :documentation "A full cloud whose visible chunk is the same as
-the visible chunk of this cloud and whose hidden chunk is the same as
-the visible chunk of CLOUD-B.")
+    the visible chunk of this cloud and whose hidden chunk is the same
+    as the visible chunk of CLOUD-B.")
    (cloud-b
     :type full-cloud :initarg :cloud-b :reader cloud-b
     :documentation "A full cloud whose hidden chunk is the same as the
-hidden chunk of this cloud and whose visible chunk is the same as the
-hidden chunk of CLOUD-A."))
+    hidden chunk of this cloud and whose visible chunk is the same as
+    the hidden chunk of CLOUD-A."))
   (:documentation "Like FULL-CLOUD but the weight matrix is factored
-into a product of two matrices: A*B. At activation time, HIDDEN +=
-VISIBLE*A*B."))
+  into a product of two matrices: A*B. At activation time, HIDDEN +=
+  VISIBLE*A*B."))
 
 (define-descriptions (cloud factored-cloud :inheritp t)
   (cloud-a-norm (format-full-cloud-norm (cloud-a cloud)) "~A")
@@ -1058,15 +1060,15 @@ VISIBLE*A*B."))
   ((chunks
     :type list :reader chunks
     :documentation "A list of all the chunks in this BM. It's
-VISIBLE-CHUNKS and HIDDEN-CHUNKS appended.")
+    VISIBLE-CHUNKS and HIDDEN-CHUNKS appended.")
    (visible-chunks
     :type list :initarg :visible-chunks :reader visible-chunks
     :documentation "A list of CHUNKs whose values come from the
-outside world: SET-INPUT sets them.")
+    outside world: SET-INPUT sets them.")
    (hidden-chunks
     :type list :initarg :hidden-chunks :reader hidden-chunks
     :documentation "A list of CHUNKs that are not directly observed.
-Disjunct from VISIBLE-CHUNKS.")
+    Disjunct from VISIBLE-CHUNKS.")
    (visible-and-conditioning-chunks
     :type list :reader visible-and-conditioning-chunks)
    (hidden-and-conditioning-chunks
@@ -1075,26 +1077,26 @@ Disjunct from VISIBLE-CHUNKS.")
    (clouds
     :type list :initform '(:merge) :initarg :clouds :reader clouds
     :documentation "Normally, a list of CLOUDS representing the
-connections between chunks. During initialization cloud specs are
-allowed in the list.")
+    connections between chunks. During initialization cloud specs are
+    allowed in the list.")
    (has-hidden-to-hidden-p :reader has-hidden-to-hidden-p)
    (has-visible-to-visible-p :reader has-visible-to-visible-p)
    (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes)
    (importances :initform nil :initarg :importances
                 :accessor importances))
   (:documentation "The network is assembled from CHUNKS (nodes of the
-same behaviour) and CLOUDs (connections between two chunks). To
-instantiate, arrange for VISIBLE-CHUNKS, HIDDEN-CHUNKS, CLOUDS (either
-as initargs or initforms) to be set.
+  same behaviour) and CLOUDs (connections between two chunks). To
+  instantiate, arrange for VISIBLE-CHUNKS, HIDDEN-CHUNKS,
+  CLOUDS (either as initargs or initforms) to be set.
 
-Usage of CLOUDS is slightly tricky: you may pass a list of CLOUD
-objects connected to chunks in this network. Alternatively, a cloud
-spec may stand for a cloud. Also, the initial value of CLOUDS is
-merged with the default cloud spec list before the final cloud spec
-list is instantiated. The default cloud spec list is what
-FULL-CLOUDS-EVERYWHERE returns for VISIBLE-CHUNKS and HIDDEN-CHUNKS.
-See MERGE-CLOUD-SPECS for the gory details. The initform, '(:MERGE),
-simply leaves the default cloud specs alone."))
+  Usage of CLOUDS is slightly tricky: you may pass a list of CLOUD
+  objects connected to chunks in this network. Alternatively, a cloud
+  spec may stand for a cloud. Also, the initial value of CLOUDS is
+  merged with the default cloud spec list before the final cloud spec
+  list is instantiated. The default cloud spec list is what
+  FULL-CLOUDS-EVERYWHERE returns for VISIBLE-CHUNKS and HIDDEN-CHUNKS.
+  See MERGE-CLOUD-SPECS for the gory details. The initform, '(:MERGE),
+  simply leaves the default cloud specs alone."))
 
 (defmethod print-object ((bm bm) stream)
   (pprint-logical-block (stream ())
@@ -1113,7 +1115,7 @@ simply leaves the default cloud specs alone."))
 
 (defgeneric find-chunk (name object &key errorp)
   (:documentation "Find the chunk in OBJECT whose name is EQUAL to
-NAME. Signal an error if not found and ERRORP.")
+  NAME. Signal an error if not found and ERRORP.")
   (:method (name (bm bm) &key errorp)
     (or (find name (chunks bm) :key #'name :test #'name=)
         (if errorp
@@ -1145,7 +1147,7 @@ NAME. Signal an error if not found and ERRORP.")
 
 (defgeneric find-cloud (name object &key errorp)
   (:documentation "Find the cloud in OBJECT whose name is EQUAL to
-NAME. Signal an error if not found and ERRORP.")
+  NAME. Signal an error if not found and ERRORP.")
   (:method (name (bm bm) &key errorp)
     (or (find name (clouds bm) :key #'name :test #'equal)
         (if errorp
@@ -1193,9 +1195,10 @@ NAME. Signal an error if not found and ERRORP.")
 
 (defun full-clouds-everywhere (visible-chunks hidden-chunks)
   "Return a list of cloud specifications suitable for instantiating a
-BM. Put a cloud between each pair of visible and hidden chunks unless
-they are both conditioning chunks. The names of the clouds are two
-element lists of the names of the visible and hidden chunks."
+  BM. Put a cloud between each pair of visible and hidden chunks
+  unless they are both conditioning chunks. The names of the clouds
+  are two element lists of the names of the visible and hidden
+  chunks."
   (let ((clouds '()))
     (dolist (visible-chunk visible-chunks)
       (dolist (hidden-chunk hidden-chunks)
@@ -1208,28 +1211,28 @@ element lists of the names of the visible and hidden chunks."
 
 (defun merge-cloud-specs (specs default-specs)
   "Combine cloud SPECS and DEFAULT-SPECS. If the first element of
-SPECS is :MERGE then merge them else return SPECS. Merging
-concatenates them but removes those specs from DEFAULT-SPECS that are
-between chunks that have a spec in SPECS. If a spec has CLASS NIL then
-it is removed as well. A cloud spec at minimum specifies the name of
-the chunks it connects:
+  SPECS is :MERGE then merge them else return SPECS. Merging
+  concatenates them but removes those specs from DEFAULT-SPECS that
+  are between chunks that have a spec in SPECS. If a spec has CLASS
+  NIL then it is removed as well. A cloud spec at minimum specifies
+  the name of the chunks it connects:
 
-  (:chunk1 inputs :chunk2 features)
+      (:chunk1 inputs :chunk2 features)
 
-in which case it defaults to be a FULL-CLOUD. If that is not desired
-then the class can be specified:
+  in which case it defaults to be a FULL-CLOUD. If that is not desired
+  then the class can be specified:
 
-  (:chunk1 inputs :chunk2 features :class factored-cloud)
+      (:chunk1 inputs :chunk2 features :class factored-cloud)
 
-To remove a cloud from DEFAULT-SPECS use :CLASS NIL:
+  To remove a cloud from DEFAULT-SPECS use :CLASS NIL:
 
-  (:chunk1 inputs :chunk2 features :class nil)
+      (:chunk1 inputs :chunk2 features :class nil)
 
-Other initargs are passed as is to MAKE-INSTANCE:
+  Other initargs are passed as is to MAKE-INSTANCE:
 
-  (:chunk1 inputs :chunk2 features :class factored-cloud :rank 10)
+      (:chunk1 inputs :chunk2 features :class factored-cloud :rank 10)
 
-You may also pass a CLOUD object as a spec."
+  You may also pass a CLOUD object as a spec."
   (labels ((getf* (plist indicator)
              (let* ((secret (gensym))
                     (name (getf plist indicator secret)))
@@ -1264,11 +1267,12 @@ You may also pass a CLOUD object as a spec."
 
 (defmethod initialize-instance :after ((bm bm) &key &allow-other-keys)
   "Return an BM that consists of VISIBLE-CHUNKS, HIDDEN-CHUNKS and
-CLOUDS of weights where CLOUDS is a list of cloud specifications.
-Names of chunks and clouds must be unique under EQUAL. CLOUDS is
-merged with DEFAULT-CLOUDS. DEFAULT-CLOUDS defaults to connecting all
-visible and hidden chunks with FULL-CLOUDS without any intralayer
-connection. See MERGE-CLOUD-SPECS on the semantics of merging."
+  CLOUDS of weights where CLOUDS is a list of cloud specifications.
+  Names of chunks and clouds must be unique under EQUAL. CLOUDS is
+  merged with DEFAULT-CLOUDS. DEFAULT-CLOUDS defaults to connecting
+  all visible and hidden chunks with FULL-CLOUDS without any
+  intralayer connection. See MERGE-CLOUD-SPECS on the semantics of
+  merging."
   (let* ((visible-chunks (visible-chunks bm))
          (hidden-chunks (hidden-chunks bm)))
     (setf (slot-value bm 'chunks) (append visible-chunks hidden-chunks))
@@ -1337,12 +1341,12 @@ connection. See MERGE-CLOUD-SPECS on the semantics of merging."
 
 (defun set-visible-mean/1 (bm)
   "Set NODES of the chunks in the visible layer to the means of their
-respective probability distributions."
+  respective probability distributions."
   (set-mean (visible-chunks bm) bm :other-chunks (hidden-chunks bm)))
 
 (defun set-hidden-mean/1 (bm)
   "Set NODES of the chunks in the hidden layer to the means of their
-respective probability distributions."
+  respective probability distributions."
   (set-mean (hidden-chunks bm) bm :other-chunks (visible-chunks bm))
   (dolist (chunk (visible-chunks bm))
     (when (typep chunk 'temporal-chunk)
@@ -1350,12 +1354,12 @@ respective probability distributions."
 
 (defun sample-visible (bm)
   "Generate samples from the probability distribution defined by the
-chunk type and the mean that resides in NODES."
+  chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (visible-chunks bm)))
 
 (defun sample-hidden (bm)
   "Generate samples from the probability distribution defined by the
-chunk type and the mean that resides in NODES."
+  chunk type and the mean that resides in NODES."
   (map nil #'sample-chunk (hidden-chunks bm)))
 
 (defmethod set-input :before (samples (bm bm))
@@ -1388,28 +1392,28 @@ chunk type and the mean that resides in NODES."
   ((layers
     :initarg :layers :type list :reader layers
     :documentation "A list of layers from bottom up. A layer is a list
-of chunks. The layers partition the set of all chunks in the BM.
-Chunks with no connections to layers below are visible (including
-constant and conditioning) chunks. The layered structure is used in
-the single, bottom-up, approximate inference pass. When instantiating
-a DBM, VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred from LAYERS and
-CLOUDS.")
+    of chunks. The layers partition the set of all chunks in the BM.
+    Chunks with no connections to layers below are visible (including
+    constant and conditioning) chunks. The layered structure is used
+    in the single, bottom-up, approximate inference pass. When
+    instantiating a DBM, VISIBLE-CHUNKS and HIDDEN-CHUNKS are inferred
+    from LAYERS and CLOUDS.")
    (clouds-up-to-layers
     :type list :reader clouds-up-to-layers
     :documentation "Each element of this list is a list of clouds
-connected from below to the layer of the same index."))
+    connected from below to the layer of the same index."))
   (:documentation "A Deep Boltzmann Machine. See \"Deep Boltzmann
-Machines\" by Ruslan Salakhutdinov and Geoffrey Hinton at
-<http://www.cs.toronto.edu/~hinton/absps/dbm.pdf>.
+  Machines\" by Ruslan Salakhutdinov and Geoffrey Hinton at
+  <http://www.cs.toronto.edu/~hinton/absps/dbm.pdf>.
 
-To instantiate, set up LAYERS and CLOUDS but not VISIBLE-CHUNKS and
-HIDDEN-CHUNKS, because contrary to how initialization works in the
-superclass (BM), the values of these slots are inferred from LAYERS
-and CLOUDS: chunks without a connection from below are visible while
-the rest are hidden.
+  To instantiate, set up LAYERS and CLOUDS but not VISIBLE-CHUNKS and
+  HIDDEN-CHUNKS, because contrary to how initialization works in the
+  superclass (BM), the values of these slots are inferred from LAYERS
+  and CLOUDS: chunks without a connection from below are visible while
+  the rest are hidden.
 
-The default cloud spec list is computed by calling
-FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
+  The default cloud spec list is computed by calling
+  FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
 
 (defun full-clouds-everywhere-between-layers (layers)
   (loop for (layer1 layer2) on layers
@@ -1508,8 +1512,8 @@ FULL-CLOUDS-EVERYWHERE-BETWEEN-LAYERS on LAYERS."))
 
 (defun up-dbm (dbm)
   "Do a single upward pass in DBM, performing approximate inference.
-Disregard intralayer and downward connections, double activations to
-chunks having upward connections."
+  Disregard intralayer and downward connections, double activations to
+  chunks having upward connections."
   (loop for (layer-below layer layer-above) on (layers dbm)
         for (clouds-up-to-layer clouds-up-to-layer-above)
           on (rest (clouds-up-to-layers dbm))
@@ -1532,9 +1536,9 @@ chunks having upward connections."
 
 (defun down-dbm (dbm)
   "Do a single downward pass in DBM, propagating the mean-field much
-like performing approximate inference, but in the other direction.
-Disregard intralayer and upward connections, double activations to
-chunks having downward connections."
+  like performing approximate inference, but in the other direction.
+  Disregard intralayer and upward connections, double activations to
+  chunks having downward connections."
   (loop for (layer-above layer layer-below) on (reverse (layers dbm))
         for (clouds-down-to-layer clouds-down-to-layer-below)
           on (reverse (clouds-up-to-layers dbm))
@@ -1614,13 +1618,13 @@ chunks having downward connections."
 (defun dbm->dbn (dbm &key (rbm-class 'rbm) (dbn-class 'dbn)
                  dbn-initargs)
   "Convert DBM to a DBN by discarding intralayer connections and
-doubling activations of clouds where necessary. If a chunk does not
-have input from below then scale its input from above by 2; similarly,
-if a chunk does not have input from above then scale its input from
-below by 2. By default, weights are shared between clouds and their
-copies.
+  doubling activations of clouds where necessary. If a chunk does not
+  have input from below then scale its input from above by 2;
+  similarly, if a chunk does not have input from above then scale its
+  input from below by 2. By default, weights are shared between clouds
+  and their copies.
 
-For now, unrolling the resulting DBN to a BPN is not supported."
+  For now, unrolling the resulting DBN to a BPN is not supported."
   (let* ((clouds (clouds dbm))
          (rbms (with-copying
                  (loop
@@ -1659,9 +1663,9 @@ For now, unrolling the resulting DBN to a BPN is not supported."
 (defclass rbm (bm)
   ((dbn :initform nil :type (or null dbn) :reader dbn))
   (:documentation "An RBM is a BM with no intralayer connections. An
-RBM when trained with PCD behaves the same as a BM with the same
-chunks, clouds but it can also be trained by contrastive
-divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
+  RBM when trained with PCD behaves the same as a BM with the same
+  chunks, clouds but it can also be trained by contrastive
+  divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
 
 (define-descriptions (rbm rbm :inheritp t)
   dbn)
@@ -1677,8 +1681,8 @@ divergence (see RBM-CD-TRAINER) and stacked in a DBN."))
 
 (defun node-change (chunks)
   "Return the average of the absolute values of NODES - OLD-NODES over
-CHUNKS. The second value returned is the number of nodes that
-contributed to the average."
+  CHUNKS. The second value returned is the number of nodes that
+  contributed to the average."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n))
@@ -1707,8 +1711,8 @@ contributed to the average."
 #+nil
 (defun node-change (chunks)
   "Return the average of the absolute values of NODES - OLD-NODES over
-CHUNKS. The second value returned is the number of nodes that
-contributed to the average."
+  CHUNKS. The second value returned is the number of nodes that
+  contributed to the average."
   (let ((sum #.(flt 0))
         (sum-mat (make-mat 1 :ctype flt-ctype))
         (n 0))
@@ -1744,9 +1748,9 @@ contributed to the average."
                                      (n-damped-iterations 100)
                                      (damping-factor #.(flt 0.9)))
   "A supervisor for SETTLE-MEAN-FIELD. Return NIL if the average of
-the absolute value of change in nodes is below NODE-CHANGE-LIMIT, else
-return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR for
-another N-DAMPED-ITERATIONS, then NIL."
+  the absolute value of change in nodes is below NODE-CHANGE-LIMIT,
+  else return 0 damping for N-UNDAMPED-ITERATIONS then DAMPING-FACTOR
+  for another N-DAMPED-ITERATIONS, then NIL."
   (declare (ignore bm))
   (let ((change (node-change chunks)))
     (cond ((< change node-change-limit)
@@ -1760,7 +1764,7 @@ another N-DAMPED-ITERATIONS, then NIL."
 
 (defgeneric default-mean-field-supervisor (bm)
   (:documentation "Return a function suitable as the SUPERVISOR
-argument for SETTLE-MEAN-FIELD. The default implementation ")
+  argument for SETTLE-MEAN-FIELD. The default implementation ")
   (:method ((bm bm))
     #'supervise-mean-field/default))
 
@@ -1768,13 +1772,14 @@ argument for SETTLE-MEAN-FIELD. The default implementation ")
                           (other-chunks (set-difference (chunks bm) chunks))
                           (supervisor (default-mean-field-supervisor bm)))
   "Do possibly damped mean field updates on CHUNKS until convergence.
-Compute V'_{t+1}, what would normally be the means, but average it
-with the previous value: V_{t+1} = k * V_t + (1 - k) * V'{t+1} where K
-is the damping factor (an FLT between 0 and 1).
+  Compute V'_{t+1}, what would normally be the means, but average it
+  with the previous value: V_{t+1} = k * V_t + (1 - k) * V'{t+1} where
+  K is the damping factor (an FLT between 0 and 1).
 
-Call SUPERVISOR with CHUNKS BM and the iteration. Settling is finished
-when SUPERVISOR returns NIL. If SUPERVISOR returns a non-nil value
-then it's taken to be a damping factor. For no damping return 0."
+  Call SUPERVISOR with CHUNKS BM and the iteration. Settling is
+  finished when SUPERVISOR returns NIL. If SUPERVISOR returns a
+  non-nil value then it's taken to be a damping factor. For no damping
+  return 0."
   (declare (ignore other-chunks))
   (loop for i upfrom 0 do
     (dolist (chunk chunks)
@@ -1804,8 +1809,8 @@ then it's taken to be a damping factor. For no damping return 0."
 
 (defgeneric set-visible-mean (bm)
   (:documentation "Like SET-VISIBLE-MEAN/1, but settle the mean field
-if there are visible-to-visible connections. For an RBM it trivially
-calls SET-VISIBLE-MEAN.")
+  if there are visible-to-visible connections. For an RBM it trivially
+  calls SET-VISIBLE-MEAN.")
   (:method :around ((bm bm))
     (with-versions ((gensym) (hidden-and-conditioning-chunks bm))
       (call-next-method)))
@@ -1819,8 +1824,9 @@ calls SET-VISIBLE-MEAN.")
 
 (defgeneric set-hidden-mean (bm)
   (:documentation "Like SET-HIDDEN-MEAN/1, but settle the mean field
-if there are hidden-to-hidden connections. For an RBM it trivially
-calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
+  if there are hidden-to-hidden connections. For an RBM it trivially
+  calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before
+  settling.")
   (:method :around ((bm bm))
     (with-versions ((gensym) (visible-and-conditioning-chunks bm))
       (call-next-method)))
@@ -1851,8 +1857,8 @@ calls SET-HIDDEN-MEAN/1, for a DBM it calls UP-DBM before settling.")
 (defgeneric accumulate-cloud-statistics (learner bm cloud
                                          gradient-sink multiplier)
   (:documentation "Take the accumulator of TRAINER that corresponds to
-CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
-contrastive divergence."))
+  CLOUD and add MULTIPLIER times the cloud statistics of [persistent]
+  contrastive divergence."))
 
 (defmethod accumulate-cloud-statistics (learner bm (cloud full-cloud)
                                         gradient-sink multiplier)
@@ -1970,23 +1976,24 @@ contrastive divergence."))
   ((products :initarg :products :reader products)
    (old-products :initarg :old-products :reader old-products))
   (:documentation "Keep track of how much pairs of nodes connected by
-CLOUD are simultaneously active. If a node in CHUNK deviates from the
-target sparsity, that is, its average activation is different from the
-target, then decrease or increase the weight to nodes to which it's
-connected by CLOUD in such a way that it will be closer to the target.
-Smooth the empirical estimates in simultaneous activations in PRODUCTS
-by DAMPING."))
+  CLOUD are simultaneously active. If a node in CHUNK deviates from
+  the target sparsity, that is, its average activation is different
+  from the target, then decrease or increase the weight to nodes to
+  which it's connected by CLOUD in such a way that it will be closer
+  to the target. Smooth the empirical estimates in simultaneous
+  activations in PRODUCTS by DAMPING."))
 
 (defclass cheating-sparsity-gradient-source (sparsity-gradient-source)
   ((sum1 :initarg :sum1 :reader sum1)
    (old-sum1 :initarg :old-sum1 :reader old-sum1)
    (sum2 :initarg :sum2 :reader sum2))
   (:documentation "Like NORMAL-SPARSITY-GRADIENT-SOURCE, but it needs
-less memory because it only tracks average activation levels of nodes
-independently (as opposed to simultaneous activations) and thus it may
-produce the wrong gradient an example for which is when two connected
-nodes are on a lot, but never at the same time. Clearly, it makes
-little sense to change the weight but this is exactly what happens."))
+  less memory because it only tracks average activation levels of
+  nodes independently (as opposed to simultaneous activations) and
+  thus it may produce the wrong gradient an example for which is when
+  two connected nodes are on a lot, but never at the same time.
+  Clearly, it makes little sense to change the weight but this is
+  exactly what happens."))
 
 (defun other-chunk (cloud chunk)
   (cond ((eq chunk (chunk1 cloud))
@@ -2065,12 +2072,12 @@ little sense to change the weight but this is exactly what happens."))
     :reader sparsity-gradient-sources)
    (sparser :initform nil :initarg :sparser :reader sparser))
   (:documentation "For the chunks with . Collect the average means
-over samples in a batch and adjust weights in each cloud connected to
-it so that the average is closer to SPARSITY-TARGET. This is
-implemented by keeping track of the average means of the chunks
-connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
-C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the end
-of the batch. Batch size comes from the superclass."))
+  over samples in a batch and adjust weights in each cloud connected
+  to it so that the average is closer to SPARSITY-TARGET. This is
+  implemented by keeping track of the average means of the chunks
+  connected to it. The derivative is (M* (MATLISP:TRANSPOSE (M.-
+  C1-MEANS TARGET)) C2-MEANS) and this is added to derivative at the
+  end of the batch. Batch size comes from the superclass."))
 
 (define-descriptions (learner sparse-bm-learner :inheritp t)
   sparsity-gradient-sources)
@@ -2167,28 +2174,29 @@ of the batch. Batch size comes from the superclass."))
     :initarg :visible-sampling
     :accessor visible-sampling
     :documentation "Controls whether visible nodes are sampled during
-the learning or the mean field is used instead.")
+    the learning or the mean field is used instead.")
    (hidden-sampling
     :initform :half-hearted
     :type (member nil :half-hearted t)
     :initarg :hidden-sampling
     :accessor hidden-sampling
     :documentation "Controls whether and how hidden nodes are sampled
-during the learning or mean field is used instead. :HALF-HEARTED, the
-default value, samples the hiddens but uses the hidden means to
-calculate the effect of the positive and negative phases on the
-gradient. The default should almost always be preferable to T, as it
-is a less noisy estimate.")
+    during the learning or mean field is used instead. :HALF-HEARTED,
+    the default value, samples the hiddens but uses the hidden means
+    to calculate the effect of the positive and negative phases on the
+    gradient. The default should almost always be preferable to T, as
+    it is a less noisy estimate.")
    (n-gibbs
     :type (integer 1)
     :initform 1
     :initarg :n-gibbs
     :accessor n-gibbs
     :documentation "The number of steps of Gibbs sampling to perform.
-This is how many full (HIDDEN -> VISIBLE -> HIDDEN) steps are taken
-for CD learning, and how many times each chunk is sampled for PCD."))
+    This is how many full (HIDDEN -> VISIBLE -> HIDDEN) steps are
+    taken for CD learning, and how many times each chunk is sampled
+    for PCD."))
   (:documentation "Paramaters for Markov Chain Monte Carlo based
-trainers for BMs."))
+  trainers for BMs."))
 
 (define-descriptions (bm bm-mcmc-learner :inheritp t)
   visible-sampling hidden-sampling n-gibbs)
@@ -2284,14 +2292,14 @@ trainers for BMs."))
     :initarg :n-particles
     :reader n-particles
     :documentation "The number of persistent chains to run. Also known
-as the number of fantasy particles.")
+    as the number of fantasy particles.")
    (persistent-chains
     :type bm
     :reader persistent-chains
     :documentation "A BM that keeps the states of the persistent
-chains (each stripe is a chain), initialized from the BM being trained
-by COPY with 'PCD as the context. Suitable for training BM and
-RBM."))
+    chains (each stripe is a chain), initialized from the BM being
+    trained by COPY with 'PCD as the context. Suitable for training BM
+    and RBM."))
   (:documentation "Persistent Contrastive Divergence trainer."))
 
 (define-descriptions (learner bm-pcd-learner :inheritp t)
@@ -2401,9 +2409,9 @@ called with the same parameters."
 
 (defun reconstruction-rmse (chunks)
   "Return the squared norm of INPUTS - NODES not considering constant
-or conditioning chunks that aren't reconstructed in any case. The
-second value returned is the number of nodes that contributed to the
-error."
+  or conditioning chunks that aren't reconstructed in any case. The
+  second value returned is the number of nodes that contributed to the
+  error."
   (let ((sum #.(flt 0))
         (n 0))
     (declare (type flt sum) (type index n))
@@ -2432,9 +2440,9 @@ error."
 #+nil
 (defun reconstruction-rmse (chunks)
   "Return the squared norm of INPUTS - NODES not considering constant
-or conditioning chunks that aren't reconstructed in any case. The
-second value returned is the number of nodes that contributed to the
-error."
+  or conditioning chunks that aren't reconstructed in any case. The
+  second value returned is the number of nodes that contributed to the
+  error."
   (let ((sum #.(flt 0))
         (sum-mat (make-mat 1 :ctype flt-ctype))
         (n 0))
@@ -2467,9 +2475,9 @@ error."
 
 (defun reconstruction-error (bm)
   "Return the squared norm of INPUTS - NODES not considering constant
-or conditioning chunks that aren't reconstructed in any case. The
-second value returned is the number of nodes that contributed to the
-error."
+  or conditioning chunks that aren't reconstructed in any case. The
+  second value returned is the number of nodes that contributed to the
+  error."
   (reconstruction-rmse (visible-chunks bm)))
 
 (defun remove-if* (filter seq)
@@ -2488,7 +2496,7 @@ error."
 (defun make-dbm-reconstruction-rmse-counters-and-measurers (dbm &key
                                                             chunk-filter)
   "Return a list of counter, measurer conses to keep track of
-reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
+  reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
   (loop for i upfrom 0
         for layer in (butlast (layers dbm))
         collect (let ((i i)
@@ -2505,8 +2513,8 @@ reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
      (counters-and-measurers
       (make-bm-reconstruction-rmse-counters-and-measurers bm)))
   "Set the hidden and then the visible mean field and collect the
-errors with COLLECT-BATCH-ERRORS. By default, return the
-reconstruction rmse."
+  errors with COLLECT-BATCH-ERRORS. By default, return the
+  reconstruction rmse."
   (collect-batch-errors (lambda (samples)
                           (set-input samples bm)
                           (set-hidden-mean bm)
@@ -2556,14 +2564,14 @@ reconstruction rmse."
 (defun make-bm-reconstruction-misclassification-counters-and-measurers
     (bm &key chunk-filter)
   "Return a list of counter, measurer conses to keep track of cross
-entropy error suitable for BM-MEAN-FIELD-ERRORS."
+  entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (visible-chunks bm) :chunk-filter chunk-filter))
 
 (defun make-bm-reconstruction-cross-entropy-counters-and-measurers
     (bm &key chunk-filter)
   "Return a list of counter, measurer conses to keep track of cross
-entropy error suitable for BM-MEAN-FIELD-ERRORS."
+  entropy error suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-cross-entropy-counters-and-measurers
    (visible-chunks bm) :chunk-filter chunk-filter))
 
@@ -2583,7 +2591,7 @@ entropy error suitable for BM-MEAN-FIELD-ERRORS."
        (make-bm-reconstruction-misclassification-counters-and-measurers bm)
        (make-bm-reconstruction-cross-entropy-counters-and-measurers bm))))
   "Like COLLECT-BM-MEAN-FIELD-ERRORS but reconstruct the labels even
-if they were missing."
+  if they were missing."
   (collect-batch-errors (lambda (samples)
                           (set-input samples bm)
                           (set-hidden-mean bm)

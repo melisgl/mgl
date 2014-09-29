@@ -4,16 +4,16 @@
   ((rbms :type list :initarg :rbms :reader rbms)
    (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "Deep Belief Network: a stack of RBMs. DBNs with
-multiple hidden layers are not Boltzmann Machines. The chunks in the
-hidden layer of a constituent RBM and the chunk in the visible layer
-of the RBM one on top of it must be EQ for the DBN to consider them
-the same. Naming them the same is not enough, in fact, all chunks must
-have unique names under EQUAL as usual.
+  multiple hidden layers are not Boltzmann Machines. The chunks in the
+  hidden layer of a constituent RBM and the chunk in the visible layer
+  of the RBM one on top of it must be EQ for the DBN to consider them
+  the same. Naming them the same is not enough, in fact, all chunks
+  must have unique names under EQUAL as usual.
 
-Similarly to DBMs, DBNs can be constructed using the :LAYERS initarg.
-When using this feature, a number of RBMs are instantiated. Often one
-wants to create a DBN that consists of some RBM subclass, this is what
-the :RBM-CLASS initarg is for."))
+  Similarly to DBMs, DBNs can be constructed using the :LAYERS
+  initarg. When using this feature, a number of RBMs are instantiated.
+  Often one wants to create a DBN that consists of some RBM subclass,
+  this is what the :RBM-CLASS initarg is for."))
 
 (defmethod n-stripes ((dbn dbn))
   (n-stripes (first (rbms dbn))))
@@ -131,7 +131,7 @@ the :RBM-CLASS initarg is for."))
 (defun make-dbn-reconstruction-rmse-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
-reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
+  reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
   (loop for i upto (position rbm (rbms dbn))
         collect (let ((i i))
                   (cons (make-instance 'rmse-counter
@@ -148,8 +148,8 @@ reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
      (counters-and-measurers
       (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
   "Run the mean field up to RBM then down to the bottom and collect
-the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
-each level in the DBN."
+  the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
+  each level in the DBN."
   (collect-batch-errors (lambda (samples)
                           (set-input samples rbm)
                           (set-hidden-mean rbm)
@@ -159,7 +159,7 @@ each level in the DBN."
 (defun make-dbn-reconstruction-misclassification-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
-misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-misclassification-counters-and-measurers
    (apply #'append
           (mapcar #'visible-chunks
@@ -170,7 +170,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
 (defun make-dbn-reconstruction-cross-entropy-counters-and-measurers
     (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
   "Return a list of counter, measurer conses to keep track of
-misclassifications suitable for BM-MEAN-FIELD-ERRORS."
+  misclassifications suitable for BM-MEAN-FIELD-ERRORS."
   (make-chunk-reconstruction-cross-entropy-counters-and-measurers
    (apply #'append
           (mapcar #'visible-chunks
@@ -187,7 +187,7 @@ misclassifications suitable for BM-MEAN-FIELD-ERRORS."
        (make-dbn-reconstruction-cross-entropy-counters-and-measurers
         dbn :rbm rbm))))
   "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct labeled chunks
-even if it's missing in the input."
+  even if it's missing in the input."
   (collect-batch-errors (lambda (samples)
                           (set-input samples rbm)
                           (set-hidden-mean rbm)

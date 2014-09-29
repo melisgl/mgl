@@ -18,8 +18,8 @@
 
 (defgeneric copy-object-slot (context original-object slot-name value)
   (:documentation "Return the value of the slot in the copied object
-and T, or NIL as the second value if the slot need not be
-initialized.")
+  and T, or NIL as the second value if the slot need not be
+  initialized.")
   (:method (context original-object slot-name value)
     (values (copy context value) t)))
 

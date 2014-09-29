@@ -25,8 +25,9 @@
 
 (defmacro special-case (test &body body)
   "Let the compiler compile BODY for the case when TEST is true and
-also when it's false. The purpose is to allow different constraints to
-propagate to the two branches allowing them to be more optimized."
+  also when it's false. The purpose is to allow different constraints
+  to propagate to the two branches allowing them to be more
+  optimized."
   `(if ,test
        (progn ,@body)
        (progn ,@body)))
@@ -178,7 +179,7 @@ propagate to the two branches allowing them to be more optimized."
 
 (defun reverse-hash-table (hash-table &key (test #'eql))
   "Return a hash table that maps from the values of HASH-TABLE back to
-its keys. HASH-TABLE had better be a bijection."
+  its keys. HASH-TABLE had better be a bijection."
   (let ((r (make-hash-table :test test)))
     (maphash (lambda (key value)
                (setf (gethash value r) key))
@@ -194,7 +195,7 @@ its keys. HASH-TABLE had better be a bijection."
 
 (defun make-seq-generator (vector)
   "Return a function that returns elements of VECTOR in order without
-end. When there are no more elements, start over."
+  end. When there are no more elements, start over."
   (let ((vector (copy-seq (coerce vector 'vector)))
         (l (length vector))
         (n 0))
@@ -205,8 +206,8 @@ end. When there are no more elements, start over."
 
 (defun make-random-generator (seq &key (reorder #'mgl-resample:shuffle))
   "Return a function that returns elements of VECTOR in random order
-without end. When there are no more elements, start over with a
-different random order."
+  without end. When there are no more elements, start over with a
+  different random order."
   (let* ((vector (funcall reorder (copy-seq (coerce seq 'vector))))
          (l (length vector))
          (n 0))
@@ -219,8 +220,8 @@ different random order."
 
 (defun make-n-gram-mappee (function n)
   "Make a function of a single argument that's suitable for the
-function arguments to a mapper function. It calls FUNCTION with every
-N element."
+  function arguments to a mapper function. It calls FUNCTION with
+  every N element."
   (let ((previous-values '()))
     (lambda (x)
       (push x previous-values)
@@ -308,12 +309,13 @@ N element."
 
 (defun binomial-log-likelihood-ratio (k1 n1 k2 n2)
   "See \"Accurate Methods for the Statistics of Surprise and
-Coincidence\" by Ted Dunning \(http://citeseer.ist.psu.edu/29096.html).
+  Coincidence\" by Ted Dunning
+  (http://citeseer.ist.psu.edu/29096.html).
 
-All classes must have non-zero counts, that is, K1, N1-K1, K2, N2-K2
-are positive integers. To ensure this - and also as kind of prior -
-add a small number such as 1 to K1, K2 and 2 to N1, N2 before
-calling."
+  All classes must have non-zero counts, that is, K1, N1-K1, K2, N2-K2
+  are positive integers. To ensure this - and also as kind of prior -
+  add a small number such as 1 to K1, K2 and 2 to N1, N2 before
+  calling."
   (flet ((log-l (p k n)
            (+ (* k (log p))
               (* (- n k) (log (- 1 p))))))
@@ -328,14 +330,15 @@ calling."
 
 (defun multinomial-log-likelihood-ratio (k1 k2)
   "See \"Accurate Methods for the Statistics of Surprise and
-Coincidence\" by Ted Dunning \(http://citeseer.ist.psu.edu/29096.html).
+  Coincidence\" by Ted Dunning
+  \(http://citeseer.ist.psu.edu/29096.html).
 
-K1 is the number of outcomes in each class. K2 is the same in a
-possibly different process.
+  K1 is the number of outcomes in each class. K2 is the same in a
+  possibly different process.
 
-All elements in K1 and K2 are positive integers. To ensure this - and
-also as kind of prior - add a small number such as 1 each element in
-K1 and K2 before calling."
+  All elements in K1 and K2 are positive integers. To ensure this -
+  and also as kind of prior - add a small number such as 1 each
+  element in K1 and K2 before calling."
   (flet ((log-l (p k)
            (let ((sum 0))
              (map nil

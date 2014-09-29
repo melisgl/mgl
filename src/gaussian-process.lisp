@@ -9,16 +9,16 @@
 
 (defgeneric gp-means (gp x)
   (:documentation "Returns the vector of means for the vector of
-inputs X. X is a vector of arbitrary objects."))
+  inputs X. X is a vector of arbitrary objects."))
 
 (defgeneric gp-covariances* (gp x1 x2)
   (:documentation "Returns the matrix of covariances between X1 and
-X2. X1 and X2 are vectors of arbitrary objects. Noise is assumed to be
-included in the covariance function."))
+  X2. X1 and X2 are vectors of arbitrary objects. Noise is assumed to
+  be included in the covariance function."))
 
 (defgeneric gp-means-and-covariances* (gp x1 x2)
   (:documentation "Returns two values: the means and the covariances
-as matrices.")
+  as matrices.")
   (:method (gp x1 x2)
     (values (gp-means gp x1)
             (gp-covariances* gp x1 x2))))
@@ -31,8 +31,8 @@ as matrices.")
 
 (defun update-gp (gp inputs outputs &key means covariances)
   "Update GP with the evidence embodied by INPUTS and the
-corresponding OUTPUTS. Return a new POSTERIOR-GP. If MEANS and
-COVARIANCES are given, then GP-MEANS-AND-COVARIANCES is not called."
+  corresponding OUTPUTS. Return a new POSTERIOR-GP. If MEANS and
+  COVARIANCES are given, then GP-MEANS-AND-COVARIANCES is not called."
   (multiple-value-bind (means covariances)
       (if (and means covariances)
           (values means covariances)
@@ -41,7 +41,7 @@ COVARIANCES are given, then GP-MEANS-AND-COVARIANCES is not called."
 
 (defun sample-gp (gp inputs &key means covariances)
   "Return a sample from the multivariate normal distribution defined
-by GP at INPUTS as a column vector."
+  by GP at INPUTS as a column vector."
   (multiple-value-bind (means covariances)
       (if (and means covariances)
           (values means covariances)
@@ -57,7 +57,7 @@ by GP at INPUTS as a column vector."
   ((mean-fn :initarg :mean-fn :reader mean-fn)
    (covariance-fn :initarg :covariance-fn :reader covariance-fn))
   (:documentation "A GP whose mean and covariance are defined by two
-lisp functions. Can be updated, but it's not trainable."))
+  lisp functions. Can be updated, but it's not trainable."))
 
 (defmethod gp-means ((gp prior-gp) x)
   ;; mean_i = (funcall mean-fn x_i)
@@ -321,9 +321,9 @@ lisp functions. Can be updated, but it's not trainable."))
                            (1.96
                             "title 'mean + 1.96 * stddev' with lines"))))
   "Return a list of MGL-GNUPLOT:DATA-MAPPINGs, one for each level in
-LEVELS-AND-OPTIONS (a list of (LEVEL OPTIONS)). Each mapping contains
-INPUTS in its first column, and MEANS + LEVEL*VARIANCES in the
-second."
+  LEVELS-AND-OPTIONS (a list of (LEVEL OPTIONS)). Each mapping
+  contains INPUTS in its first column, and MEANS + LEVEL*VARIANCES in
+  the second."
   (multiple-value-bind (means covariances)
       (if (and means covariances)
           (values means covariances)
@@ -335,7 +335,7 @@ second."
 
 (defun gp-samples-as-plot-data (gp inputs &key means covariances options)
   "Returns a matrix that contains INPUTS in its first column, and a
-sample taken with SAMPLE-GP in its second."
+  sample taken with SAMPLE-GP in its second."
   (mgl-gnuplot:data*
    (gp-data-matrix inputs (sample-gp gp inputs :means means
                                      :covariances covariances))

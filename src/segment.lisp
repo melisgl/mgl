@@ -20,15 +20,15 @@
 
 (defgeneric map-segment-runs (fn segment)
   (:documentation "Call FN with start and end of intervals of
-consecutive indices that are not missing in SEGMENT. Called by
-trainers that support partial updates.")
+  consecutive indices that are not missing in SEGMENT. Called by
+  trainers that support partial updates.")
   (:method (fn segment)
     (let ((mat (segment-weights segment)))
       (funcall fn mat 0 (mat-size mat)))))
 
 (defgeneric segments (object)
   (:documentation "A list of segments associated with OBJECT. Trainers
-must implement this. It is also defined on SEGMENT-SETs."))
+  must implement this. It is also defined on SEGMENT-SETs."))
 
 (defun list-segments (segmentable)
   (let ((segments ()))
