@@ -45,7 +45,7 @@
 (defgeneric accumulate-gradients (batch source sink multiplier)
   (:documentation "For each example in BATCH calculate the derivatives
   and add them (multiplied by MULTIPLIER) to the corresponding
-  accumulator (in the sense of FIND-SINK-ACCUMULATOR) of SINK."))
+  accumulator (in the sense of CALL-WITH-SINK-ACCUMULATOR) of SINK."))
 
 (defvar *accumulating-interesting-gradients* nil)
 
@@ -72,38 +72,34 @@
 ;;;; Interface to gradient sinks for gradient sources
 
 (defgeneric map-gradient-sink (fn sink)
-  (:documentation "Call FN of lambda list (SEGMENT ACCUMULATOR
-  ACC-START) on each segment and their corresponding accumulator array
-  plus start index in SINK."))
+  (:documentation "Call FN of lambda list (SEGMENT ACCUMULATOR) on
+  each segment and their corresponding accumulator MAT in SINK."))
 
-(defmacro do-gradient-sink (((segment accumulator acc-start) sink)
+(defmacro do-gradient-sink (((segment accumulator) sink)
                             &body body)
-  `(map-gradient-sink
-    (lambda (,segment ,accumulator ,acc-start)
-      (declare #+nil
-               (type flt-vector ,accumulator)
-               (type index ,acc-start))
-      ,@body)
-    ,sink))
+  `(map-gradient-sink (lambda (,segment ,accumulator)
+                        ,@body)
+                      ,sink))
 
-(defgeneric find-sink-accumulator (segment source sink)
-  (:documentation "Return the accumulator and start index belonging to
-  SEGMENT of SOURCE in SINK or NIL if it is not found.")
-  (:method (segment source sink)
+(defgeneric call-with-sink-accumulator (fn segment source sink)
+  (:method (fn segment source sink)
     (declare (ignore source))
-    (do-gradient-sink ((segment2 accumulator start) sink)
+    (do-gradient-sink ((segment2 accumulator) sink)
       (when (eq segment2 segment)
-        (return-from find-sink-accumulator
-          (values accumulator start))))))
+        (funcall fn accumulator)))))
 
-(defmacro with-sink-accumulator (((accumulator start) (segment source sink))
+(defmacro with-sink-accumulator ((accumulator (segment source sink))
                                  &body body)
-  `(multiple-value-bind (,accumulator ,start)
-       (find-sink-accumulator ,segment ,source ,sink)
-     (declare (type (or index null) ,start)
-              #+nil
-              (type (or flt-vector null) ,accumulator))
-     ,@body))
+  `(call-with-sink-accumulator (lambda (,accumulator)
+                                 ,@body)
+                               ,segment ,source ,sink))
+
+(defun accumulated-in-sink-p (segment source sink)
+  (call-with-sink-accumulator (lambda (accumulator)
+                                (declare (ignore accumulator))
+                                (return-from accumulated-in-sink-p t))
+                              segment source sink)
+  nil)
 
 
 ;;;; Abstract gradient descent base class
@@ -192,7 +188,8 @@
   (let ((segment-set (segment-set trainer))
         (accumulator (accumulator trainer)))
     (do-segment-set (segment :start-in-segment-set start) segment-set
-      (funcall fn segment accumulator start))))
+      (with-shape-and-displacement (accumulator (segment-size segment) start)
+        (funcall fn segment accumulator)))))
 
 
 ;;;; BATCH-GD-TRAINER

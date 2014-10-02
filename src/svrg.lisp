@@ -105,9 +105,8 @@
                   segment-set
     (let ((n (segment-size segment)))
       (with-shape-and-displacement (mat n start-in-segment-set)
-        (with-sink-accumulator ((accumulator start) (segment source sink))
-          (with-shape-and-displacement (accumulator n start)
-            (funcall fn mat accumulator)))))))
+        (with-sink-accumulator (accumulator (segment source sink))
+          (funcall fn mat accumulator))))))
 
 (defun add-normal-gradients (svrg)
   (map-mat-and-accumulator (lambda (normal-gradients accumulator)

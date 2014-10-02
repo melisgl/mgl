@@ -218,7 +218,8 @@
    ;; Interface to gradient sinks for gradient sources
    #:map-gradient-sink
    #:do-gradient-sink
-   #:find-sink-accumulator
+   #:accumulated-in-sink-p
+   #:call-with-sink-accumulator
    #:with-sink-accumulator
    ;; Abstract gradient descent base class
    #:gd-trainer

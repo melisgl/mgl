@@ -885,56 +885,55 @@
   (values))
 
 (defgeneric accumulate-cloud-statistics* (cloud v1 v2 v1-scratch importances
-                                          multiplier start accumulator))
+                                          multiplier accumulator))
 
 (defmethod accumulate-cloud-statistics* ((cloud full-cloud) v1 v2 v1-scratch
-                                         importances multiplier start
-                                         accumulator)
-  (declare (type flt multiplier)
-           (type index start))
+                                         importances multiplier accumulator)
+  (declare (type flt multiplier))
   (if (use-blas-on-chunk-p (chunk1 cloud))
       (let ((size1 (size (chunk1 cloud)))
             (size2 (size (chunk2 cloud))))
-        (with-shape-and-displacement (accumulator (list size1 size2) start)
-          (gemm! multiplier (if importances
-                                (scale-rows! importances v1 v1-scratch)
-                                v1)
-                 v2 (flt 1) accumulator
-                 :transpose-a? t :lda size1 :ldb size2 :ldc size2
-                 :m size1 :n size2 :k (n-stripes (chunk1 cloud)))))
+        (gemm! multiplier (if importances
+                              (scale-rows! importances v1 v1-scratch)
+                              v1)
+               v2 (flt 1) accumulator
+               :transpose-a? t :lda size1 :ldb size2 :ldc size2
+               :m size1 :n size2 :k (n-stripes (chunk1 cloud))))
       (with-facets ((v1* (v1 'backing-array :direction :input :type flt-vector))
                     (v2* (v2 'backing-array :direction :input :type flt-vector))
                     (accumulator* (accumulator 'backing-array :direction :io
                                                :type flt-vector)))
         (declare (optimize (speed 3) #.*no-array-bounds-check*))
         (assert (null importances))
-        (cond ((= multiplier (flt 1))
-               (special-case (zerop start)
-                 (do-cloud/chunk1 (i cloud)
-                   (let ((x (aref v1* i)))
-                     (unless (zerop x)
-                       (do-cloud/chunk2 (j weight-index)
-                         (incf (aref accumulator*
-                                     (the! index (+ start weight-index)))
-                               (* x (aref v2* j)))))))))
-              ((= multiplier (flt -1))
-               (special-case (zerop start)
-                 (do-cloud/chunk1 (i cloud)
-                   (let ((x (aref v1* i)))
-                     (unless (zerop x)
-                       (do-cloud/chunk2 (j weight-index)
-                         (decf (aref accumulator*
-                                     (the! index (+ start weight-index)))
-                               (* x (aref v2* j)))))))))
-              (t
-               (special-case (zerop start)
-                 (do-cloud/chunk1 (i cloud)
-                   (let ((x (* multiplier (aref v1* i))))
-                     (unless (zerop x)
-                       (do-cloud/chunk2 (j weight-index)
-                         (incf (aref accumulator*
-                                     (the! index (+ start weight-index)))
-                               (* x (aref v2* j)))))))))))))
+        (let ((start (mat-displacement accumulator)))
+          (declare (type index start))
+          (cond ((= multiplier (flt 1))
+                 (special-case (zerop start)
+                   (do-cloud/chunk1 (i cloud)
+                     (let ((x (aref v1* i)))
+                       (unless (zerop x)
+                         (do-cloud/chunk2 (j weight-index)
+                           (incf (aref accumulator*
+                                       (the! index (+ start weight-index)))
+                                 (* x (aref v2* j)))))))))
+                ((= multiplier (flt -1))
+                 (special-case (zerop start)
+                   (do-cloud/chunk1 (i cloud)
+                     (let ((x (aref v1* i)))
+                       (unless (zerop x)
+                         (do-cloud/chunk2 (j weight-index)
+                           (decf (aref accumulator*
+                                       (the! index (+ start weight-index)))
+                                 (* x (aref v2* j)))))))))
+                (t
+                 (special-case (zerop start)
+                   (do-cloud/chunk1 (i cloud)
+                     (let ((x (* multiplier (aref v1* i))))
+                       (unless (zerop x)
+                         (do-cloud/chunk2 (j weight-index)
+                           (incf (aref accumulator*
+                                       (the! index (+ start weight-index)))
+                                 (* x (aref v2* j))))))))))))))
 
 (defmethod map-segments (fn (cloud full-cloud))
   (funcall fn cloud))
@@ -1863,14 +1862,14 @@
 (defmethod accumulate-cloud-statistics (learner bm (cloud full-cloud)
                                         gradient-sink multiplier)
   (declare (type flt multiplier))
-  (with-sink-accumulator ((accumulator start) (cloud learner gradient-sink))
-    (when (and accumulator start)
+  (with-sink-accumulator (accumulator (cloud learner gradient-sink))
+    (when accumulator
       (let ((v1 (means-or-samples learner bm (chunk1 cloud)))
             (v2 (means-or-samples learner bm (chunk2 cloud))))
         (accumulate-cloud-statistics* cloud v1 v2
                                       (ensure-scratch (chunk1 cloud))
                                       (importances bm)
-                                      multiplier start accumulator)))))
+                                      multiplier accumulator)))))
 
 (defmethod accumulate-cloud-statistics (learner bm (cloud factored-cloud)
                                         gradient-sink multiplier)
@@ -1891,31 +1890,27 @@
     (when (indices-present chunk1)
       (error "Missing value support not implemented for FACTORED-CLOUD."))
     (assert (null (indices-present chunk2)))
-    (with-sink-accumulator ((accumulator start)
-                            ((cloud-a cloud) learner gradient-sink))
-      (when (and accumulator start)
+    (with-sink-accumulator (accumulator ((cloud-a cloud) learner gradient-sink))
+      (when accumulator
         ;; dCD/dA = v'*h*B'
         (gemm! (flt 1) h b (flt 0) x
                :transpose-b? t
                :lda size2 :ldb size2 :ldc n-shared
                :m n-stripes :n n-shared :k size2)
-        (with-shape-and-displacement (accumulator (mat-size a) start)
-          (gemm! multiplier v x (flt 1) accumulator
-                 :transpose-a? t
-                 :lda size1 :ldb n-shared :ldc n-shared
-                 :m size1 :n n-shared :k n-stripes))))
-    (with-sink-accumulator ((accumulator start)
-                            ((cloud-b cloud) learner gradient-sink))
-      (when (and accumulator start)
+        (gemm! multiplier v x (flt 1) accumulator
+               :transpose-a? t
+               :lda size1 :ldb n-shared :ldc n-shared
+               :m size1 :n n-shared :k n-stripes)))
+    (with-sink-accumulator (accumulator ((cloud-b cloud) learner gradient-sink))
+      (when accumulator
         ;; dCD/dB = A'*v'*h
         (gemm! (flt 1) a v (flt 0) x
                :transpose-a? t :transpose-b? t
                :lda n-shared :ldb size1 :ldc n-stripes
                :m n-shared :n n-stripes :k size1)
-        (with-shape-and-displacement (accumulator (mat-size b) start)
-          (gemm! multiplier x h (flt 1) accumulator
-                 :lda n-stripes :ldb size2 :ldc size2
-                 :m n-shared :n size2 :k n-stripes))))))
+        (gemm! multiplier x h (flt 1) accumulator
+               :lda n-stripes :ldb size2 :ldc size2
+               :m n-shared :n size2 :k n-stripes)))))
 
 (defgeneric positive-phase (batch learner gradient-sink multiplier))
 
@@ -2027,12 +2022,11 @@
                                        (chunk sparsity)))
                     :ctype flt-ctype))))
 
-(defgeneric flush-sparsity (sparsity accumulator start n-inputs-in-batch
-                            multiplier)
+(defgeneric flush-sparsity (sparsity accumulator n-inputs-in-batch multiplier)
   ;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
   ;; accumulator and zero PRODUCTS.
   (:method ((sparsity normal-sparsity-gradient-source)
-            accumulator start n-inputs-in-batch multiplier)
+            accumulator n-inputs-in-batch multiplier)
     (let ((damping (damping sparsity))
           (cost (cost sparsity))
           (products (products sparsity))
@@ -2040,13 +2034,12 @@
       (scal! damping old-products)
       (axpy! (/ (- (flt 1) damping) n-inputs-in-batch)
              products old-products)
-      (with-shape-and-displacement (accumulator (mat-size old-products) start)
-        (axpy! (* cost multiplier n-inputs-in-batch) old-products accumulator))
+      (axpy! (* cost multiplier n-inputs-in-batch) old-products accumulator)
       (fill! (flt 0) products)))
   ;; Add DAMPING * OLD-SUM1 + (1 - DAMPING) * SUM1 to the accumulator
   ;; and zero SUM1.
   (:method ((sparsity cheating-sparsity-gradient-source)
-            accumulator start n-inputs-in-batch multiplier)
+            accumulator n-inputs-in-batch multiplier)
     (let* ((damping (damping sparsity))
            (cost (cost sparsity))
            (sum1 (sum1 sparsity))
@@ -2059,10 +2052,9 @@
       (axpy! (/ (- (flt 1) damping) n-inputs-in-batch) sum1 old-sum1)
       (copy! old-sum1 sum1)
       (.+! (- target) sum1)
-      (with-shape-and-displacement (accumulator (list size1 size2) start)
-        (gemm! (* cost multiplier) sum1 sum2 (flt 1) accumulator
-               :m size1 :n size2 :k 1
-               :lda 1 :ldb size2 :ldc size2))
+      (gemm! (* cost multiplier) sum1 sum2 (flt 1) accumulator
+             :m size1 :n size2 :k 1
+             :lda 1 :ldb size2 :ldc size2)
       (fill! (flt 0) sum1)
       (fill! (flt 0) sum2))))
 
@@ -2092,7 +2084,7 @@
         (sparsities ()))
     (flet ((foo (cloud chunk)
              (when (and (not (conditioning-chunk-p chunk))
-                        (find-sink-accumulator cloud learner sink))
+                        (accumulated-in-sink-p cloud learner sink))
                (let ((sparsity (funcall (sparser learner) cloud chunk)))
                  (when sparsity
                    (push sparsity sparsities))))))
@@ -2118,10 +2110,8 @@
   ;; batch is processed, let's flush our accumulators to SINK.
   (let ((n-inputs-in-batch (length batch)))
     (dolist (sparsity (sparsity-gradient-sources learner))
-      (with-sink-accumulator ((accumulator start)
-                              ((cloud sparsity) learner sink))
-        (flush-sparsity sparsity accumulator start n-inputs-in-batch
-                        multiplier)))))
+      (with-sink-accumulator (accumulator ((cloud sparsity) learner sink))
+        (flush-sparsity sparsity accumulator n-inputs-in-batch multiplier)))))
 
 (defgeneric accumulate-sparsity-statistics (sparsity importances multiplier)
   (:method ((sparsity normal-sparsity-gradient-source) importances multiplier)
@@ -2139,7 +2129,7 @@
               (values (means (chunk1 cloud)) (old-nodes chunk)
                       (ensure-scratch (chunk1 cloud))))
         (accumulate-cloud-statistics* cloud v1 v2 v1-scratch importances
-                                      multiplier 0 (products sparsity)))))
+                                      multiplier (products sparsity)))))
   (:method ((sparsity cheating-sparsity-gradient-source) importances multiplier)
     ;; FLUSH-SPARSITY takes the multiplier into account.
     (declare (ignore multiplier))
@@ -2324,10 +2314,11 @@
 ;;; cloud in the normal BM then use the orignal as that's what the
 ;;; trainer was initialized with (and they, of course, share the
 ;;; weights).
-(defmethod find-sink-accumulator (cloud (learner bm-pcd-learner) trainer)
+(defmethod call-with-sink-accumulator (fn cloud (learner bm-pcd-learner)
+                                       trainer)
   (if (find cloud (list-segments (persistent-chains learner)))
-      (find-sink-accumulator (find-cloud (name cloud) (bm learner))
-                             learner trainer)
+      (call-with-sink-accumulator fn (find-cloud (name cloud) (bm learner))
+                                  learner trainer)
       (call-next-method)))
 
 (defmethod positive-phase (batch (learner bm-pcd-learner) gradient-sink

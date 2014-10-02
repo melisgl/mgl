@@ -787,11 +787,8 @@
 
 (defun add-and-forget-derivatives (bpn gradient-sink multiplier)
   (declare (type flt multiplier))
-  (do-gradient-sink ((lump accumulator acc-start) gradient-sink)
-    (let* ((derivatives (derivatives lump))
-           (n (mat-size derivatives)))
-      (with-shape-and-displacement (accumulator n acc-start)
-        (axpy! multiplier derivatives accumulator))))
+  (do-gradient-sink ((lump accumulator) gradient-sink)
+    (axpy! multiplier (derivatives lump) accumulator))
   ;; All weight derivatives must be zeroed, even the ones not being
   ;; trained on to avoid overflows.
   (loop for lump across (lumps bpn)
