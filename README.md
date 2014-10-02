@@ -125,7 +125,7 @@ not depend on the rest of MGL:
 
 There is also MGL-VISUALS which does depend on MGL.
 
-See the [MGL Manual](doc/md/README.md) for more.
+See the [MGL Manual](doc/md/manual.md) for more.
 
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
