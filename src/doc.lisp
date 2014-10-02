@@ -36,7 +36,7 @@
                           :direction :output
                           :if-does-not-exist :create
                           :if-exists :supersede)
-    (describe @mgl-manual stream)
+    (document @mgl-manual :stream stream)
     (print-markdown-footer stream)))
 
 (defun print-markdown-footer (stream)
