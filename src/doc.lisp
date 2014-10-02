@@ -6,7 +6,7 @@
   (@mgl-documentation section))
 
 (defsection @mgl-documentation (:title "Documentation")
- "See the [MGL Manual](doc/md/manual.md) for more.")
+ "See the [MGL Manual](doc/md/mgl-manual.md) for more.")
 
 ;;;; Generating docs for MGL. Not included in the ASDF system.
 
@@ -31,8 +31,8 @@
 
 (defun update-md ()
   (with-open-file (stream (ensure-directories-exist
-                           (asdf:system-relative-pathname :mgl
-                                                          "doc/md/manual.md"))
+                           (asdf:system-relative-pathname
+                            :mgl "doc/md/mgl-manual.md"))
                           :direction :output
                           :if-does-not-exist :create
                           :if-exists :supersede)

@@ -44,7 +44,9 @@ MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
 by Ravenpack International. It implements:
 
-- Backpropagation networks (BPN)- Dropout
+- Backpropagation networks (BPN)
+
+    - Dropout
 
     - Rectified linear units
 

@@ -17,6 +17,7 @@
   by Ravenpack International. It implements:
 
   - Backpropagation networks (BPN)
+
       - Dropout
       - Rectified linear units
       - Maxout
