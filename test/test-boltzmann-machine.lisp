@@ -463,7 +463,7 @@
              (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t
                               :learner-class 'test-pcd-learner)))
   ;; identity
-  (assert (> 0.04
+  (assert (> 0.1
              (test-rbm/single :sampler (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))
