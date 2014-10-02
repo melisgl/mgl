@@ -193,12 +193,12 @@
        (declare (ignore ,args))
        ,@body)))
 
-(defun make-seq-generator (vector)
-  "Return a function that returns elements of VECTOR in order without
+(defun make-seq-generator (seq)
+  "Return a function that returns elements of SEQ in order without
   end. When there are no more elements, start over."
-  (let ((vector (copy-seq (coerce vector 'vector)))
-        (l (length vector))
-        (n 0))
+  (let* ((vector (copy-seq (coerce seq 'vector)))
+         (l (length vector))
+         (n 0))
     (lambda ()
       (prog1
           (aref vector n)
