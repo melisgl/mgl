@@ -983,8 +983,10 @@
                           :n-epochs (if quick-run-p 2 3000)
                           :learning-rate (flt 1)
                           :learning-rate-decay (flt 0.998)
-                          :l2-upper-bound (sqrt (flt 15)))
-      (unless quick-run-p
+                          :l2-upper-bound (sqrt (flt 15))
+                          :input-weight-penalty (flt 0.000001)
+                          :batch-size 96)
+      (when (and bpn-filename (not quick-run-p))
         (save-weights bpn-filename bpn)))))
 
 
@@ -1015,8 +1017,9 @@
                           :learning-rate (flt 1)
                           :learning-rate-decay (flt 0.998)
                           :l2-upper-bound (sqrt (flt 3.75))
-                          :batch-size 100)
-      (unless quick-run-p
+                          :input-weight-penalty (flt 0.000001)
+                          :batch-size 96)
+      (when (and bpn-filename (not quick-run-p))
         (save-weights bpn-filename bpn)))))
 
 
@@ -1052,7 +1055,7 @@
                           :l2-upper-bound (sqrt (flt 3.75))
                           :input-weight-penalty (flt 0.000001)
                           :batch-size 96)
-      (unless quick-run-p
+      (when (and bpn-filename (not quick-run-p))
         (save-weights bpn-filename bpn)))))
 
 
@@ -1145,6 +1148,65 @@
                  :bpn-var '*bpn/3* :bpn-filename *mnist-3-bpn-filename*)
   (train-mnist/4 :training (training-images) :test (test-images)
                  :bpn-var '*bpn/4* :bpn-filename *mnist-4-bpn-filename*))
+
+(mgl-resample:cross-validate (concatenate 'vector (training-images)
+                                          (test-images))
+                             (lambda (fold test training)
+                               (log-msg "Fold ~S~%" fold)
+                               (train-mnist/5 :training training :test test))
+                             :n-folds 7
+                             :split-fn (lambda (seq fold n-folds)
+                                         (mgl-resample:split-stratified
+                                          seq fold n-folds
+                                          :key #'image-label))
+                             :pass-fold t)
+
+/3 with 1000 epochs
+
+(alexandria:mean '(98.82 99.02 98.89 98.78 98.70 98.89 98.89)) => 98.85571
+
+/4 with 1000 epochs
+
+(alexandria:mean '(98.83 99.02 98.85 98.80 98.67 98.97 98.88)) => 98.86
+
+/5 with 1000 epochs
+
+(alexandria:mean '(98.96 99.12 99.02 98.90 98.88 99.03 99.07)) => 98.99715
+
+/3:
+
+(alexandria:mean '(98.88 99.11 98.84 98.82 98.77 98.90 99.07)) => 98.91286
+
+/3+L1:
+
+(alexandria:mean '(98.81 99.15 98.97 98.85 98.86 99.13 99.04)) => 98.972855
+
+/4:
+
+(alexandria:mean '(98.89 99.13 98.84 98.84 98.71 98.97 99.02)) => 98.91429
+
+/4+L1:
+
+(alexandria:mean '(98.92 99.08 99.08 99.00 98.88 98.82 99.02)) => 98.971436
+
+/5:
+
+(alexandria:mean '(98.92 99.26 99.01 98.91 98.82 99.05 99.13)) => 99.01429
+
+/5+L1:
+
+(alexandria:mean '(99.04 99.28 99.10 98.92 99.01 99.14 99.16)) => 99.09286
+
+2014-09-20 12:02:26: n-inputs: 60000000
+2014-09-20 12:02:26: cuda mats: 70307, copies: h->d: 800008, d->h: 2085009
+2014-09-20 12:02:26: bpn train: training classification accuracy: 99.81% (60000)
+2014-09-20 12:02:26: bpn train: training cross entropy: 5.54801d-3 (60000.0d0)
+2014-09-20 12:02:26: n-inputs: 60000000
+2014-09-20 12:02:26: cuda mats: 70307, copies: h->d: 800008, d->h: 2085009
+2014-09-20 12:02:26: bpn test: test classification accuracy: 99.07% (10000)
+2014-09-20 12:02:26: bpn test: test cross entropy: 3.94829d-2 (10000.0d0)
+2014-09-20 12:02:26: ---------------------------------------------------
+
 
 (require :sb-sprof)
 
