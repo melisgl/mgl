@@ -102,6 +102,8 @@ not depend on the rest of MGL:
 
 There is also MGL-VISUALS which does depend on MGL.
 
+## Documentation
+
 See the [MGL Manual](doc/md/manual.md) for more.
 
 * * *

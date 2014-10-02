@@ -3,7 +3,10 @@
 (defsection @mgl-readme (:title "MGL")
   (mgl asdf:system)
   (@mgl-overview section)
-  "See the [MGL Manual](doc/md/manual.md) for more.")
+  (@mgl-documentation section))
+
+(defsection @mgl-documentation (:title "Documentation")
+ "See the [MGL Manual](doc/md/manual.md) for more.")
 
 ;;;; Generating docs for MGL. Not included in the ASDF system.
 

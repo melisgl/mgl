@@ -10,6 +10,7 @@
     - [2.2 Dependencies][6d2c]
     - [2.3 Tests][303a]
     - [2.4 Bundled Software][b96a]
+- [3 Documentation][0dee]
 
 ###### \[in package MGL\]
 <a name='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a>
@@ -125,8 +126,13 @@ not depend on the rest of MGL:
 
 There is also MGL-VISUALS which does depend on MGL.
 
+<a name='x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29'></a>
+
+## 3 Documentation
+
 See the [MGL Manual](doc/md/manual.md) for more.
 
+  [0dee]: #x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DOCUMENTATION MGL-PAX:SECTION)"
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
   [8665]: #x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-FEATURES MGL-PAX:SECTION)"
