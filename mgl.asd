@@ -1,10 +1,15 @@
 ;;;; -*- mode: Lisp -*-
 
+;;; See MGL:@MGL-MANUAL for the user guide.
 (asdf:defsystem #:mgl
+  :licence "MIT, see COPYING."
+  :version "0.0.8"
   :name "MGL, the machine learning library"
-  :author "Gabor Melis"
-  :version "0.0.7"
-  :licence "MIT"
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "MGL is a machine learning library for backpropagation
+  neural networks, boltzmann machines, gaussian processes and more."
   :components ((:module "src"
                 :serial t
                 :components ((:file "package")
@@ -23,7 +28,8 @@
                              (:file "deep-belief-network")
                              (:file "backprop")
                              (:file "unroll")
-                             (:file "gaussian-process"))))
+                             (:file "gaussian-process")
+                             (:file "mgl"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla
                             #:mgl-gnuplot #:mgl-mat #:mgl-pax))
 

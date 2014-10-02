@@ -1,6 +1,10 @@
+(mgl-pax:define-package :mgl
+  (:documentation "See MGL:@MGL-MANUAL.")
+  (:use :common-lisp :mgl-pax))
+
 (mgl-pax:define-package :mgl-resample
   (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
-  (:use :cl :mgl-pax))
+  (:use :common-lisp :mgl-pax))
 
 (cl:defpackage :mgl-util
   (:use #:common-lisp #:mgl-mat)

@@ -445,7 +445,7 @@
        :random-state random-state))
 
 
-(defsection @mgl-resample-misc ()
+(defsection @mgl-resample-misc (:title "Miscellaneous Operations")
   (spread-strata function)
   (zip-evenly function))
 

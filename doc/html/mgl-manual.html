@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
+<head>
+<title>MGL Manual</title>
+<link type='text/css' href='style.css' rel='stylesheet'/>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+<body><p><a name='x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h1><span class="navigation"> <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8634;</a></span>MGL Manual</h1>
+
+<h2>Table of Contents</h2>
+
+<ul>
+<li><a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">1 mgl ASDF System Details</a></li>
+<li><a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">2 Overview</a>
+
+<ul>
+<li><a href="#x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-FEATURES MGL-PAX:SECTION)">2.1 Features</a></li>
+<li><a href="#x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)">2.2 Dependencies</a></li>
+<li><a href="#x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-TESTS MGL-PAX:SECTION)">2.3 Tests</a></li>
+<li><a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">2.4 Bundled Software</a></li>
+</ul></li>
+<li><a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">3 Basic Concepts</a></li>
+<li><a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">4 Datasets</a></li>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">5 Resampling</a>
+
+<ul>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">5.1 Partitions</a></li>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)">5.2 Cross-validation</a></li>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)">5.3 Bagging</a></li>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)">5.4 CV Bagging</a></li>
+<li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)">5.5 Miscellaneous Operations</a></li>
+</ul></li>
+<li><a href="#x-28MGL-3A-40MGL-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OPTIMIZATION MGL-PAX:SECTION)">6 Optimization</a></li>
+<li><a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">7 Backprogation Neural Networks</a></li>
+<li><a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">8 Boltzmann Machines</a></li>
+<li><a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">9 Gaussian Processes</a></li>
+</ul>
+
+<h6>[in package MGL]</h6>
+
+<p><a name='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">&#8634;</a></span>1 mgl ASDF System Details</h2>
+
+<ul>
+<li>Version: 0.0.8</li>
+<li>Description: MGL is a machine learning library for backpropagation
+  neural networks, boltzmann machines, gaussian processes and more.</li>
+<li>Licence: MIT, see COPYING.</li>
+<li>Author: Gábor Melis</li>
+<li>Mailto: <a href="mailto:mega@retes.hu" >mega@retes.hu</a></li>
+<li>Homepage: <a href="http://quotenil.com" >http://quotenil.com</a></li>
+</ul>
+
+<p><a name='x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-FEATURES MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8634;</a></span>2 Overview</h2>
+
+<p>MGL is a Common Lisp machine learning library by <a href="http://quotenil.com" >Gábor
+Melis</a> with some parts originally contributed
+by Ravenpack International. It implements:</p>
+
+<ul>
+<li><p>Backpropagation networks (BPN)- Dropout</p>
+
+<ul>
+<li><p>Rectified linear units</p></li>
+<li><p>Maxout</p></li>
+<li><p>Max-channel</p></li>
+</ul></li>
+<li><p>Boltzmann Machines</p></li>
+<li><p>Restricted Boltzmann Machines (RBM)</p></li>
+<li><p>Deep Belief Networks (DBN)</p></li>
+<li><p>Semi Restricted Boltzmann Machines</p></li>
+<li><p>Boltzmann Machines</p></li>
+<li><p>Unrolling DBN to a BPN</p></li>
+<li><p>Contrastive Divergence (CD) learning</p></li>
+<li><p>Persistent Contrastive Divergence (PCD) learning</p></li>
+<li><p>Gradient descent optimization</p></li>
+<li><p>Nesterov momentum</p></li>
+<li><p>Conjugate gradient optimization</p></li>
+<li><p>Gaussian Processes</p></li>
+<li><p>Optimizing Gaussian Processes as BPNs</p></li>
+</ul>
+
+<p><a name='x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-FEATURES MGL-PAX:SECTION)">&#8634;</a></span>2.1 Features</h3>
+
+<p>In general, the focus is on power and performance not on ease of use.
+For example, it's possible to:</p>
+
+<ul>
+<li><p>control the order of presentation of training examples,</p></li>
+<li><p>vary learning rate depending on time, state of the trainer object,</p></li>
+<li><p>track all kinds of statistics during training,
+etc.</p></li>
+</ul>
+
+<p>Perhaps one day there will be a cookie cutter interface with
+restricted functionality if a reasonable compromise is found between
+power and utility.</p>
+
+<p><a name='x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-FEATURES MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-TESTS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)">&#8634;</a></span>2.2 Dependencies</h3>
+
+<p>MGL used to rely on <a href="https://github.com/tpapp/lla" >LLA</a> to
+interface to BLAS and LAPACK. That's mostly history by now, but
+configuration of foreign libraries is still done via <code>LLA</code>. See the
+README in <code>LLA</code> on how to set things up. Note that these days OpenBLAS
+is easier to set up and just as fast as ATLAS.</p>
+
+<p><a href="https://github.com/takagi/cl-cuda" >CL-CUDA</a> is a dependency for
+which the NVIDIA CUDA Toolkit needs to be installed, but MGL is
+fully functional even if there is no cuda capable gpu installed. See
+the <code>MGL-MAT:WITH-CUDA*</code> macro for how to use it.</p>
+
+<p><a name='x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-TESTS MGL-PAX:SECTION)">&#8634;</a></span>2.3 Tests</h3>
+
+<p>Run the built in tests 
+with:</p>
+
+<pre><code>(ASDF:OOS 'ASDF:TEST-OP '#:MGL)
+</code></pre>
+
+<p>Note, that most of the tests are rather stochastic and can fail once
+in a while.</p>
+
+<p><a name='x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-TESTS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">&#8634;</a></span>2.4 Bundled Software</h3>
+
+<p>With <a href="https://github.com/melisgl/mgl-pax" >MGL-PAX</a> and
+<a href="https://github.com/melisgl/mgl-mat" >MGL-MAT</a> libraries split off
+there remains only a single library bundled with MGL which does
+not depend on the rest of MGL:</p>
+
+<ul>
+<li><code>MGL-GNUPLOT</code>, a plotting library.</li>
+</ul>
+
+<p>There is also MGL-VISUALS which does depend on MGL.</p>
+
+<p><a name='x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8634;</a></span>3 Basic Concepts</h2>
+
+<p>MODEL, training set, test set, validation set,
+sample/instance/example.</p>
+
+<p><a name='x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8634;</a></span>4 Datasets</h2>
+
+<p>Ultimately machine learning is about creating models of some
+domain. The observations in modelled domain are called <em>instances</em>.
+Sets of instances are called <em>datasets</em>. Datasets are used when
+fitting a model or when making predictions.</p>
+
+<p>Implementationally speaking, an instance is typically represented by
+a set of numbers which is called <em>feature vector</em>. A dataset is a
+<code>CL:SEQUENCE</code> of such instances or a GENERATOR object that produces
+instances.</p>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8634;</a></span>5 Resampling</h2>
+
+<h6>[in package MGL-RESAMPLE]</h6>
+
+<p>The focus of this package is on resampling methods such as
+cross-validation and bagging which can be used for model evaluation,
+model selection, and also as a simple form of ensembling. Data
+partitioning and sampling functions are also provided because they
+tend to be used together with resampling.</p>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">&#8634;</a></span>5.1 Partitions</h3>
+
+<p>The following functions partition a dataset (currently only
+SEQUENCEs are supported) into a number of partitions. For each
+element in the original dataset there is exactly one partition that
+contains it.</p>
+
+<p><a name='x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>FRACTURE</strong> <em>FRACTIONS SEQ &amp;KEY WEIGHT</em></p>
+
+<p>Partition <code>SEQ</code> into a number of subsequences. <code>FRACTIONS</code> is either a
+positive integer or a list of non-negative real numbers. <code>WEIGHT</code> is
+<code>NIL</code> or a function that returns a non-negative real number when
+called with an element from <code>SEQ</code>. If <code>FRACTIONS</code> is a positive integer
+then return a list of that many subsequences with equal sum of
+weights bar rounding errors, else partition <code>SEQ</code> into subsequences,
+where the sum of weights of subsequence I is proportional to element
+I of <code>FRACTIONS</code>. If <code>WEIGHT</code> is <code>NIL</code>, then it's element is assumed to
+have the same weight.</p>
+
+<p>To split into 5 sequences:</p>
+
+<pre><code>(fracture 5 '(0 1 2 3 4 5 6 7 8 9))
+=&gt; ((0 1) (2 3) (4 5) (6 7) (8 9))
+</code></pre>
+
+<p>To split into two sequences whose lengths are proportional to 2 and
+3:</p>
+
+<pre><code>(fracture '(2 3) '(0 1 2 3 4 5 6 7 8 9))
+=&gt; ((0 1 2 3) (4 5 6 7 8 9))
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>STRATIFY</strong> <em>SEQ &amp;KEY (KEY #'IDENTITY) (TEST #'EQL)</em></p>
+
+<p>Return the list of strata of <code>SEQ</code>. <code>SEQ</code> is sequence of elements for
+which the function <code>KEY</code> returns the class they belong to. Such
+classes are opaque objects compared for equality with <code>TEST</code>. A
+stratum is a sequence of elements with the same (under <code>TEST</code>) <code>KEY</code>.</p>
+
+<pre><code>(stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+=&gt; ((0 2 4 6 8) (1 3 5 7 9))
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3AFRACTURE-STRATIFIED-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>FRACTURE-STRATIFIED</strong> <em>FRACTIONS SEQ &amp;KEY (KEY #'IDENTITY) (TEST #'EQL) WEIGHT</em></p>
+
+<p>Similar to <a href="#x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29" title="(MGL-RESAMPLE:FRACTURE FUNCTION)"><code>FRACTURE</code></a>, but also makes sure that keys are evenly
+distributed among the partitions (see <a href="#x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29" title="(MGL-RESAMPLE:STRATIFY FUNCTION)"><code>STRATIFY</code></a>). It can be useful
+for classification tasks to partition the data set while keeping the
+distribution of classes the same.</p>
+
+<p>Note that the sets returned are not in random order. In fact, they
+are sorted internally by <code>KEY</code>.</p>
+
+<p>For example, to make two splits with approximately the same number
+of even and odd numbers:</p>
+
+<pre><code>(fracture-stratified 2 '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+=&gt; ((0 2 1 3) (4 6 8 5 7 9))
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)">&#8634;</a></span>5.2 Cross-validation</h3>
+
+<p><a name='x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>CROSS-VALIDATE</strong> <em>DATA FN &amp;KEY (N-FOLDS 5) (FOLDS (ALEXANDRIA.0.DEV:IOTA N-FOLDS)) (SPLIT-FN #'SPLIT-FOLD/MOD) PASS-FOLD</em></p>
+
+<p>Map <code>FN</code> over the <code>FOLDS</code> of <code>DATA</code> split with <code>SPLIT-FN</code> and collect the
+results in a list. The simplest demonstration is:</p>
+
+<pre><code>(cross-validate '(0 1 2 3 4)
+                (lambda (test training)
+                 (list test training))
+                :n-folds 5)
+=&gt; (((0) (1 2 3 4))
+    ((1) (0 2 3 4))
+    ((2) (0 1 3 4))
+    ((3) (0 1 2 4))
+    ((4) (0 1 2 3)))
+</code></pre>
+
+<p>Of course, in practice one would typically train a model and return
+the trained model and/or its score on <code>TEST</code>. Also, sometimes one may
+want to do only some of the folds and remember which ones they were:</p>
+
+<pre><code>(cross-validate '(0 1 2 3 4)
+                (lambda (fold test training)
+                 (list :fold fold test training))
+                :folds '(2 3)
+                :pass-fold t)
+=&gt; ((:fold 2 (2) (0 1 3 4))
+    (:fold 3 (3) (0 1 2 4)))
+</code></pre>
+
+<p>Finally, the way the data is split can be customized. By default
+<a href="#x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29" title="(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"><code>SPLIT-FOLD/MOD</code></a> is called with the arguments <code>DATA</code>, the fold (from
+among <code>FOLDS</code>) and <code>N-FOLDS</code>. <a href="#x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29" title="(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"><code>SPLIT-FOLD/MOD</code></a> returns two values which
+are then passed on to <code>FN</code>. One can use <a href="#x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29" title="(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"><code>SPLIT-FOLD/CONT</code></a> or
+<a href="#x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29" title="(MGL-RESAMPLE:SPLIT-STRATIFIED FUNCTION)"><code>SPLIT-STRATIFIED</code></a> or any other function that works with these
+arguments. The only real constraint is that <code>FN</code> has to take as many
+arguments (plus the fold argument if <code>PASS-FOLD</code>) as <code>SPLIT-FN</code>
+returns.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SPLIT-FOLD/MOD</strong> <em>SEQ FOLD N-FOLDS</em></p>
+
+<p>Partition <code>SEQ</code> into two sequences: one with elements of <code>SEQ</code> with
+indices whose remainder is <code>FOLD</code> when divided with <code>N-FOLDS</code>, and a
+second one with the rest. The second one is the larger set. The
+order of elements remains stable. This function is suitable as the
+<code>SPLIT-FN</code> argument of <a href="#x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29" title="(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"><code>CROSS-VALIDATE</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SPLIT-FOLD/CONT</strong> <em>SEQ FOLD N-FOLDS</em></p>
+
+<p>Imagine dividing <code>SEQ</code> into <code>N-FOLDS</code> subsequences of the same
+size (bar rounding). Return the subsequence of index <code>FOLD</code> as the
+first value and the all the other subsequences concatenated into one
+as the second value. The order of elements remains stable. This
+function is suitable as the <code>SPLIT-FN</code> argument of <a href="#x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29" title="(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"><code>CROSS-VALIDATE</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SPLIT-STRATIFIED</strong> <em>SEQ FOLD N-FOLDS &amp;KEY (KEY #'IDENTITY) (TEST #'EQL) WEIGHT</em></p>
+
+<p>Split <code>SEQ</code> into <code>N-FOLDS</code> partitions (as in <a href="#x-28MGL-RESAMPLE-3AFRACTURE-STRATIFIED-20FUNCTION-29" title="(MGL-RESAMPLE:FRACTURE-STRATIFIED FUNCTION)"><code>FRACTURE-STRATIFIED</code></a>).
+Return the partition of index <code>FOLD</code> as the first value, and the
+concatenation of the rest as the second value. This function is
+suitable as the <code>SPLIT-FN</code> argument of <a href="#x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29" title="(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"><code>CROSS-VALIDATE</code></a> (mostly likely
+as a closure with <code>KEY</code>, <code>TEST</code>, <code>WEIGHT</code> bound).</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)">&#8634;</a></span>5.3 Bagging</h3>
+
+<p><a name='x-28MGL-RESAMPLE-3ABAG-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>BAG</strong> <em>SEQ FN &amp;KEY (RATIO 1) N WEIGHT (REPLACEMENT T) KEY (TEST #'EQL) (RANDOM-STATE *RANDOM-STATE*)</em></p>
+
+<p>Sample from <code>SEQ</code> with <a href="#x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29" title="(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"><code>SAMPLE-FROM</code></a> (passing <code>RATIO</code>, <code>WEIGHT</code>,
+<code>REPLACEMENT</code>), or <a href="#x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29" title="(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"><code>SAMPLE-STRATIFIED</code></a> if <code>KEY</code> is not <code>NIL</code>. Call <code>FN</code> with
+the sample. If <code>N</code> is <code>NIL</code> then keep repeating this until <code>FN</code> performs a
+non-local exit. Else <code>N</code> must be a non-negative integer, <code>N</code> iterations
+will be performed, the primary values returned by <code>FN</code> collected into
+a list and returned. See <a href="#x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29" title="(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"><code>SAMPLE-FROM</code></a> and <a href="#x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29" title="(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"><code>SAMPLE-STRATIFIED</code></a> for
+examples.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SAMPLE-FROM</strong> <em>RATIO SEQ &amp;KEY WEIGHT REPLACEMENT (RANDOM-STATE *RANDOM-STATE*)</em></p>
+
+<p>Return a sequence constructed by sampling with or without
+<code>REPLACEMENT</code> from <code>SEQ</code>. The sum of weights in the result sequence will
+approximately be the sum of weights of <code>SEQ</code> times <code>RATIO</code>. If <code>WEIGHT</code> is
+<code>NIL</code> then elements are assumed to have equal weights, else <code>WEIGHT</code>
+should return a non-negative real number when called with an element
+of <code>SEQ</code>.</p>
+
+<p>To randomly select half of the elements:</p>
+
+<pre><code>(sample-from 1/2 '(0 1 2 3 4 5))
+=&gt; (5 3 2)
+</code></pre>
+
+<p>To randomly select some elements such that the sum of their weights
+constitute about half of the sum of weights across the whole
+sequence:</p>
+
+<pre><code>(sample-from 1/2 '(0 1 2 3 4 5 6 7 8 9) :weight #'identity)
+=&gt; (9 4 1 6 8) ; sums to 28 that's near 45/2
+</code></pre>
+
+<p>To sample with replacement (that is, allowing the element to be
+sampled multiple times):</p>
+
+<pre><code>(sample-from 1 '(0 1 2 3 4 5) :replacement t)
+=&gt; (1 1 5 1 4 4)
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SAMPLE-STRATIFIED</strong> <em>RATIO SEQ &amp;KEY WEIGHT REPLACEMENT (KEY #'IDENTITY) (TEST #'EQL) (RANDOM-STATE *RANDOM-STATE*)</em></p>
+
+<p>Like <a href="#x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29" title="(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"><code>SAMPLE-FROM</code></a> but makes sure that the weighted proportion of
+classes in the result is approximately the same as the proportion in
+<code>SEQ</code>. See <a href="#x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29" title="(MGL-RESAMPLE:STRATIFY FUNCTION)"><code>STRATIFY</code></a> for the description of <code>KEY</code> and <code>TEST</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)">&#8634;</a></span>5.4 CV Bagging</h3>
+
+<p><a name='x-28MGL-RESAMPLE-3ABAG-CV-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>BAG-CV</strong> <em>DATA FN &amp;KEY N (N-FOLDS 5) (FOLDS (ALEXANDRIA.0.DEV:IOTA N-FOLDS)) (SPLIT-FN #'SPLIT-FOLD/MOD) PASS-FOLD (RANDOM-STATE *RANDOM-STATE*)</em></p>
+
+<p>Perform cross-validation on different shuffles of <code>DATA</code> <code>N</code> times and
+collect the results. Since <a href="#x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29" title="(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"><code>CROSS-VALIDATE</code></a> collects the return values
+of <code>FN</code>, the return value of this function is a list of lists of <code>FN</code>
+results. If <code>N</code> is <code>NIL</code>, don't collect anything just keep doing
+repeated CVs until <code>FN</code> performs an non-local exit.</p>
+
+<p>The following example simply collects the test and training sets for
+2-fold CV repeated 3 times with shuffled data:</p>
+
+<pre><code> (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+ =&gt; ((((2 3 4) (1 0))
+      ((1 0) (2 3 4)))
+     (((2 1 0) (4 3))
+      ((4 3) (2 1 0)))
+     (((1 0 3) (2 4))
+      ((2 4) (1 0 3))))
+</code></pre>
+
+<p>CV bagging is useful when a single CV is not producing stable
+results. As an ensemble method, CV bagging has the advantage over
+bagging that each example will occur the same number of times and
+after the first CV is complete there is a complete but less reliable
+estimate for each example which gets refined by further CVs.</p></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OPTIMIZATION MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)">&#8634;</a></span>5.5 Miscellaneous Operations</h3>
+
+<p><a name='x-28MGL-RESAMPLE-3ASPREAD-STRATA-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SPREAD-STRATA</strong> <em>SEQ &amp;KEY (KEY #'IDENTITY) (TEST #'EQL)</em></p>
+
+<p>Return a sequence that's a reordering of <code>SEQ</code> such that elements
+belonging to different strata (under <code>KEY</code> and <code>TEST</code>, see <a href="#x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29" title="(MGL-RESAMPLE:STRATIFY FUNCTION)"><code>STRATIFY</code></a>) are
+distributed evenly. The order of elements belonging to the same
+stratum is unchanged.</p>
+
+<p>For example, to make sure that even and odd numbers are distributed
+evenly:</p>
+
+<pre><code>(spread-strata '(0 2 4 6 8 1 3 5 7 9) :key #'evenp)
+=&gt; (0 1 2 3 4 5 6 7 8 9)
+</code></pre>
+
+<p>Same thing with unbalanced classes:</p>
+
+<pre><code>(spread-strata (vector 0 2 3 5 6 1 4)
+               :key (lambda (x)
+                      (if (member x '(1 4))
+                          t
+                          nil)))
+=&gt; #(0 1 2 3 4 5 6)
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-RESAMPLE-3AZIP-EVENLY-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>ZIP-EVENLY</strong> <em>SEQS &amp;KEY RESULT-TYPE</em></p>
+
+<p>Make a single sequence out of the sequences in <code>SEQS</code> so that in the
+returned sequence indices of elements belonging to the same source
+sequence are spread evenly across the whole range. The result is a
+list is <code>RESULT-TYPE</code> is <code>LIST</code>, it's a vector if <code>RESULT-TYPE</code> is <code>VECTOR</code>.
+If <code>RESULT-TYPE</code> is <code>NIL</code>, then it's determined by the type of the first
+sequence in <code>SEQS</code>.</p>
+
+<pre><code>(zip-evenly '((0 2 4) (1 3)))
+=&gt; (0 1 2 3 4)
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-3A-40MGL-OPTIMIZATION-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OPTIMIZATION MGL-PAX:SECTION)">&#8634;</a></span>6 Optimization</h2>
+
+<p><a name='x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OPTIMIZATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>7 Backprogation Neural Networks</h2>
+
+<p><a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>8 Boltzmann Machines</h2>
+
+<p><a name='x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8634;</a></span>9 Gaussian Processes</h2>
+<hr/><h6>[generated by
+          <a href="https://github.com/melisgl/mgl-pax">MGL-PAX</a>]
+          </h6>
+          </body>
+</html>
