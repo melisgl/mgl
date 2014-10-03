@@ -702,10 +702,11 @@
   (when (slot-boundp learner 'bpn)
     (describe (bpn learner) stream)))
 
-(defmethod segmentable ((source bp-learner))
-  (bpn source))
+(defmethod map-segments (fn (source bp-learner))
+  (map-segments fn (bpn source)))
 
-(defmethod initialize-gradient-source ((learner bp-learner) bpn sink)
+(defmethod initialize-gradient-source* (optimizer (learner bp-learner)
+                                        weights dataset)
   (when (next-method-p)
     (call-next-method))
   (setf (slot-value learner 'first-trained-lump) nil))
@@ -720,13 +721,13 @@
 (defmethod segment-weights ((lump lump))
   (nodes lump))
 
-(defun first-trained-weight-lump (trainer learner)
+(defun first-trained-weight-lump (optimizer learner)
   "Much time can be wasted computing derivatives of non-trained weight
-  lumps. Return the first one that TRAINER trains."
+  lumps. Return the first one that OPTIMIZER trains."
   (or (slot-value learner 'first-trained-lump)
       (setf (slot-value learner 'first-trained-lump)
             (find-if (lambda (lump)
-                       (member lump (segments trainer)))
+                       (member lump (segments optimizer)))
                      (lumps (bpn learner))))))
 
 (defmethod cost (bpn)
@@ -745,8 +746,8 @@
                               sum (aref nodes i)))))))
     (values sum (n-stripes bpn))))
 
-(defgeneric compute-derivatives (samples trainer learner)
-  (:method (samples trainer (learner bp-learner))
+(defgeneric compute-derivatives (samples optimizer learner)
+  (:method (samples optimizer (learner bp-learner))
     (let ((*in-training-p* t)
           (bpn (bpn learner))
           (cost #.(flt 0)))
@@ -755,48 +756,23 @@
         (forward-bpn bpn)
         (incf cost (cost bpn))
         (backward-bpn bpn :last-lump (first-trained-weight-lump
-                                      trainer learner)))
+                                      optimizer learner)))
       cost)))
 
 
-;;;; CG trainer
-
-(defun segment-set-derivatives->weights (segment-set weights)
-  (do-segment-set (lump :start-in-segment-set start-in-segment-set) segment-set
-    (with-facet (derivatives ((derivatives lump) 'backing-array
-                              :direction :input :type flt-vector))
-      (replace weights derivatives
-               :start1 start-in-segment-set
-               :start2 0 :end2 (length derivatives)))))
-
-(defmethod compute-batch-cost-and-derive (samples trainer (learner bp-learner))
-  (let ((bpn (bpn learner))
-        (cost #.(flt 0)))
-    (do-segment-set (lump) (segment-set trainer)
-      (fill! (flt 0) (derivatives lump)))
-    (loop for batch in (group samples (max-n-stripes bpn))
-          do (incf cost (compute-derivatives batch trainer learner)))
-    ;; By now the weight derivatives have accumulated, see
-    ;; ZERO-NON-WEIGHT-DERIVATIVES.
-    (segment-set-derivatives->weights (segment-set trainer)
-                                      (accumulator trainer))
-    cost))
-
-
-;;;; Gradient descent
+;;;; Gradient based optimization
 
 (defun add-and-forget-derivatives (bpn gradient-sink multiplier)
-  (declare (type flt multiplier))
   (do-gradient-sink ((lump accumulator) gradient-sink)
     (axpy! multiplier (derivatives lump) accumulator))
   ;; All weight derivatives must be zeroed, even the ones not being
   ;; trained on to avoid overflows.
   (loop for lump across (lumps bpn)
         do (when (typep lump '->weight)
-             (fill! (flt 0) (derivatives lump)))))
+             (fill! 0 (derivatives lump)))))
 
-(defmethod accumulate-gradients (batch (learner bp-learner)
-                                 gradient-sink multiplier)
+(defmethod accumulate-gradients* ((learner bp-learner) gradient-sink
+                                  batch multiplier valuep)
   (let ((bpn (bpn learner))
         (cost #.(flt 0)))
     (loop for samples in (group batch (max-n-stripes bpn))
@@ -3119,7 +3095,7 @@
   The list of ->ACTIVATIONS is assumed to be eventually fed to the
   same lump.
 
-  To use it, group the activation lumps into the same GD-TRAINER and
+  To use it, group the activation lumps into the same GD-OPTIMIZER and
   hang this function on AFTER-UPDATE-HOOK, that latter of which is
   done for you ARRANGE-FOR-RENORMALIZING-ACTIVATIONS.
 
@@ -3139,9 +3115,9 @@
                                :column))))
      l2-upper-bound)))
 
-(defun arrange-for-renormalizing-activations (bpn trainer l2-upper-bound)
-  "By pushing a lambda to AFTER-UPDATE-HOOK of TRAINER arrange for all
-  weights beings trained by TRAINER to be renormalized (as in
+(defun arrange-for-renormalizing-activations (bpn optimizer l2-upper-bound)
+  "By pushing a lambda to AFTER-UPDATE-HOOK of OPTIMIZER arrange for
+  all weights beings trained by OPTIMIZER to be renormalized (as in
   RENORMALIZE-ACTIVATIONS with L2-UPPER-BOUND).
 
   It is assumed that if the weights either belong to an activation
@@ -3151,12 +3127,12 @@
           (lambda ()
             (when firstp
               (setq ->activations
-                    (loop for lump in (segments trainer)
+                    (loop for lump in (segments optimizer)
                           collect (or (find-activation-lump-for-weight lump bpn)
                                       lump)))
               (setq firstp nil))
             (renormalize-activations ->activations l2-upper-bound)))
-        (after-update-hook trainer)))
+        (after-update-hook optimizer)))
 
 (defun find-activation-lump-for-weight (->weight bpn)
   (loop for lump across (lumps bpn) do

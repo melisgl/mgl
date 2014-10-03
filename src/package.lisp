@@ -112,8 +112,6 @@
 (cl:defpackage :mgl-train
   (:use #:common-lisp #:mgl-mat #:mgl-util)
   (:export
-   #:train
-   #:train-batch
    #:set-input
    ;; Sampler
    #:sample
@@ -124,7 +122,7 @@
    #:n-samples
    #:max-n-samples
    #:counting-function-sampler
-   #:sample-batch
+   #:list-samples
    #:make-sequence-sampler
    ;; Error counter
    #:counter
@@ -166,7 +164,6 @@
    #:map-segments
    #:segment-weights
    #:with-segment-weights
-   #:segment-size
    #:map-segment-runs
    #:list-segments
    ;; Segment set
@@ -186,7 +183,7 @@
    #:default-value
    #:label
    #:label-distribution
-   #:n-inputs
+   #:n-instances
    #:nodes
    #:name
    #:name=
@@ -206,79 +203,28 @@
   definitions. The three most important concepts are SAMPLERs,
   TRAINERs and LEARNERs."))
 
-(cl:defpackage :mgl-gd
-  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train)
-  (:export
-   ;; Abstract interface for implementing gradient sinks
-   #:gradient-sink
-   #:initialize-gradient-sink
-   #:n-inputs-until-update
-   #:maybe-update-weights
-   ;; Abstract interface for implementing gradient sources
-   #:segmentable
-   #:initialize-gradient-source
-   #:accumulate-gradients
-   #:*accumulating-interesting-gradients*
-   ;; Interface to gradient sinks for gradient sources
-   #:map-gradient-sink
-   #:do-gradient-sink
-   #:accumulated-in-sink-p
-   #:call-with-sink-accumulator
-   #:with-sink-accumulator
-   ;; Abstract gradient descent base class
-   #:gd-trainer
-   #:n-inputs
-   #:accumulator
-   #:learning-rate
-   #:momentum
-   #:weight-decay
-   #:weight-penalty
-   #:after-update-hook
-   #:batch-size
-   ;; BATCH-GD-TRAINER
-   #:batch-gd-trainer
-   #:n-inputs-in-batch
-   #:before-update-hook
-   ;; NORMALIZED-BATCH-GD-TRAINER
-   #:normalized-batch-gd-trainer
-   #:n-weight-uses-in-batch
-   ;; PER-WEIGHT-BATCH-GD-TRAINER
-   #:per-weight-batch-gd-trainer
-   ;; SEGMENTED-GD-TRAINER
-   #:segmented-gd-trainer
-   #:segmenter
-   #:trainers
-   #:n-inputs
-   ;; SVRG-TRAINER
-   #:svrg-trainer
-   #:lag)
-  (:documentation "Generic, gradient based optimization interface and
-  simple gradient descent based trainers."))
+(mgl-pax:define-package :mgl-opt
+  (:documentation "See MGL-OPT:@MGL-OPT.")
+  (:use :common-lisp :mgl-pax :mgl-train))
 
-(cl:defpackage :mgl-cg
-  (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-train #:mgl-gd)
-  (:export
-   #:cg
-   #:*default-int*
-   #:*default-ext*
-   #:*default-sig*
-   #:*default-rho*
-   #:*default-ratio*
-   #:*default-max-n-line-searches*
-   #:*default-max-n-evaluations-per-line-search*
-   #:*default-max-n-evaluations*
-   #:cg-trainer
-   #:cg-args
-   #:n-inputs
-   #:segment-set
-   #:accumulator
-   #:compute-batch-cost-and-derive
-   #:decayed-cg-trainer-mixin)
-  (:documentation "Conjugate gradient based trainer."))
+(mgl-pax:define-package :mgl-diffun
+  (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt)
+  (:export #:@mgl-gd))
+
+(mgl-pax:define-package :mgl-gd
+  (:documentation "See MGL-GD:@MGL-GD.")
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt)
+  (:export #:@mgl-gd))
+
+(mgl-pax:define-package :mgl-cg
+  (:documentation "See MGL-CG:@MGL-CG.")
+  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-util #:mgl-train #:mgl-opt)
+  (:export #:@mgl-cg))
 
 (cl:defpackage :mgl-bm
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd
-        #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt
+        #:mgl-gd #:mgl-cg)
   (:nicknames #:mgl-rbm)
   (:export
    ;; Chunk
@@ -361,7 +307,7 @@
    #:target
    #:cost
    #:damping
-   ;; Stuff common to trainers
+   ;; Stuff common to learners
    #:visible-sampling
    #:hidden-sampling
    #:n-gibbs
@@ -403,8 +349,8 @@
   Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-gd
-        #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt
+        #:mgl-gd #:mgl-cg)
   (:export
    #:lump
    #:deflump

@@ -342,12 +342,19 @@
    options))
 
 (defun gp-data-matrix (inputs outputs)
-  (aops:stack* 'flt 1 (as-column-vector inputs) (as-column-vector outputs)))
+  (mat-to-array
+   (with-shape-and-displacement (inputs)
+     (with-shape-and-displacement (outputs)
+       (reshape! inputs (list (mat-size inputs) 1))
+       (reshape! outputs (list (mat-size outputs) 1))
+       (stack 1 (list inputs outputs))))))
 
 (defun gp-data-matrix-for-level (inputs means covariances level)
   (gp-data-matrix inputs
-                  (clnu:e+ (as-column-vector means)
-                           (clnu:e* level
-                                    (clnu:esqrt
-                                     (as-column-vector
-                                      (clnu:diagonal-vector covariances)))))))
+                  (m+ means
+                      (array-to-mat
+                       (clnu:e* level
+                                (clnu:esqrt
+                                 (as-column-vector
+                                  (clnu:diagonal-vector
+                                   (mat-to-array covariances)))))))))

@@ -232,17 +232,17 @@
 
 ;;;; Logging
 
-(defclass mnist-base-trainer (cesc-trainer)
+(defclass mnist-base-optimizer (cesc-optimizer)
   ((training :initarg :training :reader training)
    (test :initarg :test :reader test)))
 
-(defmethod log-training-period ((trainer mnist-base-trainer) learner)
+(defmethod log-training-period ((optimizer mnist-base-optimizer) learner)
   (declare (ignore learner))
-  (length (training trainer)))
+  (length (training optimizer)))
 
-(defmethod log-test-period ((trainer mnist-base-trainer) learner)
+(defmethod log-test-period ((optimizer mnist-base-optimizer) learner)
   (declare (ignore learner))
-  (length (training trainer)))
+  (length (training optimizer)))
 
 
 ;;;; DBN
@@ -256,51 +256,54 @@
     (when inputs
       (clamp-images samples (nodes inputs)))))
 
-(defclass mnist-rbm-trainer (mnist-base-trainer segmented-gd-trainer)
+(defclass mnist-rbm-optimizer (mnist-base-optimizer segmented-gd-optimizer)
   ())
 
 (defclass mnist-rbm-cd-learner (rbm-cd-learner)
-  ((trainer :initarg :trainer :reader trainer)))
+  ((optimizer :initarg :optimizer :reader optimizer)))
 
 (defmethod n-gibbs ((learner mnist-rbm-cd-learner))
   (let ((x (slot-value learner 'n-gibbs)))
     (if (integerp x)
         x
-        (funcall x (trainer learner)))))
+        (funcall x (optimizer learner)))))
 
-(defmethod log-test-error ((trainer mnist-rbm-trainer) learner)
+(defmethod log-test-error ((optimizer mnist-rbm-optimizer) learner)
   (call-next-method)
   (let ((rbm (rbm learner)))
-    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer))
+    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training optimizer))
                            "training reconstruction")
-    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training trainer)
+    (log-dbn-cesc-accuracy rbm (make-tiny-sampler (training optimizer)
                                                    :discard-label-p t)
                            "training")
     (map nil (lambda (counter)
                (log-msg "dbn test: ~:_test ~:_~A~%" counter))
          (collect-dbn-mean-field-errors/labeled
-          (make-sampler (test trainer)) (dbn rbm) :rbm rbm
+          (make-sampler (test optimizer)) (dbn rbm) :rbm rbm
           :counters-and-measurers
           (make-dbn-reconstruction-rmse-counters-and-measurers
            (dbn rbm) :rbm rbm)))
-    (log-dbn-cesc-accuracy rbm (make-sampler (test trainer) :discard-label-p t)
+    (log-dbn-cesc-accuracy rbm (make-sampler (test optimizer)
+                                             :discard-label-p t)
                            "test")
     (log-msg "---------------------------------------------------~%")))
 
 
 ;;;; DBN training
 
-(defclass mnist-rbm-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)))
+(defclass mnist-rbm-segment-optimizer (batch-gd-optimizer)
+  ((n-instances-in-epoch
+    :initarg :n-instances-in-epoch
+    :reader n-instances-in-epoch)))
 
-(defmethod learning-rate ((trainer mnist-rbm-segment-trainer))
-  (let ((x (slot-value trainer 'learning-rate)))
+(defmethod learning-rate ((optimizer mnist-rbm-segment-optimizer))
+  (let ((x (slot-value optimizer 'learning-rate)))
     (if (numberp x)
         x
-        (funcall x trainer))))
+        (funcall x optimizer))))
 
-(defmethod momentum ((trainer mnist-rbm-segment-trainer))
-  (if (< (n-inputs trainer) (* 5 (n-inputs-in-epoch trainer)))
+(defmethod momentum ((optimizer mnist-rbm-segment-optimizer))
+  (if (< (n-instances optimizer) (* 5 (n-instances-in-epoch optimizer)))
       #.(flt 0.5)
       #.(flt 0.9)))
 
@@ -330,14 +333,14 @@
                    (elt x i)
                    x)))
         (let* ((n (length training))
-               (trainer
-                 (make-instance 'mnist-rbm-trainer
+               (optimizer
+                 (make-instance 'mnist-rbm-optimizer
                                 :training training
                                 :test test
                                 :segmenter
                                 (lambda (cloud)
-                                  (make-instance 'mnist-rbm-segment-trainer
-                                                 :n-inputs-in-epoch n
+                                  (make-instance 'mnist-rbm-segment-optimizer
+                                                 :n-instances-in-epoch n
                                                  :learning-rate
                                                  (this learning-rate)
                                                  :weight-decay
@@ -346,15 +349,17 @@
                                                      (flt 0)
                                                      (this decay))
                                                  :batch-size 100)))))
-          (train (make-sampler training
-                               :n-epochs n-epochs
-                               :sample-visible-p (this visible-sampling))
-                 trainer
-                 (make-instance 'mnist-rbm-cd-learner
-                                :trainer trainer
-                                :rbm rbm
-                                :visible-sampling (this visible-sampling)
-                                :n-gibbs (this n-gibbs)))))))
+          (minimize
+           optimizer
+           (make-instance 'mnist-rbm-cd-learner
+                          :optimizer optimizer
+                          :rbm rbm
+                          :visible-sampling (this visible-sampling)
+                          :n-gibbs (this n-gibbs))
+           :dataset
+           (make-sampler training
+                         :n-epochs n-epochs
+                         :sample-visible-p (this visible-sampling)))))))
 
 
 ;;;; BPN
@@ -396,15 +401,15 @@
 
 ;;;; BPN training
 
-(defclass mnist-bp-trainer (mnist-base-trainer) ())
+(defclass mnist-bp-optimizer (mnist-base-optimizer) ())
 
-(defclass mnist-cg-bp-trainer (mnist-bp-trainer cg-trainer) ())
+(defclass mnist-cg-bp-optimizer (mnist-bp-optimizer cg-optimizer) ())
 
-(defmethod log-test-error ((trainer mnist-bp-trainer) learner)
+(defmethod log-test-error ((optimizer mnist-bp-optimizer) learner)
   (call-next-method)
   (map nil (lambda (counter)
              (log-msg "bpn test: test ~:_~A~%" counter))
-       (bpn-cesc-error (make-sampler (test trainer)) (bpn learner)))
+       (bpn-cesc-error (make-sampler (test optimizer)) (bpn learner)))
   (log-msg "---------------------------------------------------~%"))
 
 (defun init-bpn-lump-weights (name bpn stddev)
@@ -414,22 +419,24 @@
                            (batch-size (min (length training) 1000))
                            (n-softmax-epochs 5) n-epochs)
   (log-msg "Starting to train the softmax layer of BPN~%")
-  (train (make-sampler training :n-epochs n-softmax-epochs)
-         (make-instance 'mnist-cg-bp-trainer
-                        :training training
-                        :test test
-                        :cg-args (list :max-n-line-searches 3)
-                        :batch-size batch-size
-                        :segment-filter #'prediction-weight-p)
-         (make-instance 'bp-learner :bpn bpn))
+  (minimize (make-instance 'mnist-cg-bp-optimizer
+                           :training training
+                           :test test
+                           :cg-args (list :max-n-line-searches 3)
+                           :batch-size batch-size
+                           :segment-filter #'prediction-weight-p)
+            (make-instance 'bp-learner :bpn bpn)
+            :dataset
+            (make-sampler training :n-epochs n-softmax-epochs))
   (log-msg "Starting to train the whole BPN~%")
-  (train (make-sampler training :n-epochs (- n-epochs n-softmax-epochs))
-         (make-instance 'mnist-cg-bp-trainer
-                        :training training
-                        :test test
-                        :cg-args (list :max-n-line-searches 3)
-                        :batch-size batch-size)
-         (make-instance 'bp-learner :bpn bpn)))
+  (minimize (make-instance 'mnist-cg-bp-optimizer
+                           :training training
+                           :test test
+                           :cg-args (list :max-n-line-searches 3)
+                           :batch-size batch-size)
+            (make-instance 'bp-learner :bpn bpn)
+            :dataset
+            (make-sampler training :n-epochs (- n-epochs n-softmax-epochs))))
 
 
 ;;;; Code for the DBN to BPN approach (paper [1]) and also for dropout
@@ -567,15 +574,15 @@
   (let ((label-chunk (find-chunk 'label dbm :errorp t)))
     (clamp-chunk-labels samples label-chunk)))
 
-(defclass mnist-dbm-trainer (mnist-base-trainer segmented-gd-trainer)
+(defclass mnist-dbm-optimizer (mnist-base-optimizer segmented-gd-optimizer)
   ())
 
-(defmethod log-test-error ((trainer mnist-dbm-trainer) learner)
+(defmethod log-test-error ((optimizer mnist-dbm-optimizer) learner)
   (call-next-method)
   (let ((dbm (bm learner)))
-    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer))
+    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training optimizer))
                            "training reconstruction")
-    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training trainer)
+    (log-dbm-cesc-accuracy dbm (make-tiny-sampler (training optimizer)
                                                   :discard-label-p t)
                            "training")
     ;; This is too time consuming for little benefit.
@@ -583,35 +590,40 @@
     (map nil (lambda (counter)
                (log-msg "dbm test: ~:_test ~:_~A~%" counter))
          (collect-bm-mean-field-errors
-          (make-sampler (test trainer)) dbm
+          (make-sampler (test optimizer)) dbm
           :counters-and-measurers
           (make-dbm-reconstruction-rmse-counters-and-measurers dbm)))
-    (log-dbm-cesc-accuracy dbm (make-sampler (test trainer) :discard-label-p t)
+    (log-dbm-cesc-accuracy dbm (make-sampler (test optimizer)
+                                             :discard-label-p t)
                            "test")
     (log-msg "---------------------------------------------------~%")))
 
-(defclass mnist-dbm-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)))
+(defclass mnist-dbm-segment-optimizer (batch-gd-optimizer)
+  ((n-instances-in-epoch
+    :initarg :n-instances-in-epoch
+    :reader n-instances-in-epoch)))
 
-(defmethod learning-rate ((trainer mnist-dbm-segment-trainer))
+(defmethod learning-rate ((optimizer mnist-dbm-segment-optimizer))
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
-  (/ (slot-value trainer 'learning-rate)
+  (/ (slot-value optimizer 'learning-rate)
      (min (flt 10)
           (expt 1.000015
-                (* (/ (n-inputs trainer) (n-inputs-in-epoch trainer))
+                (* (/ (n-instances optimizer) (n-instances-in-epoch optimizer))
                    600)))))
 
-(defmethod momentum ((trainer mnist-dbm-segment-trainer))
-  (if (< (n-inputs trainer) (* 5 (n-inputs-in-epoch trainer)))
+(defmethod momentum ((optimizer mnist-dbm-segment-optimizer))
+  (if (< (n-instances optimizer) (* 5 (n-instances-in-epoch optimizer)))
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defmethod initialize-gradient-source (learner dbm (trainer mnist-dbm-trainer))
+(defmethod initialize-gradient-source (learner dbm
+                                       (optimizer mnist-dbm-optimizer))
   (declare (ignore dbm))
   (when (next-method-p)
     (call-next-method))
-  (set-input (sample-batch (make-sampler (training trainer) :sample-visible-p t)
+  (set-input (list-samples (make-sampler (training optimizer)
+                                         :sample-visible-p t)
                            (n-particles learner))
              (persistent-chains learner))
   (up-dbm (persistent-chains learner)))
@@ -619,41 +631,42 @@
 (defun train-mnist-dbm (dbm training test &key (n-epochs 500))
   (log-msg "Starting to train DBM.~%")
   (let ((n (length training)))
-    (train (make-sampler training :n-epochs n-epochs :sample-visible-p t)
-           (make-instance 'mnist-dbm-trainer
-                          :training training
-                          :test test
-                          :segmenter
-                          (lambda (cloud)
-                            (make-instance 'mnist-dbm-segment-trainer
-                                           :n-inputs-in-epoch n
-                                           :learning-rate (flt 0.001)
-                                           :weight-decay
-                                           (if (conditioning-cloud-p cloud)
-                                               (flt 0)
-                                               (flt 0.0002))
-                                           :batch-size 100)))
-           (make-instance 'bm-pcd-learner
-                          :bm dbm
-                          :n-particles 100
-                          :visible-sampling t
-                          :n-gibbs 5
-                          :sparser
-                          (lambda (cloud chunk)
-                            (when (and (member (name chunk) '(f1 f2))
-                                       (not (equal 'label
-                                                   (name (chunk1 cloud))))
-                                       (not (equal 'label
-                                                   (name (chunk2 cloud)))))
-                              (make-instance
-                               'cheating-sparsity-gradient-source
-                               :cloud cloud
-                               :chunk chunk
-                               :sparsity (flt (if (eq 'f2 (name chunk))
-                                                  0.1
-                                                  0.2))
-                               :cost (flt 0.001)
-                               :damping (flt 0.9))))))))
+    (minimize (make-instance 'mnist-dbm-optimizer
+                             :training training
+                             :test test
+                             :segmenter
+                             (lambda (cloud)
+                               (make-instance 'mnist-dbm-segment-optimizer
+                                              :n-instances-in-epoch n
+                                              :learning-rate (flt 0.001)
+                                              :weight-decay
+                                              (if (conditioning-cloud-p cloud)
+                                                  (flt 0)
+                                                  (flt 0.0002))
+                                              :batch-size 100)))
+              (make-instance 'bm-pcd-learner
+                             :bm dbm
+                             :n-particles 100
+                             :visible-sampling t
+                             :n-gibbs 5
+                             :sparser
+                             (lambda (cloud chunk)
+                               (when (and (member (name chunk) '(f1 f2))
+                                          (not (equal 'label
+                                                      (name (chunk1 cloud))))
+                                          (not (equal 'label
+                                                      (name (chunk2 cloud)))))
+                                 (make-instance
+                                  'cheating-sparsity-gradient-source
+                                  :cloud cloud
+                                  :chunk chunk
+                                  :sparsity (flt (if (eq 'f2 (name chunk))
+                                                     0.1
+                                                     0.2))
+                                  :cost (flt 0.001)
+                                  :damping (flt 0.9)))))
+              :dataset
+              (make-sampler training :n-epochs n-epochs :sample-visible-p t))))
 
 (defun make-mnist-dbn/2 (dbm)
   (mgl-bm:dbm->dbn dbm :dbn-class 'mnist-dbn :rbm-class 'mnist-rbm/2
@@ -696,13 +709,13 @@
                 :start-level 0
                 :n-epochs (if quick-run-p 2 100)
                 :n-gibbs (list 1
-                               (lambda (trainer)
-                                 (ceiling (1+ (n-inputs trainer))
+                               (lambda (optimizer)
+                                 (ceiling (1+ (n-instances optimizer))
                                           (* 20 (length training)))))
                 :learning-rate (list (flt 0.05)
-                                     (lambda (trainer)
+                                     (lambda (optimizer)
                                        (/ (flt 0.05)
-                                          (ceiling (1+ (n-inputs trainer))
+                                          (ceiling (1+ (n-instances optimizer))
                                                    (* 20 (length training))))))
                 :decay (flt 0.001)
                 :visible-sampling t))
@@ -778,7 +791,7 @@
                  (save-weights bpn-filename bpn))))))))
 
 (defmethod negative-phase (batch (learner bm-pcd-learner)
-                           (trainer mnist-dbm-trainer) multiplier)
+                           (optimizer mnist-dbm-optimizer) multiplier)
   (let ((bm (persistent-chains learner)))
     (mgl-bm::check-no-self-connection bm)
     (flet ((foo (chunk)
@@ -792,18 +805,20 @@
         (mgl-bm::set-mean (list (find-chunk 'f1 bm)) bm))
       (mgl-bm::set-mean* (list (find-chunk 'f2 bm)) bm)
       (mgl-bm::accumulate-negative-phase-statistics
-       learner trainer
+       learner optimizer
        (* multiplier (/ (length batch) (n-stripes bm)))))))
 
 
 ;;;; Code for the plain dropout backpropagation network with rectified
 ;;;; linear units (paper [3])
 
-(defclass mnist-bpn-gd-trainer (mnist-bp-trainer segmented-gd-trainer)
+(defclass mnist-bpn-gd-optimizer (mnist-bp-optimizer segmented-gd-optimizer)
   ())
 
-(defclass mnist-bpn-gd-segment-trainer (batch-gd-trainer)
-  ((n-inputs-in-epoch :initarg :n-inputs-in-epoch :reader n-inputs-in-epoch)
+(defclass mnist-bpn-gd-segment-optimizer (batch-gd-optimizer)
+  ((n-instances-in-epoch
+    :initarg :n-instances-in-epoch
+    :reader n-instances-in-epoch)
    (n-epochs-to-reach-final-momentum
     :initarg :n-epochs-to-reach-final-momentum
     :reader n-epochs-to-reach-final-momentum)
@@ -812,18 +827,18 @@
     :initarg :learning-rate-decay
     :accessor learning-rate-decay)))
 
-(defmethod learning-rate ((trainer mnist-bpn-gd-segment-trainer))
-  (* (expt (learning-rate-decay trainer)
-           (/ (n-inputs trainer)
-              (n-inputs-in-epoch trainer)))
-     (- 1 (momentum trainer))
-     (slot-value trainer 'learning-rate)))
+(defmethod learning-rate ((optimizer mnist-bpn-gd-segment-optimizer))
+  (* (expt (learning-rate-decay optimizer)
+           (/ (n-instances optimizer)
+              (n-instances-in-epoch optimizer)))
+     (- 1 (momentum optimizer))
+     (slot-value optimizer 'learning-rate)))
 
-(defmethod momentum ((trainer mnist-bpn-gd-segment-trainer))
-  (let ((n-epochs-to-reach-final (n-epochs-to-reach-final-momentum trainer))
+(defmethod momentum ((optimizer mnist-bpn-gd-segment-optimizer))
+  (let ((n-epochs-to-reach-final (n-epochs-to-reach-final-momentum optimizer))
         (initial (flt 0.5))
         (final (flt 0.99))
-        (epoch (/ (n-inputs trainer) (n-inputs-in-epoch trainer))))
+        (epoch (/ (n-instances optimizer) (n-instances-in-epoch optimizer))))
     (if (< epoch n-epochs-to-reach-final)
         (let ((weight (/ epoch n-epochs-to-reach-final)))
           (+ (* initial (- 1 weight))
@@ -831,11 +846,11 @@
         final)))
 
 (defun make-grouped-segmenter (group-name-fn segmenter)
-  (let ((group-name-to-trainer (make-hash-table :test #'equal)))
+  (let ((group-name-to-optimizer (make-hash-table :test #'equal)))
     (lambda (segment)
       (let ((group-name (funcall group-name-fn segment)))
-        (or (gethash group-name group-name-to-trainer)
-            (setf (gethash group-name group-name-to-trainer)
+        (or (gethash group-name group-name-to-optimizer)
+            (setf (gethash group-name group-name-to-optimizer)
                   (funcall segmenter segment)))))))
 
 (defun make-dwim-grouped-segmenter (segmenter)
@@ -859,26 +874,26 @@
   (when class-weights
     (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) batch-size)
-  (flet ((make-trainer (lump &key softmaxp)
-           (let ((trainer (make-instance
-                           'mnist-bpn-gd-segment-trainer
-                           :n-inputs-in-epoch (length training)
-                           :n-epochs-to-reach-final-momentum
-                           (min 500
-                                (/ (if softmaxp n-softmax-epochs n-epochs)
-                                   2))
-                           :learning-rate (flt learning-rate)
-                           :learning-rate-decay (flt learning-rate-decay)
-                           :weight-penalty (if (and input-weight-penalty
-                                                    (member (name lump)
-                                                            '((inputs f1))
-                                                            :test #'name=))
-                                               (flt input-weight-penalty)
-                                               (flt 0))
-                           :batch-size batch-size)))
+  (flet ((make-optimizer (lump &key softmaxp)
+           (let ((optimizer (make-instance
+                             'mnist-bpn-gd-segment-optimizer
+                             :n-instances-in-epoch (length training)
+                             :n-epochs-to-reach-final-momentum
+                             (min 500
+                                  (/ (if softmaxp n-softmax-epochs n-epochs)
+                                     2))
+                             :learning-rate (flt learning-rate)
+                             :learning-rate-decay (flt learning-rate-decay)
+                             :weight-penalty (if (and input-weight-penalty
+                                                      (member (name lump)
+                                                              '((inputs f1))
+                                                              :test #'name=))
+                                                 (flt input-weight-penalty)
+                                                 (flt 0))
+                             :batch-size batch-size)))
              (when l2-upper-bound
                (arrange-for-renormalizing-activations
-                bpn trainer l2-upper-bound))
+                bpn optimizer l2-upper-bound))
              #+nil
              (when (member (name lump) '((inputs f1))
                            :test #'name=)
@@ -886,8 +901,8 @@
                        (.*! mask (nodes lump))
                        (lambda ()
                          (.*! mask (nodes lump))))
-                     (after-update-hook trainer)))
-             trainer))
+                     (after-update-hook optimizer)))
+             optimizer))
          (make-segmenter (fn)
            (let ((dwim (make-dwim-grouped-segmenter fn)))
              (lambda (lump)
@@ -899,16 +914,17 @@
                    (funcall fn lump))))))
     (unless (zerop n-softmax-epochs)
       (log-msg "Starting to train the softmax layer of BPN~%")
-      (train (make-sampler training :n-epochs n-softmax-epochs)
-             (make-instance 'mnist-bpn-gd-trainer
-                            :training training
-                            :test test
-                            :segmenter
-                            (make-segmenter
-                             (lambda (lump)
-                               (when (prediction-weight-p lump)
-                                 (make-trainer lump :softmaxp t)))))
-             (make-instance 'bp-learner :bpn bpn)))
+      (minimize (make-instance 'mnist-bpn-gd-optimizer
+                               :training training
+                               :test test
+                               :segmenter
+                               (make-segmenter
+                                (lambda (lump)
+                                  (when (prediction-weight-p lump)
+                                    (make-optimizer lump :softmaxp t)))))
+                (make-instance 'bp-learner :bpn bpn)
+                :dataset
+                (make-sampler training :n-epochs n-softmax-epochs)))
     (when set-dropout-p
       (map nil (lambda (lump)
                  (when (and (typep lump '->dropout)
@@ -930,12 +946,13 @@
            (lumps bpn)))
     (unless (zerop n-epochs)
       (mgl-example-util:log-msg "Starting to train the whole BPN~%")
-      (train (make-sampler training :n-epochs n-epochs)
-             (make-instance 'mnist-bpn-gd-trainer
-                            :training training
-                            :test test
-                            :segmenter (make-segmenter #'make-trainer))
-             (make-instance 'bp-learner :bpn bpn)))))
+      (minimize (make-instance 'mnist-bpn-gd-optimizer
+                               :training training
+                               :test test
+                               :segmenter (make-segmenter #'make-optimizer))
+                (make-instance 'bp-learner :bpn bpn)
+                :dataset
+                (make-sampler training :n-epochs n-epochs)))))
 
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))

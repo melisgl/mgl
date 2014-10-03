@@ -4,6 +4,7 @@
         #:mgl-util
         #:mgl-mat
         #:mgl-train
+        #:mgl-opt
         #:mgl-gd
         #:mgl-cg
         #:mgl-bm

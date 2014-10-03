@@ -1931,8 +1931,8 @@
     (terpri stream)
     (describe (bm learner) stream)))
 
-(defmethod segmentable ((source bm-learner))
-  (bm source))
+(defmethod map-segments (fn (source bm-learner))
+  (map-segments fn (bm source)))
 
 ;;;; Sparseness
 ;;;;
@@ -2002,10 +2002,10 @@
     ((sparsity normal-sparsity-gradient-source) &key &allow-other-keys)
   (unless (slot-boundp sparsity 'products)
     (setf (slot-value sparsity 'products)
-          (make-mat (segment-size (cloud sparsity)) :ctype flt-ctype)))
+          (make-mat (mat-size (cloud sparsity)) :ctype flt-ctype)))
   (unless (slot-boundp sparsity 'old-products)
     (setf (slot-value sparsity 'old-products)
-          (make-mat (segment-size (cloud sparsity)) :ctype flt-ctype))))
+          (make-mat (mat-size (cloud sparsity)) :ctype flt-ctype))))
 
 (defmethod initialize-instance :after
     ((sparsity cheating-sparsity-gradient-source) &key &allow-other-keys)
@@ -2022,24 +2022,25 @@
                                        (chunk sparsity)))
                     :ctype flt-ctype))))
 
-(defgeneric flush-sparsity (sparsity accumulator n-inputs-in-batch multiplier)
+(defgeneric flush-sparsity (sparsity accumulator n-instances-in-batch
+                            multiplier)
   ;; Add DAMPING * OLD-PRODUCTS + (1 - DAMPING) * PRODUCTS to the
   ;; accumulator and zero PRODUCTS.
   (:method ((sparsity normal-sparsity-gradient-source)
-            accumulator n-inputs-in-batch multiplier)
+            accumulator n-instances-in-batch multiplier)
     (let ((damping (damping sparsity))
           (cost (cost sparsity))
           (products (products sparsity))
           (old-products (old-products sparsity)))
       (scal! damping old-products)
-      (axpy! (/ (- (flt 1) damping) n-inputs-in-batch)
+      (axpy! (/ (- (flt 1) damping) n-instances-in-batch)
              products old-products)
-      (axpy! (* cost multiplier n-inputs-in-batch) old-products accumulator)
+      (axpy! (* cost multiplier n-instances-in-batch) old-products accumulator)
       (fill! (flt 0) products)))
   ;; Add DAMPING * OLD-SUM1 + (1 - DAMPING) * SUM1 to the accumulator
   ;; and zero SUM1.
   (:method ((sparsity cheating-sparsity-gradient-source)
-            accumulator n-inputs-in-batch multiplier)
+            accumulator n-instances-in-batch multiplier)
     (let* ((damping (damping sparsity))
            (cost (cost sparsity))
            (sum1 (sum1 sparsity))
@@ -2049,7 +2050,7 @@
            (size1 (mat-size sum1))
            (size2 (mat-size sum2)))
       (scal! damping old-sum1)
-      (axpy! (/ (- (flt 1) damping) n-inputs-in-batch) sum1 old-sum1)
+      (axpy! (/ (- (flt 1) damping) n-instances-in-batch) sum1 old-sum1)
       (copy! old-sum1 sum1)
       (.+! (- target) sum1)
       (gemm! (* cost multiplier) sum1 sum2 (flt 1) accumulator
@@ -2095,23 +2096,30 @@
         (foo cloud (chunk2 cloud))))
     (reverse sparsities)))
 
-(defmethod initialize-gradient-source ((learner sparse-bm-learner) bm sink)
+(defmethod initialize-gradient-source* (optimizer (learner sparse-bm-learner)
+                                        weights dataset)
   (when (next-method-p)
     (call-next-method))
   (when (sparser learner)
     (setf (slot-value learner 'sparsity-gradient-sources)
-          (map-sparser learner sink))))
+          (map-sparser learner optimizer))))
 
-(defmethod accumulate-gradients (batch (learner sparse-bm-learner)
-                                 sink multiplier)
+(defmethod accumulate-gradients* ((learner sparse-bm-learner) sink
+                                  batch multiplier valuep)
+  (check-valuep valuep)
   ;; By the time this is called, the necessary statistics were
   ;; accumulated via ACCUMULATE-POSITIVE-PHASE-STATISTICS for
   ;; MAX-N-STRIPES subbatches of the whole batch. Now that the whole
   ;; batch is processed, let's flush our accumulators to SINK.
-  (let ((n-inputs-in-batch (length batch)))
+  (let ((n-instances-in-batch (length batch)))
     (dolist (sparsity (sparsity-gradient-sources learner))
       (with-sink-accumulator (accumulator ((cloud sparsity) learner sink))
-        (flush-sparsity sparsity accumulator n-inputs-in-batch multiplier)))))
+        (flush-sparsity sparsity accumulator n-instances-in-batch
+                        multiplier)))))
+
+(defun check-valuep (valuep)
+  (assert (not valuep) () "Currently computing the value of the cost ~
+                          function is implemented for Boltzmann machines."))
 
 (defgeneric accumulate-sparsity-statistics (sparsity importances multiplier)
   (:method ((sparsity normal-sparsity-gradient-source) importances multiplier)
@@ -2198,8 +2206,9 @@
   ((bm :initarg :rbm :reader rbm))
   (:documentation "A contrastive divergence based learner for RBMs."))
 
-(defmethod accumulate-gradients (batch (learner rbm-cd-learner) gradient-sink
-                                 multiplier)
+(defmethod accumulate-gradients* ((learner rbm-cd-learner) gradient-sink
+                                  batch multiplier valuep)
+  (check-valuep valuep)
   (let ((rbm (bm learner)))
     (loop for samples in (group batch (max-n-stripes rbm))
           do (set-input samples rbm)
@@ -2301,8 +2310,9 @@
     (setf (slot-value learner 'persistent-chains) (copy 'pcd bm))
     (setf (max-n-stripes (persistent-chains learner)) (n-particles learner))))
 
-(defmethod accumulate-gradients (batch (learner bm-pcd-learner)
-                                 gradient-sink multiplier)
+(defmethod accumulate-gradients* ((learner bm-pcd-learner) gradient-sink
+                                  batch multiplier valuep)
+  (check-valuep valuep)
   (let ((bm (bm learner)))
     (loop for samples in (group batch (max-n-stripes bm))
           do (set-input samples bm)

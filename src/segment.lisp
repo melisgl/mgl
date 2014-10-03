@@ -13,22 +13,17 @@
     (mapc fn segment-list)))
 
 (defgeneric segment-weights (segment)
-  (:documentation "Return the weight matrix of SEGMENT."))
-
-(defun segment-size (segment)
-  (mat-size (segment-weights segment)))
+  (:documentation "Return the weight matrix of SEGMENT.")
+  (:method ((mat mat))
+    mat))
 
 (defgeneric map-segment-runs (fn segment)
   (:documentation "Call FN with start and end of intervals of
   consecutive indices that are not missing in SEGMENT. Called by
-  trainers that support partial updates.")
+  optimizers that support partial updates.")
   (:method (fn segment)
     (let ((mat (segment-weights segment)))
       (funcall fn mat 0 (mat-size mat)))))
-
-(defgeneric segments (object)
-  (:documentation "A list of segments associated with OBJECT. Trainers
-  must implement this. It is also defined on SEGMENT-SETs."))
 
 (defun list-segments (segmentable)
   (let ((segments ()))
@@ -57,7 +52,7 @@
         (start-indices '()))
     (dolist (segment (segments segment-set))
       (push n start-indices)
-      (incf n (segment-size segment)))
+      (incf n (mat-size (segment-weights segment))))
     (setf (slot-value segment-set 'start-indices) (reverse start-indices)
           (slot-value segment-set 'size) n)))
 
@@ -85,33 +80,3 @@
 (defun segment-set->mat (segment-set mat)
   "Copy the values of SEGMENT-SET to MAT."
   (map-concat #'copy! (segments segment-set) mat :key #'segment-weights))
-
-(defun segment-set<-weights (segment-set weights)
-  "Copy the values of WEIGHTS to SEGMENT-SET."
-  (declare (type flt-vector weights)
-           (optimize (speed 3)))
-  (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                  segment-set
-    (let* ((segment-weights (segment-weights segment))
-           (start (mat-displacement segment-weights))
-           (end (+ start (the index (mat-size segment-weights)))))
-      (declare (type index start end))
-      (with-facets ((array (segment-weights 'backing-array :direction :output
-                                            :type flt-vector)))
-        (replace array weights :start1 start :end1 end
-                 :start2 start-in-segment-set)))))
- 
-(defun segment-set->weights (segment-set weights)
-  "Copy the values from SEGMENT-SET to WEIGHTS."
-  (declare (type flt-vector weights)
-           (optimize (speed 3)))
-  (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                  segment-set
-    (let* ((segment-weights (segment-weights segment))
-           (start (mat-displacement segment-weights))
-           (end (+ start (the index (mat-size segment-weights)))))
-      (declare (type index start end))
-      (with-facets ((array (segment-weights 'backing-array :direction :input
-                                            :type flt-vector)))
-        (replace weights array :start1 start-in-segment-set
-                 :start2 start :end2 end)))))

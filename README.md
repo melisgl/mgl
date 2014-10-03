@@ -79,7 +79,7 @@ For example, it's possible to:
 
 - control the order of presentation of training examples,
 
-- vary learning rate depending on time, state of the trainer object,
+- vary learning rate depending on time, state of the optimizer,
 
 - track all kinds of statistics during training,
 etc.

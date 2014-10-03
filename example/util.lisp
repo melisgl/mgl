@@ -55,14 +55,14 @@
       ,@body)))
 
 
-;;;; Logging trainer
+;;;; Logging optimizer
 
-(defgeneric log-training-error (trainer learner))
-(defgeneric log-test-error (trainer learner))
-(defgeneric log-training-period (trainer learner))
-(defgeneric log-test-period (trainer learner))
+(defgeneric log-training-error (optimizer learner))
+(defgeneric log-test-error (optimizer learner))
+(defgeneric log-training-period (optimizer learner))
+(defgeneric log-test-period (optimizer learner))
 
-(defclass logging-trainer ()
+(defclass logging-optimizer ()
   ((log-training-fn :initform (make-instance 'periodic-fn
                                              :period 'log-training-period
                                              :fn 'log-training-error)
@@ -72,29 +72,31 @@
                                          :fn 'log-test-error)
                 :reader log-test-fn)))
 
-(defmethod train-batch :around (samples (trainer logging-trainer) learner)
-  (multiple-value-prog1 (call-next-method)
-    (call-periodic-fn (n-inputs trainer) (log-training-fn trainer)
-                      trainer learner)
-    (call-periodic-fn (n-inputs trainer) (log-test-fn trainer)
-                      trainer learner)))
+(defmethod set-n-instances :after ((optimizer logging-optimizer) gradient-source
+                                   n-instances)
+  (call-periodic-fn (n-instances optimizer) (log-training-fn optimizer)
+                    optimizer gradient-source)
+  (call-periodic-fn (n-instances optimizer) (log-test-fn optimizer)
+                    optimizer gradient-source))
 
-(defmethod train :before (sampler (trainer logging-trainer) learner)
-  (setf (last-eval (log-training-fn trainer))
-        (n-inputs trainer))
-  (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer)
-                     trainer learner))
+(defmethod minimize* :before ((optimizer logging-optimizer) gradient-source
+                              weights dataset)
+  (setf (last-eval (log-training-fn optimizer))
+        (n-instances optimizer))
+  (call-periodic-fn! (n-instances optimizer) (log-test-fn optimizer)
+                     optimizer gradient-source))
 
-(defmethod train :after (sampler (trainer logging-trainer) learner)
-  (call-periodic-fn! (n-inputs trainer) (log-training-fn trainer)
-                     trainer learner)
-  (call-periodic-fn! (n-inputs trainer) (log-test-fn trainer)
-                     trainer learner))
+(defmethod minimize* :after ((optimizer logging-optimizer) gradient-source
+                             weights dataset)
+  (call-periodic-fn! (n-instances optimizer) (log-training-fn optimizer)
+                     optimizer gradient-source)
+  (call-periodic-fn! (n-instances optimizer) (log-test-fn optimizer)
+                     optimizer gradient-source))
 
 
-;;;; BASE-TRAINER
+;;;; BASE-OPTIMIZER
 
-(defclass base-trainer (logging-trainer)
+(defclass base-optimizer (logging-optimizer)
   ((training-counters-and-measurers :initform nil
                                     :reader training-counters-and-measurers)))
 
@@ -105,35 +107,35 @@
              *n-memcpy-host-to-device*
              *n-memcpy-device-to-host*)))
 
-(defmethod log-test-error ((trainer base-trainer) learner)
+(defmethod log-test-error ((optimizer base-optimizer) learner)
   (let ((*print-level* nil))
-    (when (zerop (n-inputs trainer))
+    (when (zerop (n-instances optimizer))
       (with-logging-entry (stream)
         (format stream "Describing learner:~%")
         (describe learner stream))
       (with-logging-entry (stream)
-        (format stream "Describing trainer:~%")
-        (describe trainer stream))))
-  (log-msg "n-inputs: ~S~%" (n-inputs trainer))
+        (format stream "Describing optimizer:~%")
+        (describe optimizer stream))))
+  (log-msg "n-instances: ~S~%" (n-instances optimizer))
   (log-cuda))
 
-(defmethod log-training-error ((trainer base-trainer) learner)
-  (log-msg "n-inputs: ~S~%"  (n-inputs trainer))
+(defmethod log-training-error ((optimizer base-optimizer) learner)
+  (log-msg "n-instances: ~S~%"  (n-instances optimizer))
   (log-cuda)
-  (dolist (counter-and-measurer (training-counters-and-measurers trainer))
+  (dolist (counter-and-measurer (training-counters-and-measurers optimizer))
     (let ((counter (car counter-and-measurer)))
       (log-msg "~A~%" counter)
       (reset-counter counter))))
 
 (defmethod negative-phase :around (batch (learner rbm-cd-learner)
-                                   (sink base-trainer) multiplier)
+                                   (sink base-optimizer) multiplier)
   (call-next-method)
   (when *accumulating-interesting-gradients*
     (apply-counters-and-measurers (training-counters-and-measurers sink)
                                   batch (bm learner))))
 
 (defmethod positive-phase :around (batch (learner bm-pcd-learner)
-                                   (sink base-trainer) multiplier)
+                                   (sink base-optimizer) multiplier)
   (call-next-method)
   (when *accumulating-interesting-gradients*
     (let ((bm (bm learner)))
@@ -141,16 +143,18 @@
       (apply-counters-and-measurers (training-counters-and-measurers sink)
                                     batch bm))))
 
-(defmethod compute-derivatives :around (batch (trainer base-trainer)
+;;; FIXME:
+(defmethod compute-derivatives :around (batch (optimizer base-optimizer)
                                         (learner bp-learner))
   (multiple-value-prog1 (call-next-method)
     ;; FIXME: this is broken if DO-EXECUTORS is non-trivial.
     (when *accumulating-interesting-gradients*
-      (apply-counters-and-measurers (training-counters-and-measurers trainer)
+      (apply-counters-and-measurers (training-counters-and-measurers optimizer)
                                     batch (bpn learner)))))
 
-(defmethod train-batch (batch (trainer base-trainer) (learner bp-learner))
-  (if (typep trainer 'mgl-cg:cg-trainer)
+;;; FIXME:
+(defmethod train-batch (batch (optimizer base-optimizer) (learner bp-learner))
+  (if (typep optimizer 'mgl-cg:cg-optimizer)
       (let ((result (multiple-value-list (call-next-method))))
         (when (= (length result) 5)
           (destructuring-bind (best-w best-f n-line-searches
@@ -176,7 +180,7 @@
 
 (defclass softmax-label-chunk* (softmax-label-chunk) ())
 
-(defclass cesc-trainer (base-trainer) ())
+(defclass cesc-optimizer (base-optimizer) ())
 
 (defun maximally-likely-node (striped stripe &key (nodes (nodes striped)))
   (with-facets ((nodes (nodes 'backing-array :direction :input
@@ -208,17 +212,31 @@
         (funcall measurer (mapcar #'first examples) learner)))))
 
 
-;;;; RBM/DBN support for CESC-TRAINER
+;;;; BM support for CESC-OPTIMIZER
 
-(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (rbm rbm))
+(defmethod initialize-optimizer* ((optimizer cesc-optimizer)
+                                  (learner mgl-bm::bm-mcmc-learner)
+                                  weights dataset)
   (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "rbm: training"
-         (append
-          (make-bm-reconstruction-rmse-counters-and-measurers rbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers rbm)
-          (make-bm-reconstruction-cross-entropy-counters-and-measurers rbm)))))
+  (let ((bm (bm learner)))
+    (setf (slot-value optimizer 'training-counters-and-measurers)
+          (if (typep bm 'rbm)
+              (prepend-name-to-counters
+               "rbm: training"
+               (append
+                (make-bm-reconstruction-rmse-counters-and-measurers bm)
+                (make-bm-reconstruction-misclassification-counters-and-measurers
+                 bm)
+                (make-bm-reconstruction-cross-entropy-counters-and-measurers
+                 bm)))
+              (prepend-name-to-counters
+               "dbm train: training"
+               (append
+                (make-dbm-reconstruction-rmse-counters-and-measurers bm)
+                (make-bm-reconstruction-misclassification-counters-and-measurers
+                 bm)
+                (make-bm-reconstruction-cross-entropy-counters-and-measurers
+                 bm)))))))
 
 (defun log-dbn-cesc-accuracy (rbm sampler name)
   (if (dbn rbm)
@@ -231,21 +249,6 @@
         (map nil (lambda (counter)
                    (log-msg "rbm: ~:_~A ~:_~A~%" name counter))
              counters))))
-
-
-;;;; DBM support for CESC-TRAINER
-
-(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (dbm dbm))
-  (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "dbm train: training"
-         (append
-          (make-dbm-reconstruction-rmse-counters-and-measurers dbm)
-          (make-bm-reconstruction-misclassification-counters-and-measurers
-           dbm)
-          (make-bm-reconstruction-cross-entropy-counters-and-measurers
-           dbm)))))
 
 (defun log-dbm-cesc-accuracy (dbm sampler name)
   (let ((counters (collect-bm-mean-field-errors/labeled sampler dbm)))
@@ -255,7 +258,7 @@
            counters))))
 
 
-;;;; BPN support for CESC-TRAINER
+;;;; BPN support for CESC-OPTIMIZER
 
 (defun maximally-likely-in-cross-entropy-softmax-lump (lump stripe)
   (values (maximally-likely-node lump stripe :nodes (softmax lump))
@@ -289,9 +292,10 @@
                             (typep lump '->cross-entropy-softmax))
                           (lumps bpn)))))))
 
-(defmethod initialize-gradient-sink ((trainer cesc-trainer) learner (bpn bpn))
+(defmethod initialize-optimizer* ((optimizer cesc-optimizer)
+                                  (learner bp-learner) weights dataset)
   (call-next-method)
-  (setf (slot-value trainer 'training-counters-and-measurers)
+  (setf (slot-value optimizer 'training-counters-and-measurers)
         (prepend-name-to-counters "bpn train: training"
                                   (make-bpn-cesc-counters-and-measurers))))
 

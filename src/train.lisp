@@ -9,7 +9,7 @@
 (defgeneric default-value (object))
 (defgeneric group-size (object))
 (defgeneric batch-size (object))
-(defgeneric n-inputs (object))
+(defgeneric n-instances (object))
 
 
 ;;;; Interface
@@ -22,19 +22,6 @@
 
 (defgeneric finishedp (sampler)
   (:documentation "See if SAMPLER has run out of examples."))
-
-(defgeneric train (sampler trainer learner)
-  (:documentation "Train LEARNER with TRAINER on the examples from
-  SAMPLER. Before that TRAINER is initialized for LEARNER with
-  INITIALIZE-TRAINER. Training continues until SAMPLER is finished.")
-  (:method (sampler trainer learner)
-    ;; Make training independent from mischief of other threads.
-    (let ((*random-state* (make-random-state *random-state*)))
-      (call-next-method))))
-
-(defgeneric train-batch (batch trainer learner)
-  (:documentation "Called by TRAIN. Useful to hang an around method on
-  to monitor progress."))
 
 (defgeneric set-input (samples learner)
   (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
@@ -53,17 +40,22 @@
 (defmethod sample ((sampler function-sampler))
   (funcall (sampler sampler)))
 
+(defmethod print-object ((sampler function-sampler) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (sampler stream :type t)))
+  sampler)
+
 (defclass counting-sampler ()
-  ((n-samples :initform 0 :initarg :n-inputs :accessor n-samples)
+  ((n-samples :initform 0 :initarg :n-samples :accessor n-samples)
    (max-n-samples :initform nil :initarg :max-n-samples
                   :accessor max-n-samples))
   (:documentation "Keep track of how many samples have been generated
-  and say FINISHEDP if it's not less than MAX-N-INPUTS (that is
+  and say FINISHEDP if it's not less than MAX-N-SAMPLES (that is
   optional)."))
 
 (defmethod print-object ((sampler counting-sampler) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (sampler stream :type t :identity t)
+    (print-unreadable-object (sampler stream :type t)
       (format stream "~S/~S" (n-samples sampler) (max-n-samples sampler))))
   sampler)
 
@@ -78,8 +70,8 @@
 
 (defclass counting-function-sampler (counting-sampler function-sampler) ())
 
-(defun sample-batch (sampler max-size)
-  "Return a sequence of samples of length at most MAX-SIZE or less if
+(defun list-samples (sampler max-size)
+  "Return a list of samples of length at most MAX-SIZE or less if
   SAMPLER runs out."
   (loop repeat max-size
         while (not (finishedp sampler))
@@ -184,8 +176,9 @@
   capable of dealing simultaneously."))
 
 (defgeneric set-max-n-stripes (max-n-stripes object)
-  (:documentation "Allocate the necessary stuff to allow for N-STRIPES
-  number of stripes to be worked with simultaneously in OBJECT."))
+  (:documentation "Allocate the necessary stuff to allow for
+  MAX-N-STRIPES number of stripes to be worked with simultaneously in
+  OBJECT."))
 
 (defsetf max-n-stripes (object) (store)
   `(set-max-n-stripes ,store ,object))
@@ -245,7 +238,7 @@
   samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER
   runs out."
   (loop until (finishedp sampler) do
-    (funcall fn (sample-batch sampler (max-n-stripes learner)))))
+    (funcall fn (list-samples sampler (max-n-stripes learner)))))
 
 (defmacro do-batches-for-learner ((samples (sampler learner)) &body body)
   "Convenience macro over MAP-BATCHES-FOR-LEARNER."

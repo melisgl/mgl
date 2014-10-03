@@ -6,7 +6,7 @@
   (@mgl-basic-concepts section)
   (@mgl-datasets section)
   (mgl-resample:@mgl-resample section)
-  (@mgl-optimization section)
+  (mgl-opt:@mgl-opt section)
   (@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section))
@@ -45,7 +45,7 @@
   For example, it's possible to:
 
   - control the order of presentation of training examples,
-  - vary learning rate depending on time, state of the trainer object,
+  - vary learning rate depending on time, state of the optimizer,
   - track all kinds of statistics during training,
   etc.
 
@@ -101,10 +101,6 @@
 
 (defsection @mgl-generators (:title "Generators")
   "Finite, infinite, random")
-
-(defsection @mgl-optimization (:title "Optimization")
-  #+nil
-  (@mgl-gradient-method section))
 
 (defsection @mgl-bp (:title "Backprogation Neural Networks"))
 

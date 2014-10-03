@@ -1,6 +1,6 @@
 (in-package :mgl-test)
 
-(defclass test-trainer (segmented-gd-trainer)
+(defclass test-optimizer (segmented-gd-optimizer)
   ((counter :initform (make-instance 'rmse-counter) :reader counter)))
 
 (defclass test-cd-learner (rbm-cd-learner) ())
@@ -22,25 +22,26 @@
   (let ((counter (make-instance 'rmse-counter))
         (n-stripes (max-n-stripes rbm)))
     (while (not (finishedp sampler))
-      (set-input (sample-batch sampler n-stripes) rbm)
+      (set-input (list-samples sampler n-stripes) rbm)
       (multiple-value-bind (e n) (get-squared-error rbm)
         (add-error counter e n)))
     (get-error counter)))
 
-(defmethod train-batch :around (batch (trainer test-trainer) learner)
+(defmethod mgl-opt:accumulate-gradients* :around
+    (learner (optimizer test-optimizer) batch multiplier valuep)
   (call-next-method)
-  (let ((counter (counter trainer))
+  (let ((counter (counter optimizer))
         (rbm (bm learner)))
     (inputs->nodes rbm)
     (multiple-value-bind (e n) (get-squared-error rbm)
       (add-error counter e n))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (/= (floor n-inputs 1000)
-                (floor (- n-inputs (length batch)) 1000))
+    (let ((n-instances (n-instances optimizer)))
+      (when (/= (floor n-instances 1000)
+                (floor (- n-instances (length batch)) 1000))
         (log-msg "RMSE: ~,5F (~D, ~D)~%"
                  (or (get-error counter) #.(flt 0))
                  (n-sum-errors counter)
-                 n-inputs)
+                 n-instances)
         (reset-counter counter)))))
 
 (defun test-do-chunk ()
@@ -101,38 +102,38 @@
                             '(:merge))
                 :max-n-stripes max-n-stripes
                 :clamper #'clamp)))
-      (train (make-instance 'counting-function-sampler
-                            :max-n-samples max-n-samples
-                            :sampler sampler)
-             (make-instance
-              'test-trainer
-              :segmenter
-              (repeatedly
-                (make-instance 'batch-gd-trainer
-                               :learning-rate (flt learning-rate)
-                               :momentum (flt 0.9)
-                               :batch-size batch-size)))
-             (if (subtypep learner-class 'bm-pcd-learner)
-                 (make-instance learner-class
-                                :bm rbm
-                                :n-particles batch-size)
-                 (make-instance learner-class
-                                :bm rbm
-                                :sparser
-                                (lambda (cloud chunk)
-                                  (when (and (eq (name chunk) 'features)
-                                             (or normal-sparsity
-                                                 cheating-sparsity))
-                                    (make-instance
-                                     (if normal-sparsity
-                                         'normal-sparsity-gradient-source
-                                         'cheating-sparsity-gradient-source)
-                                     :cloud cloud
-                                     :chunk chunk
-                                     :sparsity (flt (or normal-sparsity
-                                                        cheating-sparsity))
-                                     :cost (flt 0.1)
-                                     :damping (flt 0.9)))))))
+      (minimize (make-instance
+                 'test-optimizer
+                 :segmenter
+                 (repeatedly
+                   (make-instance 'batch-gd-optimizer
+                                  :learning-rate (flt learning-rate)
+                                  :momentum (flt 0.9)
+                                  :batch-size batch-size)))
+                (if (subtypep learner-class 'bm-pcd-learner)
+                    (make-instance learner-class
+                                   :bm rbm
+                                   :n-particles batch-size)
+                    (make-instance learner-class
+                                   :bm rbm
+                                   :sparser
+                                   (lambda (cloud chunk)
+                                     (when (and (eq (name chunk) 'features)
+                                                (or normal-sparsity
+                                                    cheating-sparsity))
+                                       (make-instance
+                                        (if normal-sparsity
+                                            'normal-sparsity-gradient-source
+                                            'cheating-sparsity-gradient-source)
+                                        :cloud cloud
+                                        :chunk chunk
+                                        :sparsity (flt (or normal-sparsity
+                                                           cheating-sparsity))
+                                        :cost (flt 0.1)
+                                        :damping (flt 0.9))))))
+                :dataset (make-instance 'counting-function-sampler
+                                        :max-n-samples max-n-samples
+                                        :sampler sampler))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples max-n-test-samples
                                :sampler test-sampler)
@@ -192,26 +193,27 @@
                                         :chunk2 features))
                               '(:merge))
                   :clamper #'clamp)))
-        (train (make-instance 'counting-function-sampler
-                              :max-n-samples 100000
-                              :sampler #'sample)
-               (make-instance 'test-trainer
-                              :segmenter
-                              (lambda (chunk)
-                                (make-instance
-                                 (if missingp
-                                     'per-weight-batch-gd-trainer
-                                     'batch-gd-trainer)
-                                 :learning-rate
-                                 (if (member (name chunk)
-                                             '(((inputs features) :a)
-                                               ((inputs features) :b))
-                                             :test #'equal)
-                                     (flt 2)
-                                     (flt 0.1))
-                                 :momentum (flt 0.9)
-                                 :batch-size 100)))
-               (make-instance 'test-cd-learner :rbm rbm))
+        (minimize (make-instance 'test-optimizer
+                                 :segmenter
+                                 (lambda (chunk)
+                                   (make-instance
+                                    (if missingp
+                                        'per-weight-batch-gd-optimizer
+                                        'batch-gd-optimizer)
+                                    :learning-rate
+                                    (if (member (name chunk)
+                                                '(((inputs features) :a)
+                                                  ((inputs features) :b))
+                                                :test #'equal)
+                                        (flt 2)
+                                        (flt 0.1))
+                                    :momentum (flt 0.9)
+                                    :batch-size 100)))
+                  (make-instance 'test-cd-learner :rbm rbm)
+                  :dataset
+                  (make-instance 'counting-function-sampler
+                                 :max-n-samples 100000
+                                 :sampler #'sample))
         (setq randomp nil)
         (rbm-rmse (make-instance 'counting-function-sampler
                                  :max-n-samples 10000
@@ -243,16 +245,17 @@
                                 (make-instance hidden-type :name 'features
                                                :size 1))
                 :clamper #'clamp)))
-      (train (make-instance 'counting-function-sampler
-                            :max-n-samples 30000
-                            :sampler #'sample)
-             (make-instance 'test-trainer
-                            :segmenter
-                            (repeatedly
-                              (make-instance 'per-weight-batch-gd-trainer
-                                             :momentum (flt 0.9)
-                                             :batch-size 10)))
-             (make-instance 'test-cd-learner :rbm rbm))
+      (minimize (make-instance 'test-optimizer
+                               :segmenter
+                               (repeatedly
+                                 (make-instance 'per-weight-batch-gd-optimizer
+                                                :momentum (flt 0.9)
+                                                :batch-size 10)))
+                (make-instance 'test-cd-learner :rbm rbm)
+                :dataset
+                (make-instance 'counting-function-sampler
+                               :max-n-samples 30000
+                               :sampler #'sample))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
@@ -292,16 +295,17 @@
                                 (make-instance 'gaussian-chunk :name 'features
                                                :size 2))
                 :clamper #'clamp)))
-      (train (make-instance 'counting-function-sampler
-                            :max-n-samples 100000
-                            :sampler #'sample)
-             (make-instance 'test-trainer
-                            :segmenter
-                            (repeatedly
-                              (make-instance 'per-weight-batch-gd-trainer
-                                             :momentum (flt 0.9)
-                                             :batch-size 10)))
-             (make-instance 'test-cd-learner :rbm rbm))
+      (minimize (make-instance 'test-optimizer
+                               :segmenter
+                               (repeatedly
+                                 (make-instance 'per-weight-batch-gd-optimizer
+                                                :momentum (flt 0.9)
+                                                :batch-size 10)))
+                (make-instance 'test-cd-learner :rbm rbm)
+                :dataset
+                (make-instance 'counting-function-sampler
+                               :max-n-samples 100000
+                               :sampler #'sample))
       (rbm-rmse (make-instance 'counting-function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
@@ -389,7 +393,8 @@
   (let ((chunk (make-instance 'sigmoid-chunk
                               :name 'this-chunk
                               :size 10)))
-    (assert (names= (mapcar #'first (compare-objects chunk (copy context chunk)))
+    (assert (names= (mapcar #'first
+                            (compare-objects chunk (copy context chunk)))
                     '(nodes mgl-bm::means mgl-bm::old-nodes inputs)))))
 
 (defun test-copy-full-cloud (context)
@@ -406,7 +411,8 @@
     ;; These start with NIL and are lazily set up.
     (setf (slot-value cloud 'mgl-bm::cached-activations1) t)
     (setf (slot-value cloud 'mgl-bm::cached-activations2) t)
-    (assert (names= (mapcar #'first (compare-objects cloud (copy context cloud)))
+    (assert (names= (mapcar #'first
+                            (compare-objects cloud (copy context cloud)))
                     '(chunk1 chunk2
                       mgl-bm::cached-version1
                       mgl-bm::cached-version2

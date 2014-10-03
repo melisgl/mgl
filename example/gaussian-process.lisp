@@ -51,13 +51,13 @@
                                  (incf dfi)
                                  (incf selfpi))))))))))))))
 
-(defclass test-bpn-gp-base-trainer (base-trainer)
+(defclass test-bpn-gp-base-optimizer (base-optimizer)
   ())
 
-(defmethod log-training-period ((trainer test-bpn-gp-base-trainer) learner)
+(defmethod log-training-period ((optimizer test-bpn-gp-base-optimizer) learner)
   100)
 
-(defmethod log-test-period ((trainer test-bpn-gp-base-trainer) learner)
+(defmethod log-test-period ((optimizer test-bpn-gp-base-optimizer) learner)
   100)
 
 (defun make-test-bpn-gp-counters-and-measurers ()
@@ -77,16 +77,16 @@
                                          (nodes (find-lump name bpn)))
                                         1)))))))
 
-(defmethod initialize-gradient-sink ((trainer test-bpn-gp-base-trainer) source
-                                     bpn)
+(defmethod initialize-optimizer* ((optimizer test-bpn-gp-base-optimizer) source
+                                  weights dataset)
   (when (next-method-p)
     (call-next-method))
-  (setf (slot-value trainer 'training-counters-and-measurers)
+  (setf (slot-value optimizer 'training-counters-and-measurers)
         (prepend-name-to-counters
          "bpn gp: training"
          (make-test-bpn-gp-counters-and-measurers))))
 
-(defmethod log-test-error ((trainer test-bpn-gp-base-trainer) learner)
+(defmethod log-test-error ((optimizer test-bpn-gp-base-optimizer) learner)
   (call-next-method)
   (let ((counter (make-instance 'rmse-counter :name "test rmse")))
     (loop repeat 100 do
@@ -99,16 +99,13 @@
                      (add-error counter (expt (- y y*) 2) 1))))))
     (log-msg "bpn gp: ~A~%" counter)))
 
-(defclass test-bpn-gp-gd-trainer (test-bpn-gp-base-trainer segmented-gd-trainer)
+(defclass test-bpn-gp-gd-optimizer (test-bpn-gp-base-optimizer
+                                    segmented-gd-optimizer)
   ())
 
 (defun fill-lump (name bpn value)
-  (multiple-value-bind (mat start end)
-      (segment-weights (find-lump name bpn :errorp t))
-    (with-facets ((array (mat 'backing-array :direction :output
-                              :type flt-vector)))
-      (loop for i upfrom start below end
-            do (setf (aref array i) (flt value))))))
+  (let ((mat (segment-weights (find-lump name bpn :errorp t))))
+    (fill! value mat)))
 
 (defun build-simple-bpn-gp (n-x1 n-x2 &key weights-from)
   (with-weights-copied (weights-from)
@@ -189,30 +186,31 @@
                               (multiple-value-bind (inputs outputs)
                                   (make-input-output 5)
                                 (list :x1 inputs :x2 inputs :y1 outputs)))))
-         (trainer (make-instance
-                   'test-bpn-gp-gd-trainer
-                   :segmenter
-                   (lambda (lump)
-                     (let ((learning-rate
-                             (case (name lump)
-                               ((means-bias)
-                                (flt 0.1))
-                               ((length-scale)
-                                (flt 0.1))
-                               ((signal-variance)
-                                (flt 0.1))
-                               ((bias-variance)
-                                (flt 0.1))
-                               ;; it's easy to hit numerical stability
-                               ;; problems when training these guys
-                               ((noise-variance roughness)
-                                nil))))
-                       (when learning-rate
-                         (make-instance 'batch-gd-trainer
-                                        :learning-rate (flt learning-rate)
-                                        :momentum (flt 0.9)
-                                        :batch-size 100)))))))
-    (train sampler trainer (make-instance 'bp-learner :bpn bpn-gp))))
+         (optimizer (make-instance
+                     'test-bpn-gp-gd-optimizer
+                     :segmenter
+                     (lambda (lump)
+                       (let ((learning-rate
+                               (case (name lump)
+                                 ((means-bias)
+                                  (flt 0.1))
+                                 ((length-scale)
+                                  (flt 0.1))
+                                 ((signal-variance)
+                                  (flt 0.1))
+                                 ((bias-variance)
+                                  (flt 0.1))
+                                 ;; it's easy to hit numerical stability
+                                 ;; problems when training these guys
+                                 ((noise-variance roughness)
+                                  nil))))
+                         (when learning-rate
+                           (make-instance 'batch-gd-optimizer
+                                          :learning-rate (flt learning-rate)
+                                          :momentum (flt 0.9)
+                                          :batch-size 100)))))))
+    (minimize optimizer (make-instance 'bp-learner :bpn bpn-gp)
+              :dataset sampler)))
 
 #|
 
@@ -230,12 +228,12 @@
                                    (if (= x1 x2)
                                        1
                                        0)))))
-       (inputs (vector 1.7798 -17.324))
-       (outputs (vector 2 9))
+       (inputs (array-to-mat #(1.7798 -17.324)))
+       (outputs (array-to-mat #(2 9)))
        (posterior (update-gp prior inputs outputs))
-       (x (coerce (loop for i upfrom -500 below 500
-                        collect (* i (flt 0.1)))
-                  'vector)))
+       (x (array-to-mat (coerce (loop for i upfrom -500 below 500
+                                      collect (* i (flt 0.1)))
+                                'vector))))
   ;; Plot samples from the prior.
   (mgl-gnuplot:with-session ()
     (format mgl-gnuplot:*command-stream*
@@ -250,8 +248,9 @@
             "set title '95% confidence interval'~%")
     (mgl-gnuplot:plot*
      (list*
-      (mgl-gnuplot:data (aops:stack 1 (aops:reshape inputs '(2 1))
-                                    (aops:reshape outputs '(2 1)))
+      (mgl-gnuplot:data (mat-to-array
+                         (stack 1 (list (reshape! inputs '(2 1))
+                                        (reshape! outputs '(2 1)))))
                         "title 'observations' with points")
       (gp-confidences-as-plot-data posterior x)))))
 

@@ -1,13 +1,13 @@
 (in-package :mgl-test)
 
-(defclass test-base-bp-trainer ()
+(defclass test-base-bp-optimizer ()
   ((counter :initform (make-instance 'error-counter) :reader counter)
    (print-by :initform 1000 :initarg :print-by :reader print-by)))
 
-(defclass test-bp-trainer (test-base-bp-trainer segmented-gd-trainer)
+(defclass test-bp-optimizer (test-base-bp-optimizer segmented-gd-optimizer)
   ())
 
-(defclass test-cg-bp-trainer (test-base-bp-trainer cg-trainer)
+(defclass test-cg-bp-optimizer (test-base-bp-optimizer cg-optimizer)
   ())
 
 (defclass test-bpn (bpn)
@@ -16,33 +16,35 @@
 (defmethod set-input (samples (bpn test-bpn))
   (funcall (clamper bpn) samples bpn))
 
-(defmethod train-batch :around (samples (trainer test-bp-trainer) learner)
-  (let ((counter (counter trainer)))
+(defmethod mgl-opt:accumulate-gradients* :around
+    (learner (optimizer test-bp-optimizer) batch multiplier valuep)
+  (let ((counter (counter optimizer)))
     (call-next-method)
     (multiple-value-call #'add-error counter (cost (bpn learner)))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs (print-by trainer)))
+    (let ((n-instances (n-instances optimizer)))
+      (when (zerop (mod n-instances (print-by optimizer)))
         (log-msg "COST: ~,5F (~D, ~D)~%"
                  (or (get-error counter) #.(flt 0))
                  (n-sum-errors counter)
-                 n-inputs)
+                 n-instances)
         (reset-counter counter)))))
 
-(defmethod train-batch :around (samples (trainer test-cg-bp-trainer) learner)
+(defmethod mgl-cg::train-batch :around
+    ((optimizer test-cg-bp-optimizer) learner samples)
   (multiple-value-bind (best-w best-f)
       (call-next-method)
     (declare (ignore best-w))
-    (let ((n-inputs (n-inputs trainer)))
-      (when (zerop (mod n-inputs (print-by trainer)))
+    (let ((n-instances (n-instances optimizer)))
+      (when (zerop (mod n-instances (print-by optimizer)))
         (log-msg "COST: ~,5F (~S, ~S)~%" (/ best-f (length samples))
                  (length samples)
-                 n-inputs)))))
+                 n-instances)))))
 
 (defun bpn-error (sampler bpn)
   (let ((counter (make-instance 'error-counter))
         (n-stripes (max-n-stripes bpn)))
     (while (not (finishedp sampler))
-      (set-input (sample-batch sampler n-stripes) bpn)
+      (set-input (list-samples sampler n-stripes) bpn)
       (forward-bpn bpn)
       (multiple-value-call #'add-error counter (cost bpn)))
     (values (get-error counter) counter)))
@@ -103,22 +105,23 @@
                           (with-stripes ((stripe inputs start))
                             (setf (aref nodes start) sample)))))))
       (setf (clamper net) #'clamper)
-      (train (make-instance 'counting-function-sampler
-                            :max-n-samples 1000
-                            :sampler #'sample)
-             (if cg
-                 (make-instance 'test-cg-bp-trainer
-                                :print-by 100
-                                :batch-size 100)
-                 (make-instance 'test-bp-trainer
-                                :print-by 100
-                                :segmenter
-                                (repeatedly
-                                  (make-instance 'batch-gd-trainer
-                                                 :learning-rate (flt 0.01)
-                                                 :momentum (flt 0.9)
-                                                 :batch-size 10))))
-             (make-instance 'bp-learner :bpn net))
+      (minimize (if cg
+                    (make-instance 'test-cg-bp-optimizer
+                                   :print-by 100
+                                   :batch-size 100)
+                    (make-instance 'test-bp-optimizer
+                                   :print-by 100
+                                   :segmenter
+                                   (repeatedly
+                                     (make-instance 'batch-gd-optimizer
+                                                    :learning-rate (flt 0.01)
+                                                    :momentum (flt 0.9)
+                                                    :batch-size 10))))
+                (make-instance 'bp-learner :bpn net)
+                :dataset
+                (make-instance 'counting-function-sampler
+                               :max-n-samples 1000
+                               :sampler #'sample))
       (bpn-error (make-instance 'counting-function-sampler
                                 :max-n-samples 1000
                                 :sampler #'sample)
@@ -184,26 +187,27 @@
                                     do (setf (aref expectations-nodes i)
                                              (aref expectations j))))))))))
         (setf (clamper net) #'clamper)
-        (train (make-instance 'counting-function-sampler
-                              :max-n-samples 100000
-                              :sampler #'sample)
-               (if cg
-                   (make-instance 'test-cg-bp-trainer
-                                  :cg-args '(:max-n-line-searches 3)
-                                  :batch-size 100)
-                   (make-instance 'test-bp-trainer
-                                  :segmenter
-                                  (repeatedly
-                                    ;; Small learning rate and huge decay
-                                    ;; because the network is constructed in
-                                    ;; such a way that pushes all weights up
-                                    ;; towards infinity.
-                                    (make-instance 'batch-gd-trainer
-                                                   :learning-rate (flt 0.01)
-                                                   :momentum (flt 0.9)
-                                                   :weight-decay (flt 0)
-                                                   :batch-size 10))))
-               (make-instance 'bp-learner :bpn net))
+        (minimize (if cg
+                      (make-instance 'test-cg-bp-optimizer
+                                     :cg-args '(:max-n-line-searches 3)
+                                     :batch-size 100)
+                      (make-instance 'test-bp-optimizer
+                                     :segmenter
+                                     (repeatedly
+                                       ;; Small learning rate and huge decay
+                                       ;; because the network is constructed in
+                                       ;; such a way that pushes all weights up
+                                       ;; towards infinity.
+                                       (make-instance 'batch-gd-optimizer
+                                                      :learning-rate (flt 0.01)
+                                                      :momentum (flt 0.9)
+                                                      :weight-decay (flt 0)
+                                                      :batch-size 10))))
+                  (make-instance 'bp-learner :bpn net)
+                  :dataset
+                  (make-instance 'counting-function-sampler
+                                 :max-n-samples 100000
+                                 :sampler #'sample))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -263,21 +267,22 @@
                                          (aref expectations j)))))))))
         (setf (clamper net) #'clamper)
         (init-lump 'weights net 0.01)
-        (train (make-instance 'counting-function-sampler
-                              :max-n-samples 100000
-                              :sampler #'sample)
-               (if cg
-                   (make-instance 'test-cg-bp-trainer
-                                  :cg-args (list :max-n-line-searches 3)
-                                  :batch-size 1000)
-                   (make-instance 'test-bp-trainer
-                                  :segmenter
-                                  (repeatedly
-                                    (make-instance 'batch-gd-trainer
-                                                   :learning-rate (flt 0.1)
-                                                   :momentum (flt 0.9)
-                                                   :batch-size 100))))
-               (make-instance 'bp-learner :bpn net))
+        (minimize (if cg
+                      (make-instance 'test-cg-bp-optimizer
+                                     :cg-args (list :max-n-line-searches 3)
+                                     :batch-size 1000)
+                      (make-instance 'test-bp-optimizer
+                                     :segmenter
+                                     (repeatedly
+                                       (make-instance 'batch-gd-optimizer
+                                                      :learning-rate (flt 0.1)
+                                                      :momentum (flt 0.9)
+                                                      :batch-size 100))))
+                  (make-instance 'bp-learner :bpn net)
+                  :dataset
+                  (make-instance 'counting-function-sampler
+                                 :max-n-samples 100000
+                                 :sampler #'sample))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -349,8 +354,7 @@
                                                   :type flt-vector)))
                  (loop for sample in samples
                        for stripe upfrom 0
-                       do
-                          (with-stripes ((stripe inputs input-start)
+                       do (with-stripes ((stripe inputs input-start)
                                          (stripe expectations
                                                  expectations-start))
                             (destructuring-bind (x y) sample
@@ -368,21 +372,22 @@
                                     (+ (* -0.8 (+ x 2))
                                        (* 1.3 (+ y -1))))))))))
         (setf (clamper net) #'clamper)
-        (train (make-instance 'counting-function-sampler
-                              :max-n-samples (if cg 30000 100000)
-                              :sampler #'sample)
-               (if cg
-                   (make-instance 'test-cg-bp-trainer
-                                  :cg-args '(:max-n-line-searches 3)
-                                  :batch-size 1000)
-                   (make-instance 'test-bp-trainer
-                                  :segmenter
-                                  (repeatedly
-                                    (make-instance 'batch-gd-trainer
-                                                   :learning-rate (flt 0.01)
-                                                   :momentum (flt 0.9)
-                                                   :batch-size 10))))
-               (make-instance 'bp-learner :bpn net))
+        (minimize (if cg
+                      (make-instance 'test-cg-bp-optimizer
+                                     :cg-args '(:max-n-line-searches 3)
+                                     :batch-size 1000)
+                      (make-instance 'test-bp-optimizer
+                                     :segmenter
+                                     (repeatedly
+                                       (make-instance 'batch-gd-optimizer
+                                                      :learning-rate (flt 0.01)
+                                                      :momentum (flt 0.9)
+                                                      :batch-size 10))))
+                  (make-instance 'bp-learner :bpn net)
+                  :dataset
+                  (make-instance 'counting-function-sampler
+                                 :max-n-samples (if cg 30000 100000)
+                                 :sampler #'sample))
         (bpn-error (make-instance 'counting-function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
@@ -391,8 +396,9 @@
 (defun test-bp ()
   (declare (optimize (debug 3)))
   (do-cuda ()
-    (dolist (max-n-stripes '(1 10))
+    (dolist (max-n-stripes '(10 100))
       (dolist (cg '(nil t))
+        (log-msg "max-n-stripes: ~S, cg: ~S~%" max-n-stripes cg)
         (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
         (dolist (transposep '(nil t))
           (assert (> 0.01 (test-activation :transposep transposep :cg cg
