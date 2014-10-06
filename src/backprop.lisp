@@ -53,10 +53,6 @@
     :documentation "Upon creation or resize the lump's nodes get
     filled with this value.")))
 
-(declaim (inline derivatives*))
-(defun derivatives* (lump)
-  (the flt-vector (values (derivatives lump))))
-
 (defmacro deflump (name direct-superclasses direct-slots &rest options)
   (destructuring-bind (name maker-name)
       (if (listp name) name (list name name))
@@ -643,14 +639,6 @@
       lump-spec
       (find-lump lump-spec bpn :errorp t)))
 
-(defun copy-bpn-weights (from-bpn to-bpn &key error-if-no-match-p)
-  (loop for from-lump across (lumps from-bpn)
-        do (when (typep from-lump '->weight)
-             (let ((to-lump (find-lump (name from-lump) to-bpn
-                                       :errorp error-if-no-match-p)))
-               (assert (= (size to-lump) (size from-lump)))
-               (setf (slot-value to-lump 'nodes) (nodes from-lump))))))
-
 (defun forward-bpn (bpn &key from-lump to-lump end-lump)
   "Propagate the values from the already clamped inputs."
   (declare (optimize (debug 3)))
@@ -822,9 +810,9 @@
 
 (defmethod set-max-n-stripes (max-n-stripes (lump ->normalized))
   (call-next-method)
-  (when (and (typep (scale lump) 'flt-vector)
-             (/= (max-n-stripes lump) (length (scale lump))))
-    (setf (scale lump) (make-flt-array (max-n-stripes lump))))
+  (when (and (typep (scale lump) 'mat)
+             (/= (max-n-stripes lump) (mat-size (scale lump))))
+    (setf (scale lump) (make-mat (max-n-stripes lump))))
   max-n-stripes)
 
 (defmethod transfer-lump ((lump ->normalized))
@@ -840,7 +828,7 @@
                   (to* ((nodes lump) 'backing-array :direction :output
                         :type flt-vector)))
       (loop for stripe of-type index below (n-stripes* lump) do
-        (let ((scale (if (typep scale 'flt) scale (aref scale stripe))))
+        (let ((scale (if (typep scale 'flt) scale (mref scale stripe))))
           (with-stripes ((stripe lump ls le)
                          (stripe x xs xe))
             (loop for li upfrom ls below le

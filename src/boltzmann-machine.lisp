@@ -106,7 +106,7 @@
 (defvar *current-stripe*)
 
 (defmacro do-stripes ((chunk &optional (stripe (gensym))) &body body)
-  (with-gensyms (%chunk)
+  (alexandria:with-gensyms (%chunk)
     `(let ((,%chunk ,chunk))
        (check-stripes ,%chunk)
        (dotimes (,stripe (the index (n-stripes ,%chunk)))
@@ -115,7 +115,7 @@
 
 (defmacro do-chunk ((index chunk) &body body)
   "Iterate over the indices of nodes of CHUNK skipping missing ones."
-  (with-gensyms (%chunk %indices-present %size)
+  (alexandria:with-gensyms (%chunk %indices-present %size)
     `(let* ((,%chunk ,chunk)
             (,%indices-present (indices-present ,%chunk)))
        (if ,%indices-present
@@ -797,7 +797,7 @@
 
 (defmacro do-cloud-runs (((start end) cloud) &body body)
   "Iterate over consecutive runs of weights present in CLOUD."
-  (with-gensyms (%cloud %chunk2-size %index)
+  (alexandria:with-gensyms (%cloud %chunk2-size %index)
     `(let ((,%cloud ,cloud))
        (if (indices-present (chunk1 ,%cloud))
            (let ((,%chunk2-size (size (chunk2 ,%cloud))))
@@ -819,7 +819,7 @@
        ,@body)))
 
 (defmacro do-cloud/chunk1 ((chunk1-index cloud) &body body)
-  (with-gensyms (%cloud %chunk2-size %offset)
+  (alexandria:with-gensyms (%cloud %chunk2-size %offset)
     `(let* ((,%cloud ,cloud)
             (,%chunk2-size (size (chunk2 ,%cloud))))
        (declare (type index ,%chunk2-size))

@@ -59,7 +59,7 @@
 (defmacro do-segment-set ((segment &key start-in-segment-set) segment-set
                           &body body)
   "Iterate over SEGMENTS in SEGMENT-SET ...."
-  (with-gensyms (%segment-set %start-index)
+  (alexandria:with-gensyms (%segment-set %start-index)
     `(let* ((,%segment-set ,segment-set))
        (loop for ,segment in (segments ,%segment-set)
              ,@(when start-in-segment-set

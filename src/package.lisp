@@ -10,9 +10,6 @@
   (:use #:common-lisp #:mgl-mat)
   (:export
    ;; Macrology
-   #:with-gensyms
-   #:split-body
-   #:suffix-symbol
    #:special-case
    ;; Types
    #:flt
@@ -23,8 +20,6 @@
    #:least-positive-flt
    #:most-positive-flt
    #:flt-vector
-   #:flt-matrix
-   #:make-flt-array
    #:index
    #:index-vector
    #:*no-array-bounds-check*
@@ -41,10 +36,7 @@
    #:group
    #:subseq*
    #:max-position
-   #:hash-table->alist
-   #:alist->hash-table
    #:hash-table->vector
-   #:reverse-hash-table
    #:repeatedly
    #:make-seq-generator
    #:make-random-generator
@@ -174,8 +166,6 @@
    #:segment-set-size
    #:segment-set->mat
    #:segment-set<-mat
-   #:segment-set->weights
-   #:segment-set<-weights
    ;; Common generic functions
    #:batch-size
    #:cost
@@ -209,8 +199,7 @@
 
 (mgl-pax:define-package :mgl-diffun
   (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt)
-  (:export #:@mgl-gd))
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt))
 
 (mgl-pax:define-package :mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")

@@ -215,7 +215,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun stripe-binding (stripe object start &optional end)
-    (with-gensyms (%stripe %object)
+    (alexandria:with-gensyms (%stripe %object)
       `((,%stripe ,stripe)
         (,%object ,object)
         (,start (the index (stripe-start ,%stripe ,%object)))

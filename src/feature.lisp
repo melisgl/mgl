@@ -145,11 +145,11 @@
 
 (defun read-indexed-features (stream)
   (with-standard-io-syntax
-    (alist->hash-table (read stream) :test #'equal)))
+    (alexandria:alist-hash-table (read stream) :test #'equal)))
 
 (defun write-indexed-features (features->indices stream)
   (with-standard-io-syntax
-    (prin1 (hash-table->alist features->indices) stream)))
+    (prin1 (alexandria:hash-table-alist features->indices) stream)))
 
 
 ;;;; Encoding

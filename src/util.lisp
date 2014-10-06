@@ -2,27 +2,6 @@
 
 ;;;; Macrology
 
-(defmacro with-gensyms (vars &body body)
-  `(let ,(mapcar #'(lambda (v) `(,v (gensym ,(symbol-name v))))
-                 vars)
-    ,@body))
-
-(defun split-body (body)
-  "Return a list of declarations and the rest of BODY."
-  (let ((pos (position-if-not (lambda (form)
-                                (and (listp form)
-                                     (eq (first form) 'declare)))
-                              body)))
-    (if pos
-        (values (subseq body 0 pos)
-                (subseq body pos))
-        (values body nil))))
-
-(defun suffix-symbol (symbol &rest suffixes)
-  (intern (format nil "~A~{~A~}" (symbol-name symbol)
-                  (mapcar #'string suffixes))
-          (symbol-package symbol)))
-
 (defmacro special-case (test &body body)
   "Let the compiler compile BODY for the case when TEST is true and
   also when it's false. The purpose is to allow different constraints
@@ -56,15 +35,11 @@
 
 (eval-when (:compile-toplevel :load-toplevel)
   (deftype flt-vector () '(simple-array flt (*)))
-  (deftype flt-matrix () '(simple-array flt (* *)))
   (declaim (inline flt))
   (defun flt (x)
     (coerce x 'flt))
   (deftype index () '(integer 0 #.(1- array-total-size-limit)))
   (deftype index-vector () '(simple-array index (*))))
-
-(defun make-flt-array (dimensions &key (initial-element #.(flt 0)))
-  (make-array dimensions :element-type 'flt :initial-element initial-element))
 
 (defun flt-vector (&rest args)
   (make-array (length args) :element-type 'flt :initial-contents args))
@@ -136,7 +111,7 @@
   (append list (list obj)))
 
 (defmacro push-all (list place)
-  (with-gensyms (e)
+  (alexandria:with-gensyms (e)
     `(dolist (,e ,list)
        (push ,e ,place))))
 
@@ -155,19 +130,6 @@
   (position (loop for i upfrom start below end maximizing (elt seq i))
             seq :start start :end end))
 
-(defun hash-table->alist (hash-table)
-  (let ((r ()))
-    (maphash (lambda (key value)
-               (push (cons key value) r))
-             hash-table)
-    r))
-
-(defun alist->hash-table (alist &rest args)
-  (let ((h (apply #'make-hash-table args)))
-    (loop for (key . value) in alist
-          do (setf (gethash key h) value))
-    h))
-
 (defun hash-table->vector (hash-table)
   (let ((v (make-array (hash-table-count hash-table)))
         (i 0))
@@ -177,18 +139,9 @@
              hash-table)
     v))
 
-(defun reverse-hash-table (hash-table &key (test #'eql))
-  "Return a hash table that maps from the values of HASH-TABLE back to
-  its keys. HASH-TABLE had better be a bijection."
-  (let ((r (make-hash-table :test test)))
-    (maphash (lambda (key value)
-               (setf (gethash value r) key))
-             hash-table)
-    r))
-
 (defmacro repeatedly (&body body)
   "Like CONSTANTLY but evaluates BODY it for each time."
-  (with-gensyms (args)
+  (alexandria:with-gensyms (args)
     `(lambda (&rest ,args)
        (declare (ignore ,args))
        ,@body)))
