@@ -545,10 +545,10 @@ when some other condition met (see <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-
 <p><a name='x-28MGL-OPT-3A-2AEMPTY-DATASET-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p>[variable] <strong>*EMPTY-DATASET*</strong> <em>#<FUNCTION-SAMPLER ></em></p>
+<li><p>[variable] <strong>*EMPTY-DATASET*</strong> <em>#&lt;FUNCTION-SAMPLER &quot;empty&quot;&gt;</em></p>
 
-<p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. It's an infinite set of
-stream of NILs.</p></li>
+<p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. It's an infinite stream
+of NILs.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3A-2AACCUMULATING-INTERESTING-GRADIENTS-2A-20VARIABLE-29'></a></p>
@@ -674,7 +674,7 @@ termination condition is met.</p></li>
 <p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES &lt;= 0)</em></p>
+<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
 
 <p>The number of instances this optimizer has seen so
 far. Incremented automatically during optimization.</p></li>
@@ -683,7 +683,7 @@ far. Incremented automatically during optimization.</p></li>
 <p><a name='x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
 on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
@@ -806,14 +806,14 @@ w' -= delta_w'
 
 <p>but the former works better when batch size, momentum or learning
 rate change during the course of optimization. The above is with
-normal momentum, [Nesterov's] momentum is also
-available.</p></li>
+normal momentum, Nesterov's momentum (see <a href="#x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"><code>MOMENTUM-TYPE</code></a>) momentum is
+also available.</p></li>
 </ul>
 
 <p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES &lt;= 0)</em></p>
+<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
 
 <p>The number of instances this optimizer has seen so
 far. Incremented automatically during optimization.</p></li>
@@ -822,7 +822,7 @@ far. Incremented automatically during optimization.</p></li>
 <p><a name='x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
 on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
@@ -835,7 +835,7 @@ is processed as if it was returned by <a href="#x-28MGL-OPT-3ATERMINATION-20-28M
 <p><a name='x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>BATCH-SIZE</strong> <em>GD-OPTIMIZER</em> <em>(:BATCH-SIZE &lt;= 1)</em></p>
+<li><p>[accessor] <strong>BATCH-SIZE</strong> <em>GD-OPTIMIZER</em> <em>(:BATCH-SIZE = 1)</em></p>
 
 <p>After having gone through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) number of
 inputs, weights are updated. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) 1, one gets
@@ -848,7 +848,7 @@ most practical 'mini-batch' compromise.</p></li>
 <p><a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>LEARNING-RATE</strong> <em>GD-OPTIMIZER</em> <em>(:LEARNING-RATE &lt;= 0.10000000149011612d0)</em></p>
+<li><p>[accessor] <strong>LEARNING-RATE</strong> <em>GD-OPTIMIZER</em> <em>(:LEARNING-RATE = 0.10000000149011612d0)</em></p>
 
 <p>This is the step size along the gradient. Decrease
 it if optimization diverges, increase it if it doesn't make
@@ -858,7 +858,7 @@ progress.</p></li>
 <p><a name='x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>MOMENTUM</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM &lt;= 0.0d0)</em></p>
+<li><p>[accessor] <strong>MOMENTUM</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM = 0.0d0)</em></p>
 
 <p>A value in the [0, 1) interval. <a href="#x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>MOMENTUM</code></a> times the
 previous weight change is added to the gradient. 0 means no
@@ -868,7 +868,7 @@ momentum.</p></li>
 <p><a name='x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>MOMENTUM-TYPE</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM-TYPE &lt;= :NORMAL)</em></p>
+<li><p>[reader] <strong>MOMENTUM-TYPE</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM-TYPE = :NORMAL)</em></p>
 
 <p>One of <code>:NORMAL</code> and <code>:NESTEROV</code>. For pure
 optimization Nesterov's momentum may be better, but it also
@@ -878,7 +878,7 @@ increases chances of overfitting.</p></li>
 <p><a name='x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>WEIGHT-DECAY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-DECAY &lt;= 0.0d0)</em></p>
+<li><p>[accessor] <strong>WEIGHT-DECAY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-DECAY = 0.0d0)</em></p>
 
 <p>An L2 penalty. It discourages large weights, much
 like a zero mean gaussian prior. <a href="#x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:WEIGHT-DECAY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>WEIGHT-DECAY</code></a> * WEIGHT is added to
@@ -890,7 +890,7 @@ added to it.</p></li>
 <p><a name='x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>WEIGHT-PENALTY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-PENALTY &lt;= 0.0d0)</em></p>
+<li><p>[accessor] <strong>WEIGHT-PENALTY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-PENALTY = 0.0d0)</em></p>
 
 <p>An L1 penalty. It encourages sparsity.
 <code>SIGN</code>(WEIGHT) * <a href="#x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:WEIGHT-PENALTY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>WEIGHT-PENALTY</code></a> is added to the gradient pushing the
@@ -903,7 +903,7 @@ on the features.</p></li>
 <p><a name='x-28MGL-GD-3AAFTER-UPDATE-HOOK-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>AFTER-UPDATE-HOOK</strong> <em>GD-OPTIMIZER</em> <em>(:AFTER-UPDATE-HOOK &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>AFTER-UPDATE-HOOK</strong> <em>GD-OPTIMIZER</em> <em>(:AFTER-UPDATE-HOOK = NIL)</em></p>
 
 <p>A list of functions with no arguments called after
 each weight update.</p></li>
@@ -912,7 +912,7 @@ each weight update.</p></li>
 <p><a name='x-28MGL-GD-3ABEFORE-UPDATE-HOOK-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3ABATCH-GD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>BEFORE-UPDATE-HOOK</strong> <em>BATCH-GD-OPTIMIZER</em> <em>(:BEFORE-UPDATE-HOOK &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>BEFORE-UPDATE-HOOK</strong> <em>BATCH-GD-OPTIMIZER</em> <em>(:BEFORE-UPDATE-HOOK = NIL)</em></p>
 
 <p>A list of functions of no parameters. Each
 function is called just before a weight update takes place.
@@ -938,7 +938,7 @@ simply to not train all segments.</p></li>
 <p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES &lt;= 0)</em></p>
+<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
 
 <p>The number of instances this optimizer has seen so
 far. Incremented automatically during optimization.</p></li>
@@ -947,7 +947,7 @@ far. Incremented automatically during optimization.</p></li>
 <p><a name='x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
 on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
@@ -1208,7 +1208,7 @@ through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PA
 <p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES &lt;= 0)</em></p>
+<li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
 
 <p>The number of instances this optimizer has seen so
 far. Incremented automatically during optimization.</p></li>
@@ -1217,7 +1217,7 @@ far. Incremented automatically during optimization.</p></li>
 <p><a name='x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
 on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
@@ -1243,13 +1243,13 @@ the dataset at the start of optimization.</p></li>
 <p><a name='x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li>[accessor] <strong>CG-ARGS</strong> <em>CG-OPTIMIZER</em> <em>(:CG-ARGS &lt;= 'NIL)</em></li>
+<li>[accessor] <strong>CG-ARGS</strong> <em>CG-OPTIMIZER</em> <em>(:CG-ARGS = 'NIL)</em></li>
 </ul>
 
 <p><a name='x-28MGL-CG-3ASEGMENT-FILTER-20-28MGL-PAX-3AREADER-20MGL-CG-3ACG-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>SEGMENT-FILTER</strong> <em>CG-OPTIMIZER</em> <em>(:SEGMENT-FILTER &lt;= (CONSTANTLY T))</em></p>
+<li><p>[reader] <strong>SEGMENT-FILTER</strong> <em>CG-OPTIMIZER</em> <em>(:SEGMENT-FILTER = (CONSTANTLY T))</em></p>
 
 <p>A predicate function on segments that filters out
 uninteresting segments. Called from <a href="#x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29" title="(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"><code>INITIALIZE-OPTIMIZER*</code></a>.</p></li>
@@ -1267,7 +1267,7 @@ add decay on a per-segment basis.</p></li>
 <p><a name='x-28MGL-CG-3ASEGMENT-DECAY-FN-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ADECAYED-CG-OPTIMIZER-MIXIN-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>SEGMENT-DECAY-FN</strong> <em>DECAYED-CG-OPTIMIZER-MIXIN</em> <em>(:SEGMENT-DECAY-FN &lt;= NIL)</em></p>
+<li><p>[accessor] <strong>SEGMENT-DECAY-FN</strong> <em>DECAYED-CG-OPTIMIZER-MIXIN</em> <em>(:SEGMENT-DECAY-FN = NIL)</em></p>
 
 <p>If not <code>NIL</code>, it's a designator for a function that
 returns the decay for a given segment. For convenience <code>NIL</code> is also
@@ -1286,8 +1286,8 @@ treated as 0 decay.</p></li>
 <li><p>[class] <strong>DIFFUN</strong></p>
 
 <p><a href="#x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29" title="(MGL-DIFFUN:DIFFUN CLASS)"><code>DIFFUN</code></a> dresses a lisp function (in its <a href="#x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29" title="(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"><code>FN</code></a> slot) as
-a [gradient source] which allows it to be
-used in <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. See the examples in <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">Gradient Descent</a> and
+a gradient source (see <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)">Implementing Gradient Sources</a>) which allows it to
+be used in <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. See the examples in <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">Gradient Descent</a> and
 <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">Conjugate Gradient</a>.</p></li>
 </ul>
 
@@ -1303,7 +1303,7 @@ parameters.</p></li>
 <p><a name='x-28MGL-DIFFUN-3APARAMETER-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>PARAMETER-INDICES</strong> <em>DIFFUN</em> <em>(:PARAMETER-INDICES &lt;= NIL)</em></p>
+<li><p>[reader] <strong>PARAMETER-INDICES</strong> <em>DIFFUN</em> <em>(:PARAMETER-INDICES = NIL)</em></p>
 
 <p>The list of indices of parameters that we don't
 optimize. Values for these will come from the DATASET argument of
@@ -1313,7 +1313,7 @@ optimize. Values for these will come from the DATASET argument of
 <p><a name='x-28MGL-DIFFUN-3AWEIGHT-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>WEIGHT-INDICES</strong> <em>DIFFUN</em> <em>(:WEIGHT-INDICES &lt;= NIL)</em></p>
+<li><p>[reader] <strong>WEIGHT-INDICES</strong> <em>DIFFUN</em> <em>(:WEIGHT-INDICES = NIL)</em></p>
 
 <p>The list of indices of parameters to be optimized,
 the values of which will come from the <code>WEIGHTS</code> argument of

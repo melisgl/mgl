@@ -32,7 +32,8 @@
 ;;;; Samplers
 
 (defclass function-sampler ()
-  ((sampler :initarg :sampler :accessor sampler)))
+  ((sampler :initarg :sampler :accessor sampler)
+   (name :initform nil :initarg :name :reader name)))
 
 (defmethod finishedp ((sampler function-sampler))
   nil)
@@ -42,7 +43,9 @@
 
 (defmethod print-object ((sampler function-sampler) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (sampler stream :type t)))
+    (print-unreadable-object (sampler stream :type t)
+      (when (name sampler)
+        (format stream "~S" (name sampler)))))
   sampler)
 
 (defclass counting-sampler ()

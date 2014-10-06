@@ -263,8 +263,8 @@
 
   but the former works better when batch size, momentum or learning
   rate change during the course of optimization. The above is with
-  normal momentum, [Nesterov's][MOMENTUM-TYPE] momentum is also
-  available."))
+  normal momentum, Nesterov's momentum (see MOMENTUM-TYPE) momentum is
+  also available."))
 
 (defmethod n-instances-until-update ((optimizer batch-gd-optimizer))
   ;; BATCH-SIZE may be setf'ed to a value lower than N-INSTANCES-IN-BATCH

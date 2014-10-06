@@ -24,9 +24,10 @@
   (mgl-cg:@mgl-cg section))
 
 (defvar *empty-dataset* (make-instance 'mgl-train:function-sampler
-                                       :sampler (constantly nil))
-  "This is the default dataset for MINIMIZE. It's an infinite set of
-  stream of NILs.")
+                                       :sampler (constantly nil)
+                                       :name "empty")
+  "This is the default dataset for MINIMIZE. It's an infinite stream
+  of NILs.")
 
 (defvar *accumulating-interesting-gradients* nil)
 
