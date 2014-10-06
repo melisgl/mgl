@@ -52,9 +52,10 @@
 </ul></li>
 <li><a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">6.4 Conjugate Gradient</a></li>
 </ul></li>
-<li><a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">7 Backprogation Neural Networks</a></li>
-<li><a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">8 Boltzmann Machines</a></li>
-<li><a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">9 Gaussian Processes</a></li>
+<li><a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">7 Differentiable Function</a></li>
+<li><a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">8 Backprogation Neural Networks</a></li>
+<li><a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">9 Boltzmann Machines</a></li>
+<li><a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">10 Gaussian Processes</a></li>
 </ul>
 
 <h6>[in package MGL]</h6>
@@ -1010,7 +1011,7 @@ inputs with only missing values does not change anything.</p></li>
 
 <p><a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h3><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8634;</a></span>6.4 Conjugate Gradient</h3>
+<h3><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8634;</a></span>6.4 Conjugate Gradient</h3>
 
 <h6>[in package MGL-CG]</h6>
 
@@ -1273,17 +1274,63 @@ returns the decay for a given segment. For convenience <code>NIL</code> is also
 treated as 0 decay.</p></li>
 </ul>
 
+<p><a name='x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8634;</a></span>7 Differentiable Function</h2>
+
+<h6>[in package MGL-DIFFUN]</h6>
+
+<p><a name='x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>DIFFUN</strong></p>
+
+<p><a href="#x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29" title="(MGL-DIFFUN:DIFFUN CLASS)"><code>DIFFUN</code></a> dresses a lisp function (in its <a href="#x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29" title="(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"><code>FN</code></a> slot) as
+a [gradient source] which allows it to be
+used in <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. See the examples in <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">Gradient Descent</a> and
+<a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">Conjugate Gradient</a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>FN</strong> <em>DIFFUN</em> <em>(:FN)</em></p>
+
+<p>A lisp function. It may have any number of
+parameters.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DIFFUN-3APARAMETER-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>PARAMETER-INDICES</strong> <em>DIFFUN</em> <em>(:PARAMETER-INDICES &lt;= NIL)</em></p>
+
+<p>The list of indices of parameters that we don't
+optimize. Values for these will come from the DATASET argument of
+<a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DIFFUN-3AWEIGHT-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>WEIGHT-INDICES</strong> <em>DIFFUN</em> <em>(:WEIGHT-INDICES &lt;= NIL)</em></p>
+
+<p>The list of indices of parameters to be optimized,
+the values of which will come from the <code>WEIGHTS</code> argument of
+<a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>.</p></li>
+</ul>
+
 <p><a name='x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>7 Backprogation Neural Networks</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>8 Backprogation Neural Networks</h2>
 
 <p><a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>8 Boltzmann Machines</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>9 Boltzmann Machines</h2>
 
 <p><a name='x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8634;</a></span>9 Gaussian Processes</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8634;</a></span>10 Gaussian Processes</h2>
 <hr/><h6>[generated by
           <a href="https://github.com/melisgl/mgl-pax">MGL-PAX</a>]
           </h6>

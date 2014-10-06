@@ -7,6 +7,7 @@
   (@mgl-datasets section)
   (mgl-resample:@mgl-resample section)
   (mgl-opt:@mgl-opt section)
+  (mgl-diffun:@mgl-diffun section)
   (@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section))

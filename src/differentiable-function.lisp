@@ -15,19 +15,20 @@
     :initform ()
     :initarg :parameter-indices
     :reader parameter-indices
-    :documentation "PARAMETER-INDICES is the list of indices of
-    parameters that we don't optimize. Values for these will come from
-    DATASET argument of MINIMIZE.")
+    :documentation "The list of indices of parameters that we don't
+    optimize. Values for these will come from the DATASET argument of
+    MINIMIZE.")
    (weight-indices
     :initform ()
     :initarg :weight-indices
     :reader weight-indices
     :documentation "The list of indices of parameters to be optimized,
-    the values of which will come fromt the WEIGHTS argument of
+    the values of which will come from the WEIGHTS argument of
     MINIMIZE."))
   (:documentation "DIFFUN dresses a lisp function (in its FN slot) as
   a [gradient source][@MGL-OPT-GRADIENT-SOURCE] which allows it to be
-  used in MINIMIZE."))
+  used in MINIMIZE. See the examples in MGL-GD:@MGL-GD and
+  MGL-CG:@MGL-CG."))
 
 ;;; Build an argument list for FN, the lisp function, of the DIFF-FN
 ;;; DIFFUN from WEIGHTS and ARGS based on
@@ -82,7 +83,3 @@
                     args))
         (apply fn args))
      delta))
-
-#+nil
-(defmethod map-segments (fn (diffun diffun))
-  (funcall fn (make-mat (length (weight-indices diffun)))))
