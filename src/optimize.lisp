@@ -23,7 +23,7 @@
   (mgl-gd:@mgl-gd section)
   (mgl-cg:@mgl-cg section))
 
-(defvar *empty-dataset* (make-instance 'mgl-train:function-sampler
+(defvar *empty-dataset* (make-instance 'function-sampler
                                        :sampler (constantly nil)
                                        :name "empty")
   "This is the default dataset for MINIMIZE. It's an infinite stream

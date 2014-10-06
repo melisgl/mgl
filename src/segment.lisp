@@ -5,7 +5,7 @@
 ;;;; MATs. MAP-SEGMENT provides iteration over segments, and
 ;;;; SEGMENT-WEIGHTS returns the MAT object.
 
-(in-package :mgl-train)
+(in-package :mgl-core)
 
 (defgeneric map-segments (fn segmentable)
   (:documentation "Apply FN to each segment of LEARNER.")

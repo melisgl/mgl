@@ -1,4 +1,4 @@
-(in-package :mgl-train)
+(in-package :mgl-core)
 
 (defgeneric label (object)
   (:documentation "Return the label of object as an index. This is a

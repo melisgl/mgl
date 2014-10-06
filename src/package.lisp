@@ -101,7 +101,7 @@
    #:encode/bag-of-words)
   (:documentation "Simple utilities, types."))
 
-(cl:defpackage :mgl-train
+(cl:defpackage :mgl-core
   (:use #:common-lisp #:mgl-mat #:mgl-util)
   (:export
    #:set-input
@@ -195,24 +195,24 @@
 
 (mgl-pax:define-package :mgl-opt
   (:documentation "See MGL-OPT:@MGL-OPT.")
-  (:use :common-lisp :mgl-pax :mgl-train))
+  (:use :common-lisp :mgl-pax :mgl-core))
 
 (mgl-pax:define-package :mgl-diffun
   (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt))
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt))
 
 (mgl-pax:define-package :mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt)
   (:export #:@mgl-gd))
 
 (mgl-pax:define-package :mgl-cg
   (:documentation "See MGL-CG:@MGL-CG.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-util #:mgl-train #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-util #:mgl-core #:mgl-opt)
   (:export #:@mgl-cg))
 
 (cl:defpackage :mgl-bm
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt
         #:mgl-gd #:mgl-cg)
   (:nicknames #:mgl-rbm)
   (:export
@@ -338,7 +338,7 @@
   Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-train #:mgl-opt
+  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt
         #:mgl-gd #:mgl-cg)
   (:export
    #:lump
@@ -426,7 +426,7 @@
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll
-  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-bm #:mgl-bp
+  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-core #:mgl-bm #:mgl-bp
         #:mgl-gd)
   (:export
    #:chunk-lump-name
@@ -445,7 +445,7 @@
   networks, aka `unrolling'."))
 
 (cl:defpackage :mgl-gp
-  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-train #:mgl-bp)
+  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-core #:mgl-bp)
   (:export
    #:gp
    #:gp-means

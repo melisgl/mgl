@@ -1,4 +1,4 @@
-(in-package :mgl-train)
+(in-package :mgl-core)
 
 ;;;; Various accessor type generic functions shared by packages
 

@@ -3,7 +3,7 @@
         #:mgl-resample
         #:mgl-util
         #:mgl-mat
-        #:mgl-train
+        #:mgl-core
         #:mgl-opt
         #:mgl-gd
         #:mgl-cg

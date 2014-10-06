@@ -197,14 +197,14 @@
       (lambda (examples learner)
         (funcall measurer (mapcar #'first examples) learner)))))
 
-(defmethod mgl-train::maybe-make-cross-entropy-measurer
+(defmethod mgl-core::maybe-make-cross-entropy-measurer
     ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
       (lambda (examples learner)
         (funcall measurer (mapcar #'first examples) learner)))))
 
-(defmethod mgl-train::maybe-make-classification-confidence-collector
+(defmethod mgl-core::maybe-make-classification-confidence-collector
     ((chunk softmax-label-chunk*))
   (let ((measurer (call-next-method)))
     (when measurer
@@ -286,7 +286,7 @@
                 (cesc-classification-error bpn)))
         (cons (make-instance 'cross-entropy-counter)
               (lambda (samples bpn)
-                (mgl-train::measure-cross-entropy
+                (mgl-core::measure-cross-entropy
                  samples
                  (find-if (lambda (lump)
                             (typep lump '->cross-entropy-softmax))
