@@ -4,11 +4,11 @@
   (mgl asdf:system)
   (@mgl-overview section)
   (@mgl-basic-concepts section)
-  (mgl-dataset:@mgl-dataset section)
-  (mgl-core:@mgl-model section)
-  (mgl-resample:@mgl-resample section)
-  (mgl-opt:@mgl-opt section)
-  (mgl-diffun:@mgl-diffun section)
+  (@mgl-dataset section)
+  (@mgl-resample section)
+  (@mgl-model section)
+  (@mgl-opt section)
+  (@mgl-diffun section)
   (@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section))
@@ -18,20 +18,20 @@
   Melis](http://quotenil.com) with some parts originally contributed
   by Ravenpack International. It implements:
 
-  - Backpropagation networks (BPN)
+  - Backpropagation networks (\\BPN)
 
       - Dropout
       - Rectified linear units
       - Maxout
       - Max-channel
   - Boltzmann Machines
-    - Restricted Boltzmann Machines (RBM)
-    - Deep Belief Networks (DBN)
+    - Restricted Boltzmann Machines (\\RBM)
+    - Deep Belief Networks (\\DBN)
     - Semi Restricted Boltzmann Machines
     - Boltzmann Machines
-    - Unrolling DBN to a BPN
+    - Unrolling \\DBN to a \\BPN
     - Contrastive Divergence (CD) learning
-    - Persistent Contrastive Divergence (PCD) learning
+    - Persistent Contrastive Divergence (\\PCD) learning
   - Gradient descent optimization
     - Nesterov momentum
   - Conjugate gradient optimization

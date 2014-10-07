@@ -14,14 +14,14 @@
 - [4 Dataset][72e9]
     - [4.1 Sampler][af7d]
         - [4.1.1 Function Sampler][2100]
-- [5 Model][8b7f]
-    - [5.1 Model Persistence][56ee]
-- [6 Resampling][8fc3]
-    - [6.1 Partitions][9f93]
-    - [6.2 Cross-validation][4293]
-    - [6.3 Bagging][0675]
-    - [6.4 CV Bagging][ca85]
-    - [6.5 Miscellaneous Operations][7540]
+- [5 Resampling][8fc3]
+    - [5.1 Partitions][9f93]
+    - [5.2 Cross-validation][4293]
+    - [5.3 Bagging][0675]
+    - [5.4 CV Bagging][ca85]
+    - [5.5 Miscellaneous Operations][7540]
+- [6 Model][8b7f]
+    - [6.1 Model Persistence][56ee]
 - [7 Gradient Based Optimization][fe97]
     - [7.1 Iterative Optimizer][f805]
     - [7.2 Gradient Descent][53a7]
@@ -277,47 +277,9 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 
 
-<a name='x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29'></a>
-
-## 5 Model
-
-###### \[in package MGL-CORE\]
-<a name='x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a>
-
-### 5.1 Model Persistence
-
-<a name='x-28MGL-CORE-3AREAD-WEIGHTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **READ-WEIGHTS** *MODEL STREAM*
-
-    Read the weights of `MODEL` from the bivalent `STREAM`
-    where weights mean the learnt parameters. There is currently no
-    sanity checking of data which will most certainly change in the
-    future together with the serialization format.
-
-<a name='x-28MGL-CORE-3AWRITE-WEIGHTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **WRITE-WEIGHTS** *MODEL STREAM*
-
-    Write weight of `MODEL` to the bivalent `STREAM`.
-
-<a name='x-28MGL-CORE-3ALOAD-WEIGHTS-20FUNCTION-29'></a>
-
-- [function] **LOAD-WEIGHTS** *FILENAME MODEL*
-
-    Load weights of `MODEL` from `FILENAME`.
-
-<a name='x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29'></a>
-
-- [function] **SAVE-WEIGHTS** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
-
-    Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
-    `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
-    on to `OPEN`.
-
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29'></a>
 
-## 6 Resampling
+## 5 Resampling
 
 ###### \[in package MGL-RESAMPLE\]
 The focus of this package is on resampling methods such as
@@ -328,7 +290,7 @@ tend to be used together with resampling.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.1 Partitions
+### 5.1 Partitions
 
 The following functions partition a dataset (currently only
 SEQUENCEs are supported) into a number of partitions. For each
@@ -395,7 +357,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.2 Cross-validation
+### 5.2 Cross-validation
 
 <a name='x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29'></a>
 
@@ -467,7 +429,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.3 Bagging
+### 5.3 Bagging
 
 <a name='x-28MGL-RESAMPLE-3ABAG-20FUNCTION-29'></a>
 
@@ -521,7 +483,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.4 CV Bagging
+### 5.4 CV Bagging
 
 <a name='x-28MGL-RESAMPLE-3ABAG-CV-20FUNCTION-29'></a>
 
@@ -552,7 +514,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.5 Miscellaneous Operations
+### 5.5 Miscellaneous Operations
 
 <a name='x-28MGL-RESAMPLE-3ASPREAD-STRATA-20FUNCTION-29'></a>
 
@@ -593,6 +555,44 @@ contains it.
         (zip-evenly '((0 2 4) (1 3)))
         => (0 1 2 3 4)
 
+
+<a name='x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29'></a>
+
+## 6 Model
+
+###### \[in package MGL-CORE\]
+<a name='x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a>
+
+### 6.1 Model Persistence
+
+<a name='x-28MGL-CORE-3AREAD-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **READ-WEIGHTS** *MODEL STREAM*
+
+    Read the weights of `MODEL` from the bivalent `STREAM`
+    where weights mean the learnt parameters. There is currently no
+    sanity checking of data which will most certainly change in the
+    future together with the serialization format.
+
+<a name='x-28MGL-CORE-3AWRITE-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **WRITE-WEIGHTS** *MODEL STREAM*
+
+    Write weight of `MODEL` to the bivalent `STREAM`.
+
+<a name='x-28MGL-CORE-3ALOAD-WEIGHTS-20FUNCTION-29'></a>
+
+- [function] **LOAD-WEIGHTS** *FILENAME MODEL*
+
+    Load weights of `MODEL` from `FILENAME`.
+
+<a name='x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29'></a>
+
+- [function] **SAVE-WEIGHTS** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
+
+    Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
+    `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
+    on to `OPEN`.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a>
 

@@ -1,17 +1,10 @@
 (mgl-pax:define-package :mgl-common
+  (:documentation "The only purpose of this package is to avoid
+  conflicts between other packages.")
   (:use :common-lisp :mgl-pax)
   ;; FIXME: remove these after everything is defined with
   ;; MGL-PAX:DEFINE-PACKAGE.
   (:export :name :name= :default-value :cost :size :nodes :group-size :target))
-
-(mgl-pax:define-package :mgl
-  (:documentation "See MGL:@MGL-MANUAL. This package reexports
-  everything from other packages defined here plus MGL-MAT.")
-  (:use :common-lisp :mgl-pax))
-
-(mgl-pax:define-package :mgl-resample
-  (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
-  (:use :common-lisp :mgl-pax))
 
 (cl:defpackage :mgl-util
   (:use #:common-lisp #:mgl-mat #:mgl-common)
@@ -108,8 +101,11 @@
 
 (mgl-pax:define-package :mgl-dataset
   (:documentation "See MGL-DATASET:@MGL-DATASET.")
-  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util)
-  (:export #:@mgl-dataset))
+  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util))
+
+(mgl-pax:define-package :mgl-resample
+  (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
+  (:use :common-lisp :mgl-pax))
 
 (mgl-pax:define-package :mgl-core
   (:use #:common-lisp #:mgl-pax #:mgl-mat
@@ -172,12 +168,6 @@
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core))
 
-(mgl-pax:define-package :mgl-diffun
-  (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-core
-        #:mgl-opt))
-
 (mgl-pax:define-package :mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
@@ -191,6 +181,101 @@
         #:mgl-common #:mgl-util :mgl-dataset #:mgl-core
         #:mgl-opt)
   (:export #:@mgl-cg))
+
+(mgl-pax:define-package :mgl-diffun
+  (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-opt))
+
+(cl:defpackage :mgl-bp
+  (:use #:common-lisp #:cl-cuda #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-opt #:mgl-gd #:mgl-cg)
+  (:export
+   #:lump
+   #:deflump
+   #:name
+   #:size
+   #:default-size
+   #:lump-size
+   #:lump-node-array
+   #:->input
+   #:update-stats-p
+   #:normalize-with-stats-p
+   #:normalized-cap
+   #:->weight
+   #:->constant
+   #:default-value
+   #:->normalized
+   #:group-size
+   #:->activation
+   #:transpose-weights-p
+   #:add-activations
+   #:->error
+   #:importance
+   #:cost
+   #:transfer-lump
+   #:derive-lump
+   ;; BPN
+   #:bpn
+   #:nodes
+   #:derivatives
+   #:lumps
+   #:find-lump
+   #:initialize-lump
+   #:initialize-bpn
+   #:add-lump
+   #:remove-lump
+   #:with-weights-copied
+   #:build-bpn
+   #:forward-bpn
+   #:backward-bpn
+   #:bp-learner
+   #:compute-derivatives
+   #:dropout
+   ;; Node types
+   #:define-node-type
+   #:node
+   #:add-derivative
+   #:->rep
+   #:->stretch
+   #:->+
+   #:->*
+   #:->sum
+   #:->linear
+   #:->sigmoid
+   #:->scaled-tanh
+   #:->rectified
+   #:->split-sign
+   #:noisyp
+   #:->dropout
+   #:->multiply-with-gaussian
+   #:->sample-binary
+   #:->softplus
+   #:->exp
+   #:->abs
+   #:->sin
+   #:->rough-exponential
+   #:->ref
+   #:->periodic
+   #:->sum-squared-error
+   #:->squared-error
+   #:->max
+   #:->max-channel
+   #:->min
+   #:->softmax
+   #:->cross-entropy
+   #:->cross-entropy-softmax
+   #:softmax
+   #:target
+   #:class-weights
+   #:add-cross-entropy-softmax
+   ;; Utilities
+   #:collect-bpn-errors
+   #:renormalize-activations
+   #:arrange-for-renormalizing-activations)
+  (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-bm
   (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
@@ -319,100 +404,10 @@
   Boltzmann Machines and their stacks called Deep Belief
   Networks (DBN)."))
 
-(cl:defpackage :mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-core
-        #:mgl-opt #:mgl-gd #:mgl-cg)
-  (:export
-   #:lump
-   #:deflump
-   #:name
-   #:size
-   #:default-size
-   #:lump-size
-   #:lump-node-array
-   #:->input
-   #:update-stats-p
-   #:normalize-with-stats-p
-   #:normalized-cap
-   #:->weight
-   #:->constant
-   #:default-value
-   #:->normalized
-   #:group-size
-   #:->activation
-   #:transpose-weights-p
-   #:add-activations
-   #:->error
-   #:importance
-   #:cost
-   #:transfer-lump
-   #:derive-lump
-   ;; BPN
-   #:bpn
-   #:nodes
-   #:derivatives
-   #:lumps
-   #:find-lump
-   #:initialize-lump
-   #:initialize-bpn
-   #:add-lump
-   #:remove-lump
-   #:with-weights-copied
-   #:build-bpn
-   #:forward-bpn
-   #:backward-bpn
-   #:bp-learner
-   #:compute-derivatives
-   #:dropout
-   ;; Node types
-   #:define-node-type
-   #:node
-   #:add-derivative
-   #:->rep
-   #:->stretch
-   #:->+
-   #:->*
-   #:->sum
-   #:->linear
-   #:->sigmoid
-   #:->scaled-tanh
-   #:->rectified
-   #:->split-sign
-   #:noisyp
-   #:->dropout
-   #:->multiply-with-gaussian
-   #:->sample-binary
-   #:->softplus
-   #:->exp
-   #:->abs
-   #:->sin
-   #:->rough-exponential
-   #:->ref
-   #:->periodic
-   #:->sum-squared-error
-   #:->squared-error
-   #:->max
-   #:->max-channel
-   #:->min
-   #:->softmax
-   #:->cross-entropy
-   #:->cross-entropy-softmax
-   #:softmax
-   #:target
-   #:class-weights
-   #:add-cross-entropy-softmax
-   ;; Utilities
-   #:collect-bpn-errors
-   #:renormalize-activations
-   #:arrange-for-renormalizing-activations)
-  (:documentation "Backpropagation."))
-
 (cl:defpackage :mgl-unroll
   (:use #:common-lisp #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core
-        #:mgl-bm #:mgl-bp ;; #:mgl-gd
-        )
+        #:mgl-bm #:mgl-bp)
   (:export
    #:chunk-lump-name
    #:unroll-dbn
@@ -453,3 +448,11 @@
    #:gp-samples-as-plot-data)
   (:documentation "Gaussian processes with support for training with
   backpropagation."))
+
+(mgl-pax:define-package :mgl
+  (:documentation "See MGL:@MGL-MANUAL. This package reexports
+  everything from other packages defined here plus MGL-MAT.")
+  (:use #:common-lisp #:mgl-pax
+        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-resample #:mgl-core
+        #:mgl-opt #:mgl-gd #:mgl-cg
+        #:mgl-diffun #:mgl-bp #:mgl-bm #:mgl-unroll #:mgl-gp))
