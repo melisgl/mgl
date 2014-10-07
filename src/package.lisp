@@ -74,9 +74,6 @@
    #:running-stat-mean
    ;; Array utilities
    #:as-column-vector
-   ;; I/O
-   #:write-weights
-   #:read-weights
    ;; Printing
    #:print-table
    ;; Describe customization
@@ -114,8 +111,9 @@
   (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util)
   (:export #:@mgl-dataset))
 
-(cl:defpackage :mgl-core
-  (:use #:common-lisp #:mgl-mat #:mgl-common #:mgl-util #:mgl-dataset)
+(mgl-pax:define-package :mgl-core
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-dataset)
   (:export
    #:set-input
    ;; Error counter

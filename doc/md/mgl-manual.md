@@ -14,27 +14,29 @@
 - [4 Dataset][72e9]
     - [4.1 Sampler][af7d]
         - [4.1.1 Function Sampler][2100]
-- [5 Resampling][8fc3]
-    - [5.1 Partitions][9f93]
-    - [5.2 Cross-validation][4293]
-    - [5.3 Bagging][0675]
-    - [5.4 CV Bagging][ca85]
-    - [5.5 Miscellaneous Operations][7540]
-- [6 Gradient Based Optimization][fe97]
-    - [6.1 Iterative Optimizer][f805]
-    - [6.2 Gradient Descent][53a7]
-        - [6.2.1 Batch GD Optimizer][df57]
-        - [6.2.2 Segmented GD Optimizer][25a8]
-        - [6.2.3 Per-weight Optimization][d275]
-    - [6.3 Conjugate Gradient][8729]
-    - [6.4 Extension API][2730]
-        - [6.4.1 Implementing Optimizers][794a]
-        - [6.4.2 Implementing Gradient Sources][984f]
-        - [6.4.3 Implementing Gradient Sinks][f18a]
-- [7 Differentiable Function][1a5d]
-- [8 Backprogation Neural Networks][74a7]
-- [9 Boltzmann Machines][94c7]
-- [10 Gaussian Processes][026c]
+- [5 Model][8b7f]
+    - [5.1 Model Persistence][56ee]
+- [6 Resampling][8fc3]
+    - [6.1 Partitions][9f93]
+    - [6.2 Cross-validation][4293]
+    - [6.3 Bagging][0675]
+    - [6.4 CV Bagging][ca85]
+    - [6.5 Miscellaneous Operations][7540]
+- [7 Gradient Based Optimization][fe97]
+    - [7.1 Iterative Optimizer][f805]
+    - [7.2 Gradient Descent][53a7]
+        - [7.2.1 Batch GD Optimizer][df57]
+        - [7.2.2 Segmented GD Optimizer][25a8]
+        - [7.2.3 Per-weight Optimization][d275]
+    - [7.3 Conjugate Gradient][8729]
+    - [7.4 Extension API][2730]
+        - [7.4.1 Implementing Optimizers][794a]
+        - [7.4.2 Implementing Gradient Sources][984f]
+        - [7.4.3 Implementing Gradient Sinks][f18a]
+- [8 Differentiable Function][1a5d]
+- [9 Backprogation Neural Networks][74a7]
+- [10 Boltzmann Machines][94c7]
+- [11 Gaussian Processes][026c]
 
 ###### \[in package MGL\]
 <a name='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a>
@@ -275,9 +277,47 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 
 
+<a name='x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29'></a>
+
+## 5 Model
+
+###### \[in package MGL-CORE\]
+<a name='x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a>
+
+### 5.1 Model Persistence
+
+<a name='x-28MGL-CORE-3AREAD-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **READ-WEIGHTS** *MODEL STREAM*
+
+    Read the weights of `MODEL` from the bivalent `STREAM`
+    where weights mean the learnt parameters. There is currently no
+    sanity checking of data which will most certainly change in the
+    future together with the serialization format.
+
+<a name='x-28MGL-CORE-3AWRITE-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **WRITE-WEIGHTS** *MODEL STREAM*
+
+    Write weight of `MODEL` to the bivalent `STREAM`.
+
+<a name='x-28MGL-CORE-3ALOAD-WEIGHTS-20FUNCTION-29'></a>
+
+- [function] **LOAD-WEIGHTS** *FILENAME MODEL*
+
+    Load weights of `MODEL` from `FILENAME`.
+
+<a name='x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29'></a>
+
+- [function] **SAVE-WEIGHTS** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
+
+    Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
+    `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
+    on to `OPEN`.
+
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29'></a>
 
-## 5 Resampling
+## 6 Resampling
 
 ###### \[in package MGL-RESAMPLE\]
 The focus of this package is on resampling methods such as
@@ -288,7 +328,7 @@ tend to be used together with resampling.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.1 Partitions
+### 6.1 Partitions
 
 The following functions partition a dataset (currently only
 SEQUENCEs are supported) into a number of partitions. For each
@@ -355,7 +395,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.2 Cross-validation
+### 6.2 Cross-validation
 
 <a name='x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29'></a>
 
@@ -427,7 +467,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.3 Bagging
+### 6.3 Bagging
 
 <a name='x-28MGL-RESAMPLE-3ABAG-20FUNCTION-29'></a>
 
@@ -481,7 +521,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.4 CV Bagging
+### 6.4 CV Bagging
 
 <a name='x-28MGL-RESAMPLE-3ABAG-CV-20FUNCTION-29'></a>
 
@@ -512,7 +552,7 @@ contains it.
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.5 Miscellaneous Operations
+### 6.5 Miscellaneous Operations
 
 <a name='x-28MGL-RESAMPLE-3ASPREAD-STRATA-20FUNCTION-29'></a>
 
@@ -556,7 +596,7 @@ contains it.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a>
 
-## 6 Gradient Based Optimization
+## 7 Gradient Based Optimization
 
 ###### \[in package MGL-OPT\]
 We have a real valued, differentiable function F and the task is to
@@ -600,7 +640,7 @@ gradients) but more can be added with the [Extension API][2730].
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.1 Iterative Optimizer
+### 7.1 Iterative Optimizer
 
 <a name='x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29'></a>
 
@@ -638,7 +678,7 @@ gradients) but more can be added with the [Extension API][2730].
 
 <a name='x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.2 Gradient Descent
+### 7.2 Gradient Descent
 
 ###### \[in package MGL-GD\]
 Gradient descent is a first-order optimization algorithm. Relying
@@ -709,7 +749,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.2.1 Batch GD Optimizer
+#### 7.2.1 Batch GD Optimizer
 
 <a name='x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -832,7 +872,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.2.2 Segmented GD Optimizer
+#### 7.2.2 Segmented GD Optimizer
 
 <a name='x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -879,7 +919,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.2.3 Per-weight Optimization
+#### 7.2.3 Per-weight Optimization
 
 <a name='x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -907,7 +947,7 @@ mini-batch basis:
 
 <a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.3 Conjugate Gradient
+### 7.3 Conjugate Gradient
 
 ###### \[in package MGL-CG\]
 Conjugate gradient is a first-order optimization algorithm. It's
@@ -1140,11 +1180,11 @@ respect to some of its parameters.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.4 Extension API
+### 7.4 Extension API
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.4.1 Implementing Optimizers
+#### 7.4.1 Implementing Optimizers
 
 The following generic functions must be specialized for new
 optimizer types.
@@ -1228,7 +1268,7 @@ optimizers.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.4.2 Implementing Gradient Sources
+#### 7.4.2 Implementing Gradient Sources
 
 Weights can be stored in a multitude of ways. Optimizers need to
 update weights, so it is assumed that weights are stored in any
@@ -1304,7 +1344,7 @@ new gradient sources except where noted.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.4.3 Implementing Gradient Sinks
+#### 7.4.3 Implementing Gradient Sinks
 
 Optimizers call [`ACCUMULATE-GRADIENTS*`][4c7c] on gradient sources. One
 parameter of [`ACCUMULATE-GRADIENTS*`][4c7c] is the `SINK`. A gradient sink
@@ -1326,7 +1366,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 
 <a name='x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29'></a>
 
-## 7 Differentiable Function
+## 8 Differentiable Function
 
 ###### \[in package MGL-DIFFUN\]
 <a name='x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29'></a>
@@ -1363,17 +1403,17 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 
 <a name='x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a>
 
-## 8 Backprogation Neural Networks
+## 9 Backprogation Neural Networks
 
 
 <a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a>
 
-## 9 Boltzmann Machines
+## 10 Boltzmann Machines
 
 
 <a name='x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29'></a>
 
-## 10 Gaussian Processes
+## 11 Gaussian Processes
 
 
   [026c]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GP MGL-PAX:SECTION)"
@@ -1394,6 +1434,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [516d]: #x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)"
   [51ad]: #x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
+  [56ee]: #x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
   [643d]: #x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29 "(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"
   [66a1]: #x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
@@ -1413,6 +1454,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [864e]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "(MGL-CG:CG-OPTIMIZER CLASS)"
   [8665]: #x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-FEATURES MGL-PAX:SECTION)"
   [8729]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "(MGL-CG:@MGL-CG MGL-PAX:SECTION)"
+  [8b7f]: #x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)"
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"
   [9589]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"

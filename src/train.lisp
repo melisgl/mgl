@@ -1,5 +1,42 @@
 (in-package :mgl-core)
 
+(defsection @mgl-model (:title "Model")
+  (@mgl-model-persistence section))
+
+(defsection @mgl-model-persistence (:title "Model Persistence")
+  (read-weights generic-function)
+  (write-weights generic-function)
+  (load-weights function)
+  (save-weights function))
+
+(defgeneric read-weights (model stream)
+  (:documentation "Read the weights of MODEL from the bivalent STREAM
+  where weights mean the learnt parameters. There is currently no
+  sanity checking of data which will most certainly change in the
+  future together with the serialization format."))
+
+(defgeneric write-weights (model stream)
+  (:documentation "Write weight of MODEL to the bivalent STREAM."))
+
+(defun load-weights (filename model)
+  "Load weights of MODEL from FILENAME."
+  (with-open-file (stream filename :element-type 'unsigned-byte)
+    (read-weights model stream)))
+
+(defun save-weights (filename model &key (if-exists :error)
+                     (ensure t))
+  "Save weights of MODEL to FILENAME. If ENSURE, then
+  ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
+  on to OPEN."
+  (when ensure
+    (ensure-directories-exist filename))
+  (with-open-file (stream filename :direction :output
+                          :if-does-not-exist :create
+                          :if-exists if-exists
+                          :element-type 'unsigned-byte)
+    (write-weights model stream)))
+
+
 (defgeneric set-input (instances learner)
   (:documentation "Set INSTANCES as inputs in LEARNER. SAMPLES is
   always a SEQUENCE of instances even for learners not capable of

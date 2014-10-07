@@ -5,6 +5,7 @@
   (@mgl-overview section)
   (@mgl-basic-concepts section)
   (mgl-dataset:@mgl-dataset section)
+  (mgl-core:@mgl-model section)
   (mgl-resample:@mgl-resample section)
   (mgl-opt:@mgl-opt section)
   (mgl-diffun:@mgl-diffun section)

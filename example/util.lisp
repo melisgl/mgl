@@ -304,17 +304,3 @@
   (collect-bpn-errors sampler bpn
                       :counters-and-measurers
                       (make-bpn-cesc-counters-and-measurers)))
-
-
-;;;; Utilities
-
-(defun load-weights (filename obj)
-  (with-open-file (stream filename :element-type 'unsigned-byte)
-    (read-weights obj stream)))
-
-(defun save-weights (filename obj)
-  (ensure-directories-exist filename)
-  (with-open-file (stream filename :direction :output
-                   :if-does-not-exist :create :if-exists :supersede
-                   :element-type 'unsigned-byte)
-    (write-weights obj stream)))

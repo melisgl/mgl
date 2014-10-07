@@ -365,15 +365,6 @@
   (aops:reshape a (list (array-total-size a) 1)))
 
 
-;;;; Weight I/O
-
-(defgeneric write-weights (object stream)
-  (:documentation "Write the weights of OBJECT to STREAM."))
-
-(defgeneric read-weights (object stream)
-  (:documentation "Read the weights of OBJECT from STREAM."))
-
-
 ;;;; Printing
 
 (defun print-table (list &key (stream t))
