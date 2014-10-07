@@ -153,7 +153,8 @@
                                     batch (bpn learner)))))
 
 ;;; FIXME:
-(defmethod train-batch (batch (optimizer base-optimizer) (learner bp-learner))
+(defmethod mgl-cg::train-batch ((optimizer base-optimizer) (learner bp-learner)
+                                batch)
   (if (typep optimizer 'mgl-cg:cg-optimizer)
       (let ((result (multiple-value-list (call-next-method))))
         (when (= (length result) 5)
