@@ -88,7 +88,24 @@
 
 (defsection @mgl-basic-concepts (:title "Basic Concepts")
   "MODEL, training set, test set, validation set,
-  sample/instance/example.")
+  sample/instance/example.
+
+  The MGL package reexports every external symbol of all the MGL-* 
+  packages.")
+
+(cl-reexport:reexport-from :mgl-common)
+(cl-reexport:reexport-from :mgl-util)
+(cl-reexport:reexport-from :mgl-dataset)
+(cl-reexport:reexport-from :mgl-resample)
+(cl-reexport:reexport-from :mgl-core)
+(cl-reexport:reexport-from :mgl-opt)
+(cl-reexport:reexport-from :mgl-gd)
+(cl-reexport:reexport-from :mgl-cg)
+(cl-reexport:reexport-from :mgl-diffun)
+(cl-reexport:reexport-from :mgl-bp)
+(cl-reexport:reexport-from :mgl-bm)
+(cl-reexport:reexport-from :mgl-unroll)
+(cl-reexport:reexport-from :mgl-gp)
 
 (defsection @mgl-bp (:title "Backprogation Neural Networks"))
 

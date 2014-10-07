@@ -32,7 +32,7 @@
                              (:file "unroll")
                              (:file "gaussian-process")
                              (:file "mgl"))))
-  :depends-on (#:alexandria #:closer-mop #:array-operations #:lla
+  :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
                             #:mgl-gnuplot #:mgl-mat #:mgl-pax))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
