@@ -212,7 +212,7 @@
     (call-next-method))
   (setf (slot-value optimizer 'segment-set)
         (make-instance 'segment-set :segments weights))
-  (let ((n-weights (segment-set-size (segment-set optimizer))))
+  (let ((n-weights (size (segment-set optimizer))))
     (setf (accumulator optimizer) (make-mat n-weights :ctype flt-ctype))
     (setf (weight-deltas optimizer) (make-mat n-weights :ctype flt-ctype))))
 
@@ -365,7 +365,7 @@
   same time for all weights."))
 
 (defun set-up-n-weight-uses (optimizer)
-  (let ((n-weights (segment-set-size (segment-set optimizer))))
+  (let ((n-weights (size (segment-set optimizer))))
     (setf (n-weight-uses-in-batch optimizer)
           (make-array n-weights :element-type 'index :initial-element 0))))
 

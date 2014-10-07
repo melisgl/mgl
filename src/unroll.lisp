@@ -365,7 +365,7 @@
     (destructuring-bind (&key weight-name) args
       (let* ((lump (find-lump weight-name bpn :errorp t))
              (weights (weights cloud))
-             (nodes (segment-weights lump)))
+             (nodes (nodes lump)))
         (unless (= (mat-size weights) (mat-size nodes))
           (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
                  lump cloud))

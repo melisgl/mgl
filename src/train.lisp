@@ -1,9 +1,9 @@
 (in-package :mgl-core)
 
-(defgeneric set-input (samples learner)
-  (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
-  a sequence of examples even for learners not capable of batch
-  operation."))
+(defgeneric set-input (instances learner)
+  (:documentation "Set INSTANCES as inputs in LEARNER. SAMPLES is
+  always a SEQUENCE of instances even for learners not capable of
+  batch operation."))
 
 ;;;; Error counter
 

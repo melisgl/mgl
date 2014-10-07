@@ -245,7 +245,7 @@ can be used as input for training or prediction.</p></li>
 <p><a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p>[variable] <strong>*INFINITELY-EMPTY-DATASET*</strong> <em>#&lt;FUNCTION-SAMPLER &quot;infintely empty&quot; &gt;</em></p>
+<li><p>[variable] <strong>*INFINITELY-EMPTY-DATASET*</strong> <em>#&lt;FUNCTION-SAMPLER &quot;infinitely empty&quot; &gt;</em></p>
 
 <p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MGL-OPT:MINIMIZE</code></a>. It's an infinite
 stream of NILs.</p></li>
@@ -645,7 +645,7 @@ gradients) but more can be added with the <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXT
 <li><p>[function] <strong>MINIMIZE</strong> <em>OPTIMIZER GRADIENT-SOURCE &amp;KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET *INFINITELY-EMPTY-DATASET*)</em></p>
 
 <p>Minimize the value of the real valued function represented by
-<code>GRADIENT-SOURCE</code> by updating some of its parameters in <code>WEIGHTS</code> (a MAT
+<code>GRADIENT-SOURCE</code> by updating some of its parameters in <code>WEIGHTS</code> (a <code>MAT</code>
 or a sequence of MATs). Return <code>WEIGHTS</code>. <code>DATASET</code> (see
 MGL:@MGL-DATASETS) is a set of unoptimized parameters of the same
 function. For example, <code>WEIGHTS</code> may be the weights of a neural
@@ -662,7 +662,9 @@ when some other condition met (see <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-
 <p><a name='x-28MGL-OPT-3A-2AACCUMULATING-INTERESTING-GRADIENTS-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li>[variable] <strong>*ACCUMULATING-INTERESTING-GRADIENTS*</strong> <em>NIL</em></li>
+<li><p>[variable] <strong>*ACCUMULATING-INTERESTING-GRADIENTS*</strong> <em>NIL</em></p>
+
+<p>FIXME: Will go away soon.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a></p>
@@ -701,9 +703,69 @@ whether optimization is to be terminated based on <code>N-INSTANCES</code> and
 <a href="#x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29" title="(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)"><code>ITERATIVE-OPTIMIZER</code></a>.</p></li>
 </ul>
 
+<p><a name='x-28MGL-OPT-3ASEGMENT-SET-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>SEGMENT-SET</strong></p>
+
+<p>It's like a concatenation of segments.</p></li>
+</ul>
+
+<p><a name='x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>SIZE</strong> <em>SEGMENT-SET</em></p>
+
+<p>The sum of the sizes of the weight matrices of
+<code>SEGMENTS</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>DO-SEGMENT-SET</strong> <em>(SEGMENT &amp;KEY START-IN-SEGMENT-SET) SEGMENT-SET &amp;BODY BODY</em></p>
+
+<p>Iterate over <code>SEGMENTS</code> in <code>SEGMENT-SET</code> ....</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ASEGMENT-SET-3C-MAT-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SEGMENT-SET&lt;-MAT</strong> <em>SEGMENT-SET MAT</em></p>
+
+<p>Copy the values of <code>MAT</code> to <code>SEGMENT-SET</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ASEGMENT-SET--3EMAT-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>SEGMENT-SET-&gt;MAT</strong> <em>SEGMENT-SET MAT</em></p>
+
+<p>Copy the values of <code>SEGMENT-SET</code> to <code>MAT</code>.</p></li>
+</ul>
+
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a></p>
 
 <h4><span class="navigation"> <a href="#x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)">&#8634;</a></span>6.1.2 Implementing Gradient Sources</h4>
+
+<p>Weights can be stored in a multitude of ways. It is assumed that
+weights are stored in any number of <code>MAT</code> objects.</p>
+
+<p><a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAP-SEGMENTS</strong> <em>FN GRADIENT-SOURCE</em></p>
+
+<p>Apply <code>FN</code> to each segment of <code>GRADIENT-SOURCE</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>LIST-SEGMENTS</strong> <em>GRADIENT-SOURCE</em></p>
+
+<p>Return the list of segments from <a href="#x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29" title="(MGL-OPT:MAP-SEGMENTS GENERIC-FUNCTION)"><code>MAP-SEGMENTS</code></a> on <code>GRADIENT-SOURCE</code>.</p></li>
+</ul>
 
 <p><a name='x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29'></a></p>
 
@@ -728,6 +790,32 @@ object representing the function being optimized, <code>SINK</code> is gradient
 sink.</p></li>
 </ul>
 
+<p><a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAP-SEGMENTS</strong> <em>FN GRADIENT-SOURCE</em></p>
+
+<p>Apply <code>FN</code> to each segment of <code>GRADIENT-SOURCE</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3AMAP-SEGMENT-RUNS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAP-SEGMENT-RUNS</strong> <em>FN SEGMENT</em></p>
+
+<p>Call <code>FN</code> with start and end of intervals of
+consecutive indices that are not missing in <code>SEGMENT</code>. Called by
+optimizers that support partial updates.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SEGMENT-WEIGHTS</strong> <em>SEGMENT</em></p>
+
+<p>Return the weight matrix of <code>SEGMENT</code>.</p></li>
+</ul>
+
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a></p>
 
 <h4><span class="navigation"> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)">&#8634;</a></span>6.1.3 Implementing Gradient Sinks</h4>
@@ -738,7 +826,7 @@ sink.</p></li>
 <li><p>[generic-function] <strong>MAP-GRADIENT-SINK</strong> <em>FN SINK</em></p>
 
 <p>Call <code>FN</code> of lambda list (<code>SEGMENT</code> <code>ACCUMULATOR</code>) on
-each segment and their corresponding accumulator MAT in <code>SINK</code>.</p></li>
+each segment and their corresponding accumulator <code>MAT</code> in <code>SINK</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29'></a></p>
@@ -1071,7 +1159,7 @@ is processed as if it was returned by <a href="#x-28MGL-OPT-3ATERMINATION-20-28M
 <li><p>[reader] <strong>SEGMENTER</strong> <em>SEGMENTED-GD-OPTIMIZER</em> <em>(:SEGMENTER)</em></p>
 
 <p>When this optimizer is initialized it loops over
-the segment of the learner with <code>MAP-SEGMENTS</code>. <a href="#x-28MGL-GD-3ASEGMENTER-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29" title="(MGL-GD:SEGMENTER (MGL-PAX:READER MGL-GD:SEGMENTED-GD-OPTIMIZER))"><code>SEGMENTER</code></a> is a
+the segment of the learner with <a href="#x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29" title="(MGL-OPT:MAP-SEGMENTS GENERIC-FUNCTION)"><code>MAP-SEGMENTS</code></a>. <a href="#x-28MGL-GD-3ASEGMENTER-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29" title="(MGL-GD:SEGMENTER (MGL-PAX:READER MGL-GD:SEGMENTED-GD-OPTIMIZER))"><code>SEGMENTER</code></a> is a
 function that is called with each segment and returns an optimizer
 or <code>NIL</code>. Several segments may be mapped to the same optimizer.
 After the segment-&gt;optimizer mappings are collected, each
@@ -1079,7 +1167,7 @@ optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
 segments mapped to it.</p></li>
 </ul>
 
-<p><a name='x-28MGL-CORE-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-GD-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li>[reader] <strong>SEGMENTS</strong> <em>SEGMENTED-GD-OPTIMIZER</em></li>

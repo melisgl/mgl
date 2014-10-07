@@ -154,20 +154,6 @@
    #:insert-into-executor-cache
    #:trivially-map-over-executors
    #:sample-to-executor-cache-key
-   ;; Segments
-   #:map-segments
-   #:segment-weights
-   #:with-segment-weights
-   #:map-segment-runs
-   #:list-segments
-   ;; Segment set
-   #:segment-set
-   #:segments
-   #:start-indices
-   #:do-segment-set
-   #:segment-set-size
-   #:segment-set->mat
-   #:segment-set<-mat
    ;; Classification
    #:label
    #:label-distribution
@@ -185,29 +171,33 @@
 
 (mgl-pax:define-package :mgl-opt
   (:documentation "See MGL-OPT:@MGL-OPT.")
-  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-dataset #:mgl-core))
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core))
 
 (mgl-pax:define-package :mgl-diffun
   (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util #:mgl-core
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt))
 
 (mgl-pax:define-package :mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util :mgl-dataset
-        #:mgl-core #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core
+        #:mgl-opt)
   (:export #:@mgl-gd))
 
 (mgl-pax:define-package :mgl-cg
   (:documentation "See MGL-CG:@MGL-CG.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util :mgl-dataset
-        #:mgl-core #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util :mgl-dataset #:mgl-core
+        #:mgl-opt)
   (:export #:@mgl-cg))
 
 (cl:defpackage :mgl-bm
-  (:use #:common-lisp #:cl-cuda #:mgl-mat #:mgl-common #:mgl-util #:mgl-core
-        ;; #:mgl-dataset
-        #:mgl-opt #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-opt #:mgl-gd)
   (:nicknames #:mgl-rbm)
   (:export
    ;; Chunk
@@ -332,8 +322,9 @@
   Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-mat #:mgl-common #:mgl-util ;; #:mgl-dataset
-        #:mgl-core #:mgl-opt #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-opt #:mgl-gd #:mgl-cg)
   (:export
    #:lump
    #:deflump
@@ -420,8 +411,10 @@
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll
-  (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-dataset #:mgl-core
-        #:mgl-bm #:mgl-bp #:mgl-gd)
+  (:use #:common-lisp #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core
+        #:mgl-bm #:mgl-bp ;; #:mgl-gd
+        )
   (:export
    #:chunk-lump-name
    #:unroll-dbn
@@ -439,7 +432,9 @@
   networks, aka `unrolling'."))
 
 (cl:defpackage :mgl-gp
-  (:use #:common-lisp #:mgl-mat #:mgl-common #:mgl-util #:mgl-core #:mgl-bp)
+  (:use #:common-lisp #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-bp)
   (:export
    #:gp
    #:gp-means

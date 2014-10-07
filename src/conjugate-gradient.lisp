@@ -415,7 +415,7 @@
         (make-instance 'segment-set
                        :segments (remove-if-not (segment-filter optimizer)
                                                 weights)))
-  (let ((n (segment-set-size (segment-set optimizer))))
+  (let ((n (size (segment-set optimizer))))
     (setf (weights optimizer) (make-mat n)
           (spare-vectors optimizer) (loop repeat 6 collect (make-mat n)))))
 

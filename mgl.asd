@@ -21,7 +21,6 @@
                              (:file "confusion-matrix")
                              (:file "feature")
                              (:file "train")
-                             (:file "segment")
                              (:file "classification")
                              (:file "optimize")
                              (:file "gradient-descent")

@@ -212,7 +212,7 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 <a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a>
 
-- [variable] **\*INFINITELY-EMPTY-DATASET\*** *#\<FUNCTION-SAMPLER "infintely empty" \>*
+- [variable] **\*INFINITELY-EMPTY-DATASET\*** *#\<FUNCTION-SAMPLER "infinitely empty" \>*
 
     This is the default dataset for [`MGL-OPT:MINIMIZE`][bca8]. It's an infinite
     stream of NILs.
@@ -567,7 +567,7 @@ gradients) but more can be added with the [Extension API][2730].
 - [function] **MINIMIZE** *OPTIMIZER GRADIENT-SOURCE &KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET \*INFINITELY-EMPTY-DATASET\*)*
 
     Minimize the value of the real valued function represented by
-    `GRADIENT-SOURCE` by updating some of its parameters in `WEIGHTS` (a MAT
+    `GRADIENT-SOURCE` by updating some of its parameters in `WEIGHTS` (a `MAT`
     or a sequence of MATs). Return `WEIGHTS`. `DATASET` (see
     MGL:@MGL-DATASETS) is a set of unoptimized parameters of the same
     function. For example, `WEIGHTS` may be the weights of a neural
@@ -583,6 +583,8 @@ gradients) but more can be added with the [Extension API][2730].
 <a name='x-28MGL-OPT-3A-2AACCUMULATING-INTERESTING-GRADIENTS-2A-20VARIABLE-29'></a>
 
 - [variable] **\*ACCUMULATING-INTERESTING-GRADIENTS\*** *NIL*
+
+    FIXME: Will go away soon.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
 
@@ -614,9 +616,55 @@ gradients) but more can be added with the [Extension API][2730].
     `TERMINATION` that are values of the respective accessors of
     [`ITERATIVE-OPTIMIZER`][83bf].
 
+<a name='x-28MGL-OPT-3ASEGMENT-SET-20CLASS-29'></a>
+
+- [class] **SEGMENT-SET**
+
+    It's like a concatenation of segments.
+
+<a name='x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29'></a>
+
+- [reader] **SIZE** *SEGMENT-SET*
+
+    The sum of the sizes of the weight matrices of
+    `SEGMENTS`.
+
+<a name='x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **DO-SEGMENT-SET** *(SEGMENT &KEY START-IN-SEGMENT-SET) SEGMENT-SET &BODY BODY*
+
+    Iterate over `SEGMENTS` in `SEGMENT-SET` ....
+
+<a name='x-28MGL-OPT-3ASEGMENT-SET-3C-MAT-20FUNCTION-29'></a>
+
+- [function] **SEGMENT-SET\<-MAT** *SEGMENT-SET MAT*
+
+    Copy the values of `MAT` to `SEGMENT-SET`.
+
+<a name='x-28MGL-OPT-3ASEGMENT-SET--3EMAT-20FUNCTION-29'></a>
+
+- [function] **SEGMENT-SET-\>MAT** *SEGMENT-SET MAT*
+
+    Copy the values of `SEGMENT-SET` to `MAT`.
+
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a>
 
 #### 6.1.2 Implementing Gradient Sources
+
+Weights can be stored in a multitude of ways. It is assumed that
+weights are stored in any number of `MAT` objects.
+
+<a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-SEGMENTS** *FN GRADIENT-SOURCE*
+
+    Apply `FN` to each segment of `GRADIENT-SOURCE`.
+
+<a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a>
+
+- [function] **LIST-SEGMENTS** *GRADIENT-SOURCE*
+
+    Return the list of segments from [`MAP-SEGMENTS`][8202] on `GRADIENT-SOURCE`.
 
 <a name='x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29'></a>
 
@@ -637,6 +685,26 @@ gradients) but more can be added with the [Extension API][2730].
     object representing the function being optimized, `SINK` is gradient
     sink.
 
+<a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-SEGMENTS** *FN GRADIENT-SOURCE*
+
+    Apply `FN` to each segment of `GRADIENT-SOURCE`.
+
+<a name='x-28MGL-OPT-3AMAP-SEGMENT-RUNS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-SEGMENT-RUNS** *FN SEGMENT*
+
+    Call `FN` with start and end of intervals of
+    consecutive indices that are not missing in `SEGMENT`. Called by
+    optimizers that support partial updates.
+
+<a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SEGMENT-WEIGHTS** *SEGMENT*
+
+    Return the weight matrix of `SEGMENT`.
+
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a>
 
 #### 6.1.3 Implementing Gradient Sinks
@@ -646,7 +714,7 @@ gradients) but more can be added with the [Extension API][2730].
 - [generic-function] **MAP-GRADIENT-SINK** *FN SINK*
 
     Call `FN` of lambda list (`SEGMENT` `ACCUMULATOR`) on
-    each segment and their corresponding accumulator MAT in `SINK`.
+    each segment and their corresponding accumulator `MAT` in `SINK`.
 
 <a name='x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29'></a>
 
@@ -932,14 +1000,14 @@ mini-batch basis:
 - [reader] **SEGMENTER** *SEGMENTED-GD-OPTIMIZER* *(:SEGMENTER)*
 
     When this optimizer is initialized it loops over
-    the segment of the learner with `MAP-SEGMENTS`. [`SEGMENTER`][b6ac] is a
+    the segment of the learner with [`MAP-SEGMENTS`][8202]. [`SEGMENTER`][b6ac] is a
     function that is called with each segment and returns an optimizer
     or `NIL`. Several segments may be mapped to the same optimizer.
     After the segment->optimizer mappings are collected, each
     optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
     segments mapped to it.
 
-<a name='x-28MGL-CORE-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-GD-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
 
 - [reader] **SEGMENTS** *SEGMENTED-GD-OPTIMIZER*
 
@@ -1284,6 +1352,7 @@ respect to some of its parameters.
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)"
   [7ae7]: #x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"
   [7f6b]: #x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:CG-ARGS (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
+  [8202]: #x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-SEGMENTS GENERIC-FUNCTION)"
   [8375]: #x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29 "(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"
   [83bf]: #x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29 "(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)"
   [864e]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "(MGL-CG:CG-OPTIMIZER CLASS)"

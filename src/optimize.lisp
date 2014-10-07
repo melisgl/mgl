@@ -22,7 +22,8 @@
   (mgl-gd:@mgl-gd section)
   (mgl-cg:@mgl-cg section))
 
-(defvar *accumulating-interesting-gradients* nil)
+(defvar *accumulating-interesting-gradients* nil
+  "FIXME: Will go away soon.")
 
 (defun minimize (optimizer gradient-source
                  &key (weights (list-segments gradient-source))
@@ -94,7 +95,12 @@
 (defsection @mgl-opt-optimizer (:title "Implementing Optimizers")
   (minimize* generic-function)
   (initialize-optimizer* generic-function)
-  (terminate-optimization-p function))
+  (terminate-optimization-p function)
+  (segment-set class)
+  (size (reader segment-set))
+  (do-segment-set macro)
+  (segment-set<-mat function)
+  (segment-set->mat function))
 
 (defgeneric minimize* (optimizer gradient-source weights dataset))
 
@@ -118,11 +124,95 @@
          termination)
         (t
          (terminate-optimization-p n-instances (funcall termination)))))
+
+(defclass segment-set ()
+  ((segments :initform (error "Must specify segment list.")
+             :initarg :segments :reader segments)
+   (start-indices :reader start-indices)
+   (size
+    :reader size
+    :documentation "The sum of the sizes of the weight matrices of
+    SEGMENTS."))
+  (:documentation "It's like a concatenation of segments."))
+
+(defmethod print-object ((set segment-set) stream)
+  (pprint-logical-block (stream ())
+    (print-unreadable-object (set stream :type t :identity t)
+      (format stream "~A" (segments set))))
+  set)
+
+(defmethod initialize-instance :after ((segment-set segment-set)
+                                       &key &allow-other-keys)
+  (let ((n 0)
+        (start-indices '()))
+    (dolist (segment (segments segment-set))
+      (push n start-indices)
+      (incf n (mat-size (segment-weights segment))))
+    (setf (slot-value segment-set 'start-indices) (reverse start-indices)
+          (slot-value segment-set 'size) n)))
+
+(defmacro do-segment-set ((segment &key start-in-segment-set) segment-set
+                          &body body)
+  "Iterate over SEGMENTS in SEGMENT-SET ...."
+  (alexandria:with-gensyms (%segment-set %start-index)
+    `(let* ((,%segment-set ,segment-set))
+       (loop for ,segment in (segments ,%segment-set)
+             ,@(when start-in-segment-set
+                 (list 'for %start-index 'in
+                       (list 'start-indices %segment-set)))
+             do
+             (let (,@(when start-in-segment-set
+                       (list (list start-in-segment-set %start-index))))
+               ,@(when start-in-segment-set
+                   `((declare (type index ,start-in-segment-set))))
+               ,@body)))))
+
+(defun segment-set<-mat (segment-set mat)
+  "Copy the values of MAT to SEGMENT-SET."
+  (map-concat (lambda (m mat) (copy! mat m))
+              (segments segment-set) mat :key #'segment-weights))
+
+(defun segment-set->mat (segment-set mat)
+  "Copy the values of SEGMENT-SET to MAT."
+  (map-concat #'copy! (segments segment-set) mat :key #'segment-weights))
 
 
 (defsection @mgl-opt-gradient-source (:title "Implementing Gradient Sources")
+  "Weights can be stored in a multitude of ways. It is assumed that
+  weights are stored in any number of MAT objects."
+  (map-segments generic-function)
+  (list-segments function)
   (initialize-gradient-source* generic-function)
-  (accumulate-gradients* generic-function))
+  (accumulate-gradients* generic-function)
+  (map-segments generic-function)
+  (map-segment-runs generic-function)
+  (segment-weights generic-function))
+
+(defgeneric map-segments (fn gradient-source)
+  (:documentation "Apply FN to each segment of GRADIENT-SOURCE.")
+  (:method (fn (segment-list list))
+    (mapc fn segment-list)))
+
+(defgeneric segment-weights (segment)
+  (:documentation "Return the weight matrix of SEGMENT.")
+  (:method ((mat mat))
+    mat))
+
+(defgeneric map-segment-runs (fn segment)
+  (:documentation "Call FN with start and end of intervals of
+  consecutive indices that are not missing in SEGMENT. Called by
+  optimizers that support partial updates.")
+  (:method (fn segment)
+    (let ((mat (segment-weights segment)))
+      (funcall fn mat 0 (mat-size mat)))))
+
+(defun list-segments (gradient-source)
+  "Return the list of segments from MAP-SEGMENTS on GRADIENT-SOURCE."
+  (let ((segments ()))
+    (map-segments (lambda (segment)
+                    (push segment segments))
+                  gradient-source)
+    (reverse segments)))
 
 (defgeneric initialize-gradient-source* (optimizer gradient-source weights
                                          dataset)
