@@ -237,9 +237,23 @@ can be used as input for training or prediction.</p></li>
 <p><a name='x-28MGL-DATASET-3AMAKE-SEQUENCE-SAMPLER-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[function] <strong>MAKE-SEQUENCE-SAMPLER</strong> <em>SEQ</em></p>
+<li><p>[function] <strong>MAKE-SEQUENCE-SAMPLER</strong> <em>SEQ &amp;KEY MAX-N-SAMPLES</em></p>
 
-<p>A simple sampler that returns elements of <code>SEQ</code> once, in order.</p></li>
+<p>Create a sampler that returns elements of <code>SEQ</code> in their original
+order. If <code>MAX-N-SAMPLES</code> is non-nil, then at most <code>MAX-N-SAMPLES</code> are
+sampled.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AMAKE-RANDOM-SAMPLER-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAKE-RANDOM-SAMPLER</strong> <em>SEQ &amp;KEY MAX-N-SAMPLES (REORDER #'MGL-RESAMPLE:SHUFFLE)</em></p>
+
+<p>Create a sampler that returns elements of <code>SEQ</code> in random order. If
+<code>MAX-N-SAMPLES</code> is non-nil, then at most <code>MAX-N-SAMPLES</code> are sampled.
+The first pass over a shuffled copy of <code>SEQ</code>, and this copy is
+reshuffled whenever the sampler reaches the end of it. Shuffling is
+performed by calling the <code>REORDER</code> function.</p></li>
 </ul>
 
 <p><a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a></p>

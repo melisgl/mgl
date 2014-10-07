@@ -148,7 +148,7 @@
        (declare (ignore ,args))
        ,@body)))
 
-(defun make-seq-generator (seq)
+(defun make-sequence-generator (seq)
   "Return a function that returns elements of SEQ in order without
   end. When there are no more elements, start over."
   (let* ((vector (copy-seq (coerce seq 'vector)))

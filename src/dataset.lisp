@@ -12,8 +12,6 @@
   instances."
   (@mgl-sampler section))
 
-;;;; Rename to generator?
-
 (defsection @mgl-sampler (:title "Sampler")
   "Some algorithms do not need random access to the entire dataset and
   can work with a stream observations. Samplers are simple generators
@@ -22,6 +20,7 @@
   (finishedp generic-function)
   (list-samples function)
   (make-sequence-sampler function)
+  (make-random-sampler function)
   (*infinitely-empty-dataset* variable)
   (@mgl-sampler-function-sampler section))
 
@@ -41,11 +40,25 @@
         while (not (finishedp sampler))
         collect (sample sampler)))
 
-(defun make-sequence-sampler (seq)
-  "A simple sampler that returns elements of SEQ once, in order."
+;;; FIXME: add KEY
+(defun make-sequence-sampler (seq &key max-n-samples)
+  "Create a sampler that returns elements of SEQ in their original
+  order. If MAX-N-SAMPLES is non-nil, then at most MAX-N-SAMPLES are
+  sampled."
   (make-instance 'function-sampler
-                 :max-n-samples (length seq)
-                 :generator (make-seq-generator seq)))
+                 :max-n-samples max-n-samples
+                 :generator (make-sequence-generator seq)))
+
+(defun make-random-sampler (seq &key max-n-samples
+                            (reorder #'mgl-resample:shuffle))
+  "Create a sampler that returns elements of SEQ in random order. If
+  MAX-N-SAMPLES is non-nil, then at most MAX-N-SAMPLES are sampled.
+  The first pass over a shuffled copy of SEQ, and this copy is
+  reshuffled whenever the sampler reaches the end of it. Shuffling is
+  performed by calling the REORDER function."
+  (make-instance 'function-sampler
+                 :max-n-samples max-n-samples
+                 :generator (make-random-generator seq :reorder reorder)))
 
 
 (defsection @mgl-sampler-function-sampler (:title "Function Sampler")

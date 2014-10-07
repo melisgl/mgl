@@ -206,9 +206,21 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 <a name='x-28MGL-DATASET-3AMAKE-SEQUENCE-SAMPLER-20FUNCTION-29'></a>
 
-- [function] **MAKE-SEQUENCE-SAMPLER** *SEQ*
+- [function] **MAKE-SEQUENCE-SAMPLER** *SEQ &KEY MAX-N-SAMPLES*
 
-    A simple sampler that returns elements of `SEQ` once, in order.
+    Create a sampler that returns elements of `SEQ` in their original
+    order. If `MAX-N-SAMPLES` is non-nil, then at most `MAX-N-SAMPLES` are
+    sampled.
+
+<a name='x-28MGL-DATASET-3AMAKE-RANDOM-SAMPLER-20FUNCTION-29'></a>
+
+- [function] **MAKE-RANDOM-SAMPLER** *SEQ &KEY MAX-N-SAMPLES (REORDER #'MGL-RESAMPLE:SHUFFLE)*
+
+    Create a sampler that returns elements of `SEQ` in random order. If
+    `MAX-N-SAMPLES` is non-nil, then at most `MAX-N-SAMPLES` are sampled.
+    The first pass over a shuffled copy of `SEQ`, and this copy is
+    reshuffled whenever the sampler reaches the end of it. Shuffling is
+    performed by calling the `REORDER` function.
 
 <a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a>
 

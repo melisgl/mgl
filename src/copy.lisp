@@ -1,4 +1,4 @@
-;;;; Generic, customizable copy mechanism.
+;;;; Generic, customizable copy mechanism. Only used internally.
 
 (in-package :mgl-util)
 

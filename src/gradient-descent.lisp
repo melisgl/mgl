@@ -102,8 +102,7 @@
 (defmethod minimize* ((optimizer base-gd-optimizer) gradient-source
                       weights dataset)
   (let ((sampler (if (typep dataset 'sequence)
-                     (make-instance 'function-sampler
-                                    :generator (make-random-generator dataset))
+                     (make-random-sampler dataset)
                      dataset)))
     (while (and (not (terminate-optimization-p (n-instances optimizer)
                                                (termination optimizer)))

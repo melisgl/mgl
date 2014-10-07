@@ -463,7 +463,8 @@
   replaced by the calculated contents; if :APPEND, the new (lump
   array) entries are appended to the existing ones; if :ERROR, an
   error is signalled."
-  (let ((sampler (make-sequence-sampler samples))
+  (let ((sampler (make-sequence-sampler samples
+                                        :max-n-samples (length samples)))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
     (do-batches-for-learner (samples (sampler dbm))

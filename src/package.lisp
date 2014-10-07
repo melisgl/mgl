@@ -46,7 +46,7 @@
    #:max-position
    #:hash-table->vector
    #:repeatedly
-   #:make-seq-generator
+   #:make-sequence-generator
    #:make-random-generator
    #:make-n-gram-mappee
    ;; Periodic fn
