@@ -617,9 +617,8 @@
       #.(flt 0.5)
       #.(flt 0.9)))
 
-(defmethod initialize-gradient-source (learner dbm
-                                       (optimizer mnist-dbm-optimizer))
-  (declare (ignore dbm))
+(defmethod initialize-gradient-source* ((optimizer mnist-dbm-optimizer) learner
+                                        weights dataset)
   (when (next-method-p)
     (call-next-method))
   (set-input (list-samples (make-sampler (training optimizer)
