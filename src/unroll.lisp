@@ -467,7 +467,7 @@
                                         :max-n-samples (length samples)))
         (cache (clamping-cache bpn))
         (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
-    (do-batches-for-learner (samples (sampler dbm))
+    (do-batches-for-model (samples (sampler dbm))
       (when periodic-fn
         (call-periodic-fn (hash-table-count cache) periodic-fn
                           (hash-table-count cache)))

@@ -25,10 +25,11 @@
   (@mgl-sampler-function-sampler section))
 
 (defgeneric sample (sampler)
-  (:documentation "If not SAMPLER has not run out of data (see
-  FINISHEDP) SAMPLE returns an object that represents a sample from
-  the world to be experienced or, in other words, simply something the
-  can be used as input for training or prediction."))
+  (:documentation "If SAMPLER has not run out of data (see FINISHEDP)
+  SAMPLE returns an object that represents a sample from the world to
+  be experienced or, in other words, simply something the can be used
+  as input for training or prediction. It is not allowed to call
+  SAMPLE if SAMPLER is FINISHEDP."))
 
 (defgeneric finishedp (sampler)
   (:documentation "See if SAMPLER has run out of examples."))

@@ -111,7 +111,6 @@
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-dataset)
   (:export
-   #:set-input
    ;; Error counter
    #:counter
    #:print-counter
@@ -124,19 +123,7 @@
    #:add-error
    #:reset-counter
    #:get-error
-   ;; Stripes
-   #:n-stripes
-   #:set-n-stripes
-   #:max-n-stripes
-   #:set-max-n-stripes
-   #:find-striped
-   #:striped-array
-   #:stripe-start
-   #:stripe-end
-   #:with-stripes
    ;; Collecting errors
-   #:map-batches-for-learner
-   #:do-batches-for-learner
    #:apply-counters-and-measurers
    #:collect-batch-errors
    ;; Executors

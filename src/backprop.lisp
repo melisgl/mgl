@@ -154,9 +154,6 @@
   (when *bpn-being-built*
     (add-lump lump *bpn-being-built*)))
 
-(defmethod striped-array ((lump lump))
-  (nodes lump))
-
 (defmethod stripe-start (stripe (lump lump))
   (* (if (same-stripes-p lump)
          0
@@ -575,9 +572,6 @@
       (if errorp
           (error "Cannot find lump ~S." name)
           nil)))
-
-(defmethod find-striped (name (bpn bpn))
-  (find-lump name bpn))
 
 (defmethod set-input :around (samples (bpn bpn))
   (setf (n-stripes bpn) (length samples))

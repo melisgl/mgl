@@ -49,9 +49,6 @@
   (/ (mat-max-size (nodes chunk))
      (size chunk)))
 
-(defmethod striped-array ((chunk chunk))
-  (nodes chunk))
-
 (defmethod stripe-start (stripe (chunk chunk))
   (* stripe (size chunk)))
 
@@ -1120,9 +1117,6 @@
         (if errorp
             (error "Cannot find chunk ~S." name)
             nil))))
-
-(defmethod find-striped (name (bm bm))
-  (find-chunk name bm))
 
 (defmacro do-clouds ((cloud bm) &body body)
   `(dolist (,cloud (clouds ,bm))

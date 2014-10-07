@@ -1,7 +1,9 @@
 (in-package :mgl-core)
 
 (defsection @mgl-model (:title "Model")
-  (@mgl-model-persistence section))
+  (@mgl-model-persistence section)
+  (@mgl-model-stripe section))
+
 
 (defsection @mgl-model-persistence (:title "Model Persistence")
   (read-weights generic-function)
@@ -37,10 +39,110 @@
     (write-weights model stream)))
 
 
-(defgeneric set-input (instances learner)
-  (:documentation "Set INSTANCES as inputs in LEARNER. SAMPLES is
-  always a SEQUENCE of instances even for learners not capable of
-  batch operation."))
+(defsection @mgl-model-stripe (:title "Batch Processing")
+  "Processing instances one by one during training or prediction can
+  be slow. The models that support batch processing for greater
+  efficiency are said to be /striped/.
+
+  Typically after creating a model, ones sets MAX-N-STRIPES on it a
+  positive integer. When a batch of instances is to be fed to the
+  model it is first broken into subbatches of length that's at most
+  MAX-N-STRIPES. For each subbatch, SET-INPUT is called and a before
+  method takes care of setting N-STRIPES to the actual number of
+  instances in the subbatch. When MAX-N-STRIPES is set internal data
+  structures may be resized which is an expensive operation. Setting
+  N-STRIPES is a comparatively cheap operation, often implemented as
+  matrix reshaping.
+
+  Note that for models made of different parts (for example,
+  [MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
+  values affects the constituent parts, but one should never change
+  the number stripes of the parts directly because that would lead to
+  an internal inconsistency in the model."
+  (max-n-stripes generic-function)
+  (set-max-n-stripes generic-function)
+  (n-stripes generic-function)
+  (set-n-stripes generic-function)
+  (with-stripes macro)
+  (stripe-start generic-function)
+  (stripe-end generic-function)
+  (set-input generic-function)
+  (map-batches-for-model function)
+  (do-batches-for-model macro))
+
+(defgeneric max-n-stripes (object)
+  (:documentation "The number of stripes with which the OBJECT is
+  capable of dealing simultaneously. "))
+
+(defgeneric set-max-n-stripes (max-n-stripes object)
+  (:documentation "Allocate the necessary stuff to allow for
+  MAX-N-STRIPES number of stripes to be worked with simultaneously in
+  OBJECT. This is called when MAX-N-STRIPES is SETF'ed."))
+
+(defsetf max-n-stripes (object) (store)
+  `(set-max-n-stripes ,store ,object))
+
+(defgeneric n-stripes (object)
+  (:documentation "The number of stripes currently present in OBJECT.
+  This is at most MAX-N-STRIPES."))
+
+(defgeneric set-n-stripes (n-stripes object)
+  (:documentation "Set the number of stripes (out of MAX-N-STRIPES)
+  that are in use in OBJECT. This is called when N-STRIPES is
+  SETF'ed."))
+
+(defsetf n-stripes (object) (store)
+  `(set-n-stripes ,store ,object))
+
+(defmacro with-stripes (specs &body body)
+  "Bind start and optionally end indices belonging to stripes in
+  striped objects.
+
+      (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
+                    (STRIPE2 OBJECT2 START2)
+                    ...)
+       ...)"
+  `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
+                  specs)
+     ,@body))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun stripe-binding (stripe object start &optional end)
+    (alexandria:with-gensyms (%stripe %object)
+      `((,%stripe ,stripe)
+        (,%object ,object)
+        (,start (the index (stripe-start ,%stripe ,%object)))
+        ,@(when end `((,end (the index (stripe-end ,%stripe ,%object)))))))))
+
+(defgeneric stripe-start (stripe object)
+  (:documentation "Return the start index of STRIPE in STRIPED-ARRAY
+  of OBJECT."))
+
+(defgeneric stripe-end (stripe object)
+  (:documentation "Return the end index (exclusive) of STRIPE in
+  STRIPED-ARRAY of OBJECT."))
+
+(defgeneric set-input (instances model)
+  (:documentation "Set INSTANCES as inputs in MODEL. SAMPLES is always
+  a SEQUENCE of instances even for models not capable of batch
+  operation. It sets N-STRIPES to (LENGTH INSTANCES) in a :BEFORE
+  method."))
+
+(defun map-batches-for-model (fn dataset model)
+  "Call FN with batches of instances from DATASET suitable for MODEL.
+  The number of instances in a batch is MAX-N-STRIPES of MODEL or less
+  if there are no more instances left."
+  (let ((sampler (if (typep dataset 'sequence)
+                     (make-sequence-sampler dataset
+                                            :max-n-samples (length dataset))
+                     dataset)))
+    (loop until (finishedp sampler) do
+      (funcall fn (list-samples sampler (max-n-stripes model))))))
+
+(defmacro do-batches-for-model ((batch (dataset model)) &body body)
+  "Convenience macro over MAP-BATCHES-FOR-MODEL."
+  `(map-batches-for-model (lambda (,batch) ,@body) ,dataset ,model))
+
 
 ;;;; Error counter
 
@@ -123,84 +225,7 @@
   counter)
 
 
-;;;; Stripes
-;;;;
-;;;; For batch processing, objects (typically inputs or objects that
-;;;; hold [intermediate] results of a computation) can be striped.
-;;;; Each stripe is identified by an index in [0,MAX-N-STRIPES-1].
-
-(defgeneric max-n-stripes (object)
-  (:documentation "The number of stripes with which the OBJECT is
-  capable of dealing simultaneously."))
-
-(defgeneric set-max-n-stripes (max-n-stripes object)
-  (:documentation "Allocate the necessary stuff to allow for
-  MAX-N-STRIPES number of stripes to be worked with simultaneously in
-  OBJECT."))
-
-(defsetf max-n-stripes (object) (store)
-  `(set-max-n-stripes ,store ,object))
-
-(defgeneric n-stripes (object)
-  (:documentation "The number of stripes currently present in OBJECT.
-  This is at most MAX-N-STRIPES."))
-
-(defgeneric set-n-stripes (n-stripes object)
-  (:documentation "Set the number of stripes \(out of MAX-N-STRIPES)
-  that are in use in OBJECT."))
-
-(defsetf n-stripes (object) (store)
-  `(set-n-stripes ,store ,object))
-
-(defgeneric find-striped (name object)
-  (:documentation "Return the striped component of OBJECT whose name
-  is NAME."))
-
-(defgeneric striped-array (object)
-  (:documentation "Return the array in which the stripes of OBJECT are
-  stored."))
-
-(defgeneric stripe-start (stripe object)
-  (:documentation "Return the start index of STRIPE in STRIPED-ARRAY
-  of OBJECT."))
-
-(defgeneric stripe-end (stripe object)
-  (:documentation "Return the end index (exclusive) of STRIPE in
-  STRIPED-ARRAY of OBJECT."))
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun stripe-binding (stripe object start &optional end)
-    (alexandria:with-gensyms (%stripe %object)
-      `((,%stripe ,stripe)
-        (,%object ,object)
-        (,start (the index (stripe-start ,%stripe ,%object)))
-        ,@(when end `((,end (the index (stripe-end ,%stripe ,%object)))))))))
-
-(defmacro with-stripes (specs &body body)
-  "Bind start and optionally end indices belonging to stripes in
-  striped objects.
-
-      (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
-                    (STRIPE2 OBJECT2 START2 END2)
-                    ...)
-       ...)"
-  `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
-                  specs)
-     ,@body))
-
-
 ;;;; Collecting errors
-
-(defun map-batches-for-learner (fn sampler learner)
-  "Call FN with batches of samples suitable for LEARNER. The number of
-  samples in a batch is MAX-N-STRIPES of LEARNER or less if SAMPLER
-  runs out."
-  (loop until (finishedp sampler) do
-    (funcall fn (list-samples sampler (max-n-stripes learner)))))
-
-(defmacro do-batches-for-learner ((samples (sampler learner)) &body body)
-  "Convenience macro over MAP-BATCHES-FOR-LEARNER."
-  `(map-batches-for-learner (lambda (,samples) ,@body) ,sampler ,learner))
 
 (defun add-measured-error (counter-and-measurer &rest args)
   (destructuring-bind (counter . measurer) counter-and-measurer
@@ -228,7 +253,7 @@
   and third argument to ADD-ERROR. Finally, return the counters.
   Return the list of counters from COUNTERS-AND-MEASURERS."
   (when counters-and-measurers
-    (do-batches-for-learner (samples (sampler learner))
+    (do-batches-for-model (samples (sampler learner))
       (funcall fn samples)
       (apply-counters-and-measurers counters-and-measurers samples learner)))
   (map 'list #'car counters-and-measurers))

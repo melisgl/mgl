@@ -22,6 +22,7 @@
     - [5.5 Miscellaneous Operations][7540]
 - [6 Model][8b7f]
     - [6.1 Model Persistence][56ee]
+    - [6.2 Batch Processing][0552]
 - [7 Gradient Based Optimization][fe97]
     - [7.1 Iterative Optimizer][f805]
     - [7.2 Gradient Descent][53a7]
@@ -188,10 +189,11 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 - [generic-function] **SAMPLE** *SAMPLER*
 
-    If not `SAMPLER` has not run out of data (see
-    [`FINISHEDP`][d503]) [`SAMPLE`][6fc3] returns an object that represents a sample from
-    the world to be experienced or, in other words, simply something the
-    can be used as input for training or prediction.
+    If `SAMPLER` has not run out of data (see [`FINISHEDP`][d503])
+    [`SAMPLE`][6fc3] returns an object that represents a sample from the world to
+    be experienced or, in other words, simply something the can be used
+    as input for training or prediction. It is not allowed to call
+    [`SAMPLE`][6fc3] if `SAMPLER` is [`FINISHEDP`][d503].
 
 <a name='x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29'></a>
 
@@ -593,6 +595,110 @@ contains it.
     Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
     `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
     on to `OPEN`.
+
+<a name='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a>
+
+### 6.2 Batch Processing
+
+Processing instances one by one during training or prediction can
+be slow. The models that support batch processing for greater
+efficiency are said to be /striped/.
+
+Typically after creating a model, ones sets [`MAX-N-STRIPES`][9598] on it a
+positive integer. When a batch of instances is to be fed to the
+model it is first broken into subbatches of length that's at most
+[`MAX-N-STRIPES`][9598]. For each subbatch, [`SET-INPUT`][8795] is called and a before
+method takes care of setting [`N-STRIPES`][dca7] to the actual number of
+instances in the subbatch. When [`MAX-N-STRIPES`][9598] is set internal data
+structures may be resized which is an expensive operation. Setting
+[`N-STRIPES`][dca7] is a comparatively cheap operation, often implemented as
+matrix reshaping.
+
+Note that for models made of different parts (for example,
+[MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
+values affects the constituent parts, but one should never change
+the number stripes of the parts directly because that would lead to
+an internal inconsistency in the model.
+
+<a name='x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAX-N-STRIPES** *OBJECT*
+
+    The number of stripes with which the `OBJECT` is
+    capable of dealing simultaneously. 
+
+<a name='x-28MGL-CORE-3ASET-MAX-N-STRIPES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SET-MAX-N-STRIPES** *MAX-N-STRIPES OBJECT*
+
+    Allocate the necessary stuff to allow for
+    `MAX-N-STRIPES` number of stripes to be worked with simultaneously in
+    `OBJECT`. This is called when `MAX-N-STRIPES` is `SETF`'ed.
+
+<a name='x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **N-STRIPES** *OBJECT*
+
+    The number of stripes currently present in `OBJECT`.
+    This is at most [`MAX-N-STRIPES`][9598].
+
+<a name='x-28MGL-CORE-3ASET-N-STRIPES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SET-N-STRIPES** *N-STRIPES OBJECT*
+
+    Set the number of stripes (out of [`MAX-N-STRIPES`][9598])
+    that are in use in `OBJECT`. This is called when `N-STRIPES` is
+    `SETF`'ed.
+
+<a name='x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **WITH-STRIPES** *SPECS &BODY BODY*
+
+    Bind start and optionally end indices belonging to stripes in
+    striped objects.
+    
+        (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
+                      (STRIPE2 OBJECT2 START2)
+                      ...)
+         ...)
+
+
+<a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **STRIPE-START** *STRIPE OBJECT*
+
+    Return the start index of `STRIPE` in `STRIPED-ARRAY`
+    of `OBJECT`.
+
+<a name='x-28MGL-CORE-3ASTRIPE-END-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **STRIPE-END** *STRIPE OBJECT*
+
+    Return the end index (exclusive) of `STRIPE` in
+    `STRIPED-ARRAY` of `OBJECT`.
+
+<a name='x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SET-INPUT** *INSTANCES MODEL*
+
+    Set `INSTANCES` as inputs in `MODEL`. `SAMPLES` is always
+    a `SEQUENCE` of instances even for models not capable of batch
+    operation. It sets [`N-STRIPES`][dca7] to (`LENGTH` `INSTANCES`) in a `:BEFORE`
+    method.
+
+<a name='x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29'></a>
+
+- [function] **MAP-BATCHES-FOR-MODEL** *FN DATASET MODEL*
+
+    Call `FN` with batches of instances from `DATASET` suitable for `MODEL`.
+    The number of instances in a batch is [`MAX-N-STRIPES`][9598] of `MODEL` or less
+    if there are no more instances left.
+
+<a name='x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **DO-BATCHES-FOR-MODEL** *(BATCH (DATASET MODEL)) &BODY BODY*
+
+    Convenience macro over [`MAP-BATCHES-FOR-MODEL`][fdf3].
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a>
 
@@ -1418,6 +1524,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 
   [026c]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GP MGL-PAX:SECTION)"
   [02de]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"
+  [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
@@ -1454,10 +1561,12 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [864e]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "(MGL-CG:CG-OPTIMIZER CLASS)"
   [8665]: #x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-FEATURES MGL-PAX:SECTION)"
   [8729]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "(MGL-CG:@MGL-CG MGL-PAX:SECTION)"
+  [8795]: #x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29 "(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"
   [8b7f]: #x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)"
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"
   [9589]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"
+  [9598]: #x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"
   [97ba]: #x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-GRADIENT-SINK GENERIC-FUNCTION)"
   [984f]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)"
   [9aa2]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:BATCH-GD-OPTIMIZER CLASS)"
@@ -1473,6 +1582,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [d275]: #x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)"
   [d503]: #x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29 "(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"
   [dc9d]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
+  [dca7]: #x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"
   [e0c8]: #x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"
@@ -1488,6 +1598,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [f995]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)"
   [f9f7]: #x-28MGL-CG-3ACG-20FUNCTION-29 "(MGL-CG:CG FUNCTION)"
   [fd45]: #x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
+  [fdf3]: #x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29 "(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"
   [fe97]: #x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)"
 
 * * *

@@ -44,6 +44,7 @@
 
 <ul>
 <li><a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">6.1 Model Persistence</a></li>
+<li><a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">6.2 Batch Processing</a></li>
 </ul></li>
 <li><a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">7 Gradient Based Optimization</a>
 
@@ -216,10 +217,11 @@ providing two functions: <a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-2
 <ul>
 <li><p>[generic-function] <strong>SAMPLE</strong> <em>SAMPLER</em></p>
 
-<p>If not <code>SAMPLER</code> has not run out of data (see
-<a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>) <a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> returns an object that represents a sample from
-the world to be experienced or, in other words, simply something the
-can be used as input for training or prediction.</p></li>
+<p>If <code>SAMPLER</code> has not run out of data (see <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>)
+<a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> returns an object that represents a sample from the world to
+be experienced or, in other words, simply something the can be used
+as input for training or prediction. It is not allowed to call
+<a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> if <code>SAMPLER</code> is <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29'></a></p>
@@ -645,7 +647,7 @@ sequence in <code>SEQS</code>.</p>
 
 <p><a name='x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8634;</a></span>6.1 Model Persistence</h3>
+<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8634;</a></span>6.1 Model Persistence</h3>
 
 <p><a name='x-28MGL-CORE-3AREAD-WEIGHTS-20GENERIC-FUNCTION-29'></a></p>
 
@@ -684,9 +686,133 @@ future together with the serialization format.</p></li>
 on to <code>OPEN</code>.</p></li>
 </ul>
 
+<p><a name='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8634;</a></span>6.2 Batch Processing</h3>
+
+<p>Processing instances one by one during training or prediction can
+be slow. The models that support batch processing for greater
+efficiency are said to be /striped/.</p>
+
+<p>Typically after creating a model, ones sets <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> on it a
+positive integer. When a batch of instances is to be fed to the
+model it is first broken into subbatches of length that's at most
+<a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>. For each subbatch, <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a> is called and a before
+method takes care of setting <a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"><code>N-STRIPES</code></a> to the actual number of
+instances in the subbatch. When <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> is set internal data
+structures may be resized which is an expensive operation. Setting
+<a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"><code>N-STRIPES</code></a> is a comparatively cheap operation, often implemented as
+matrix reshaping.</p>
+
+<p>Note that for models made of different parts (for example,
+[MGL-BP:BPN] consists of [MGL-BP:LUMP][]s) , setting these
+values affects the constituent parts, but one should never change
+the number stripes of the parts directly because that would lead to
+an internal inconsistency in the model.</p>
+
+<p><a name='x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAX-N-STRIPES</strong> <em>OBJECT</em></p>
+
+<p>The number of stripes with which the <code>OBJECT</code> is
+capable of dealing simultaneously. </p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASET-MAX-N-STRIPES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SET-MAX-N-STRIPES</strong> <em>MAX-N-STRIPES OBJECT</em></p>
+
+<p>Allocate the necessary stuff to allow for
+<code>MAX-N-STRIPES</code> number of stripes to be worked with simultaneously in
+<code>OBJECT</code>. This is called when <code>MAX-N-STRIPES</code> is <code>SETF</code>'ed.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>N-STRIPES</strong> <em>OBJECT</em></p>
+
+<p>The number of stripes currently present in <code>OBJECT</code>.
+This is at most <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASET-N-STRIPES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SET-N-STRIPES</strong> <em>N-STRIPES OBJECT</em></p>
+
+<p>Set the number of stripes (out of <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>)
+that are in use in <code>OBJECT</code>. This is called when <code>N-STRIPES</code> is
+<code>SETF</code>'ed.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>WITH-STRIPES</strong> <em>SPECS &amp;BODY BODY</em></p>
+
+<p>Bind start and optionally end indices belonging to stripes in
+striped objects.</p>
+
+<pre><code>(WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
+              (STRIPE2 OBJECT2 START2)
+              ...)
+ ...)
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>STRIPE-START</strong> <em>STRIPE OBJECT</em></p>
+
+<p>Return the start index of <code>STRIPE</code> in <code>STRIPED-ARRAY</code>
+of <code>OBJECT</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASTRIPE-END-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>STRIPE-END</strong> <em>STRIPE OBJECT</em></p>
+
+<p>Return the end index (exclusive) of <code>STRIPE</code> in
+<code>STRIPED-ARRAY</code> of <code>OBJECT</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SET-INPUT</strong> <em>INSTANCES MODEL</em></p>
+
+<p>Set <code>INSTANCES</code> as inputs in <code>MODEL</code>. <code>SAMPLES</code> is always
+a <code>SEQUENCE</code> of instances even for models not capable of batch
+operation. It sets <a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"><code>N-STRIPES</code></a> to (<code>LENGTH</code> <code>INSTANCES</code>) in a <code>:BEFORE</code>
+method.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAP-BATCHES-FOR-MODEL</strong> <em>FN DATASET MODEL</em></p>
+
+<p>Call <code>FN</code> with batches of instances from <code>DATASET</code> suitable for <code>MODEL</code>.
+The number of instances in a batch is <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> of <code>MODEL</code> or less
+if there are no more instances left.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>DO-BATCHES-FOR-MODEL</strong> <em>(BATCH (DATASET MODEL)) &amp;BODY BODY</em></p>
+
+<p>Convenience macro over <a href="#x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29" title="(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"><code>MAP-BATCHES-FOR-MODEL</code></a>.</p></li>
+</ul>
+
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8634;</a></span>7 Gradient Based Optimization</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8634;</a></span>7 Gradient Based Optimization</h2>
 
 <h6>[in package MGL-OPT]</h6>
 
