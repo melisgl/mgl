@@ -260,25 +260,25 @@ stream of NILs.</p></li>
 <ul>
 <li><p>[class] <strong>FUNCTION-SAMPLER</strong></p>
 
-<p>A sampler with a function in its <a href="#x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:SAMPLER (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"><code>SAMPLER</code></a> that
+<p>A sampler with a function in its <a href="#x-28MGL-DATASET-3AGENERATOR-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:GENERATOR (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"><code>GENERATOR</code></a> that
 produces a stream of samples which may or may not be finite
 depending on <a href="#x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"><code>MAX-N-SAMPLES</code></a>. <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a> returns <code>T</code> iff <a href="#x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"><code>MAX-N-SAMPLES</code></a> is
 non-nil, and it's not greater than the number of samples
 generated (<a href="#x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"><code>N-SAMPLES</code></a>).</p>
 
 <pre><code>(list-samples (make-instance 'function-sampler
-                             :sampler (lambda ()
-                                        (random 10))
+                             :generator (lambda ()
+                                          (random 10))
                              :max-n-samples 5)
               10)
 =&gt; (3 5 2 3 3)
 </code></pre></li>
 </ul>
 
-<p><a name='x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
+<p><a name='x-28MGL-DATASET-3AGENERATOR-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
 
 <ul>
-<li><p>[reader] <strong>SAMPLER</strong> <em>FUNCTION-SAMPLER</em> <em>(:SAMPLER)</em></p>
+<li><p>[reader] <strong>GENERATOR</strong> <em>FUNCTION-SAMPLER</em> <em>(:GENERATOR)</em></p>
 
 <p>A generator function of no arguments that returns
 the next sample.</p></li>
@@ -754,9 +754,9 @@ function with respect to some of its parameters.</p>
           <span class="special">*diff-fn-2*</span>
           <span class="keyword">:weights</span> <span class="paren2">(<span class="code">make-mat 1</span>)</span>
           <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'function-sampler
-                                  <span class="keyword">:sampler</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
-                                             <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
-                                                      <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
+                                  <span class="keyword">:generator</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
+                                               <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
+                                                        <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
                                   <span class="keyword">:max-n-samples</span> 1000</span>)</span></span>)</span>
 <span class="comment">;;; =&gt; A MAT with a single value of about 10, the expected value of
 </span><span class="comment">;;; the instances in the dataset.
@@ -1063,9 +1063,9 @@ respect to some of its parameters.</p>
           <span class="special">*diff-fn-2*</span>
           <span class="keyword">:weights</span> <span class="paren2">(<span class="code">make-mat 1</span>)</span>
           <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'function-sampler
-                                  <span class="keyword">:sampler</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
-                                             <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
-                                                      <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
+                                  <span class="keyword">:generator</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
+                                               <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
+                                                        <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
                                   <span class="keyword">:max-n-samples</span> 1000</span>)</span></span>)</span>
 <span class="comment">;;; =&gt; A MAT with a single value of about 10, the expected value of
 </span><span class="comment">;;; the instances in the dataset.
@@ -1532,8 +1532,8 @@ be used in <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIM
 <ul>
 <li><p>[reader] <strong>FN</strong> <em>DIFFUN</em> <em>(:FN)</em></p>
 
-<p>A lisp function. It may have any number of
-parameters.</p></li>
+<p>A real valued lisp function. It may have any
+number of parameters.</p></li>
 </ul>
 
 <p><a name='x-28MGL-DIFFUN-3APARAMETER-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a></p>

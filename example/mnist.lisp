@@ -196,11 +196,11 @@
                      discard-label-p sample-visible-p)
   (make-instance 'function-sampler
                  :max-n-samples max-n
-                 :sampler (let ((g (make-random-generator images)))
-                            (lambda ()
-                              (list (funcall g)
-                                    :discard-label-p discard-label-p
-                                    :sample-visible-p sample-visible-p)))))
+                 :generator (let ((g (make-random-generator images)))
+                              (lambda ()
+                                (list (funcall g)
+                                      :discard-label-p discard-label-p
+                                      :sample-visible-p sample-visible-p)))))
 
 (defun make-tiny-sampler (images &key discard-label-p)
   (make-sampler (subseq images 0 1000) :discard-label-p discard-label-p))

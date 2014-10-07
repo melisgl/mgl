@@ -182,10 +182,10 @@
          (sampler (make-instance
                    'function-sampler
                    :max-n-samples 50000
-                   :sampler (lambda ()
-                              (multiple-value-bind (inputs outputs)
-                                  (make-input-output 5)
-                                (list :x1 inputs :x2 inputs :y1 outputs)))))
+                   :generator (lambda ()
+                                (multiple-value-bind (inputs outputs)
+                                    (make-input-output 5)
+                                  (list :x1 inputs :x2 inputs :y1 outputs)))))
          (optimizer (make-instance
                      'test-bpn-gp-gd-optimizer
                      :segmenter

@@ -225,23 +225,23 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 
 - [class] **FUNCTION-SAMPLER**
 
-    A sampler with a function in its [`SAMPLER`][37bf] that
+    A sampler with a function in its [`GENERATOR`][8521] that
     produces a stream of samples which may or may not be finite
     depending on [`MAX-N-SAMPLES`][f56b]. [`FINISHEDP`][d503] returns `T` iff [`MAX-N-SAMPLES`][f56b] is
     non-nil, and it's not greater than the number of samples
     generated ([`N-SAMPLES`][fd45]).
     
         (list-samples (make-instance 'function-sampler
-                                     :sampler (lambda ()
-                                                (random 10))
+                                     :generator (lambda ()
+                                                  (random 10))
                                      :max-n-samples 5)
                       10)
         => (3 5 2 3 3)
 
 
-<a name='x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
+<a name='x-28MGL-DATASET-3AGENERATOR-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
 
-- [reader] **SAMPLER** *FUNCTION-SAMPLER* *(:SAMPLER)*
+- [reader] **GENERATOR** *FUNCTION-SAMPLER* *(:GENERATOR)*
 
     A generator function of no arguments that returns
     the next sample.
@@ -665,9 +665,9 @@ function with respect to some of its parameters.
           *diff-fn-2*
           :weights (make-mat 1)
           :dataset (make-instance 'function-sampler
-                                  :sampler (lambda ()
-                                             (list (+ 10
-                                                      (gaussian-random-1))))
+                                  :generator (lambda ()
+                                               (list (+ 10
+                                                        (gaussian-random-1))))
                                   :max-n-samples 1000))
 ;;; => A MAT with a single value of about 10, the expected value of
 ;;; the instances in the dataset.
@@ -937,9 +937,9 @@ respect to some of its parameters.
           *diff-fn-2*
           :weights (make-mat 1)
           :dataset (make-instance 'function-sampler
-                                  :sampler (lambda ()
-                                             (list (+ 10
-                                                      (gaussian-random-1))))
+                                  :generator (lambda ()
+                                               (list (+ 10
+                                                        (gaussian-random-1))))
                                   :max-n-samples 1000))
 ;;; => A MAT with a single value of about 10, the expected value of
 ;;; the instances in the dataset.
@@ -1330,8 +1330,8 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 
 - [reader] **FN** *DIFFUN* *(:FN)*
 
-    A lisp function. It may have any number of
-    parameters.
+    A real valued lisp function. It may have any
+    number of parameters.
 
 <a name='x-28MGL-DIFFUN-3APARAMETER-INDICES-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29'></a>
 
@@ -1374,7 +1374,6 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [2730]: #x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)"
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
-  [37bf]: #x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:SAMPLER (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [3a6e]: #x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:MINIMIZE* GENERIC-FUNCTION)"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)"
   [434c]: #x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"
@@ -1398,6 +1397,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [8202]: #x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-SEGMENTS GENERIC-FUNCTION)"
   [8375]: #x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29 "(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"
   [83bf]: #x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29 "(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)"
+  [8521]: #x-28MGL-DATASET-3AGENERATOR-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:GENERATOR (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [864e]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "(MGL-CG:CG-OPTIMIZER CLASS)"
   [8665]: #x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-FEATURES MGL-PAX:SECTION)"
   [8729]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "(MGL-CG:@MGL-CG MGL-PAX:SECTION)"

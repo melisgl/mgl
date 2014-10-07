@@ -56,7 +56,7 @@
 
 (defun test-rbm/single (&key (visible-type 'sigmoid-chunk)
                         (hidden-type 'sigmoid-chunk)
-                        sampler (test-sampler sampler)
+                        generator (test-generator generator)
                         hidden-bias-p
                         visible-bias-p
                         rank
@@ -133,10 +133,10 @@
                                         :damping (flt 0.9))))))
                 :dataset (make-instance 'function-sampler
                                         :max-n-samples max-n-samples
-                                        :sampler sampler))
+                                        :generator generator))
       (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples max-n-test-samples
-                               :sampler test-sampler)
+                               :generator test-generator)
                 rbm))))
 
 (defun test-rbm/identity-and-xor (&key missingp randomp rank)
@@ -213,11 +213,11 @@
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples 100000
-                                 :sampler #'sample))
+                                 :generator #'sample))
         (setq randomp nil)
         (rbm-rmse (make-instance 'function-sampler
                                  :max-n-samples 10000
-                                 :sampler #'sample)
+                                 :generator #'sample)
                   rbm)))))
 
 (defun test-rbm/identity/softmax (&key (hidden-type 'sigmoid-chunk))
@@ -255,10 +255,10 @@
                 :dataset
                 (make-instance 'function-sampler
                                :max-n-samples 30000
-                               :sampler #'sample))
+                               :generator #'sample))
       (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples 10000
-                               :sampler #'sample)
+                               :generator #'sample)
                 rbm))))
 
 (defun rate-code (value min max n)
@@ -305,31 +305,33 @@
                 :dataset
                 (make-instance 'function-sampler
                                :max-n-samples 100000
-                               :sampler #'sample))
+                               :generator #'sample))
       (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples 10000
-                               :sampler #'sample)
+                               :generator #'sample)
                 rbm))))
 
 (defun test-rbm-examples ()
   ;; Constant one is easily solved with a single large weight.
   ;; qwe
-  (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.01 (test-rbm/single :generator (constantly (flt 1))
                                    :max-n-stripes 1)))
-  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.0001 (test-rbm/single :generator (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 1)))
-  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.0001 (test-rbm/single :generator (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 3)))
   ;; For constant zero we need to add a bias to either layer.
   (assert (> 0.01
-             (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t)))
+             (test-rbm/single :generator (constantly (flt 0))
+                              :visible-bias-p t)))
   (assert (> 0.01
-             (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t)))
+             (test-rbm/single :generator (constantly (flt 0))
+                              :hidden-bias-p t)))
   ;; identity
   (assert (> 0.01
-             (test-rbm/single :sampler (repeatedly
+             (test-rbm/single :generator (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))
                               :visible-bias-p t
@@ -342,7 +344,7 @@
   (assert (> 0.25 (test-rbm/identity-and-xor :missingp t :rank 1)))
   (assert (> 0.25 (test-rbm/identity-and-xor :randomp t)))
   (assert (> 0.4 (test-rbm/identity-and-xor :missingp t :randomp t)))
-  (assert (> 0.2 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.2 (test-rbm/single :generator (constantly (flt 1))
                                   :visible-type 'gaussian-chunk
                                   :max-n-samples 10000)))
   (assert (> 0.4 (test-rbm/identity/softmax)))
@@ -450,27 +452,27 @@
 
 (defun test-rbm-examples/pcd ()
   ;; Constant one is easily solved with a single large weight.
-  (assert (> 0.01 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.01 (test-rbm/single :generator (constantly (flt 1))
                                    :max-n-stripes 7
                                    :learner-class 'test-pcd-learner)))
-  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.0001 (test-rbm/single :generator (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 1
                                      :learner-class 'test-pcd-learner)))
-  (assert (> 0.0001 (test-rbm/single :sampler (constantly (flt 1))
+  (assert (> 0.0001 (test-rbm/single :generator (constantly (flt 1))
                                      :max-n-stripes 7
                                      :rank 3
                                      :learner-class 'test-pcd-learner)))
   ;; For constant zero we need to add a bias to either layer.
   (assert (> 0.01
-             (test-rbm/single :sampler (constantly (flt 0)) :visible-bias-p t
+             (test-rbm/single :generator (constantly (flt 0)) :visible-bias-p t
                               :learner-class 'test-pcd-learner)))
   (assert (> 0.01
-             (test-rbm/single :sampler (constantly (flt 0)) :hidden-bias-p t
+             (test-rbm/single :generator (constantly (flt 0)) :hidden-bias-p t
                               :learner-class 'test-pcd-learner)))
   ;; identity
   (assert (> 0.1
-             (test-rbm/single :sampler (repeatedly
+             (test-rbm/single :generator (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))
                               :visible-bias-p t
@@ -481,7 +483,7 @@
 
 ;;; Sparsity
 #+nil
-(test-rbm/single :sampler (constantly (flt 1))
+(test-rbm/single :generator (constantly (flt 1))
                  :max-n-stripes 1
                  :max-n-samples 100000
                  :features-size 20

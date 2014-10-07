@@ -45,21 +45,21 @@
   "A simple sampler that returns elements of SEQ once, in order."
   (make-instance 'function-sampler
                  :max-n-samples (length seq)
-                 :sampler (make-seq-generator seq)))
+                 :generator (make-seq-generator seq)))
 
 
 (defsection @mgl-sampler-function-sampler (:title "Function Sampler")
   (function-sampler class)
-  (sampler (reader function-sampler))
+  (generator (reader function-sampler))
   (max-n-samples (accessor function-sampler))
   (name (reader function-sampler))
   (n-samples (reader function-sampler)))
 
 
 (defclass function-sampler ()
-  ((sampler
-    :initarg :sampler
-    :reader sampler
+  ((generator
+    :initarg :generator
+    :reader generator
     :documentation "A generator function of no arguments that returns
     the next sample.")
    (n-samples
@@ -77,15 +77,15 @@
     :reader name
     :documentation "An arbitrary object naming the sampler. Only used
     for printing the sampler object."))
-  (:documentation "A sampler with a function in its SAMPLER that
+  (:documentation "A sampler with a function in its GENERATOR that
   produces a stream of samples which may or may not be finite
   depending on MAX-N-SAMPLES. FINISHEDP returns T iff MAX-N-SAMPLES is
   non-nil, and it's not greater than the number of samples
   generated (N-SAMPLES).
 
       (list-samples (make-instance 'function-sampler
-                                   :sampler (lambda ()
-                                              (random 10))
+                                   :generator (lambda ()
+                                                (random 10))
                                    :max-n-samples 5)
                     10)
       => (3 5 2 3 3)"))
@@ -97,7 +97,7 @@
 
 (defmethod sample ((sampler function-sampler))
   (incf (slot-value sampler 'n-samples))
-  (funcall (sampler sampler)))
+  (funcall (generator sampler)))
 
 (defmethod print-object ((sampler function-sampler) stream)
   (pprint-logical-block (stream ())
@@ -109,7 +109,7 @@
   sampler)
 
 (defvar *infinitely-empty-dataset* (make-instance 'function-sampler
-                                                  :sampler (constantly nil)
+                                                  :generator (constantly nil)
                                                   :name "infinitely empty")
   "This is the default dataset for MGL-OPT:MINIMIZE. It's an infinite
   stream of NILs.")

@@ -9,8 +9,8 @@
 (defclass diffun ()
   ((fn
     :initarg :fn :reader fn
-    :documentation "A lisp function. It may have any number of
-    parameters.")
+    :documentation "A real valued lisp function. It may have any
+    number of parameters.")
    (parameter-indices
     :initform ()
     :initarg :parameter-indices

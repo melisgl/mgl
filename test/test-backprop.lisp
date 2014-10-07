@@ -121,10 +121,10 @@
                 :dataset
                 (make-instance 'function-sampler
                                :max-n-samples 1000
-                               :sampler #'sample))
+                               :generator #'sample))
       (bpn-error (make-instance 'function-sampler
                                 :max-n-samples 1000
-                                :sampler #'sample)
+                                :generator #'sample)
                  net))))
 
 (defun test-softmax (&key cg (max-n-stripes 1))
@@ -207,10 +207,10 @@
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples 100000
-                                 :sampler #'sample))
+                                 :generator #'sample))
         (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
-                                  :sampler #'sample)
+                                  :generator #'sample)
                    net)))))
 
 (defun init-lump (name bpn deviation)
@@ -282,10 +282,10 @@
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples 100000
-                                 :sampler #'sample))
+                                 :generator #'sample))
         (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
-                                  :sampler #'sample)
+                                  :generator #'sample)
                    net)))))
 
 (defun lump-start (lump)
@@ -387,10 +387,10 @@
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples (if cg 30000 100000)
-                                 :sampler #'sample))
+                                 :generator #'sample))
         (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
-                                  :sampler #'sample)
+                                  :generator #'sample)
                    net)))))
 
 (defun test-bp ()

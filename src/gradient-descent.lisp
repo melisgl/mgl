@@ -37,9 +37,9 @@
             *diff-fn-2*
             :weights (make-mat 1)
             :dataset (make-instance 'function-sampler
-                                    :sampler (lambda ()
-                                               (list (+ 10
-                                                        (gaussian-random-1))))
+                                    :generator (lambda ()
+                                                 (list (+ 10
+                                                          (gaussian-random-1))))
                                     :max-n-samples 1000))
   ;;; => A MAT with a single value of about 10, the expected value of
   ;;; the instances in the dataset.
@@ -103,7 +103,7 @@
                       weights dataset)
   (let ((sampler (if (typep dataset 'sequence)
                      (make-instance 'function-sampler
-                                    :sampler (make-random-generator dataset))
+                                    :generator (make-random-generator dataset))
                      dataset)))
     (while (and (not (terminate-optimization-p (n-instances optimizer)
                                                (termination optimizer)))
