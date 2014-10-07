@@ -36,7 +36,7 @@
   (minimize (make-instance 'batch-gd-optimizer :batch-size 10)
             *diff-fn-2*
             :weights (make-mat 1)
-            :dataset (make-instance 'counting-function-sampler
+            :dataset (make-instance 'function-sampler
                                     :sampler (lambda ()
                                                (list (+ 10
                                                         (gaussian-random-1))))

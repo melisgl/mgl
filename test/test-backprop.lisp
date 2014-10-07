@@ -119,10 +119,10 @@
                                                     :batch-size 10))))
                 (make-instance 'bp-learner :bpn net)
                 :dataset
-                (make-instance 'counting-function-sampler
+                (make-instance 'function-sampler
                                :max-n-samples 1000
                                :sampler #'sample))
-      (bpn-error (make-instance 'counting-function-sampler
+      (bpn-error (make-instance 'function-sampler
                                 :max-n-samples 1000
                                 :sampler #'sample)
                  net))))
@@ -205,10 +205,10 @@
                                                       :batch-size 10))))
                   (make-instance 'bp-learner :bpn net)
                   :dataset
-                  (make-instance 'counting-function-sampler
+                  (make-instance 'function-sampler
                                  :max-n-samples 100000
                                  :sampler #'sample))
-        (bpn-error (make-instance 'counting-function-sampler
+        (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
                    net)))))
@@ -280,10 +280,10 @@
                                                       :batch-size 100))))
                   (make-instance 'bp-learner :bpn net)
                   :dataset
-                  (make-instance 'counting-function-sampler
+                  (make-instance 'function-sampler
                                  :max-n-samples 100000
                                  :sampler #'sample))
-        (bpn-error (make-instance 'counting-function-sampler
+        (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
                    net)))))
@@ -385,10 +385,10 @@
                                                       :batch-size 10))))
                   (make-instance 'bp-learner :bpn net)
                   :dataset
-                  (make-instance 'counting-function-sampler
+                  (make-instance 'function-sampler
                                  :max-n-samples (if cg 30000 100000)
                                  :sampler #'sample))
-        (bpn-error (make-instance 'counting-function-sampler
+        (bpn-error (make-instance 'function-sampler
                                   :max-n-samples 1000
                                   :sampler #'sample)
                    net)))))

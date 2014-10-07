@@ -1,5 +1,7 @@
 (in-package :mgl-util)
 
+
+
 ;;;; Macrology
 
 (defmacro special-case (test &body body)

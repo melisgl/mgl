@@ -1,8 +1,9 @@
 (cl:defpackage :mgl-test
   (:use #:common-lisp
+        #:mgl-mat
         #:mgl-resample
         #:mgl-util
-        #:mgl-mat
+        #:mgl-dataset
         #:mgl-core
         #:mgl-opt
         #:mgl-gd

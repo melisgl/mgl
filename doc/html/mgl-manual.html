@@ -22,7 +22,15 @@
 <li><a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">2.4 Bundled Software</a></li>
 </ul></li>
 <li><a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">3 Basic Concepts</a></li>
-<li><a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">4 Datasets</a></li>
+<li><a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">4 Dataset</a>
+
+<ul>
+<li><a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">4.1 Sampler</a>
+
+<ul>
+<li><a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)">4.1.1 Function Sampler</a></li>
+</ul></li>
+</ul></li>
 <li><a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">5 Resampling</a>
 
 <ul>
@@ -169,28 +177,137 @@ not depend on the rest of MGL:</p>
 
 <p><a name='x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8634;</a></span>3 Basic Concepts</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8634;</a></span>3 Basic Concepts</h2>
 
 <p>MODEL, training set, test set, validation set,
 sample/instance/example.</p>
 
-<p><a name='x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29'></a></p>
+<p><a name='x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8634;</a></span>4 Datasets</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">&#8634;</a></span>4 Dataset</h2>
+
+<h6>[in package MGL-DATASET]</h6>
 
 <p>Ultimately machine learning is about creating models of some
-domain. The observations in modelled domain are called <em>instances</em>.
-Sets of instances are called <em>datasets</em>. Datasets are used when
-fitting a model or when making predictions.</p>
+domain. The observations in the modelled domain are called
+<em>instances</em>. Sets of instances are called <em>datasets</em>. Datasets are
+used when fitting a model or when making predictions.</p>
 
 <p>Implementationally speaking, an instance is typically represented by
 a set of numbers which is called <em>feature vector</em>. A dataset is a
-<code>CL:SEQUENCE</code> of such instances or a GENERATOR object that produces
+<code>SEQUENCE</code> of such instances or a <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">Sampler</a> object that produces
 instances.</p>
+
+<p><a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">&#8634;</a></span>4.1 Sampler</h3>
+
+<p>Some algorithms do not need random access to the entire dataset and
+can work with a stream observations. Samplers are simple generators
+providing two functions: <a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> and <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>.</p>
+
+<p><a name='x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SAMPLE</strong> <em>SAMPLER</em></p>
+
+<p>If not <code>SAMPLER</code> has not run out of data (see
+<a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>) <a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> returns an object that represents a sample from
+the world to be experienced or, in other words, simply something the
+can be used as input for training or prediction.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>FINISHEDP</strong> <em>SAMPLER</em></p>
+
+<p>See if <code>SAMPLER</code> has run out of examples.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3ALIST-SAMPLES-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>LIST-SAMPLES</strong> <em>SAMPLER MAX-SIZE</em></p>
+
+<p>Return a list of samples of length at most <code>MAX-SIZE</code> or less if
+<code>SAMPLER</code> runs out.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AMAKE-SEQUENCE-SAMPLER-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAKE-SEQUENCE-SAMPLER</strong> <em>SEQ</em></p>
+
+<p>A simple sampler that returns elements of <code>SEQ</code> once, in order.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a></p>
+
+<ul>
+<li><p>[variable] <strong>*INFINITELY-EMPTY-DATASET*</strong> <em>#&lt;FUNCTION-SAMPLER &quot;infintely empty&quot; &gt;</em></p>
+
+<p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MGL-OPT:MINIMIZE</code></a>. It's an infinite
+stream of NILs.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h4><span class="navigation"> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)">&#8634;</a></span>4.1.1 Function Sampler</h4>
+
+<p><a name='x-28MGL-DATASET-3AFUNCTION-SAMPLER-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>FUNCTION-SAMPLER</strong></p>
+
+<p>A sampler with a function in its <a href="#x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:SAMPLER (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"><code>SAMPLER</code></a> that
+produces a stream of samples which may or may not be finite
+depending on <a href="#x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"><code>MAX-N-SAMPLES</code></a>. <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a> returns <code>T</code> iff <a href="#x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"><code>MAX-N-SAMPLES</code></a> is
+non-nil, and it's not greater than the number of samples
+generated (<a href="#x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29" title="(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"><code>N-SAMPLES</code></a>).</p>
+
+<pre><code>(list-samples (make-instance 'function-sampler
+                             :sampler (lambda ()
+                                        (random 10))
+                             :max-n-samples 5)
+              10)
+=&gt; (3 5 2 3 3)
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>SAMPLER</strong> <em>FUNCTION-SAMPLER</em> <em>(:SAMPLER)</em></p>
+
+<p>A generator function of no arguments that returns
+the next sample.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
+
+<ul>
+<li>[accessor] <strong>MAX-N-SAMPLES</strong> <em>FUNCTION-SAMPLER</em> <em>(:MAX-N-SAMPLES = NIL)</em></li>
+</ul>
+
+<p><a name='x-28MGL-COMMON-3ANAME-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>NAME</strong> <em>FUNCTION-SAMPLER</em> <em>(:NAME = NIL)</em></p>
+
+<p>An arbitrary object naming the sampler. Only used
+for printing the sampler object.</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a></p>
+
+<ul>
+<li>[reader] <strong>N-SAMPLES</strong> <em>FUNCTION-SAMPLER</em> <em>(:N-SAMPLES = 0)</em></li>
+</ul>
 
 <p><a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8634;</a></span>5 Resampling</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29" title="(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)">&#8634;</a></span>5 Resampling</h2>
 
 <h6>[in package MGL-RESAMPLE]</h6>
 
@@ -525,30 +642,21 @@ gradients) but more can be added with the <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXT
 <p><a name='x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[function] <strong>MINIMIZE</strong> <em>OPTIMIZER GRADIENT-SOURCE &amp;KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET *EMPTY-DATASET*)</em></p>
+<li><p>[function] <strong>MINIMIZE</strong> <em>OPTIMIZER GRADIENT-SOURCE &amp;KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET *INFINITELY-EMPTY-DATASET*)</em></p>
 
 <p>Minimize the value of the real valued function represented by
 <code>GRADIENT-SOURCE</code> by updating some of its parameters in <code>WEIGHTS</code> (a MAT
 or a sequence of MATs). Return <code>WEIGHTS</code>. <code>DATASET</code> (see
-<a href="#x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-DATASETS MGL-PAX:SECTION)">Datasets</a>) is a set of unoptimized parameters of the same
+MGL:@MGL-DATASETS) is a set of unoptimized parameters of the same
 function. For example, <code>WEIGHTS</code> may be the weights of a neural
 network while <code>DATASET</code> is the training set consisting of inputs
-suitable for <code>MGL-TRAIN:SET-INPUT</code>. The default <code>DATASET</code>,
-(<a href="#x-28MGL-OPT-3A-2AEMPTY-DATASET-2A-20VARIABLE-29" title="(MGL-OPT:*EMPTY-DATASET* VARIABLE)"><code>*EMPTY-DATASET*</code></a>) is suitable for when all parameters are optimized,
+suitable for MGL-TRAIN:SET-INPUT. The default <code>DATASET</code>,
+(<em>EMPTY-DATASET</em>) is suitable for when all parameters are optimized,
 so there is nothing left to come from the environment.</p>
 
 <p>Optimization terminates if <code>DATASET</code> is a sampler and it runs out or
 when some other condition met (see <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a>, for example). If
 <code>DATASET</code> is a <code>SEQUENCE</code>, then it is reused over and over again.</p></li>
-</ul>
-
-<p><a name='x-28MGL-OPT-3A-2AEMPTY-DATASET-2A-20VARIABLE-29'></a></p>
-
-<ul>
-<li><p>[variable] <strong>*EMPTY-DATASET*</strong> <em>#&lt;FUNCTION-SAMPLER &quot;empty&quot;&gt;</em></p>
-
-<p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>. It's an infinite stream
-of NILs.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3A-2AACCUMULATING-INTERESTING-GRADIENTS-2A-20VARIABLE-29'></a></p>
@@ -671,7 +779,7 @@ each segment and their corresponding accumulator MAT in <code>SINK</code>.</p></
 termination condition is met.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
@@ -686,7 +794,7 @@ far. Incremented automatically during optimization.</p></li>
 <li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
-on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
+on in the sense of <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
 than this value optimization stops. If <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a> is <code>NIL</code>, then
 optimization will continue. If it is <code>T</code>, then optimization will
 stop. If it is a function of no arguments, then its return value
@@ -743,7 +851,7 @@ function with respect to some of its parameters.</p>
 </span><span class="paren1">(<span class="code">minimize <span class="paren2">(<span class="code">make-instance 'batch-gd-optimizer <span class="keyword">:batch-size</span> 10</span>)</span>
           <span class="special">*diff-fn-2*</span>
           <span class="keyword">:weights</span> <span class="paren2">(<span class="code">make-mat 1</span>)</span>
-          <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'counting-function-sampler
+          <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'function-sampler
                                   <span class="keyword">:sampler</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
                                              <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
                                                       <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
@@ -783,7 +891,7 @@ mini-batch basis:</p>
 <li><p>[class] <strong>BATCH-GD-OPTIMIZER</strong> <em>GD-OPTIMIZER</em></p>
 
 <p>Updates all weights simultaneously after chewing
-through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) inputs. <a href="#x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29" title="(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"><code>PER-WEIGHT-BATCH-GD-OPTIMIZER</code></a> may be a
+through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) inputs. <a href="#x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29" title="(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"><code>PER-WEIGHT-BATCH-GD-OPTIMIZER</code></a> may be a
 better choice when some weights can go unused for instance due to
 missing input values.</p>
 
@@ -810,7 +918,7 @@ normal momentum, Nesterov's momentum (see <a href="#x-28MGL-GD-3AMOMENTUM-TYPE-2
 also available.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
@@ -825,23 +933,23 @@ far. Incremented automatically during optimization.</p></li>
 <li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
-on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
+on in the sense of <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
 than this value optimization stops. If <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a> is <code>NIL</code>, then
 optimization will continue. If it is <code>T</code>, then optimization will
 stop. If it is a function of no arguments, then its return value
 is processed as if it was returned by <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a>.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[accessor] <strong>BATCH-SIZE</strong> <em>GD-OPTIMIZER</em> <em>(:BATCH-SIZE = 1)</em></p>
 
-<p>After having gone through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) number of
-inputs, weights are updated. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) 1, one gets
-Stochastics Gradient Descent. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) equal to the number
+<p>After having gone through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) number of
+inputs, weights are updated. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) 1, one gets
+Stochastics Gradient Descent. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) equal to the number
 of instances in the dataset, one gets standard, 'batch' gradient
-descent. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) between these two extremes, one gets the
+descent. With <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) between these two extremes, one gets the
 most practical 'mini-batch' compromise.</p></li>
 </ul>
 
@@ -935,7 +1043,7 @@ to different optimizers (capable of working with segmentables) or
 simply to not train all segments.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
@@ -950,7 +1058,7 @@ far. Incremented automatically during optimization.</p></li>
 <li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
-on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
+on in the sense of <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
 than this value optimization stops. If <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a> is <code>NIL</code>, then
 optimization will continue. If it is <code>T</code>, then optimization will
 stop. If it is a function of no arguments, then its return value
@@ -971,7 +1079,7 @@ optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
 segments mapped to it.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-CORE-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li>[reader] <strong>SEGMENTS</strong> <em>SEGMENTED-GD-OPTIMIZER</em></li>
@@ -1052,7 +1160,7 @@ respect to some of its parameters.</p>
 </span><span class="paren1">(<span class="code">minimize <span class="paren2">(<span class="code">make-instance 'cg-optimizer <span class="keyword">:batch-size</span> 10</span>)</span>
           <span class="special">*diff-fn-2*</span>
           <span class="keyword">:weights</span> <span class="paren2">(<span class="code">make-mat 1</span>)</span>
-          <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'counting-function-sampler
+          <span class="keyword">:dataset</span> <span class="paren2">(<span class="code">make-instance 'function-sampler
                                   <span class="keyword">:sampler</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
                                              <span class="paren4">(<span class="code">list <span class="paren5">(<span class="code">+ 10
                                                       <span class="paren6">(<span class="code">gaussian-random-1</span>)</span></span>)</span></span>)</span></span>)</span>
@@ -1202,10 +1310,10 @@ at the initial point in the linesearch). Constants must satisfy 0 &lt;
 <li><p>[class] <strong>CG-OPTIMIZER</strong> <em>ITERATIVE-OPTIMIZER</em></p>
 
 <p>Updates all weights simultaneously after chewing
-through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) inputs.</p></li>
+through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) inputs.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[reader] <strong>N-INSTANCES</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:N-INSTANCES = 0)</em></p>
@@ -1220,23 +1328,23 @@ far. Incremented automatically during optimization.</p></li>
 <li><p>[accessor] <strong>TERMINATION</strong> <em>ITERATIVE-OPTIMIZER</em> <em>(:TERMINATION = NIL)</em></p>
 
 <p>If a number, it's the number of instances to train
-on in the sense of <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
+on in the sense of <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a>. If <a href="#x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"><code>N-INSTANCES</code></a> is equal or greater
 than this value optimization stops. If <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a> is <code>NIL</code>, then
 optimization will continue. If it is <code>T</code>, then optimization will
 stop. If it is a function of no arguments, then its return value
 is processed as if it was returned by <a href="#x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>TERMINATION</code></a>.</p></li>
 </ul>
 
-<p><a name='x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a></p>
+<p><a name='x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a></p>
 
 <ul>
 <li><p>[accessor] <strong>BATCH-SIZE</strong> <em>CG-OPTIMIZER</em> <em>(:BATCH-SIZE)</em></p>
 
-<p>After having gone through <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) number of
+<p>After having gone through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) number of
 instances, weights are updated. Normally, <a href="#x-28MGL-CG-3ACG-20FUNCTION-29" title="(MGL-CG:CG FUNCTION)"><code>CG</code></a> operates on all
 available data, but it may be useful to introduce some noise into
 the optimization to reduce overfitting by using smaller batch
-sizes. If <code>BATCH-SIZE</code>(<a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) is not set, it is initialized to the size of
+sizes. If <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a>) is not set, it is initialized to the size of
 the dataset at the start of optimization.</p></li>
 </ul>
 

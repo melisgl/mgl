@@ -46,7 +46,7 @@
   (minimize (make-instance 'cg-optimizer :batch-size 10)
             *diff-fn-2*
             :weights (make-mat 1)
-            :dataset (make-instance 'counting-function-sampler
+            :dataset (make-instance 'function-sampler
                                     :sampler (lambda ()
                                                (list (+ 10
                                                         (gaussian-random-1))))
@@ -392,11 +392,6 @@
 (define-descriptions (optimizer cg-optimizer)
   n-instances batch-size cg-args segment-set)
 
-(defmethod n-instances-until-update ((optimizer cg-optimizer))
-  ;; deal with varying batch size gracefully
-  (- (batch-size optimizer)
-     (mod (n-instances optimizer) (batch-size optimizer))))
-
 (defmethod map-gradient-sink (fn (optimizer cg-optimizer))
   (let ((segment-set (segment-set optimizer))
         (accumulator (accumulator optimizer)))
@@ -434,6 +429,8 @@
                 (not (finishedp sampler)))
       (let ((batch (list-samples sampler (batch-size optimizer))))
         (train-batch optimizer gradient-source batch)))))
+
+(defgeneric train-batch (optimizer learner batch))
 
 ;;; FIXME: make this a DEFUN when monitors work
 (defmethod train-batch (optimizer learner batch)
@@ -482,8 +479,9 @@
   (:documentation "Mix this before a CG based optimizer to conveniently
   add decay on a per-segment basis."))
 
-(defmethod compute-batch-cost-and-derive
-    (batch (optimizer decayed-cg-optimizer-mixin) learner)
+(defmethod accumulate-gradients*
+    (gradient-source (optimizer decayed-cg-optimizer-mixin)
+     batch multiplier valuep)
   (let* ((cost (flt (call-next-method)))
          (segment-decay-fn (segment-decay-fn optimizer))
          (accumulator (accumulator optimizer)))

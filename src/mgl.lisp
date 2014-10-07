@@ -4,7 +4,7 @@
   (mgl asdf:system)
   (@mgl-overview section)
   (@mgl-basic-concepts section)
-  (@mgl-datasets section)
+  (mgl-dataset:@mgl-dataset section)
   (mgl-resample:@mgl-resample section)
   (mgl-opt:@mgl-opt section)
   (mgl-diffun:@mgl-diffun section)
@@ -88,20 +88,6 @@
 (defsection @mgl-basic-concepts (:title "Basic Concepts")
   "MODEL, training set, test set, validation set,
   sample/instance/example.")
-
-(defsection @mgl-datasets (:title "Datasets")
-  "Ultimately machine learning is about creating models of some
-  domain. The observations in modelled domain are called _instances_.
-  Sets of instances are called _datasets_. Datasets are used when
-  fitting a model or when making predictions.
-
-  Implementationally speaking, an instance is typically represented by
-  a set of numbers which is called _feature vector_. A dataset is a
-  CL:SEQUENCE of such instances or a GENERATOR object that produces
-  instances.")
-
-(defsection @mgl-generators (:title "Generators")
-  "Finite, infinite, random")
 
 (defsection @mgl-bp (:title "Backprogation Neural Networks"))
 

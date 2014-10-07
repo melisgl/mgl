@@ -11,7 +11,9 @@
     - [2.3 Tests][303a]
     - [2.4 Bundled Software][b96a]
 - [3 Basic Concepts][516d]
-- [4 Datasets][958e]
+- [4 Dataset][72e9]
+    - [4.1 Sampler][af7d]
+        - [4.1.1 Function Sampler][2100]
 - [5 Resampling][8fc3]
     - [5.1 Partitions][9f93]
     - [5.2 Cross-validation][4293]
@@ -157,19 +159,109 @@ There is also MGL-VISUALS which does depend on MGL.
 MODEL, training set, test set, validation set,
 sample/instance/example.
 
-<a name='x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29'></a>
+<a name='x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29'></a>
 
-## 4 Datasets
+## 4 Dataset
 
+###### \[in package MGL-DATASET\]
 Ultimately machine learning is about creating models of some
-domain. The observations in modelled domain are called *instances*.
-Sets of instances are called *datasets*. Datasets are used when
-fitting a model or when making predictions.
+domain. The observations in the modelled domain are called
+*instances*. Sets of instances are called *datasets*. Datasets are
+used when fitting a model or when making predictions.
 
 Implementationally speaking, an instance is typically represented by
 a set of numbers which is called *feature vector*. A dataset is a
-`CL:SEQUENCE` of such instances or a GENERATOR object that produces
+`SEQUENCE` of such instances or a [Sampler][af7d] object that produces
 instances.
+
+<a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29'></a>
+
+### 4.1 Sampler
+
+Some algorithms do not need random access to the entire dataset and
+can work with a stream observations. Samplers are simple generators
+providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
+
+<a name='x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SAMPLE** *SAMPLER*
+
+    If not `SAMPLER` has not run out of data (see
+    [`FINISHEDP`][d503]) [`SAMPLE`][6fc3] returns an object that represents a sample from
+    the world to be experienced or, in other words, simply something the
+    can be used as input for training or prediction.
+
+<a name='x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **FINISHEDP** *SAMPLER*
+
+    See if `SAMPLER` has run out of examples.
+
+<a name='x-28MGL-DATASET-3ALIST-SAMPLES-20FUNCTION-29'></a>
+
+- [function] **LIST-SAMPLES** *SAMPLER MAX-SIZE*
+
+    Return a list of samples of length at most `MAX-SIZE` or less if
+    `SAMPLER` runs out.
+
+<a name='x-28MGL-DATASET-3AMAKE-SEQUENCE-SAMPLER-20FUNCTION-29'></a>
+
+- [function] **MAKE-SEQUENCE-SAMPLER** *SEQ*
+
+    A simple sampler that returns elements of `SEQ` once, in order.
+
+<a name='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a>
+
+- [variable] **\*INFINITELY-EMPTY-DATASET\*** *#\<FUNCTION-SAMPLER "infintely empty" \>*
+
+    This is the default dataset for [`MGL-OPT:MINIMIZE`][bca8]. It's an infinite
+    stream of NILs.
+
+<a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29'></a>
+
+#### 4.1.1 Function Sampler
+
+<a name='x-28MGL-DATASET-3AFUNCTION-SAMPLER-20CLASS-29'></a>
+
+- [class] **FUNCTION-SAMPLER**
+
+    A sampler with a function in its [`SAMPLER`][37bf] that
+    produces a stream of samples which may or may not be finite
+    depending on [`MAX-N-SAMPLES`][f56b]. [`FINISHEDP`][d503] returns `T` iff [`MAX-N-SAMPLES`][f56b] is
+    non-nil, and it's not greater than the number of samples
+    generated ([`N-SAMPLES`][fd45]).
+    
+        (list-samples (make-instance 'function-sampler
+                                     :sampler (lambda ()
+                                                (random 10))
+                                     :max-n-samples 5)
+                      10)
+        => (3 5 2 3 3)
+
+
+<a name='x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
+
+- [reader] **SAMPLER** *FUNCTION-SAMPLER* *(:SAMPLER)*
+
+    A generator function of no arguments that returns
+    the next sample.
+
+<a name='x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
+
+- [accessor] **MAX-N-SAMPLES** *FUNCTION-SAMPLER* *(:MAX-N-SAMPLES = NIL)*
+
+<a name='x-28MGL-COMMON-3ANAME-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
+
+- [reader] **NAME** *FUNCTION-SAMPLER* *(:NAME = NIL)*
+
+    An arbitrary object naming the sampler. Only used
+    for printing the sampler object.
+
+<a name='x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29'></a>
+
+- [reader] **N-SAMPLES** *FUNCTION-SAMPLER* *(:N-SAMPLES = 0)*
+
+
 
 <a name='x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29'></a>
 
@@ -472,28 +564,21 @@ gradients) but more can be added with the [Extension API][2730].
 
 <a name='x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29'></a>
 
-- [function] **MINIMIZE** *OPTIMIZER GRADIENT-SOURCE &KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET \*EMPTY-DATASET\*)*
+- [function] **MINIMIZE** *OPTIMIZER GRADIENT-SOURCE &KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET \*INFINITELY-EMPTY-DATASET\*)*
 
     Minimize the value of the real valued function represented by
     `GRADIENT-SOURCE` by updating some of its parameters in `WEIGHTS` (a MAT
     or a sequence of MATs). Return `WEIGHTS`. `DATASET` (see
-    [Datasets][958e]) is a set of unoptimized parameters of the same
+    MGL:@MGL-DATASETS) is a set of unoptimized parameters of the same
     function. For example, `WEIGHTS` may be the weights of a neural
     network while `DATASET` is the training set consisting of inputs
-    suitable for `MGL-TRAIN:SET-INPUT`. The default `DATASET`,
-    ([`*EMPTY-DATASET*`][75f4]) is suitable for when all parameters are optimized,
+    suitable for MGL-TRAIN:SET-INPUT. The default `DATASET`,
+    (*EMPTY-DATASET*) is suitable for when all parameters are optimized,
     so there is nothing left to come from the environment.
     
     Optimization terminates if `DATASET` is a sampler and it runs out or
     when some other condition met (see [`TERMINATION`][bec0], for example). If
     `DATASET` is a `SEQUENCE`, then it is reused over and over again.
-
-<a name='x-28MGL-OPT-3A-2AEMPTY-DATASET-2A-20VARIABLE-29'></a>
-
-- [variable] **\*EMPTY-DATASET\*** *#\<FUNCTION-SAMPLER "empty"\>*
-
-    This is the default dataset for [`MINIMIZE`][bca8]. It's an infinite stream
-    of NILs.
 
 <a name='x-28MGL-OPT-3A-2AACCUMULATING-INTERESTING-GRADIENTS-2A-20VARIABLE-29'></a>
 
@@ -591,7 +676,7 @@ gradients) but more can be added with the [Extension API][2730].
     [Conjugate Gradient][8729] based optimizers that iterate over instances until a
     termination condition is met.
 
-<a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
 
 - [reader] **N-INSTANCES** *ITERATIVE-OPTIMIZER* *(:N-INSTANCES = 0)*
 
@@ -603,7 +688,7 @@ gradients) but more can be added with the [Extension API][2730].
 - [accessor] **TERMINATION** *ITERATIVE-OPTIMIZER* *(:TERMINATION = NIL)*
 
     If a number, it's the number of instances to train
-    on in the sense of [`N-INSTANCES`][3558]. If [`N-INSTANCES`][3558] is equal or greater
+    on in the sense of [`N-INSTANCES`][66a1]. If [`N-INSTANCES`][66a1] is equal or greater
     than this value optimization stops. If [`TERMINATION`][bec0] is `NIL`, then
     optimization will continue. If it is `T`, then optimization will
     stop. If it is a function of no arguments, then its return value
@@ -657,7 +742,7 @@ function with respect to some of its parameters.
 (minimize (make-instance 'batch-gd-optimizer :batch-size 10)
           *diff-fn-2*
           :weights (make-mat 1)
-          :dataset (make-instance 'counting-function-sampler
+          :dataset (make-instance 'function-sampler
                                   :sampler (lambda ()
                                              (list (+ 10
                                                       (gaussian-random-1))))
@@ -697,7 +782,7 @@ mini-batch basis:
 - [class] **BATCH-GD-OPTIMIZER** *GD-OPTIMIZER*
 
     Updates all weights simultaneously after chewing
-    through `BATCH-SIZE`([`0`][f383] [`1`][031e]) inputs. [`PER-WEIGHT-BATCH-GD-OPTIMIZER`][1fa8] may be a
+    through `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) inputs. [`PER-WEIGHT-BATCH-GD-OPTIMIZER`][1fa8] may be a
     better choice when some weights can go unused for instance due to
     missing input values.
     
@@ -721,7 +806,7 @@ mini-batch basis:
     normal momentum, Nesterov's momentum (see [`MOMENTUM-TYPE`][e0c8]) momentum is
     also available.
 
-<a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
 
 - [reader] **N-INSTANCES** *ITERATIVE-OPTIMIZER* *(:N-INSTANCES = 0)*
 
@@ -733,21 +818,21 @@ mini-batch basis:
 - [accessor] **TERMINATION** *ITERATIVE-OPTIMIZER* *(:TERMINATION = NIL)*
 
     If a number, it's the number of instances to train
-    on in the sense of [`N-INSTANCES`][3558]. If [`N-INSTANCES`][3558] is equal or greater
+    on in the sense of [`N-INSTANCES`][66a1]. If [`N-INSTANCES`][66a1] is equal or greater
     than this value optimization stops. If [`TERMINATION`][bec0] is `NIL`, then
     optimization will continue. If it is `T`, then optimization will
     stop. If it is a function of no arguments, then its return value
     is processed as if it was returned by [`TERMINATION`][bec0].
 
-<a name='x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
 - [accessor] **BATCH-SIZE** *GD-OPTIMIZER* *(:BATCH-SIZE = 1)*
 
-    After having gone through `BATCH-SIZE`([`0`][f383] [`1`][031e]) number of
-    inputs, weights are updated. With `BATCH-SIZE`([`0`][f383] [`1`][031e]) 1, one gets
-    Stochastics Gradient Descent. With `BATCH-SIZE`([`0`][f383] [`1`][031e]) equal to the number
+    After having gone through `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) number of
+    inputs, weights are updated. With `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) 1, one gets
+    Stochastics Gradient Descent. With `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) equal to the number
     of instances in the dataset, one gets standard, 'batch' gradient
-    descent. With `BATCH-SIZE`([`0`][f383] [`1`][031e]) between these two extremes, one gets the
+    descent. With `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) between these two extremes, one gets the
     most practical 'mini-batch' compromise.
 
 <a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
@@ -824,7 +909,7 @@ mini-batch basis:
     to different optimizers (capable of working with segmentables) or
     simply to not train all segments.
 
-<a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
 
 - [reader] **N-INSTANCES** *ITERATIVE-OPTIMIZER* *(:N-INSTANCES = 0)*
 
@@ -836,7 +921,7 @@ mini-batch basis:
 - [accessor] **TERMINATION** *ITERATIVE-OPTIMIZER* *(:TERMINATION = NIL)*
 
     If a number, it's the number of instances to train
-    on in the sense of [`N-INSTANCES`][3558]. If [`N-INSTANCES`][3558] is equal or greater
+    on in the sense of [`N-INSTANCES`][66a1]. If [`N-INSTANCES`][66a1] is equal or greater
     than this value optimization stops. If [`TERMINATION`][bec0] is `NIL`, then
     optimization will continue. If it is `T`, then optimization will
     stop. If it is a function of no arguments, then its return value
@@ -854,7 +939,7 @@ mini-batch basis:
     optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
     segments mapped to it.
 
-<a name='x-28MGL-TRAIN-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-CORE-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
 
 - [reader] **SEGMENTS** *SEGMENTED-GD-OPTIMIZER*
 
@@ -929,7 +1014,7 @@ respect to some of its parameters.
 (minimize (make-instance 'cg-optimizer :batch-size 10)
           *diff-fn-2*
           :weights (make-mat 1)
-          :dataset (make-instance 'counting-function-sampler
+          :dataset (make-instance 'function-sampler
                                   :sampler (lambda ()
                                              (list (+ 10
                                                       (gaussian-random-1))))
@@ -1062,9 +1147,9 @@ respect to some of its parameters.
 - [class] **CG-OPTIMIZER** *ITERATIVE-OPTIMIZER*
 
     Updates all weights simultaneously after chewing
-    through `BATCH-SIZE`([`0`][f383] [`1`][031e]) inputs.
+    through `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) inputs.
 
-<a name='x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29'></a>
 
 - [reader] **N-INSTANCES** *ITERATIVE-OPTIMIZER* *(:N-INSTANCES = 0)*
 
@@ -1076,21 +1161,21 @@ respect to some of its parameters.
 - [accessor] **TERMINATION** *ITERATIVE-OPTIMIZER* *(:TERMINATION = NIL)*
 
     If a number, it's the number of instances to train
-    on in the sense of [`N-INSTANCES`][3558]. If [`N-INSTANCES`][3558] is equal or greater
+    on in the sense of [`N-INSTANCES`][66a1]. If [`N-INSTANCES`][66a1] is equal or greater
     than this value optimization stops. If [`TERMINATION`][bec0] is `NIL`, then
     optimization will continue. If it is `T`, then optimization will
     stop. If it is a function of no arguments, then its return value
     is processed as if it was returned by [`TERMINATION`][bec0].
 
-<a name='x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a>
 
 - [accessor] **BATCH-SIZE** *CG-OPTIMIZER* *(:BATCH-SIZE)*
 
-    After having gone through `BATCH-SIZE`([`0`][f383] [`1`][031e]) number of
+    After having gone through `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) number of
     instances, weights are updated. Normally, [`CG`][f9f7] operates on all
     available data, but it may be useful to introduce some noise into
     the optimization to reduce overfitting by using smaller batch
-    sizes. If `BATCH-SIZE`([`0`][f383] [`1`][031e]) is not set, it is initialized to the size of
+    sizes. If `BATCH-SIZE`([`0`][dc9d] [`1`][f94f]) is not set, it is initialized to the size of
     the dataset at the start of optimization.
 
 <a name='x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a>
@@ -1173,15 +1258,15 @@ respect to some of its parameters.
 
   [026c]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GP MGL-PAX:SECTION)"
   [02de]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"
-  [031e]: #x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
+  [2100]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)"
   [25a8]: #x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-SEGMENTED-GD-OPTIMIZER MGL-PAX:SECTION)"
   [2730]: #x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)"
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
-  [3558]: #x-28MGL-TRAIN-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-TRAIN:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
+  [37bf]: #x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:SAMPLER (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)"
   [434c]: #x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
@@ -1189,10 +1274,12 @@ respect to some of its parameters.
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
   [643d]: #x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29 "(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"
+  [66a1]: #x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
+  [6fc3]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"
+  [72e9]: #x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)"
   [74a7]: #x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BP MGL-PAX:SECTION)"
   [7540]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)"
-  [75f4]: #x-28MGL-OPT-3A-2AEMPTY-DATASET-2A-20VARIABLE-29 "(MGL-OPT:*EMPTY-DATASET* VARIABLE)"
   [76b8]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)"
   [7ae7]: #x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"
@@ -1205,11 +1292,11 @@ respect to some of its parameters.
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"
   [9589]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"
-  [958e]: #x-28MGL-3A-40MGL-DATASETS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DATASETS MGL-PAX:SECTION)"
   [984f]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)"
   [9aa2]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:BATCH-GD-OPTIMIZER CLASS)"
   [9f93]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)"
   [a7de]: #x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:WEIGHT-PENALTY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
+  [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
   [b6ac]: #x-28MGL-GD-3ASEGMENTER-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29 "(MGL-GD:SEGMENTER (MGL-PAX:READER MGL-GD:SEGMENTED-GD-OPTIMIZER))"
   [b96a]: #x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)"
   [bca8]: #x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29 "(MGL-OPT:MINIMIZE FUNCTION)"
@@ -1217,6 +1304,8 @@ respect to some of its parameters.
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)"
   [ce14]: #x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:WEIGHT-DECAY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [d275]: #x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)"
+  [d503]: #x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29 "(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"
+  [dc9d]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"
   [e0c8]: #x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"
@@ -1224,11 +1313,13 @@ respect to some of its parameters.
   [ed3d]: #x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [edd9]: #x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-STRATIFIED FUNCTION)"
   [f18a]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)"
-  [f383]: #x-28MGL-TRAIN-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-TRAIN:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [f4f4]: #x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29 "(MGL-DIFFUN:DIFFUN CLASS)"
+  [f56b]: #x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"
   [f805]: #x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)"
+  [f94f]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [f995]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)"
   [f9f7]: #x-28MGL-CG-3ACG-20FUNCTION-29 "(MGL-CG:CG FUNCTION)"
+  [fd45]: #x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [fe97]: #x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)"
 
 * * *

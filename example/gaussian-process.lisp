@@ -180,7 +180,7 @@
 (defun test-simple-bpn-gp ()
   (let* ((bpn-gp (build-simple-bpn-gp 1 1))
          (sampler (make-instance
-                   'counting-function-sampler
+                   'function-sampler
                    :max-n-samples 50000
                    :sampler (lambda ()
                               (multiple-value-bind (inputs outputs)

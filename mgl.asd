@@ -13,8 +13,10 @@
   :components ((:module "src"
                 :serial t
                 :components ((:file "package")
+                             (:file "common")
                              (:file "resample")
                              (:file "util")
+                             (:file "dataset")
                              (:file "copy")
                              (:file "confusion-matrix")
                              (:file "feature")

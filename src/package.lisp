@@ -1,5 +1,12 @@
+(mgl-pax:define-package :mgl-common
+  (:use :common-lisp :mgl-pax)
+  ;; FIXME: remove these after everything is defined with
+  ;; MGL-PAX:DEFINE-PACKAGE.
+  (:export :name :name= :default-value :cost :size :nodes :group-size :target))
+
 (mgl-pax:define-package :mgl
-  (:documentation "See MGL:@MGL-MANUAL.")
+  (:documentation "See MGL:@MGL-MANUAL. This package reexports
+  everything from other packages defined here plus MGL-MAT.")
   (:use :common-lisp :mgl-pax))
 
 (mgl-pax:define-package :mgl-resample
@@ -7,8 +14,9 @@
   (:use :common-lisp :mgl-pax))
 
 (cl:defpackage :mgl-util
-  (:use #:common-lisp #:mgl-mat)
+  (:use #:common-lisp #:mgl-mat #:mgl-common)
   (:export
+   #:name=
    ;; Macrology
    #:special-case
    ;; Types
@@ -101,21 +109,15 @@
    #:encode/bag-of-words)
   (:documentation "Simple utilities, types."))
 
+(mgl-pax:define-package :mgl-dataset
+  (:documentation "See MGL-DATASET:@MGL-DATASET.")
+  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util)
+  (:export #:@mgl-dataset))
+
 (cl:defpackage :mgl-core
-  (:use #:common-lisp #:mgl-mat #:mgl-util)
+  (:use #:common-lisp #:mgl-mat #:mgl-common #:mgl-util #:mgl-dataset)
   (:export
    #:set-input
-   ;; Sampler
-   #:sample
-   #:finishedp
-   #:function-sampler
-   #:sampler
-   #:counting-sampler
-   #:n-samples
-   #:max-n-samples
-   #:counting-function-sampler
-   #:list-samples
-   #:make-sequence-sampler
    ;; Error counter
    #:counter
    #:print-counter
@@ -166,21 +168,9 @@
    #:segment-set-size
    #:segment-set->mat
    #:segment-set<-mat
-   ;; Common generic functions
-   #:batch-size
-   #:cost
-   #:group-size
-   #:default-value
-   #:label
-   #:label-distribution
-   #:n-instances
-   #:nodes
-   #:name
-   #:name=
-   #:size
-   #:target
    ;; Classification
    #:label
+   #:label-distribution
    #:labeled
    #:labeledp
    #:stripe-label
@@ -195,25 +185,29 @@
 
 (mgl-pax:define-package :mgl-opt
   (:documentation "See MGL-OPT:@MGL-OPT.")
-  (:use :common-lisp :mgl-pax :mgl-core))
+  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-dataset #:mgl-core))
 
 (mgl-pax:define-package :mgl-diffun
   (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt))
+  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util #:mgl-core
+        #:mgl-opt))
 
 (mgl-pax:define-package :mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util :mgl-dataset
+        #:mgl-core #:mgl-opt)
   (:export #:@mgl-gd))
 
 (mgl-pax:define-package :mgl-cg
   (:documentation "See MGL-CG:@MGL-CG.")
-  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-util #:mgl-core #:mgl-opt)
+  (:use #:common-lisp #:mgl-pax #:mgl-mat #:mgl-common #:mgl-util :mgl-dataset
+        #:mgl-core #:mgl-opt)
   (:export #:@mgl-cg))
 
 (cl:defpackage :mgl-bm
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt
-        #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-mat #:mgl-common #:mgl-util #:mgl-core
+        ;; #:mgl-dataset
+        #:mgl-opt #:mgl-gd #:mgl-cg)
   (:nicknames #:mgl-rbm)
   (:export
    ;; Chunk
@@ -338,8 +332,8 @@
   Networks (DBN)."))
 
 (cl:defpackage :mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-util #:mgl-mat #:mgl-core #:mgl-opt
-        #:mgl-gd #:mgl-cg)
+  (:use #:common-lisp #:cl-cuda #:mgl-mat #:mgl-common #:mgl-util ;; #:mgl-dataset
+        #:mgl-core #:mgl-opt #:mgl-gd #:mgl-cg)
   (:export
    #:lump
    #:deflump
@@ -426,8 +420,8 @@
   (:documentation "Backpropagation."))
 
 (cl:defpackage :mgl-unroll
-  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-core #:mgl-bm #:mgl-bp
-        #:mgl-gd)
+  (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-dataset #:mgl-core
+        #:mgl-bm #:mgl-bp #:mgl-gd)
   (:export
    #:chunk-lump-name
    #:unroll-dbn
@@ -445,7 +439,7 @@
   networks, aka `unrolling'."))
 
 (cl:defpackage :mgl-gp
-  (:use #:common-lisp #:mgl-util #:mgl-mat #:mgl-core #:mgl-bp)
+  (:use #:common-lisp #:mgl-mat #:mgl-common #:mgl-util #:mgl-core #:mgl-bp)
   (:export
    #:gp
    #:gp-means

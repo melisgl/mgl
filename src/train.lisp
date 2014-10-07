@@ -1,91 +1,9 @@
 (in-package :mgl-core)
 
-;;;; Various accessor type generic functions shared by packages
-
-(defgeneric name (object))
-(setf (fdefinition 'name=) #'equal)
-(defgeneric size (object))
-(defgeneric nodes (object))
-(defgeneric default-value (object))
-(defgeneric group-size (object))
-(defgeneric batch-size (object))
-(defgeneric n-instances (object))
-
-
-;;;; Interface
-
-(defgeneric sample (sampler)
-  (:documentation "The SAMPLER - if not FINISHEDP - returns an object
-  that represents a sample from the world to be experienced or in
-  other words simply something the can be used as input for training
-  or prediction."))
-
-(defgeneric finishedp (sampler)
-  (:documentation "See if SAMPLER has run out of examples."))
-
 (defgeneric set-input (samples learner)
   (:documentation "Set SAMPLES as inputs in LEARNER. SAMPLES is always
   a sequence of examples even for learners not capable of batch
   operation."))
-
-
-;;;; Samplers
-
-(defclass function-sampler ()
-  ((sampler :initarg :sampler :accessor sampler)
-   (name :initform nil :initarg :name :reader name)))
-
-(defmethod finishedp ((sampler function-sampler))
-  nil)
-
-(defmethod sample ((sampler function-sampler))
-  (funcall (sampler sampler)))
-
-(defmethod print-object ((sampler function-sampler) stream)
-  (pprint-logical-block (stream ())
-    (print-unreadable-object (sampler stream :type t)
-      (when (name sampler)
-        (format stream "~S" (name sampler)))))
-  sampler)
-
-(defclass counting-sampler ()
-  ((n-samples :initform 0 :initarg :n-samples :accessor n-samples)
-   (max-n-samples :initform nil :initarg :max-n-samples
-                  :accessor max-n-samples))
-  (:documentation "Keep track of how many samples have been generated
-  and say FINISHEDP if it's not less than MAX-N-SAMPLES (that is
-  optional)."))
-
-(defmethod print-object ((sampler counting-sampler) stream)
-  (pprint-logical-block (stream ())
-    (print-unreadable-object (sampler stream :type t)
-      (format stream "~S/~S" (n-samples sampler) (max-n-samples sampler))))
-  sampler)
-
-(defmethod finishedp ((sampler counting-sampler))
-  (let ((max-n-samples (max-n-samples sampler)))
-    (and max-n-samples
-         (<= max-n-samples (n-samples sampler)))))
-
-(defmethod sample ((sampler counting-sampler))
-  (incf (n-samples sampler))
-  (call-next-method))
-
-(defclass counting-function-sampler (counting-sampler function-sampler) ())
-
-(defun list-samples (sampler max-size)
-  "Return a list of samples of length at most MAX-SIZE or less if
-  SAMPLER runs out."
-  (loop repeat max-size
-        while (not (finishedp sampler))
-        collect (sample sampler)))
-
-(defun make-sequence-sampler (seq)
-  "A simple sampler that returns elements of SEQ once, in order."
-  (make-instance 'counting-function-sampler
-                 :max-n-samples (length seq)
-                 :sampler (make-seq-generator seq)))
-
 
 ;;;; Error counter
 

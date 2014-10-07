@@ -16,24 +16,17 @@
   which are first order methods (they do not need second order
   gradients) but more can be added with the @MGL-OPT-EXTENSION-API."
   (minimize function)
-  (*empty-dataset* variable)
   (*accumulating-interesting-gradients* variable)
   (@mgl-opt-extension-api section)
   (@mgl-opt-iterative-optimizer section)
   (mgl-gd:@mgl-gd section)
   (mgl-cg:@mgl-cg section))
 
-(defvar *empty-dataset* (make-instance 'function-sampler
-                                       :sampler (constantly nil)
-                                       :name "empty")
-  "This is the default dataset for MINIMIZE. It's an infinite stream
-  of NILs.")
-
 (defvar *accumulating-interesting-gradients* nil)
 
 (defun minimize (optimizer gradient-source
                  &key (weights (list-segments gradient-source))
-                 (dataset *empty-dataset*))
+                 (dataset *infinitely-empty-dataset*))
   "Minimize the value of the real valued function represented by
   GRADIENT-SOURCE by updating some of its parameters in WEIGHTS (a MAT
   or a sequence of MATs). Return WEIGHTS. DATASET (see

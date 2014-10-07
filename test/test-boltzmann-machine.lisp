@@ -131,10 +131,10 @@
                                                            cheating-sparsity))
                                         :cost (flt 0.1)
                                         :damping (flt 0.9))))))
-                :dataset (make-instance 'counting-function-sampler
+                :dataset (make-instance 'function-sampler
                                         :max-n-samples max-n-samples
                                         :sampler sampler))
-      (rbm-rmse (make-instance 'counting-function-sampler
+      (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples max-n-test-samples
                                :sampler test-sampler)
                 rbm))))
@@ -211,11 +211,11 @@
                                     :batch-size 100)))
                   (make-instance 'test-cd-learner :rbm rbm)
                   :dataset
-                  (make-instance 'counting-function-sampler
+                  (make-instance 'function-sampler
                                  :max-n-samples 100000
                                  :sampler #'sample))
         (setq randomp nil)
-        (rbm-rmse (make-instance 'counting-function-sampler
+        (rbm-rmse (make-instance 'function-sampler
                                  :max-n-samples 10000
                                  :sampler #'sample)
                   rbm)))))
@@ -253,10 +253,10 @@
                                                 :batch-size 10)))
                 (make-instance 'test-cd-learner :rbm rbm)
                 :dataset
-                (make-instance 'counting-function-sampler
+                (make-instance 'function-sampler
                                :max-n-samples 30000
                                :sampler #'sample))
-      (rbm-rmse (make-instance 'counting-function-sampler
+      (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
                 rbm))))
@@ -303,10 +303,10 @@
                                                 :batch-size 10)))
                 (make-instance 'test-cd-learner :rbm rbm)
                 :dataset
-                (make-instance 'counting-function-sampler
+                (make-instance 'function-sampler
                                :max-n-samples 100000
                                :sampler #'sample))
-      (rbm-rmse (make-instance 'counting-function-sampler
+      (rbm-rmse (make-instance 'function-sampler
                                :max-n-samples 10000
                                :sampler #'sample)
                 rbm))))

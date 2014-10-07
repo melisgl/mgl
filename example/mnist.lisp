@@ -194,7 +194,7 @@
 (defun make-sampler (images &key (n-epochs 1)
                      (max-n (* n-epochs (length images)))
                      discard-label-p sample-visible-p)
-  (make-instance 'counting-function-sampler
+  (make-instance 'function-sampler
                  :max-n-samples max-n
                  :sampler (let ((g (make-random-generator images)))
                             (lambda ()
