@@ -395,7 +395,7 @@
 (defmethod map-gradient-sink (fn (optimizer cg-optimizer))
   (let ((segment-set (segment-set optimizer))
         (accumulator (accumulator optimizer)))
-    (do-segment-set (segment :start-in-segment-set start) segment-set
+    (do-segment-set (segment start) segment-set
       (with-shape-and-displacement (accumulator (mat-size
                                                  (segment-weights segment))
                                     start)
@@ -489,8 +489,7 @@
     (with-facets ((accumulator* (accumulator 'backing-array
                                              :direction :io
                                              :type flt-vector)))
-      (do-segment-set (segment :start-in-segment-set segment-start)
-                      (segment-set optimizer)
+      (do-segment-set (segment segment-start) (segment-set optimizer)
         (let ((decay (funcall segment-decay-fn segment)))
           (declare (type (or null flt) decay))
           (when (and decay (not (zerop decay)))

@@ -1841,6 +1841,38 @@
     (settle-hidden-mean-field dbm)))
 
 
+;;;; Weight sharing for PCD.
+;;;;
+;;;; This is not really specific to PCD but nothing else uses it. If
+;;;; that changes, it could be moved to
+;;;; MGL-OPT:@MGL-OPT-GRADIENT-SINK.
+
+(defgeneric call-with-sink-accumulator (fn segment source sink)
+  (:method (fn segment source sink)
+    (declare (ignore source))
+    (do-gradient-sink ((segment2 accumulator) sink)
+      (when (eq segment2 segment)
+        (funcall fn accumulator)))))
+
+(defmacro with-sink-accumulator ((accumulator (segment source sink))
+                                 &body body)
+  "Bind ACCUMULATOR to the accumulator MAT associated with SEGMENT of
+  SOURCE in SINK. ACCUMULATOR is dynamic extent. This is a convenience
+  macro on top of CALL-WITH-SINK-ACCUMULATOR."
+  `(call-with-sink-accumulator (lambda (,accumulator)
+                                 ,@body)
+                               ,segment ,source ,sink))
+
+(defun accumulated-in-sink-p (segment source sink)
+  "See if SEGMENT of SOURCE has an accumulator associated with it in
+  SINK."
+  (call-with-sink-accumulator (lambda (accumulator)
+                                (declare (ignore accumulator))
+                                (return-from accumulated-in-sink-p t))
+                              segment source sink)
+  nil)
+
+
 ;;;; General code for gradient based optimization (CD and PCD)
 
 ;;; Return the node vector for calculating cloud statistics.

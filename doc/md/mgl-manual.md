@@ -21,16 +21,16 @@
     - [5.4 CV Bagging][ca85]
     - [5.5 Miscellaneous Operations][7540]
 - [6 Gradient Based Optimization][fe97]
-    - [6.1 Extension API][2730]
-        - [6.1.1 Implementing Optimizers][794a]
-        - [6.1.2 Implementing Gradient Sources][984f]
-        - [6.1.3 Implementing Gradient Sinks][f18a]
-    - [6.2 Iterative Optimizer][f805]
-    - [6.3 Gradient Descent][53a7]
-        - [6.3.1 Batch GD Optimizer][df57]
-        - [6.3.2 Segmented GD Optimizer][25a8]
-        - [6.3.3 Per-weight Optimization][d275]
-    - [6.4 Conjugate Gradient][8729]
+    - [6.1 Iterative Optimizer][f805]
+    - [6.2 Gradient Descent][53a7]
+        - [6.2.1 Batch GD Optimizer][df57]
+        - [6.2.2 Segmented GD Optimizer][25a8]
+        - [6.2.3 Per-weight Optimization][d275]
+    - [6.3 Conjugate Gradient][8729]
+    - [6.4 Extension API][2730]
+        - [6.4.1 Implementing Optimizers][794a]
+        - [6.4.2 Implementing Gradient Sources][984f]
+        - [6.4.3 Implementing Gradient Sinks][f18a]
 - [7 Differentiable Function][1a5d]
 - [8 Backprogation Neural Networks][74a7]
 - [9 Boltzmann Machines][94c7]
@@ -586,155 +586,9 @@ gradients) but more can be added with the [Extension API][2730].
 
     FIXME: Will go away soon.
 
-<a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
-
-### 6.1 Extension API
-
-<a name='x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
-
-#### 6.1.1 Implementing Optimizers
-
-<a name='x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **MINIMIZE\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
-
-<a name='x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **INITIALIZE-OPTIMIZER\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
-
-    Called automatically before training starts, this
-    function sets up `OPTIMIZER` to be suitable for optimizing
-    `GRADIENT-SOURCE`. It typically creates appropriately sized
-    accumulators for the gradients.
-
-<a name='x-28MGL-OPT-3ATERMINATE-OPTIMIZATION-P-20FUNCTION-29'></a>
-
-- [function] **TERMINATE-OPTIMIZATION-P** *N-INSTANCES TERMINATION*
-
-    Utility function for subclasses of [`ITERATIVE-OPTIMIZER`][83bf]. It returns
-    whether optimization is to be terminated based on `N-INSTANCES` and
-    `TERMINATION` that are values of the respective accessors of
-    [`ITERATIVE-OPTIMIZER`][83bf].
-
-<a name='x-28MGL-OPT-3ASEGMENT-SET-20CLASS-29'></a>
-
-- [class] **SEGMENT-SET**
-
-    It's like a concatenation of segments.
-
-<a name='x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29'></a>
-
-- [reader] **SIZE** *SEGMENT-SET*
-
-    The sum of the sizes of the weight matrices of
-    `SEGMENTS`.
-
-<a name='x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29'></a>
-
-- [macro] **DO-SEGMENT-SET** *(SEGMENT &KEY START-IN-SEGMENT-SET) SEGMENT-SET &BODY BODY*
-
-    Iterate over `SEGMENTS` in `SEGMENT-SET` ....
-
-<a name='x-28MGL-OPT-3ASEGMENT-SET-3C-MAT-20FUNCTION-29'></a>
-
-- [function] **SEGMENT-SET\<-MAT** *SEGMENT-SET MAT*
-
-    Copy the values of `MAT` to `SEGMENT-SET`.
-
-<a name='x-28MGL-OPT-3ASEGMENT-SET--3EMAT-20FUNCTION-29'></a>
-
-- [function] **SEGMENT-SET-\>MAT** *SEGMENT-SET MAT*
-
-    Copy the values of `SEGMENT-SET` to `MAT`.
-
-<a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a>
-
-#### 6.1.2 Implementing Gradient Sources
-
-Weights can be stored in a multitude of ways. It is assumed that
-weights are stored in any number of `MAT` objects.
-
-<a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **MAP-SEGMENTS** *FN GRADIENT-SOURCE*
-
-    Apply `FN` to each segment of `GRADIENT-SOURCE`.
-
-<a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a>
-
-- [function] **LIST-SEGMENTS** *GRADIENT-SOURCE*
-
-    Return the list of segments from [`MAP-SEGMENTS`][8202] on `GRADIENT-SOURCE`.
-
-<a name='x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **INITIALIZE-GRADIENT-SOURCE\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
-
-    Called automatically before training starts, this
-    function sets up `SINK` to be suitable for `SOURCE`. It typically
-    creates accumulator arrays in the sink for the gradients.
-
-<a name='x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **ACCUMULATE-GRADIENTS\*** *SOURCE SINK BATCH MULTIPLIER VALUEP*
-
-    Add `MULTIPLIER` times the sum of first-order
-    gradients to accumulators of `SINK` (normally accessed with
-    [`DO-GRADIENT-SINK`][643d]) and if `VALUEP`, return the sum of values of the
-    function being optimized for a `BATCH` of instances. `SOURCE` is the
-    object representing the function being optimized, `SINK` is gradient
-    sink.
-
-<a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **MAP-SEGMENTS** *FN GRADIENT-SOURCE*
-
-    Apply `FN` to each segment of `GRADIENT-SOURCE`.
-
-<a name='x-28MGL-OPT-3AMAP-SEGMENT-RUNS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **MAP-SEGMENT-RUNS** *FN SEGMENT*
-
-    Call `FN` with start and end of intervals of
-    consecutive indices that are not missing in `SEGMENT`. Called by
-    optimizers that support partial updates.
-
-<a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **SEGMENT-WEIGHTS** *SEGMENT*
-
-    Return the weight matrix of `SEGMENT`.
-
-<a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a>
-
-#### 6.1.3 Implementing Gradient Sinks
-
-<a name='x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **MAP-GRADIENT-SINK** *FN SINK*
-
-    Call `FN` of lambda list (`SEGMENT` `ACCUMULATOR`) on
-    each segment and their corresponding accumulator `MAT` in `SINK`.
-
-<a name='x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29'></a>
-
-- [macro] **DO-GRADIENT-SINK** *((SEGMENT ACCUMULATOR) SINK) &BODY BODY*
-
-<a name='x-28MGL-OPT-3ACALL-WITH-SINK-ACCUMULATOR-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **CALL-WITH-SINK-ACCUMULATOR** *FN SEGMENT SOURCE SINK*
-
-<a name='x-28MGL-OPT-3AWITH-SINK-ACCUMULATOR-20MGL-PAX-3AMACRO-29'></a>
-
-- [macro] **WITH-SINK-ACCUMULATOR** *(ACCUMULATOR (SEGMENT SOURCE SINK)) &BODY BODY*
-
-<a name='x-28MGL-OPT-3AACCUMULATED-IN-SINK-P-20FUNCTION-29'></a>
-
-- [function] **ACCUMULATED-IN-SINK-P** *SEGMENT SOURCE SINK*
-
 <a name='x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.2 Iterative Optimizer
+### 6.1 Iterative Optimizer
 
 <a name='x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29'></a>
 
@@ -772,7 +626,7 @@ weights are stored in any number of `MAT` objects.
 
 <a name='x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.3 Gradient Descent
+### 6.2 Gradient Descent
 
 ###### \[in package MGL-GD\]
 Gradient descent is a first-order optimization algorithm. Relying
@@ -843,7 +697,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.3.1 Batch GD Optimizer
+#### 6.2.1 Batch GD Optimizer
 
 <a name='x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -966,7 +820,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.3.2 Segmented GD Optimizer
+#### 6.2.2 Segmented GD Optimizer
 
 <a name='x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -1007,13 +861,13 @@ mini-batch basis:
     optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
     segments mapped to it.
 
-<a name='x-28MGL-GD-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-OPT-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29'></a>
 
 - [reader] **SEGMENTS** *SEGMENTED-GD-OPTIMIZER*
 
 <a name='x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29'></a>
 
-#### 6.3.3 Per-weight Optimization
+#### 6.2.3 Per-weight Optimization
 
 <a name='x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -1041,7 +895,7 @@ mini-batch basis:
 
 <a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a>
 
-### 6.4 Conjugate Gradient
+### 6.3 Conjugate Gradient
 
 ###### \[in package MGL-CG\]
 Conjugate gradient is a first-order optimization algorithm. It's
@@ -1272,6 +1126,192 @@ respect to some of its parameters.
     returns the decay for a given segment. For convenience `NIL` is also
     treated as 0 decay.
 
+<a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
+
+### 6.4 Extension API
+
+<a name='x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
+
+#### 6.4.1 Implementing Optimizers
+
+The following generic functions must be specialized for new
+optimizer types.
+
+<a name='x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MINIMIZE\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
+
+<a name='x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **INITIALIZE-OPTIMIZER\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
+
+    Called automatically before training starts, this
+    function sets up `OPTIMIZER` to be suitable for optimizing
+    `GRADIENT-SOURCE`. It typically creates appropriately sized
+    accumulators for the gradients.
+
+<a name='x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SEGMENTS** *OPTIMIZER*
+
+    Several weight matrices known as *segments* can be
+    optimized by a single optimizer. This function returns them as a
+    list.
+
+The rest are just useful for utilities for implementing
+optimizers.
+
+<a name='x-28MGL-OPT-3ATERMINATE-OPTIMIZATION-P-20FUNCTION-29'></a>
+
+- [function] **TERMINATE-OPTIMIZATION-P** *N-INSTANCES TERMINATION*
+
+    Utility function for subclasses of [`ITERATIVE-OPTIMIZER`][83bf]. It returns
+    whether optimization is to be terminated based on `N-INSTANCES` and
+    `TERMINATION` that are values of the respective accessors of
+    [`ITERATIVE-OPTIMIZER`][83bf].
+
+<a name='x-28MGL-OPT-3ASEGMENT-SET-20CLASS-29'></a>
+
+- [class] **SEGMENT-SET**
+
+    This is a utility class for optimizers that have a
+    list of [`SEGMENTS`][f1cd] and (the weights being optimized) is able to copy
+    back and forth between those segments and a single `MAT` (the
+    accumulator).
+
+<a name='x-28MGL-OPT-3ASEGMENTS-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29'></a>
+
+- [reader] **SEGMENTS** *SEGMENT-SET* *(:SEGMENTS)*
+
+    A list of weight matrices.
+
+<a name='x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29'></a>
+
+- [reader] **SIZE** *SEGMENT-SET*
+
+    The sum of the sizes of the weight matrices of
+    [`SEGMENTS`][f1cd].
+
+<a name='x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **DO-SEGMENT-SET** *(SEGMENT &OPTIONAL START) SEGMENT-SET &BODY BODY*
+
+    Iterate over [`SEGMENTS`][f1cd] in `SEGMENT-SET`. If `START` is specified, the it
+    is bound to the start index of `SEGMENT` within `SEGMENT-SET`. The start
+    index is the sum of the sizes of previous segments.
+
+<a name='x-28MGL-OPT-3ASEGMENT-SET-3C-MAT-20FUNCTION-29'></a>
+
+- [function] **SEGMENT-SET\<-MAT** *SEGMENT-SET MAT*
+
+    Copy the values of `MAT` to the weight matrices of `SEGMENT-SET` as if
+    they were concatenated into a single `MAT`.
+
+<a name='x-28MGL-OPT-3ASEGMENT-SET--3EMAT-20FUNCTION-29'></a>
+
+- [function] **SEGMENT-SET-\>MAT** *SEGMENT-SET MAT*
+
+    Copy the values of `SEGMENT-SET` to `MAT` as if they were concatenated
+    into a single `MAT`.
+
+<a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a>
+
+#### 6.4.2 Implementing Gradient Sources
+
+Weights can be stored in a multitude of ways. Optimizers need to
+update weights, so it is assumed that weights are stored in any
+number of `MAT` objects called segments.
+
+The generic functions in this section must all be specialized for
+new gradient sources except where noted.
+
+<a name='x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-SEGMENTS** *FN GRADIENT-SOURCE*
+
+    Apply `FN` to each segment of `GRADIENT-SOURCE`.
+
+<a name='x-28MGL-OPT-3AMAP-SEGMENT-RUNS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-SEGMENT-RUNS** *FN SEGMENT*
+
+    Call `FN` with start and end of intervals of
+    consecutive indices that are not missing in `SEGMENT`. Called by
+    optimizers that support partial updates. The default implementation
+    assumes that all weights are present. This only needs to be
+    specialized if one plans to use an optimizer that knows how to deal
+    unused/missing weights such as [`MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER`][51ad]
+    and `OPTIMIZER` [`MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER`][1fa8].
+
+<a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SEGMENT-WEIGHTS** *SEGMENT*
+
+    Return the weight matrix of `SEGMENT`. A segment
+    doesn't need to be a `MAT` object itself. For example, it may be a
+    `MGL-BM:CHUNK` of a [MGL-BM:BM][CLASS] or a `MGL-BP:LUMP` of a
+    [MGL-BP:BPN][CLASS] whose `NODES` slot holds the weights.
+
+<a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20-28METHOD-20NIL-20-28MGL-MAT-3AMAT-29-29-29'></a>
+
+- [method] **SEGMENT-WEIGHTS** *(MAT MAT)*
+
+    When the segment is really a `MAT`, then just return it.
+
+<a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a>
+
+- [function] **LIST-SEGMENTS** *GRADIENT-SOURCE*
+
+    A utility function that returns the list of segments from
+    [`MAP-SEGMENTS`][8202] on `GRADIENT-SOURCE`.
+
+<a name='x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **INITIALIZE-GRADIENT-SOURCE\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
+
+    Called automatically before [`MINIMIZE*`][3a6e] is called,
+    this function may be specialized if `GRADIENT-SOURCE` needs some kind
+    of setup.
+
+<a name='x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20-28METHOD-20NIL-20-28T-20T-20T-20T-29-29-29'></a>
+
+- [method] **INITIALIZE-GRADIENT-SOURCE\*** *OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET*
+
+    The default method does nothing.
+
+<a name='x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **ACCUMULATE-GRADIENTS\*** *GRADIENT-SOURCE SINK BATCH MULTIPLIER VALUEP*
+
+    Add `MULTIPLIER` times the sum of first-order
+    gradients to accumulators of `SINK` (normally accessed with
+    [`DO-GRADIENT-SINK`][643d]) and if `VALUEP`, return the sum of values of the
+    function being optimized for a `BATCH` of instances. `GRADIENT-SOURCE`
+    is the object representing the function being optimized, `SINK` is
+    gradient sink.
+
+<a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a>
+
+#### 6.4.3 Implementing Gradient Sinks
+
+Optimizers call [`ACCUMULATE-GRADIENTS*`][4c7c] on gradient sources. One
+parameter of [`ACCUMULATE-GRADIENTS*`][4c7c] is the `SINK`. A gradient sink
+knows what accumulator matrix (if any) belongs to a segment. Sinks
+are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
+
+<a name='x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-GRADIENT-SINK** *FN SINK*
+
+    Call `FN` of lambda list (`SEGMENT` `ACCUMULATOR`) on
+    each segment and their corresponding accumulator `MAT` in `SINK`.
+
+<a name='x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **DO-GRADIENT-SINK** *((SEGMENT ACCUMULATOR) SINK) &BODY BODY*
+
+    A convenience macro on top of [`MAP-GRADIENT-SINK`][97ba].
+
 <a name='x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29'></a>
 
 ## 7 Differentiable Function
@@ -1335,10 +1375,13 @@ respect to some of its parameters.
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
   [37bf]: #x-28MGL-DATASET-3ASAMPLER-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:SAMPLER (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
+  [3a6e]: #x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:MINIMIZE* GENERIC-FUNCTION)"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)"
   [434c]: #x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
+  [4c7c]: #x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:ACCUMULATE-GRADIENTS* GENERIC-FUNCTION)"
   [516d]: #x-28MGL-3A-40MGL-BASIC-CONCEPTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BASIC-CONCEPTS MGL-PAX:SECTION)"
+  [51ad]: #x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
   [643d]: #x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29 "(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"
@@ -1361,6 +1404,7 @@ respect to some of its parameters.
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"
   [9589]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"
+  [97ba]: #x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-GRADIENT-SINK GENERIC-FUNCTION)"
   [984f]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)"
   [9aa2]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:BATCH-GD-OPTIMIZER CLASS)"
   [9f93]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)"
@@ -1382,6 +1426,7 @@ respect to some of its parameters.
   [ed3d]: #x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [edd9]: #x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-STRATIFIED FUNCTION)"
   [f18a]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)"
+  [f1cd]: #x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:SEGMENTS GENERIC-FUNCTION)"
   [f4f4]: #x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29 "(MGL-DIFFUN:DIFFUN CLASS)"
   [f56b]: #x-28MGL-DATASET-3AMAX-N-SAMPLES-20-28MGL-PAX-3AACCESSOR-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:MAX-N-SAMPLES (MGL-PAX:ACCESSOR MGL-DATASET:FUNCTION-SAMPLER))"
   [f805]: #x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)"

@@ -222,7 +222,7 @@
 (defmethod map-gradient-sink (fn (optimizer gd-optimizer))
   (let ((segment-set (segment-set optimizer))
         (accumulator (accumulator optimizer)))
-    (do-segment-set (segment :start-in-segment-set start) segment-set
+    (do-segment-set (segment start) segment-set
       (with-shape-and-displacement (accumulator (mat-size
                                                  (segment-weights segment))
                                     start)
@@ -299,8 +299,7 @@
     (mgl-mat:axpy! (/ n-instances) accumulator weight-deltas)
     (with-shape-and-displacement (weight-deltas)
       (with-shape-and-displacement (accumulator)
-        (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                        (segment-set optimizer)
+        (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
           (let ((weights (segment-weights segment)))
             (reshape-and-displace! weight-deltas (mat-size weights)
                                    start-in-segment-set)
@@ -335,8 +334,7 @@
     (mgl-mat:scal! momentum weight-deltas)
     (mgl-mat:axpy! (flt (/ n-instances)) accumulator weight-deltas)
     (with-shape-and-displacement (weight-deltas)
-      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                      (segment-set optimizer)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (let ((weights (segment-weights segment)))
           (reshape-and-displace! weight-deltas (mat-size weights)
                                  start-in-segment-set)
@@ -398,8 +396,7 @@
                                             :type flt-vector))
                   (weight-deltas (weight-deltas 'array :direction :io
                                                 :type flt-vector)))
-      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                      (segment-set optimizer)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (map-segment-runs
          (lambda (start end)
            (declare (type index start end)
@@ -417,8 +414,7 @@
       (when (<= batch-size (the index (incf (n-instances-in-batch optimizer)
                                             n-new-inputs)))
         (setf (n-instances-in-batch optimizer) 0)
-        (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                        (segment-set optimizer)
+        (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
           (let* ((weights (segment-weights segment))
                  (start (mat-displacement weights))
                  (end (the! index (+ start (the index (mat-size weights))))))
@@ -489,8 +485,7 @@
                   (weight-deltas (weight-deltas 'array :direction :io
                                                 :type flt-vector)))
       (declare (optimize (speed 3) #.*no-array-bounds-check*))
-      (do-segment-set (segment :start-in-segment-set start-in-segment-set)
-                      (segment-set optimizer)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (let ((weights (segment-weights segment)))
           (with-facets ((weights (weights 'array :direction :io
                                           :type flt-vector)))

@@ -17,10 +17,10 @@
   gradients) but more can be added with the @MGL-OPT-EXTENSION-API."
   (minimize function)
   (*accumulating-interesting-gradients* variable)
-  (@mgl-opt-extension-api section)
   (@mgl-opt-iterative-optimizer section)
   (mgl-gd:@mgl-gd section)
-  (mgl-cg:@mgl-cg section))
+  (mgl-cg:@mgl-cg section)
+  (@mgl-opt-extension-api section))
 
 (defvar *accumulating-interesting-gradients* nil
   "FIXME: Will go away soon.")
@@ -93,10 +93,16 @@
 
 
 (defsection @mgl-opt-optimizer (:title "Implementing Optimizers")
+  "The following generic functions must be specialized for new
+  optimizer types."
   (minimize* generic-function)
   (initialize-optimizer* generic-function)
+  (segments generic-function)
+  "The rest are just useful for utilities for implementing
+  optimizers."
   (terminate-optimization-p function)
   (segment-set class)
+  (segments (reader segment-set))
   (size (reader segment-set))
   (do-segment-set macro)
   (segment-set<-mat function)
@@ -111,7 +117,9 @@
   accumulators for the gradients."))
 
 (defgeneric segments (optimizer)
-  (:documentation "The list of segments optimized by OPTIMIZER."))
+  (:documentation "Several weight matrices known as *segments* can be
+  optimized by a single optimizer. This function returns them as a
+  list."))
 
 (defun terminate-optimization-p (n-instances termination)
   "Utility function for subclasses of ITERATIVE-OPTIMIZER. It returns
@@ -126,14 +134,18 @@
          (terminate-optimization-p n-instances (funcall termination)))))
 
 (defclass segment-set ()
-  ((segments :initform (error "Must specify segment list.")
-             :initarg :segments :reader segments)
+  ((segments
+    :initarg :segments :reader segments
+    :documentation "A list of weight matrices.")
    (start-indices :reader start-indices)
    (size
     :reader size
     :documentation "The sum of the sizes of the weight matrices of
     SEGMENTS."))
-  (:documentation "It's like a concatenation of segments."))
+  (:documentation "This is a utility class for optimizers that have a
+  list of SEGMENTS and (the weights being optimized) is able to copy
+  back and forth between those segments and a single MAT (the
+  accumulator)."))
 
 (defmethod print-object ((set segment-set) stream)
   (pprint-logical-block (stream ())
@@ -151,42 +163,50 @@
     (setf (slot-value segment-set 'start-indices) (reverse start-indices)
           (slot-value segment-set 'size) n)))
 
-(defmacro do-segment-set ((segment &key start-in-segment-set) segment-set
+(defmacro do-segment-set ((segment &optional start) segment-set
                           &body body)
-  "Iterate over SEGMENTS in SEGMENT-SET ...."
+  "Iterate over SEGMENTS in SEGMENT-SET. If START is specified, the it
+  is bound to the start index of SEGMENT within SEGMENT-SET. The start
+  index is the sum of the sizes of previous segments."
   (alexandria:with-gensyms (%segment-set %start-index)
     `(let* ((,%segment-set ,segment-set))
        (loop for ,segment in (segments ,%segment-set)
-             ,@(when start-in-segment-set
+             ,@(when start
                  (list 'for %start-index 'in
                        (list 'start-indices %segment-set)))
-             do
-             (let (,@(when start-in-segment-set
-                       (list (list start-in-segment-set %start-index))))
-               ,@(when start-in-segment-set
-                   `((declare (type index ,start-in-segment-set))))
-               ,@body)))))
+             do (let (,@(when start
+                          (list (list start %start-index))))
+                  ,@(when start
+                      `((declare (type index ,start))))
+                  ,@body)))))
 
 (defun segment-set<-mat (segment-set mat)
-  "Copy the values of MAT to SEGMENT-SET."
+  "Copy the values of MAT to the weight matrices of SEGMENT-SET as if
+  they were concatenated into a single MAT."
   (map-concat (lambda (m mat) (copy! mat m))
               (segments segment-set) mat :key #'segment-weights))
 
 (defun segment-set->mat (segment-set mat)
-  "Copy the values of SEGMENT-SET to MAT."
+  "Copy the values of SEGMENT-SET to MAT as if they were concatenated
+  into a single MAT."
   (map-concat #'copy! (segments segment-set) mat :key #'segment-weights))
 
 
 (defsection @mgl-opt-gradient-source (:title "Implementing Gradient Sources")
-  "Weights can be stored in a multitude of ways. It is assumed that
-  weights are stored in any number of MAT objects."
-  (map-segments generic-function)
-  (list-segments function)
-  (initialize-gradient-source* generic-function)
-  (accumulate-gradients* generic-function)
+  "Weights can be stored in a multitude of ways. Optimizers need to
+  update weights, so it is assumed that weights are stored in any
+  number of MAT objects called segments.
+
+  The generic functions in this section must all be specialized for
+  new gradient sources except where noted."
   (map-segments generic-function)
   (map-segment-runs generic-function)
-  (segment-weights generic-function))
+  (segment-weights generic-function)
+  (segment-weights (method () (mat)))
+  (list-segments function)
+  (initialize-gradient-source* generic-function)
+  (initialize-gradient-source* (method () (t t t t)))
+  (accumulate-gradients* generic-function))
 
 (defgeneric map-segments (fn gradient-source)
   (:documentation "Apply FN to each segment of GRADIENT-SOURCE.")
@@ -194,20 +214,29 @@
     (mapc fn segment-list)))
 
 (defgeneric segment-weights (segment)
-  (:documentation "Return the weight matrix of SEGMENT.")
+  (:documentation "Return the weight matrix of SEGMENT. A segment
+  doesn't need to be a MAT object itself. For example, it may be a
+  MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
+  [MGL-BP:BPN][CLASS] whose NODES slot holds the weights.")
   (:method ((mat mat))
+    "When the segment is really a MAT, then just return it."
     mat))
 
 (defgeneric map-segment-runs (fn segment)
   (:documentation "Call FN with start and end of intervals of
   consecutive indices that are not missing in SEGMENT. Called by
-  optimizers that support partial updates.")
+  optimizers that support partial updates. The default implementation
+  assumes that all weights are present. This only needs to be
+  specialized if one plans to use an optimizer that knows how to deal
+  unused/missing weights such as MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER
+  and OPTIMIZER MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER.")
   (:method (fn segment)
     (let ((mat (segment-weights segment)))
       (funcall fn mat 0 (mat-size mat)))))
 
 (defun list-segments (gradient-source)
-  "Return the list of segments from MAP-SEGMENTS on GRADIENT-SOURCE."
+  "A utility function that returns the list of segments from
+  MAP-SEGMENTS on GRADIENT-SOURCE."
   (let ((segments ()))
     (map-segments (lambda (segment)
                     (push segment segments))
@@ -216,26 +245,29 @@
 
 (defgeneric initialize-gradient-source* (optimizer gradient-source weights
                                          dataset)
-  (:documentation "Called automatically before training starts, this
-  function sets up SINK to be suitable for SOURCE. It typically
-  creates accumulator arrays in the sink for the gradients.")
-  (:method (optimizer gradient-source weights dataset)))
+  (:documentation "Called automatically before MINIMIZE* is called,
+  this function may be specialized if GRADIENT-SOURCE needs some kind
+  of setup.")
+  (:method (optimizer gradient-source weights dataset)
+    "The default method does nothing."
+    nil))
 
-(defgeneric accumulate-gradients* (source sink batch multiplier valuep)
+(defgeneric accumulate-gradients* (gradient-source sink batch multiplier valuep)
   (:documentation "Add MULTIPLIER times the sum of first-order
   gradients to accumulators of SINK (normally accessed with
   DO-GRADIENT-SINK) and if VALUEP, return the sum of values of the
-  function being optimized for a BATCH of instances. SOURCE is the
-  object representing the function being optimized, SINK is gradient
-  sink."))
+  function being optimized for a BATCH of instances. GRADIENT-SOURCE
+  is the object representing the function being optimized, SINK is
+  gradient sink."))
 
 
 (defsection @mgl-opt-gradient-sink (:title "Implementing Gradient Sinks")
+  "Optimizers call ACCUMULATE-GRADIENTS* on gradient sources. One
+  parameter of ACCUMULATE-GRADIENTS* is the SINK. A gradient sink
+  knows what accumulator matrix (if any) belongs to a segment. Sinks
+  are defined entirely by MAP-GRADIENT-SINK."
   (map-gradient-sink generic-function)
-  (do-gradient-sink macro)
-  (call-with-sink-accumulator generic-function)
-  (with-sink-accumulator macro)
-  (accumulated-in-sink-p function))
+  (do-gradient-sink macro))
 
 (defgeneric map-gradient-sink (fn sink)
   (:documentation "Call FN of lambda list (SEGMENT ACCUMULATOR) on
@@ -243,26 +275,7 @@
 
 (defmacro do-gradient-sink (((segment accumulator) sink)
                             &body body)
+  "A convenience macro on top of MAP-GRADIENT-SINK."
   `(map-gradient-sink (lambda (,segment ,accumulator)
                         ,@body)
                       ,sink))
-
-(defgeneric call-with-sink-accumulator (fn segment source sink)
-  (:method (fn segment source sink)
-    (declare (ignore source))
-    (do-gradient-sink ((segment2 accumulator) sink)
-      (when (eq segment2 segment)
-        (funcall fn accumulator)))))
-
-(defmacro with-sink-accumulator ((accumulator (segment source sink))
-                                 &body body)
-  `(call-with-sink-accumulator (lambda (,accumulator)
-                                 ,@body)
-                               ,segment ,source ,sink))
-
-(defun accumulated-in-sink-p (segment source sink)
-  (call-with-sink-accumulator (lambda (accumulator)
-                                (declare (ignore accumulator))
-                                (return-from accumulated-in-sink-p t))
-                              segment source sink)
-  nil)
