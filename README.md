@@ -6,10 +6,8 @@
 
 - [1 mgl ASDF System Details][e0d7]
 - [2 Overview][f995]
-    - [2.1 Features][8665]
-    - [2.2 Dependencies][6d2c]
-    - [2.3 Tests][303a]
-    - [2.4 Bundled Software][b96a]
+    - [2.1 Dependencies][6d2c]
+    - [2.2 Code Organization][45db]
 - [3 Documentation][0dee]
 
 ###### \[in package MGL\]
@@ -33,6 +31,12 @@ MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
 by Ravenpack International. It implements:
 
+- Gradient descent optimization
+
+    - Nesterov momentum
+
+- Conjugate gradient optimization
+
 - Backpropagation networks (BPN)
 
     - Dropout
@@ -45,52 +49,32 @@ by Ravenpack International. It implements:
 
 - Boltzmann Machines
 
-- Restricted Boltzmann Machines (RBM)
+    - Restricted Boltzmann Machines (RBM)
 
-- Deep Belief Networks (DBN)
+    - Contrastive Divergence (CD) learning
 
-- Semi Restricted Boltzmann Machines
+    - Deep Belief Networks (DBN)
 
-- Boltzmann Machines
+    - Semi Restricted Boltzmann Machines
 
-- Unrolling DBN to a BPN
+    - Deep Boltzmann Machines
 
-- Contrastive Divergence (CD) learning
+    - Persistent Contrastive Divergence (PCD) learning
 
-- Persistent Contrastive Divergence (PCD) learning
-
-- Gradient descent optimization
-
-- Nesterov momentum
-
-- Conjugate gradient optimization
+    - Unrolling DBN or a DBM to a BPN
 
 - Gaussian Processes
 
-- Optimizing Gaussian Processes as BPNs
+    - Optimizing Gaussian Processes as BPNs
 
-
-<a name='x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29'></a>
-
-### 2.1 Features
-
-In general, the focus is on power and performance not on ease of use.
-For example, it's possible to:
-
-- control the order of presentation of training examples,
-
-- vary learning rate depending on time, state of the optimizer,
-
-- track all kinds of statistics during training,
-etc.
-
-Perhaps one day there will be a cookie cutter interface with
+In general, the focus is on power and performance not on ease of
+use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
 <a name='x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29'></a>
 
-### 2.2 Dependencies
+### 2.1 Dependencies
 
 MGL used to rely on [LLA](https://github.com/tpapp/lla) to
 interface to BLAS and LAPACK. That's mostly history by now, but
@@ -103,30 +87,27 @@ which the NVIDIA CUDA Toolkit needs to be installed, but MGL is
 fully functional even if there is no cuda capable gpu installed. See
 the `MGL-MAT:WITH-CUDA*` macro for how to use it.
 
-<a name='x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29'></a>
+<a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a>
 
-### 2.3 Tests
+### 2.2 Code Organization
 
-Run the built in tests 
-with:
+MGL consists of several packages dedicated to different tasks.
+For example, package `MGL-RESAMPLE` is about `@MGL-RESAMPLE` and
+`MGL-GD` is about `@MGL-GD` and so on. On one hand, having many
+packages makes it easier to cleanly separate API and implementation
+and also to explore into a specific task. At other times, they can
+be a hassle, so the [`MGL`][e0d7] package itself reexports every external
+symbol found in all the other packages that make up MGL.
+
+One exception to this rule is the bundled, but independent
+`MGL-GNUPLOT` library.
+
+The built in tests can be run with:
 
     (ASDF:OOS 'ASDF:TEST-OP '#:MGL)
 
 Note, that most of the tests are rather stochastic and can fail once
 in a while.
-
-<a name='x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29'></a>
-
-### 2.4 Bundled Software
-
-With [MGL-PAX](https://github.com/melisgl/mgl-pax) and
-[MGL-MAT](https://github.com/melisgl/mgl-mat) libraries split off
-there remains only a single library bundled with MGL which does
-not depend on the rest of MGL:
-
-- `MGL-GNUPLOT`, a plotting library.
-
-There is also MGL-VISUALS which does depend on MGL.
 
 <a name='x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29'></a>
 
@@ -135,10 +116,8 @@ There is also MGL-VISUALS which does depend on MGL.
 See the [MGL Manual](doc/md/mgl-manual.md) for more.
 
   [0dee]: #x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DOCUMENTATION MGL-PAX:SECTION)"
-  [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
+  [45db]: #x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-CODE-ORGANIZATION MGL-PAX:SECTION)"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
-  [8665]: #x-28MGL-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-FEATURES MGL-PAX:SECTION)"
-  [b96a]: #x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)"
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"
   [f995]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)"
 

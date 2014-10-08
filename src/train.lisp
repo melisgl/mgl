@@ -1,6 +1,6 @@
 (in-package :mgl-core)
 
-(defsection @mgl-model (:title "Model")
+(defsection @mgl-model (:title "Models")
   (@mgl-model-persistence section)
   (@mgl-model-stripe section)
   (@mgl-executors section))

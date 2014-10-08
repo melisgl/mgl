@@ -4,7 +4,8 @@
   (:use :common-lisp :mgl-pax)
   ;; FIXME: remove these after everything is defined with
   ;; MGL-PAX:DEFINE-PACKAGE.
-  (:export :name :name= :default-value :cost :size :nodes :group-size :target))
+  (:export :name :name= :default-value :cost :size :nodes :group-size :target
+           :fn))
 
 (cl:defpackage :mgl-util
   (:use #:common-lisp #:mgl-mat #:mgl-common)

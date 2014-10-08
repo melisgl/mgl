@@ -1,6 +1,6 @@
 (in-package :mgl-diffun)
 
-(defsection @mgl-diffun (:title "Differentiable Function")
+(defsection @mgl-diffun (:title "Differentiable Functions")
   (diffun class)
   (fn (reader diffun))
   (parameter-indices (reader diffun))

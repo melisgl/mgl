@@ -1,6 +1,6 @@
 (in-package mgl-dataset)
 
-(defsection @mgl-dataset (:title "Dataset")
+(defsection @mgl-dataset (:title "Datasets")
   "Ultimately machine learning is about creating models of some
   domain. The observations in the modelled domain are called
   _instances_. Sets of instances are called _datasets_. Datasets are
@@ -12,7 +12,7 @@
   instances."
   (@mgl-sampler section))
 
-(defsection @mgl-sampler (:title "Sampler")
+(defsection @mgl-sampler (:title "Samplers")
   "Some algorithms do not need random access to the entire dataset and
   can work with a stream observations. Samplers are simple generators
   providing two functions: SAMPLE and FINISHEDP."
