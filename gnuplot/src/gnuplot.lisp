@@ -5,7 +5,7 @@
 (defclass command ()
   ()
   (:documentation "A gnuplot command. There are separate classes for
-plot/splot, etc."))
+  plot/splot, etc."))
 
 (defclass plot ()
   ((kind :type (member :2d :3d) :initform :2d :initarg :kind :reader kind)
@@ -15,13 +15,13 @@ plot/splot, etc."))
   ((options :type (or list string) :initform nil :initarg :options
             :reader options))
   (:documentation "A plot can contain multiple mappings. For example
-in
+  in
 
     plot sin(x) title 'sine', \"datafile\" with lines
 
-there is a function and a file mapping. Subclasses of MAPPING
-represent the function or the data and the options (e.g. 'title',
-'with' above)."))
+  there is a function and a file mapping. Subclasses of MAPPING
+  represent the function or the data and the options (e.g. 'title',
+  'with' above)."))
 
 (defclass function-mapping (mapping)
   ((expression :initarg :expression :reader function-expression)))
@@ -29,21 +29,21 @@ represent the function or the data and the options (e.g. 'title',
 (defclass data-mapping (mapping)
   ((data :initarg :data :reader mapping-data))
   (:documentation "Consider plot '-', sin(x). For gnuplot '-'
-indicates inline data that will be read from the command stream after
-all mappings are read. The DATA slot of this class holds an object
-that can be serialized by WRITE-DATA."))
+  indicates inline data that will be read from the command stream
+  after all mappings are read. The DATA slot of this class holds an
+  object that can be serialized by WRITE-DATA."))
 
 (defclass file-mapping (mapping)
   ((filename :initarg :filename :reader filename))
   (:documentation "When the data comes from a file. As in plot
-'filename' title 'something'."))
+  'filename' title 'something'."))
 
 
 ;;;; Serialization interface
 
 (defgeneric write-command (command stream)
   (:documentation "Write the gnuplot COMMAND to STREAM. Commands
-represented by the classes PLOT, SET-COMMAND, etc."))
+  represented by the classes PLOT, SET-COMMAND, etc."))
 
 (defgeneric write-mapping (mapping stream)
   (:documentation "Write the gnuplot MAPPING to STREAM."))
@@ -149,11 +149,11 @@ represented by the classes PLOT, SET-COMMAND, etc."))
 
 (defvar *command-stream* nil
   "The default stream to which commands and inline data are written by
-WRITE-COMMAND.")
+  WRITE-COMMAND.")
 
 (defmacro with-command-stream ((stream) &body body)
   "Binds *COMMAND-STREAM* to STREAM routing all command output to
-STREAM by default."
+  STREAM by default."
   `(let ((*command-stream* ,stream))
      ,@body))
 
@@ -177,7 +177,7 @@ STREAM by default."
                          (output '*standard-output*) (error '*error-output*))
                         &body body)
   "Start gnuplot, bind STREAM and *COMMAND-STREAM* to its standard
-input. The stream is closed when BODY exits."
+  input. The stream is closed when BODY exits."
   `(with-command-stream ((start-session :display ,display :geometry ,geometry
                                         :persistp ,persistp :output ,output
                                         :error ,error))
