@@ -23,6 +23,8 @@
 - [6 Model][8b7f]
     - [6.1 Model Persistence][56ee]
     - [6.2 Batch Processing][0552]
+    - [6.3 Executors][6e12]
+        - [6.3.1 Parameterized Executor Cache][1426]
 - [7 Gradient Based Optimization][fe97]
     - [7.1 Iterative Optimizer][f805]
     - [7.2 Gradient Descent][53a7]
@@ -161,6 +163,9 @@ There is also MGL-VISUALS which does depend on MGL.
 
 MODEL, training set, test set, validation set,
 sample/instance/example.
+
+The [`MGL`][e0d7] package reexports every external symbol of all the MGL-\* 
+packages.
 
 <a name='x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29'></a>
 
@@ -657,25 +662,35 @@ an internal inconsistency in the model.
     Bind start and optionally end indices belonging to stripes in
     striped objects.
     
-        (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
-                      (STRIPE2 OBJECT2 START2)
-                      ...)
+        (WITH-STRIPES ((STRIPE1 OBJECT1 START1 END1)
+                       (STRIPE2 OBJECT2 START2)
+                       ...)
          ...)
-
+    
+    This is how one's supposed to find the index range corresponding to
+    the Nth input in an input lump of a bpn:
+    
+         (with-stripes ((n input-lump start end))
+           (loop for i upfrom start below end
+                 do (setf (mref (nodes input-lump) i) 0d0)))
+    
+    Note how the input lump is striped, but the matrix into which we are
+    indexing (`NODES`) is not known to [`WITH-STRIPES`][3ed1]. In fact, for lumps
+    the same stripe indices work with `NODES` and `MGL-BP:DERIVATIVES`.
 
 <a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a>
 
 - [generic-function] **STRIPE-START** *STRIPE OBJECT*
 
-    Return the start index of `STRIPE` in `STRIPED-ARRAY`
-    of `OBJECT`.
+    Return the start index of `STRIPE` in some array or
+    matrix of `OBJECT`.
 
 <a name='x-28MGL-CORE-3ASTRIPE-END-20GENERIC-FUNCTION-29'></a>
 
 - [generic-function] **STRIPE-END** *STRIPE OBJECT*
 
-    Return the end index (exclusive) of `STRIPE` in
-    `STRIPED-ARRAY` of `OBJECT`.
+    Return the end index (exclusive) of `STRIPE` in some
+    array or matrix of `OBJECT`.
 
 <a name='x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29'></a>
 
@@ -699,6 +714,79 @@ an internal inconsistency in the model.
 - [macro] **DO-BATCHES-FOR-MODEL** *(BATCH (DATASET MODEL)) &BODY BODY*
 
     Convenience macro over [`MAP-BATCHES-FOR-MODEL`][fdf3].
+
+<a name='x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29'></a>
+
+### 6.3 Executors
+
+<a name='x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAP-OVER-EXECUTORS** *FN INSTANCES PROTOTYPE-EXECUTOR*
+
+    Divide `INSTANCES` between executors that perform the
+    same function as `PROTOTYPE-EXECUTOR` and call `FN` with the instances
+    and the executor for which the instances are.
+    
+    Some objects conflate function and call: the forward pass of a
+    [MGL-BP:BPN][class] computes output from inputs so it is like a
+    function but it also doubles as a function call in the sense that
+    the bpn (function) object changes state during the computation of
+    the output. Hence not even the forward pass of a bpn is thread safe.
+    There is also the restriction that all inputs must be of the same
+    size.
+    
+    For example, if we have a function that builds bpn a for an input of
+    a certain size, then we can create a factory that creates bpns for a
+    particular call. The factory probably wants keep the weights the
+    same though. In [Parameterized Executor Cache][1426],
+    [`MAKE-EXECUTOR-WITH-PARAMETERS`][b73e] is this factory.
+    
+    Parallelization of execution is another possibility
+    [`MAP-OVER-EXECUTORS`][c27a] allows, but there is no prebuilt solution for it,
+    yet.
+    
+    The default implementation simply calls `FN` with `INSTANCES` and
+    `PROTOTYPE-EXECUTOR`.
+
+<a name='x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **DO-EXECUTORS** *(INSTANCES OBJECT) &BODY BODY*
+
+    Convenience macro on top of [`MAP-OVER-EXECUTORS`][c27a].
+
+<a name='x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29'></a>
+
+#### 6.3.1 Parameterized Executor Cache
+
+<a name='x-28MGL-CORE-3APARAMETERIZED-EXECUTOR-CACHE-MIXIN-20CLASS-29'></a>
+
+- [class] **PARAMETERIZED-EXECUTOR-CACHE-MIXIN**
+
+    Mix this into a model, implement
+    [`INSTANCE-TO-EXECUTOR-PARAMETERS`][b8b6] and [`MAKE-EXECUTOR-WITH-PARAMETERS`][b73e]
+    and [`DO-EXECUTORS`][2cc2] will be to able build executors suitable for
+    different instances. The canonical example is using a BPN to compute
+    the means and convariances of a gaussian process. Since each
+    instance is made of a variable number of observations, the size of
+    the input is not constant, thus we have a bpn (an executor) for each
+    input dimension (the parameters).
+
+<a name='x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAKE-EXECUTOR-WITH-PARAMETERS** *PARAMETERS CACHE*
+
+    Create a new executor for `PARAMETERS`. `CACHE` is a
+    [`PARAMETERIZED-EXECUTOR-CACHE-MIXIN`][d74b]. In the BPN gaussian process
+    example, `PARAMETERS` would be a list of input dimensions.
+
+<a name='x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **INSTANCE-TO-EXECUTOR-PARAMETERS** *INSTANCE CACHE*
+
+    Return the parameters for an executor able to
+    handle `INSTANCE`. Called by [`MAP-OVER-EXECUTORS`][c27a] on `CACHE` (that's a
+    `CACHED-PARAMETERIZED-EXECUTOR-MIXIN`). The returned parameters are
+    keys in an `EQUAL` parameters->executor hash table.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a>
 
@@ -1526,14 +1614,17 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [02de]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
+  [1426]: #x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
   [2100]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER-FUNCTION-SAMPLER MGL-PAX:SECTION)"
   [25a8]: #x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-SEGMENTED-GD-OPTIMIZER MGL-PAX:SECTION)"
   [2730]: #x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)"
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
+  [2cc2]: #x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29 "(MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO)"
   [303a]: #x-28MGL-3A-40MGL-TESTS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-TESTS MGL-PAX:SECTION)"
   [3a6e]: #x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:MINIMIZE* GENERIC-FUNCTION)"
+  [3ed1]: #x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29 "(MGL-CORE:WITH-STRIPES MGL-PAX:MACRO)"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)"
   [434c]: #x-28MGL-DIFFUN-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "(MGL-DIFFUN:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
@@ -1546,6 +1637,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [643d]: #x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29 "(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"
   [66a1]: #x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
+  [6e12]: #x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)"
   [6fc3]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"
   [72e9]: #x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)"
   [74a7]: #x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BP MGL-PAX:SECTION)"
@@ -1574,13 +1666,17 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [a7de]: #x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:WEIGHT-PENALTY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
   [b6ac]: #x-28MGL-GD-3ASEGMENTER-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29 "(MGL-GD:SEGMENTER (MGL-PAX:READER MGL-GD:SEGMENTED-GD-OPTIMIZER))"
+  [b73e]: #x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"
+  [b8b6]: #x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION)"
   [b96a]: #x-28MGL-3A-40MGL-BUNDLED-SOFTWARE-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BUNDLED-SOFTWARE MGL-PAX:SECTION)"
   [bca8]: #x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29 "(MGL-OPT:MINIMIZE FUNCTION)"
   [bec0]: #x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
+  [c27a]: #x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)"
   [ce14]: #x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:WEIGHT-DECAY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [d275]: #x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)"
   [d503]: #x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29 "(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"
+  [d74b]: #x-28MGL-CORE-3APARAMETERIZED-EXECUTOR-CACHE-MIXIN-20CLASS-29 "(MGL-CORE:PARAMETERIZED-EXECUTOR-CACHE-MIXIN CLASS)"
   [dc9d]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [dca7]: #x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"

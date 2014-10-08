@@ -2,7 +2,8 @@
 
 (defsection @mgl-model (:title "Model")
   (@mgl-model-persistence section)
-  (@mgl-model-stripe section))
+  (@mgl-model-stripe section)
+  (@mgl-executors section))
 
 
 (defsection @mgl-model-persistence (:title "Model Persistence")
@@ -98,10 +99,21 @@
   "Bind start and optionally end indices belonging to stripes in
   striped objects.
 
-      (WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
-                    (STRIPE2 OBJECT2 START2)
-                    ...)
-       ...)"
+      (WITH-STRIPES ((STRIPE1 OBJECT1 START1 END1)
+                     (STRIPE2 OBJECT2 START2)
+                     ...)
+       ...)
+
+  This is how one's supposed to find the index range corresponding to
+  the Nth input in an input lump of a bpn:
+
+       (with-stripes ((n input-lump start end))
+         (loop for i upfrom start below end
+               do (setf (mref (nodes input-lump) i) 0d0)))
+
+  Note how the input lump is striped, but the matrix into which we are
+  indexing (NODES) is not known to WITH-STRIPES. In fact, for lumps
+  the same stripe indices work with NODES and MGL-BP:DERIVATIVES."
   `(let* ,(mapcan (lambda (spec) (apply #'stripe-binding spec))
                   specs)
      ,@body))
@@ -115,12 +127,12 @@
         ,@(when end `((,end (the index (stripe-end ,%stripe ,%object)))))))))
 
 (defgeneric stripe-start (stripe object)
-  (:documentation "Return the start index of STRIPE in STRIPED-ARRAY
-  of OBJECT."))
+  (:documentation "Return the start index of STRIPE in some array or
+  matrix of OBJECT."))
 
 (defgeneric stripe-end (stripe object)
-  (:documentation "Return the end index (exclusive) of STRIPE in
-  STRIPED-ARRAY of OBJECT."))
+  (:documentation "Return the end index (exclusive) of STRIPE in some
+  array or matrix of OBJECT."))
 
 (defgeneric set-input (instances model)
   (:documentation "Set INSTANCES as inputs in MODEL. SAMPLES is always
@@ -142,6 +154,110 @@
 (defmacro do-batches-for-model ((batch (dataset model)) &body body)
   "Convenience macro over MAP-BATCHES-FOR-MODEL."
   `(map-batches-for-model (lambda (,batch) ,@body) ,dataset ,model))
+
+
+(defsection @mgl-executors (:title "Executors")
+  (map-over-executors generic-function)
+  (do-executors macro)
+  (@mgl-parameterized-executor-cache section))
+
+(defgeneric map-over-executors (fn instances prototype-executor)
+  (:documentation "Divide INSTANCES between executors that perform the
+  same function as PROTOTYPE-EXECUTOR and call FN with the instances
+  and the executor for which the instances are.
+
+  Some objects conflate function and call: the forward pass of a
+  [MGL-BP:BPN][class] computes output from inputs so it is like a
+  function but it also doubles as a function call in the sense that
+  the bpn (function) object changes state during the computation of
+  the output. Hence not even the forward pass of a bpn is thread safe.
+  There is also the restriction that all inputs must be of the same
+  size.
+
+  For example, if we have a function that builds bpn a for an input of
+  a certain size, then we can create a factory that creates bpns for a
+  particular call. The factory probably wants keep the weights the
+  same though. In @MGL-PARAMETERIZED-EXECUTOR-CACHE,
+  MAKE-EXECUTOR-WITH-PARAMETERS is this factory.
+
+  Parallelization of execution is another possibility
+  MAP-OVER-EXECUTORS allows, but there is no prebuilt solution for it,
+  yet.
+
+  The default implementation simply calls FN with INSTANCES and
+  PROTOTYPE-EXECUTOR.")
+  (:method (fn instances object)
+    (funcall fn instances object)))
+
+(defmacro do-executors ((instances object) &body body)
+  "Convenience macro on top of MAP-OVER-EXECUTORS."
+  `(map-over-executors (lambda (,instances ,object)
+                         ,@body)
+                       ,instances ,object))
+
+
+(defsection @mgl-parameterized-executor-cache
+    (:title "Parameterized Executor Cache")
+  (parameterized-executor-cache-mixin class)
+  (make-executor-with-parameters generic-function)
+  (instance-to-executor-parameters generic-function))
+
+(defclass parameterized-executor-cache-mixin ()
+  ((executor-cache
+    :initform (make-hash-table :test #'equal)
+    :reader executor-cache))
+  (:documentation "Mix this into a model, implement
+  INSTANCE-TO-EXECUTOR-PARAMETERS and MAKE-EXECUTOR-WITH-PARAMETERS
+  and DO-EXECUTORS will be to able build executors suitable for
+  different instances. The canonical example is using a BPN to compute
+  the means and convariances of a gaussian process. Since each
+  instance is made of a variable number of observations, the size of
+  the input is not constant, thus we have a bpn (an executor) for each
+  input dimension (the parameters)."))
+
+(defgeneric make-executor-with-parameters (parameters cache)
+  (:documentation "Create a new executor for PARAMETERS. CACHE is a
+  PARAMETERIZED-EXECUTOR-CACHE-MIXIN. In the BPN gaussian process
+  example, PARAMETERS would be a list of input dimensions."))
+
+(defgeneric instance-to-executor-parameters (instance cache)
+  (:documentation "Return the parameters for an executor able to
+  handle INSTANCE. Called by MAP-OVER-EXECUTORS on CACHE (that's a
+  CACHED-PARAMETERIZED-EXECUTOR-MIXIN). The returned parameters are
+  keys in an EQUAL parameters->executor hash table."))
+
+(defun lookup-executor-cache (parameters cache)
+  (gethash parameters (executor-cache cache)))
+
+(defun insert-into-executor-cache (parameters cache value)
+  (setf (gethash parameters (executor-cache cache)) value))
+
+(defmethod map-over-executors (fn instances
+                               (c parameterized-executor-cache-mixin))
+  (trivially-map-over-executors fn instances c))
+
+(defun trivially-map-over-executors (fn instances obj)
+  (let ((executor-to-instances (make-hash-table)))
+    (dolist (instance instances)
+      (let ((executor (find-one-executor instance obj)))
+        (push instance (gethash executor executor-to-instances))))
+    (maphash (lambda (executor instances)
+               (funcall fn instances executor))
+             executor-to-instances)))
+
+(defgeneric find-one-executor (instance obj)
+  (:method (instance obj)
+    nil)
+  (:method :around (instance obj)
+    (or (call-next-method)
+        obj))
+  (:method (instance (cached parameterized-executor-cache-mixin))
+    (let ((parameters (instance-to-executor-parameters instance cached)))
+      (or (lookup-executor-cache parameters cached)
+          (let ((executor (make-executor-with-parameters parameters cached)))
+            (when executor
+              (insert-into-executor-cache parameters cached executor))
+            executor)))))
 
 
 ;;;; Error counter
@@ -258,67 +374,3 @@
       (apply-counters-and-measurers counters-and-measurers samples learner)))
   (map 'list #'car counters-and-measurers))
 
-
-;;;; Executors
-
-(defgeneric map-over-executors (fn samples object)
-  (:documentation "Divide SAMPLES between executors. And call FN with
-  the samples and the executor for which the samples are.
-
-  Some objects conflate function and call: the forward pass of a bpn
-  computes output from inputs so it is like a function but it also
-  doubles as a function call in the sense that the bpn (function)
-  object changes state during the computation of the output. Hence not
-  even the forward pass of a bpn is thread safe. There is also the
-  restriction that all inputs must be of the same size.
-
-  For example, if we have a function that builds bpn a for an input of
-  a certain size, then we can create a factory that creates bpns for a
-  particular call. The factory probably wants keep the weights the
-  same though.
-
-  Another possibility MAP-OVER-EXECUTORS allows is to parallelize
-  execution.
-
-  The default implementation simply calls FN with SAMPLES and
-  OBJECT.")
-  (:method (fn samples object)
-    (funcall fn samples object)))
-
-(defmacro do-executors ((samples object) &body body)
-  `(map-over-executors (lambda (,samples ,object)
-                         ,@body)
-                       ,samples ,object))
-
-(defclass trivial-cached-executor-mixin ()
-  ((executor-cache :initform (make-hash-table :test #'equal)
-                   :reader executor-cache))
-  (:documentation ""))
-
-(defun lookup-executor-cache (key cache)
-  (gethash key (executor-cache cache)))
-
-(defun insert-into-executor-cache (key cache value)
-  (setf (gethash key (executor-cache cache)) value))
-
-(defmethod map-over-executors (fn samples (c trivial-cached-executor-mixin))
-  (trivially-map-over-executors fn samples c))
-
-(defun trivially-map-over-executors (fn samples obj)
-  (let ((executor-to-samples (make-hash-table)))
-    (dolist (sample samples)
-      (let ((executor (find-one-executor sample obj)))
-        (push sample (gethash executor executor-to-samples))))
-    (maphash (lambda (executor samples)
-               (funcall fn samples executor))
-             executor-to-samples)))
-
-(defgeneric find-one-executor (sample obj)
-  (:documentation "Called by TRIVIALLY-MAP-OVER-EXECUTORS.")
-  (:method (sample obj)
-    nil)
-  (:method :around (sample obj)
-    (or (call-next-method)
-        obj)))
-
-(defgeneric sample-to-executor-cache-key (sample object))

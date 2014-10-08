@@ -3,13 +3,9 @@
 (defclass test-bpn-gp (trivial-cached-executor-mixin bpn-gp)
   ())
 
-(defmethod find-one-executor (sample (bpn-gp test-bpn-gp))
-  (let ((key (sample-to-executor-cache-key sample bpn-gp)))
-    (or (lookup-executor-cache key bpn-gp)
-        (insert-into-executor-cache
-         key bpn-gp
-         (destructuring-bind (n-x1 n-x2) key
-           (build-simple-bpn-gp n-x1 n-x2 :weights-from bpn-gp))))))
+(defmethod make-executor-with-parameters (parameters (bpn-gp test-bpn-gp))
+  (destructuring-bind (n-x1 n-x2) parameters
+    (build-simple-bpn-gp n-x1 n-x2 :weights-from bpn-gp)))
 
 (defmethod set-input (samples (bpn test-bpn-gp))
   (let ((df (find-lump 'distance-field bpn :errorp t))
@@ -208,6 +204,7 @@
                            (make-instance 'batch-gd-optimizer
                                           :learning-rate (flt learning-rate)
                                           :momentum (flt 0.9)
+                                          ;; ??
                                           :batch-size 100)))))))
     (minimize optimizer (make-instance 'bp-learner :bpn bpn-gp)
               :dataset sampler)))

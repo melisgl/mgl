@@ -185,7 +185,7 @@
                          :reader covariance-lump-name)))
 
 ;;; For subclasses that use TRIVIAL-CACHED-EXECUTOR-MIXIN or such.
-(defmethod sample-to-executor-cache-key (sample (bpn-gp bpn-gp))
+(defmethod instance-to-executor-parameters (sample (bpn-gp bpn-gp))
   (destructuring-bind (&key x1 x2 &allow-other-keys) sample
     (list (mat-size x1) (mat-size x2))))
 

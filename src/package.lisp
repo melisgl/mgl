@@ -126,15 +126,6 @@
    ;; Collecting errors
    #:apply-counters-and-measurers
    #:collect-batch-errors
-   ;; Executors
-   #:map-over-executors
-   #:do-executors
-   #:find-one-executor
-   #:trivial-cached-executor-mixin
-   #:lookup-executor-cache
-   #:insert-into-executor-cache
-   #:trivially-map-over-executors
-   #:sample-to-executor-cache-key
    ;; Classification
    #:label
    #:label-distribution

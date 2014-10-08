@@ -258,7 +258,12 @@
   DO-GRADIENT-SINK) and if VALUEP, return the sum of values of the
   function being optimized for a BATCH of instances. GRADIENT-SOURCE
   is the object representing the function being optimized, SINK is
-  gradient sink."))
+  gradient sink.
+
+  Note the number of instances in BATCH may be larger than what
+  GRADIENT-SOURCE process in one go (in the sense of say,
+  MAX-N-STRIPES), so DO-BATCHES-FOR-MODEL or something like (GROUP
+  BATCH MAX-N-STRIPES) can be handy."))
 
 
 (defsection @mgl-opt-gradient-sink (:title "Implementing Gradient Sinks")

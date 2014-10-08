@@ -45,6 +45,11 @@
 <ul>
 <li><a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">6.1 Model Persistence</a></li>
 <li><a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">6.2 Batch Processing</a></li>
+<li><a href="#x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)">6.3 Executors</a>
+
+<ul>
+<li><a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)">6.3.1 Parameterized Executor Cache</a></li>
+</ul></li>
 </ul></li>
 <li><a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">7 Gradient Based Optimization</a>
 
@@ -187,6 +192,9 @@ not depend on the rest of MGL:</p>
 
 <p>MODEL, training set, test set, validation set,
 sample/instance/example.</p>
+
+<p>The <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)"><code>MGL</code></a> package reexports every external symbol of all the MGL-* 
+packages.</p>
 
 <p><a name='x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29'></a></p>
 
@@ -688,7 +696,7 @@ on to <code>OPEN</code>.</p></li>
 
 <p><a name='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8634;</a></span>6.2 Batch Processing</h3>
+<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8634;</a></span>6.2 Batch Processing</h3>
 
 <p>Processing instances one by one during training or prediction can
 be slow. The models that support batch processing for greater
@@ -756,11 +764,23 @@ that are in use in <code>OBJECT</code>. This is called when <code>N-STRIPES</cod
 <p>Bind start and optionally end indices belonging to stripes in
 striped objects.</p>
 
-<pre><code>(WITH-STRIPE ((STRIPE1 OBJECT1 START1 END1)
-              (STRIPE2 OBJECT2 START2)
-              ...)
+<pre><code>(WITH-STRIPES ((STRIPE1 OBJECT1 START1 END1)
+               (STRIPE2 OBJECT2 START2)
+               ...)
  ...)
-</code></pre></li>
+</code></pre>
+
+<p>This is how one's supposed to find the index range corresponding to
+the Nth input in an input lump of a bpn:</p>
+
+<pre><code> (with-stripes ((n input-lump start end))
+   (loop for i upfrom start below end
+         do (setf (mref (nodes input-lump) i) 0d0)))
+</code></pre>
+
+<p>Note how the input lump is striped, but the matrix into which we are
+indexing (<code>NODES</code>) is not known to <a href="#x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:WITH-STRIPES MGL-PAX:MACRO)"><code>WITH-STRIPES</code></a>. In fact, for lumps
+the same stripe indices work with <code>NODES</code> and <code>MGL-BP:DERIVATIVES</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a></p>
@@ -768,8 +788,8 @@ striped objects.</p>
 <ul>
 <li><p>[generic-function] <strong>STRIPE-START</strong> <em>STRIPE OBJECT</em></p>
 
-<p>Return the start index of <code>STRIPE</code> in <code>STRIPED-ARRAY</code>
-of <code>OBJECT</code>.</p></li>
+<p>Return the start index of <code>STRIPE</code> in some array or
+matrix of <code>OBJECT</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ASTRIPE-END-20GENERIC-FUNCTION-29'></a></p>
@@ -777,8 +797,8 @@ of <code>OBJECT</code>.</p></li>
 <ul>
 <li><p>[generic-function] <strong>STRIPE-END</strong> <em>STRIPE OBJECT</em></p>
 
-<p>Return the end index (exclusive) of <code>STRIPE</code> in
-<code>STRIPED-ARRAY</code> of <code>OBJECT</code>.</p></li>
+<p>Return the end index (exclusive) of <code>STRIPE</code> in some
+array or matrix of <code>OBJECT</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29'></a></p>
@@ -810,9 +830,92 @@ if there are no more instances left.</p></li>
 <p>Convenience macro over <a href="#x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29" title="(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"><code>MAP-BATCHES-FOR-MODEL</code></a>.</p></li>
 </ul>
 
+<p><a name='x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)">&#8634;</a></span>6.3 Executors</h3>
+
+<p><a name='x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAP-OVER-EXECUTORS</strong> <em>FN INSTANCES PROTOTYPE-EXECUTOR</em></p>
+
+<p>Divide <code>INSTANCES</code> between executors that perform the
+same function as <code>PROTOTYPE-EXECUTOR</code> and call <code>FN</code> with the instances
+and the executor for which the instances are.</p>
+
+<p>Some objects conflate function and call: the forward pass of a
+[MGL-BP:BPN] computes output from inputs so it is like a
+function but it also doubles as a function call in the sense that
+the bpn (function) object changes state during the computation of
+the output. Hence not even the forward pass of a bpn is thread safe.
+There is also the restriction that all inputs must be of the same
+size.</p>
+
+<p>For example, if we have a function that builds bpn a for an input of
+a certain size, then we can create a factory that creates bpns for a
+particular call. The factory probably wants keep the weights the
+same though. In <a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)">Parameterized Executor Cache</a>,
+<a href="#x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"><code>MAKE-EXECUTOR-WITH-PARAMETERS</code></a> is this factory.</p>
+
+<p>Parallelization of execution is another possibility
+<a href="#x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"><code>MAP-OVER-EXECUTORS</code></a> allows, but there is no prebuilt solution for it,
+yet.</p>
+
+<p>The default implementation simply calls <code>FN</code> with <code>INSTANCES</code> and
+<code>PROTOTYPE-EXECUTOR</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>DO-EXECUTORS</strong> <em>(INSTANCES OBJECT) &amp;BODY BODY</em></p>
+
+<p>Convenience macro on top of <a href="#x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"><code>MAP-OVER-EXECUTORS</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h4><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)">&#8634;</a></span>6.3.1 Parameterized Executor Cache</h4>
+
+<p><a name='x-28MGL-CORE-3APARAMETERIZED-EXECUTOR-CACHE-MIXIN-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>PARAMETERIZED-EXECUTOR-CACHE-MIXIN</strong></p>
+
+<p>Mix this into a model, implement
+<a href="#x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION)"><code>INSTANCE-TO-EXECUTOR-PARAMETERS</code></a> and <a href="#x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"><code>MAKE-EXECUTOR-WITH-PARAMETERS</code></a>
+and <a href="#x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO)"><code>DO-EXECUTORS</code></a> will be to able build executors suitable for
+different instances. The canonical example is using a BPN to compute
+the means and convariances of a gaussian process. Since each
+instance is made of a variable number of observations, the size of
+the input is not constant, thus we have a bpn (an executor) for each
+input dimension (the parameters).</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAKE-EXECUTOR-WITH-PARAMETERS</strong> <em>PARAMETERS CACHE</em></p>
+
+<p>Create a new executor for <code>PARAMETERS</code>. <code>CACHE</code> is a
+<a href="#x-28MGL-CORE-3APARAMETERIZED-EXECUTOR-CACHE-MIXIN-20CLASS-29" title="(MGL-CORE:PARAMETERIZED-EXECUTOR-CACHE-MIXIN CLASS)"><code>PARAMETERIZED-EXECUTOR-CACHE-MIXIN</code></a>. In the BPN gaussian process
+example, <code>PARAMETERS</code> would be a list of input dimensions.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>INSTANCE-TO-EXECUTOR-PARAMETERS</strong> <em>INSTANCE CACHE</em></p>
+
+<p>Return the parameters for an executor able to
+handle <code>INSTANCE</code>. Called by <a href="#x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"><code>MAP-OVER-EXECUTORS</code></a> on <code>CACHE</code> (that's a
+<code>CACHED-PARAMETERIZED-EXECUTOR-MIXIN</code>). The returned parameters are
+keys in an <code>EQUAL</code> parameters-&gt;executor hash table.</p></li>
+</ul>
+
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8634;</a></span>7 Gradient Based Optimization</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-ITERATIVE-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8634;</a></span>7 Gradient Based Optimization</h2>
 
 <h6>[in package MGL-OPT]</h6>
 
