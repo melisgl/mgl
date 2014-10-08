@@ -20,7 +20,7 @@
                              (:file "copy")
                              (:file "confusion-matrix")
                              (:file "feature")
-                             (:file "train")
+                             (:file "core")
                              (:file "classification")
                              (:file "optimize")
                              (:file "gradient-descent")
