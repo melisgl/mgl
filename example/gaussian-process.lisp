@@ -1,6 +1,6 @@
 (in-package :mgl-example-gp)
 
-(defclass test-bpn-gp (trivial-cached-executor-mixin bpn-gp)
+(defclass test-bpn-gp (parameterized-executor-cache-mixin bpn-gp)
   ())
 
 (defmethod make-executor-with-parameters (parameters (bpn-gp test-bpn-gp))
