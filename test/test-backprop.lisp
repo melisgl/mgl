@@ -1,8 +1,7 @@
 (in-package :mgl-test)
 
 (defclass test-base-bp-optimizer ()
-  ((counter :initform (make-instance 'error-counter) :reader counter)
-   (print-by :initform 1000 :initarg :print-by :reader print-by)))
+  ())
 
 (defclass test-bp-optimizer (test-base-bp-optimizer segmented-gd-optimizer)
   ())
@@ -16,38 +15,36 @@
 (defmethod set-input (samples (bpn test-bpn))
   (funcall (clamper bpn) samples bpn))
 
-(defmethod mgl-opt:accumulate-gradients* :around
-    (learner (optimizer test-bp-optimizer) batch multiplier valuep)
-  (let ((counter (counter optimizer)))
-    (call-next-method)
-    (multiple-value-call #'add-error counter (cost (bpn learner)))
-    (let ((n-instances (n-instances optimizer)))
-      (when (zerop (mod n-instances (print-by optimizer)))
-        (log-msg "COST: ~,5F (~D, ~D)~%"
-                 (or (get-error counter) #.(flt 0))
-                 (n-sum-errors counter)
-                 n-instances)
-        (reset-counter counter)))))
+(defun make-bpn-cost-monitors ()
+  (list
+   (make-instance 'monitor
+                  :measurer (lambda (instances bpn)
+                              (declare (ignore instances))
+                              (mgl-bp:cost bpn))
+                  :counter (make-instance
+                            'basic-counter
+                            :attributes '(:dataset "train" :type "cost")))))
 
-(defmethod mgl-cg::train-batch :around
-    ((optimizer test-cg-bp-optimizer) learner samples)
-  (multiple-value-bind (best-w best-f)
-      (call-next-method)
-    (declare (ignore best-w))
-    (let ((n-instances (n-instances optimizer)))
-      (when (zerop (mod n-instances (print-by optimizer)))
-        (log-msg "COST: ~,5F (~S, ~S)~%" (/ best-f (length samples))
-                 (length samples)
-                 n-instances)))))
+(defun make-bp-learner (bpn)
+  (make-instance 'bp-learner
+                 :bpn bpn
+                 :monitors (make-bpn-cost-monitors)))
+
+(defun monitor-training-periodically (optimizer)
+  (monitor-optimization-periodically
+   optimizer
+   '((:fn reset-optimization-monitors :period 100 :last-eval 0))))
+
+;; (test-simple :cg nil :max-n-stripes 10)
 
 (defun bpn-error (sampler bpn)
-  (let ((counter (make-instance 'error-counter))
+  (let ((counter (make-instance 'basic-counter))
         (n-stripes (max-n-stripes bpn)))
     (while (not (finishedp sampler))
       (set-input (list-samples sampler n-stripes) bpn)
       (forward-bpn bpn)
-      (multiple-value-call #'add-error counter (cost bpn)))
-    (values (get-error counter) counter)))
+      (multiple-value-call #'add-to-counter counter (cost bpn)))
+    (values (counter-values counter) counter)))
 
 (defun bpn-nodes (bpn stripe)
   (apply #'concatenate 'list
@@ -107,17 +104,17 @@
       (setf (clamper net) #'clamper)
       (minimize (if cg
                     (make-instance 'test-cg-bp-optimizer
-                                   :print-by 100
-                                   :batch-size 100)
-                    (make-instance 'test-bp-optimizer
-                                   :print-by 100
-                                   :segmenter
-                                   (repeatedly
-                                     (make-instance 'batch-gd-optimizer
-                                                    :learning-rate (flt 0.01)
-                                                    :momentum (flt 0.9)
-                                                    :batch-size 10))))
-                (make-instance 'bp-learner :bpn net)
+                                   :batch-size 100
+                                   :on-cg-batch-done '(log-cg-batch-done))
+                    (monitor-training-periodically
+                     (make-instance 'test-bp-optimizer
+                                    :segmenter
+                                    (repeatedly
+                                      (make-instance 'batch-gd-optimizer
+                                                     :learning-rate (flt 0.01)
+                                                     :momentum (flt 0.9)
+                                                     :batch-size 10)))))
+                (make-bp-learner net)
                 :dataset
                 (make-instance 'function-sampler
                                :max-n-samples 1000
@@ -190,20 +187,22 @@
         (minimize (if cg
                       (make-instance 'test-cg-bp-optimizer
                                      :cg-args '(:max-n-line-searches 3)
-                                     :batch-size 100)
-                      (make-instance 'test-bp-optimizer
-                                     :segmenter
-                                     (repeatedly
-                                       ;; Small learning rate and huge decay
-                                       ;; because the network is constructed in
-                                       ;; such a way that pushes all weights up
-                                       ;; towards infinity.
-                                       (make-instance 'batch-gd-optimizer
-                                                      :learning-rate (flt 0.01)
-                                                      :momentum (flt 0.9)
-                                                      :weight-decay (flt 0)
-                                                      :batch-size 10))))
-                  (make-instance 'bp-learner :bpn net)
+                                     :batch-size 100
+                                     :on-cg-batch-done '(log-cg-batch-done))
+                      (monitor-training-periodically
+                       (make-instance 'test-bp-optimizer
+                                      :segmenter
+                                      (repeatedly
+                                        ;; Small learning rate and huge decay
+                                        ;; because the network is constructed in
+                                        ;; such a way that pushes all weights up
+                                        ;; towards infinity.
+                                        (make-instance 'batch-gd-optimizer
+                                                       :learning-rate (flt 0.01)
+                                                       :momentum (flt 0.9)
+                                                       :weight-decay (flt 0)
+                                                       :batch-size 10)))))
+                  (make-bp-learner net)
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples 100000
@@ -270,15 +269,17 @@
         (minimize (if cg
                       (make-instance 'test-cg-bp-optimizer
                                      :cg-args (list :max-n-line-searches 3)
-                                     :batch-size 1000)
-                      (make-instance 'test-bp-optimizer
-                                     :segmenter
-                                     (repeatedly
-                                       (make-instance 'batch-gd-optimizer
-                                                      :learning-rate (flt 0.1)
-                                                      :momentum (flt 0.9)
-                                                      :batch-size 100))))
-                  (make-instance 'bp-learner :bpn net)
+                                     :batch-size 1000
+                                     :on-cg-batch-done '(log-cg-batch-done))
+                      (monitor-training-periodically
+                       (make-instance 'test-bp-optimizer
+                                      :segmenter
+                                      (repeatedly
+                                        (make-instance 'batch-gd-optimizer
+                                                       :learning-rate (flt 0.1)
+                                                       :momentum (flt 0.9)
+                                                       :batch-size 100)))))
+                  (make-bp-learner net)
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples 100000
@@ -375,15 +376,17 @@
         (minimize (if cg
                       (make-instance 'test-cg-bp-optimizer
                                      :cg-args '(:max-n-line-searches 3)
-                                     :batch-size 1000)
-                      (make-instance 'test-bp-optimizer
-                                     :segmenter
-                                     (repeatedly
-                                       (make-instance 'batch-gd-optimizer
-                                                      :learning-rate (flt 0.01)
-                                                      :momentum (flt 0.9)
-                                                      :batch-size 10))))
-                  (make-instance 'bp-learner :bpn net)
+                                     :batch-size 1000
+                                     :on-cg-batch-done '(log-cg-batch-done))
+                      (monitor-training-periodically
+                       (make-instance 'test-bp-optimizer
+                                      :segmenter
+                                      (repeatedly
+                                        (make-instance 'batch-gd-optimizer
+                                                       :learning-rate (flt 0.01)
+                                                       :momentum (flt 0.9)
+                                                       :batch-size 10)))))
+                  (make-bp-learner net)
                   :dataset
                   (make-instance 'function-sampler
                                  :max-n-samples (if cg 30000 100000)

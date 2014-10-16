@@ -1,18 +1,17 @@
-(mgl-pax:define-package :mgl-common
+(mgl-pax:define-package #:mgl-common
   (:documentation "The only purpose of this package is to avoid
   conflicts between other packages.")
   (:use :common-lisp :mgl-pax)
-  ;; FIXME: remove these after everything is defined with
-  ;; MGL-PAX:DEFINE-PACKAGE.
-  (:export :name :name= :default-value :cost :size :nodes :group-size :target
-           :fn))
+  (:export #:name #:name= #:default-value #:cost #:size #:nodes #:group-size
+           #:target #:fn))
 
-(cl:defpackage :mgl-util
+(cl:defpackage #:mgl-util
   (:use #:common-lisp #:mgl-mat #:mgl-common)
   (:export
    #:name=
    ;; Macrology
    #:special-case
+   #:apply-key
    ;; Types
    #:flt
    #:flt-ctype
@@ -43,6 +42,7 @@
    #:make-sequence-generator
    #:make-random-generator
    #:make-n-gram-mappee
+   #:applies-to-p
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn
@@ -68,6 +68,8 @@
    #:running-stat-mean
    ;; Array utilities
    #:as-column-vector
+   #:rows-to-arrays
+   #:max-row-positions
    ;; Printing
    #:print-table
    ;; Describe customization
@@ -79,17 +81,6 @@
    #:define-slots-not-to-be-copied
    #:define-slots-to-be-shallow-copied
    #:copy
-   ;; Confusion matrix
-   #:confusion-matrix
-   #:sort-confusion-classes
-   #:confusion-class-name
-   #:confusion-count
-   #:map-confusion-matrix
-   #:confusion-matrix-classes
-   #:confusion-matrix-accuracy
-   #:confusion-matrix-precision
-   #:confusion-matrix-recall
-   #:add-confusion-matrix
    ;; Feature selection, encoding
    #:count-features
    #:compute-feature-llrs
@@ -97,77 +88,61 @@
    #:index-scored-features
    #:read-indexed-features
    #:write-indexed-features
-   #:encode/bag-of-words)
+   #:encode/bag-of-words
+   ;; Repeatable experiments
+   #:*experiment-random-seed*
+   #:call-repeatably
+   #:repeatably)
   (:documentation "Simple utilities, types."))
 
-(mgl-pax:define-package :mgl-dataset
+(mgl-pax:define-package #:mgl-log
+  (:documentation "See MGL-LOG:@MGL-LOG.")
+  (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util))
+
+(mgl-pax:define-package #:mgl-dataset
   (:documentation "See MGL-DATASET:@MGL-DATASET.")
   (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util))
 
-(mgl-pax:define-package :mgl-resample
+(mgl-pax:define-package #:mgl-resample
   (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
-  (:use :common-lisp :mgl-pax))
+  (:use #:common-lisp #:mgl-pax))
 
-(mgl-pax:define-package :mgl-core
+(mgl-pax:define-package #:mgl-core
   (:use #:common-lisp #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-dataset)
-  (:export
-   ;; Error counter
-   #:counter
-   #:print-counter
-   #:error-counter
-   #:misclassification-counter
-   #:cross-entropy-counter
-   #:rmse-counter
-   #:sum-errors
-   #:n-sum-errors
-   #:add-error
-   #:reset-counter
-   #:get-error
-   ;; Collecting errors
-   #:apply-counters-and-measurers
-   #:collect-batch-errors
-   ;; Classification
-   #:label
-   #:label-distribution
-   #:labeled
-   #:labeledp
-   #:stripe-label
-   #:maybe-make-misclassification-measurer
-   #:classification-confidences
-   #:maybe-make-cross-entropy-measurer
-   #:roc-auc
-   #:roc-auc-counter)
-  (:documentation "Generic training related interfaces and basic
-  definitions. The three most important concepts are SAMPLERs,
-  TRAINERs and LEARNERs."))
+        #:mgl-common #:mgl-util #:mgl-log
+        #:mgl-dataset)
+  (:documentation "See MGL-CORE:@MGL-MODEL, MGL-CORE:@MGL-MONITOR,
+  MGL-CORE:@MGL-CLASSIFICATION."))
 
-(mgl-pax:define-package :mgl-opt
+(mgl-pax:define-package #:mgl-opt
   (:documentation "See MGL-OPT:@MGL-OPT.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core))
+        #:mgl-common #:mgl-util #:mgl-log
+        #:mgl-dataset #:mgl-core))
 
-(mgl-pax:define-package :mgl-gd
+(mgl-pax:define-package #:mgl-gd
   (:documentation "See MGL-GD:@MGL-GD.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core
+        #:mgl-common #:mgl-util
+        #:mgl-dataset #:mgl-core
         #:mgl-opt)
   (:export #:@mgl-gd))
 
-(mgl-pax:define-package :mgl-cg
+(mgl-pax:define-package #:mgl-cg
   (:documentation "See MGL-CG:@MGL-CG.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util :mgl-dataset #:mgl-core
+        #:mgl-common #:mgl-util #:mgl-log
+        #:mgl-dataset #:mgl-core
         #:mgl-opt)
   (:export #:@mgl-cg))
 
-(mgl-pax:define-package :mgl-diffun
+(mgl-pax:define-package #:mgl-diffun
   (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt))
 
-(cl:defpackage :mgl-bp
+(cl:defpackage #:mgl-bp
   (:use #:common-lisp #:cl-cuda #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt #:mgl-gd #:mgl-cg)
@@ -211,7 +186,6 @@
    #:forward-bpn
    #:backward-bpn
    #:bp-learner
-   #:compute-derivatives
    #:dropout
    ;; Node types
    #:define-node-type
@@ -251,12 +225,12 @@
    #:class-weights
    #:add-cross-entropy-softmax
    ;; Utilities
-   #:collect-bpn-errors
+   #:monitor-bpn-results
    #:renormalize-activations
    #:arrange-for-renormalizing-activations)
   (:documentation "Backpropagation."))
 
-(cl:defpackage :mgl-bm
+(cl:defpackage #:mgl-bm
   (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt #:mgl-gd)
@@ -361,29 +335,25 @@
    #:nodes->inputs
    #:reconstruction-rmse
    #:reconstruction-error
-   #:make-bm-reconstruction-rmse-counters-and-measurers
-   #:make-dbm-reconstruction-rmse-counters-and-measurers
-   #:collect-bm-mean-field-errors
+   #:monitor-bm-mean-field-bottom-up
+   #:monitor-bm-mean-field-reconstructions
+   #:make-reconstruction-monitors
+   #:make-reconstruction-monitors*
    ;; Classification
    #:softmax-label-chunk
-   #:make-bm-reconstruction-misclassification-counters-and-measurers
-   #:make-bm-reconstruction-cross-entropy-counters-and-measurers
-   #:collect-bm-mean-field-errors/labeled
    ;; DBN
    #:dbn
    #:rbms
+   #:n-rbms
    #:down-mean-field
-   #:make-dbn-reconstruction-rmse-counters-and-measurers
-   #:collect-dbn-mean-field-errors
-   #:mark-labels-present
-   #:mark-everything-present
-   #:make-dbn-reconstruction-misclassification-counters-and-measurers
-   #:collect-dbn-mean-field-errors/labeled)
+   #:monitor-dbn-mean-field-bottom-up
+   #:monitor-dbn-mean-field-reconstructions
+   #:mark-everything-present)
   (:documentation "Fully General Boltzmann Machines, Restricted
   Boltzmann Machines and their stacks called Deep Belief
   Networks (DBN)."))
 
-(cl:defpackage :mgl-unroll
+(cl:defpackage #:mgl-unroll
   (:use #:common-lisp #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-dataset #:mgl-core
         #:mgl-bm #:mgl-bp)
@@ -403,7 +373,7 @@
   (:documentation "Translating Boltzmann Machines to a Backprop
   networks, aka `unrolling'."))
 
-(cl:defpackage :mgl-gp
+(cl:defpackage #:mgl-gp
   (:use #:common-lisp #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-bp)
@@ -428,10 +398,11 @@
   (:documentation "Gaussian processes with support for training with
   backpropagation."))
 
-(mgl-pax:define-package :mgl
+(mgl-pax:define-package #:mgl
   (:documentation "See MGL:@MGL-MANUAL. This package reexports
   everything from other packages defined here plus MGL-MAT.")
-  (:use #:common-lisp #:mgl-pax
-        #:mgl-common #:mgl-util #:mgl-dataset #:mgl-resample #:mgl-core
+  (:use #:common-lisp #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util #:mgl-log
+        #:mgl-dataset #:mgl-resample #:mgl-core
         #:mgl-opt #:mgl-gd #:mgl-cg
         #:mgl-diffun #:mgl-bp #:mgl-bm #:mgl-unroll #:mgl-gp))

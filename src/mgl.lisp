@@ -6,6 +6,8 @@
   (@mgl-dataset section)
   (@mgl-resample section)
   (@mgl-model section)
+  (@mgl-monitoring section)
+  (@mgl-classification section)
   (@mgl-opt section)
   (@mgl-diffun section)
   (@mgl-bp section)
@@ -45,7 +47,8 @@
   restricted functionality if a reasonable compromise is found between
   power and utility."
   (@mgl-dependencies section)
-  (@mgl-code-organization section))
+  (@mgl-code-organization section)
+  (@mgl-glossary section))
 
 (defsection @mgl-dependencies (:title "Dependencies")
   "\\MGL used to rely on [LLA](https://github.com/tpapp/lla) to
@@ -78,8 +81,10 @@
   Note, that most of the tests are rather stochastic and can fail once
   in a while.")
 
+(cl-reexport:reexport-from :mgl-mat)
 (cl-reexport:reexport-from :mgl-common)
 (cl-reexport:reexport-from :mgl-util)
+(cl-reexport:reexport-from :mgl-log)
 (cl-reexport:reexport-from :mgl-dataset)
 (cl-reexport:reexport-from :mgl-resample)
 (cl-reexport:reexport-from :mgl-core)
@@ -91,6 +96,15 @@
 (cl-reexport:reexport-from :mgl-bm)
 (cl-reexport:reexport-from :mgl-unroll)
 (cl-reexport:reexport-from :mgl-gp)
+
+(defsection @mgl-glossary (:title "Glossary")
+  "Ultimately machine learning is about creating **models** of some
+  domain. The observations in the modelled domain are called
+  **instances** (also known as examples or samples). Sets of instances
+  are called **datasets**. Datasets are used when fitting a model or
+  when making **predictions**. Sometimes the word predictions is too
+  specific, and the results obtained from applying a model to some
+  instances are simply called **results**.")
 
 (defsection @mgl-bp (:title "Backprogation Neural Networks"))
 

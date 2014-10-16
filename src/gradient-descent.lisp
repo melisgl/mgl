@@ -108,8 +108,7 @@
                                                (termination optimizer)))
                 (not (finishedp sampler)))
       (let ((batch (list-samples sampler (n-instances-until-update optimizer))))
-        (let ((*accumulating-interesting-gradients* t))
-          (accumulate-gradients* gradient-source optimizer batch 1 nil))
+        (accumulate-gradients* gradient-source optimizer batch 1 nil)
         (maybe-update-weights optimizer gradient-source (length batch))))))
 
 (defgeneric n-instances-until-update (optimizer)

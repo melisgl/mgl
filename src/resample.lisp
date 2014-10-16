@@ -106,7 +106,7 @@
          (subseq seq start))))
 
 (defun stratify (seq &key (key #'identity) (test #'eql))
-  "Return the list of strata of SEQ. SEQ is sequence of elements for
+  "Return the list of strata of SEQ. SEQ is a sequence of elements for
   which the function KEY returns the class they belong to. Such
   classes are opaque objects compared for equality with TEST. A
   stratum is a sequence of elements with the same (under TEST) KEY.
@@ -114,18 +114,17 @@
       (stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
       => ((0 2 4 6 8) (1 3 5 7 9))"
   (if (member test (list 'eq #'eq 'eql #'eql 'equal #'equal))
-      ;; FIXME: non-deterministic due to reliance on EQ[L] hash
-      ;; tables.
-      (let ((h (make-hash-table :test test)))
+      (let ((h (make-hash-table :test test))
+            (classes ()))
         (map nil (lambda (x)
-                   (push x (gethash (funcall key x) h)))
+                   (let ((class (funcall key x)))
+                     (pushnew class classes :test test)
+                     (push x (gethash class h))))
              seq)
-        (let ((result ()))
-          (maphash (lambda (key seq)
-                     (declare (ignore key))
-                     (push (nreverse seq) result))
-                   h)
-          (nreverse result)))
+        ;; Get the elements of the hash table in a reproducible
+        ;; order.
+        (loop for class in (reverse classes)
+              collect (nreverse (gethash class h))))
       (let ((keys (collect-distinct seq :key key :test test)))
         (if (zerop (length keys))
             ()
@@ -251,7 +250,6 @@
     (split-by-index seq (lambda (i)
                           (= fold (floor i fold-length))))))
 
-;;; FIXME: export?
 (defun split-by-index (seq pred)
   "Partition SEQ into two sequences: one with the elements with
   indices for which PRED returns true, one with the rest. The order of

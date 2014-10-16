@@ -12,6 +12,11 @@
 
 (in-package :mgl-bp)
 
+(defun make-cost-monitors (model &key operation-mode attributes)
+  (make-cost-monitors* model operation-mode attributes))
+
+(defgeneric make-cost-monitors* (mode operation-mode attributes))
+
 ;;;; Lump
 
 (defvar *bpn-being-built* nil)
@@ -448,7 +453,7 @@
 
 (defmethod set-input-done ((lump ->input))
   (when (or (update-stats-p lump) (normalize-with-stats-p lump))
-    ;; FIXME: cudaize
+    ;; FIXME: cudaize or remove?
     (with-facet (nodes ((nodes lump) 'backing-array :direction :io
                         :type flt-vector))
       (let ((n-stripes* (n-stripes* lump))
@@ -675,7 +680,8 @@
 
 (defclass bp-learner ()
   ((bpn :initarg :bpn :reader bpn)
-   (first-trained-lump :reader first-trained-lump)))
+   (first-trained-lump :reader first-trained-lump)
+   (monitors :initform () :initarg :monitors :accessor monitors)))
 
 (define-descriptions (learner bp-learner :inheritp t)
   bpn first-trained-lump)
@@ -728,18 +734,18 @@
                               sum (aref nodes i)))))))
     (values sum (n-stripes bpn))))
 
-(defgeneric compute-derivatives (samples optimizer learner)
-  (:method (samples optimizer (learner bp-learner))
-    (let ((*in-training-p* t)
-          (bpn (bpn learner))
-          (cost #.(flt 0)))
-      (do-executors (samples bpn)
-        (set-input samples bpn)
-        (forward-bpn bpn)
-        (incf cost (cost bpn))
-        (backward-bpn bpn :last-lump (first-trained-weight-lump
-                                      optimizer learner)))
-      cost)))
+(defun compute-derivatives (samples optimizer learner)
+  (let ((*in-training-p* t)
+        (bpn (bpn learner))
+        (cost #.(flt 0)))
+    (do-executors (samples bpn)
+      (set-input samples bpn)
+      (forward-bpn bpn)
+      (incf cost (cost bpn))
+      (backward-bpn bpn :last-lump (first-trained-weight-lump
+                                    optimizer learner))
+      (apply-monitors (monitors learner) samples bpn))
+    cost))
 
 
 ;;;; Gradient based optimization
@@ -823,6 +829,7 @@
                         :type flt-vector)))
       (loop for stripe of-type index below (n-stripes* lump) do
         (let ((scale (if (typep scale 'flt) scale (mref scale stripe))))
+          (declare (type flt scale))
           (with-stripes ((stripe lump ls le)
                          (stripe x xs xe))
             (loop for li upfrom ls below le
@@ -937,9 +944,8 @@
          (weights (weights lump))
          (n-stripes (n-stripes lump))
          (nx (size x))
-         (nl (/ (size weights)
-                nx)))
-    ;; FIXME:
+         (nl (/ (size weights) nx)))
+    ;; FIXEXT:
     (assert (not (same-stripes-p x)))
     (if (transpose-weights-p lump)
         (gemm! (flt 1) (nodes x) (nodes weights)
@@ -1006,11 +1012,10 @@
                     (to* ((nodes lump) 'backing-array :direction :output
                           :type flt-vector)))
         (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe x xs xe)
-                         (stripe lump ls le))
-            (declare (ignore xe le))
+          (with-stripes ((stripe x xs)
+                         (stripe lump ls))
             (dotimes (i xn)
-              (let ((v (aref x* (+ xs i))))
+              (let ((v (aref x* (the! index (+ xs i)))))
                 (loop for li of-type index upfrom (+ ls i) by xn
                       repeat n
                       do (setf (aref to* li) v))))))))))
@@ -1027,9 +1032,8 @@
                     (d* ((derivatives lump) 'backing-array :direction :input
                          :type flt-vector)))
         (loop for stripe of-type index below (n-stripes* lump) do
-          (with-stripes ((stripe x xs xe)
-                         (stripe lump ls le))
-            (declare (ignore xe le))
+          (with-stripes ((stripe x xs)
+                         (stripe lump ls))
             (dotimes (i xn)
               (let ((sum (flt 0)))
                 (loop for li of-type index upfrom (+ ls i) by xn
@@ -1057,8 +1061,7 @@
                          :type flt-vector)))
         (loop for stripe of-type index below (n-stripes* lump) do
           (with-stripes ((stripe x xs xe)
-                         (stripe lump ls le))
-            (declare (ignore le))
+                         (stripe lump ls))
             (let ((li ls))
               (loop for xi upfrom xs below xe
                     do (let ((v (aref x* xi)))
@@ -1078,8 +1081,7 @@
                          :type flt-vector)))
         (loop for stripe of-type index below (n-stripes* lump) do
           (with-stripes ((stripe x xs xe)
-                         (stripe lump ls le))
-            (declare (ignore le))
+                         (stripe lump ls))
             (let ((li ls))
               (loop for xi upfrom xs below xe
                     do (let ((sum (flt 0)))
@@ -1512,12 +1514,6 @@
   (let ((x (x lump)))
     (assert (= (size lump) (size x)))
     (sigmoid-derivative! (nodes lump) (derivatives lump) (derivatives x))))
-
-(defmethod classification-confidences ((lump ->sigmoid) stripe)
-  (with-facets ((nodes ((nodes lump) 'backing-array :direction :input
-                        :type flt-vector)))
-    (with-stripes ((stripe lump start end))
-      (subseq nodes start end))))
 
 
 
@@ -2060,8 +2056,7 @@
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
                        (stripe index index-s index-e)
-                       (stripe into into-s into-e))
-          (declare (ignore into-e))
+                       (stripe into into-s))
           (loop for li upfrom ls below le
                 for index-i upfrom index-s below index-e
                 do (let ((into-i (round (aref index* index-i))))
@@ -2085,8 +2080,7 @@
       (loop for stripe of-type index below (n-stripes* lump) do
         (with-stripes ((stripe lump ls le)
                        (stripe index index-s index-e)
-                       (stripe into into-s into-e))
-          (declare (ignore into-e))
+                       (stripe into into-s))
           (loop for li upfrom ls below le
                 for index-i upfrom index-s below index-e
                 do (let ((into-i (round (aref index* index-i))))
@@ -2299,9 +2293,8 @@
                       (d* ((derivatives lump) 'backing-array :direction :input
                            :type flt-vector)))
           (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
+            (with-stripes ((stripe lump ls)
                            (stripe x xs xe))
-              (declare (ignore le))
               (loop for xi upfrom xs below xe
                     for i upfrom 0
                     do (let ((li (+ ls (floor i group-size))))
@@ -2510,9 +2503,8 @@
                       (d* ((derivatives lump) 'backing-array :direction :input
                            :type flt-vector)))
           (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe lump ls le)
+            (with-stripes ((stripe lump ls)
                            (stripe x xs xe))
-              (declare (ignore le))
               (loop for xi upfrom xs below xe
                     for i upfrom 0
                     do (let ((li (+ ls (floor i group-size))))
@@ -2599,12 +2591,6 @@
                                 (if (= i k)
                                     (* li* (- #.(flt 1) li*))
                                     (* li* (- (aref to* (+ lg k)))))))))))))))))
-
-(defmethod classification-confidences ((lump ->softmax) stripe)
-  (with-facets ((nodes ((nodes lump) 'backing-array :direction :input
-                        :type flt-vector)))
-    (with-stripes ((stripe lump start end))
-      (subseq nodes start end))))
 
 
 ;;;; ->CROSS-ENTROPY-SOFTMAX
@@ -2684,7 +2670,7 @@
     (setf (slot-value lump 'softmax)
           (make-instance 'mat
                          :ctype flt-ctype
-                         :dimensions (mat-size (nodes (x lump))))))
+                         :dimensions (mat-dimensions (nodes (x lump))))))
   (softmax lump))
 
 (define-cuda-kernel (cuda-cross-entropy-softmax)
@@ -2825,7 +2811,7 @@
                       (class-weights* (class-weights 'backing-array
                                                      :direction :input
                                                      :type flt-vector)))
-          ;; FIXME: target derivative not calculated
+          ;; FIXEXT: target derivative not calculated
           (assert (typep target '->input))
           (loop for stripe of-type index below (n-stripes* lump) do
             (with-stripes ((stripe lump ls le)
@@ -2865,24 +2851,12 @@
                                                #.(flt 1)
                                                #.(flt 0)))))))))))))))
 
-(defmethod classification-confidences ((lump ->cross-entropy-softmax) stripe)
-  (with-facets ((softmax ((softmax lump) 'backing-array :direction :input
-                          :type flt-vector)))
-    (with-stripes ((stripe lump start end))
-      (subseq softmax start end))))
 
-(defmethod label-distribution ((lump ->cross-entropy-softmax) stripe object)
-  (declare (ignore object))
-  (let ((target (target lump))
-        (class-weights (class-weights lump)))
-    (with-facets ((target* ((nodes target) 'backing-array :direction :input
-                            :type flt-vector))
-                  (class-weights* (class-weights 'backing-array
-                                                 :direction :input
-                                                 :type flt-vector)))
-      (with-stripes ((stripe target ts te))
-        (let ((d (subseq target* ts te)))
-          (map-into d #'* d class-weights*))))))
+(defmethod label-indices ((lump ->cross-entropy-softmax))
+  (max-row-positions (softmax lump)))
+
+(defmethod label-index-distributions ((lump ->cross-entropy-softmax))
+  (rows-to-arrays (softmax lump)))
 
 
 ;;;; RENORMALIZE-ACTIVATIONS
@@ -3125,9 +3099,32 @@
 
 ;;;; Utilities
 
-(defun collect-bpn-errors (sampler bpn &key counters-and-measurers)
-  (collect-batch-errors (lambda (samples)
-                          (do-executors (samples bpn)
-                            (set-input samples bpn)
-                            (forward-bpn bpn)))
-                        sampler bpn counters-and-measurers))
+(defun monitor-bpn-results (dataset bpn monitors)
+  (monitor-model-results (lambda (batch)
+                           ;; FIXME: DO-EXECUTORS belongs elsewhere.
+                           (do-executors (batch bpn)
+                             (set-input batch bpn)
+                             (forward-bpn bpn))
+                           bpn)
+                         dataset bpn monitors))
+
+(defmethod make-classification-accuracy-monitors*
+    ((bpn bpn) operation-mode label-index-fn attributes)
+  (let ((attributes `(,@attributes :model "bpn")))
+    (loop for lump across (lumps bpn)
+          nconc (make-classification-accuracy-monitors* lump operation-mode
+                                                        label-index-fn
+                                                        attributes))))
+
+(defmethod make-cross-entropy-monitors* ((bpn bpn) operation-mode
+                                         label-index-distribution-fn attributes)
+  (let ((attributes `(,@attributes :model "bpn")))
+    (loop for lump across (lumps bpn)
+          nconc (make-cross-entropy-monitors* lump operation-mode
+                                              label-index-distribution-fn
+                                              attributes))))
+
+(defmethod make-cost-monitors* ((bpn bpn) operation-mode attributes)
+  (let ((attributes `(,@attributes :model "bpn")))
+    (loop for lump across (lumps bpn)
+          nconc (make-cost-monitors* lump operation-mode attributes))))

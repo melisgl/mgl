@@ -1,15 +1,11 @@
 (in-package mgl-dataset)
 
 (defsection @mgl-dataset (:title "Datasets")
-  "Ultimately machine learning is about creating models of some
-  domain. The observations in the modelled domain are called
-  _instances_. Sets of instances are called _datasets_. Datasets are
-  used when fitting a model or when making predictions.
-
-  Implementationally speaking, an instance is typically represented by
-  a set of numbers which is called _feature vector_. A dataset is a
-  SEQUENCE of such instances or a @MGL-SAMPLER object that produces
-  instances."
+  "An instance can often be any kind of object of the user's choice.
+  It is typically represented by a set of numbers which is called a
+  feature vector or by a structure holding the feature vector, the
+  label, etc. A dataset is a SEQUENCE of such instances or a
+  @MGL-SAMPLER object that produces instances."
   (@mgl-sampler section))
 
 (defsection @mgl-sampler (:title "Samplers")
@@ -41,7 +37,6 @@
         while (not (finishedp sampler))
         collect (sample sampler)))
 
-;;; FIXME: add KEY
 (defun make-sequence-sampler (seq &key max-n-samples)
   "Create a sampler that returns elements of SEQ in their original
   order. If MAX-N-SAMPLES is non-nil, then at most MAX-N-SAMPLES are

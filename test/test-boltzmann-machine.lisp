@@ -23,9 +23,8 @@
         (n-stripes (max-n-stripes rbm)))
     (while (not (finishedp sampler))
       (set-input (list-samples sampler n-stripes) rbm)
-      (multiple-value-bind (e n) (get-squared-error rbm)
-        (add-error counter e n)))
-    (get-error counter)))
+      (multiple-value-call #'add-to-counter counter (get-squared-error rbm)))
+    (counter-values counter)))
 
 (defmethod mgl-opt:accumulate-gradients* :around
     (learner (optimizer test-optimizer) batch multiplier valuep)
@@ -33,15 +32,12 @@
   (let ((counter (counter optimizer))
         (rbm (bm learner)))
     (inputs->nodes rbm)
-    (multiple-value-bind (e n) (get-squared-error rbm)
-      (add-error counter e n))
+    (multiple-value-call #'add-to-counter counter (get-squared-error rbm))
     (let ((n-instances (n-instances optimizer)))
       (when (/= (floor n-instances 1000)
                 (floor (- n-instances (length batch)) 1000))
-        (log-msg "RMSE: ~,5F (~D, ~D)~%"
-                 (or (get-error counter) #.(flt 0))
-                 (n-sum-errors counter)
-                 n-instances)
+        (multiple-value-bind (e n) (counter-values counter)
+          (log-msg "RMSE: ~,5F (~D, ~D)~%" (or e 0) n n-instances))
         (reset-counter counter)))))
 
 (defun test-do-chunk ()
@@ -471,7 +467,7 @@
              (test-rbm/single :generator (constantly (flt 0)) :hidden-bias-p t
                               :learner-class 'test-pcd-learner)))
   ;; identity
-  (assert (> 0.1
+  (assert (> 0.2
              (test-rbm/single :generator (repeatedly
                                          (select-random-element
                                           (list #.(flt 0) #.(flt 1))))

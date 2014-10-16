@@ -1476,8 +1476,8 @@
            :hidden-chunks hidden-chunks
            initargs)))
 
-;;; Check that there are no clouds between non-adjacent layers. FIXME:
-;;; should intralayer connections be allowed?
+;;; Check that there are no clouds between non-adjacent layers.
+;;; FIXEXT: should intralayer connections be allowed?
 (defun check-dbm-clouds (dbm)
   (let ((bad-clouds
           (set-difference (clouds dbm)
@@ -1950,7 +1950,8 @@
 
 
 (defclass bm-learner ()
-  ((bm :initarg :bm :reader bm)))
+  ((bm :initarg :bm :reader bm)
+   (monitors :initform () :initarg :monitors :reader monitors)))
 
 (defmethod describe-object :after ((learner bm-learner) stream)
   (when (slot-boundp learner 'bm)
@@ -2263,7 +2264,8 @@
       (when visible-sampling
         (sample-visible rbm))
       (set-hidden-mean/1 rbm))
-    (accumulate-negative-phase-statistics learner gradient-sink multiplier)))
+    (accumulate-negative-phase-statistics learner gradient-sink multiplier)
+    (apply-monitors (monitors learner) batch (bm learner))))
 
 (defmethod accumulate-positive-phase-statistics ((learner rbm-cd-learner)
                                                  gradient-sink multiplier)
@@ -2363,7 +2365,10 @@
     (set-hidden-mean bm)
     (when (eq t (hidden-sampling learner))
       (sample-hidden bm))
-    (accumulate-positive-phase-statistics learner gradient-sink multiplier)))
+    (accumulate-positive-phase-statistics learner gradient-sink multiplier)
+    (when (monitors learner)
+      (set-visible-mean bm)
+      (apply-monitors (monitors learner) batch bm))))
 
 (defun check-no-self-connection (bm)
   (when (find-if (lambda (cloud)
@@ -2512,116 +2517,88 @@ called with the same parameters."
       (remove-if filter seq)
       seq))
 
-(defun make-bm-reconstruction-rmse-counters-and-measurers (bm &key chunk-filter)
-  (declare (ignore bm))
-  (list (cons (make-instance 'rmse-counter)
-              (lambda (samples bm)
-                (declare (ignore samples))
-                (reconstruction-rmse (remove-if* chunk-filter
-                                                 (visible-chunks bm)))))))
-
-(defun make-dbm-reconstruction-rmse-counters-and-measurers (dbm &key
-                                                            chunk-filter)
-  "Return a list of counter, measurer conses to keep track of
-  reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
-  (loop for i upfrom 0
-        for layer in (butlast (layers dbm))
-        collect (let ((i i)
-                      (layer layer))
-                  (cons (make-instance 'rmse-counter
-                                       :prepend-name (format nil "level ~A" i))
-                        (lambda (samples dbn)
-                          (declare (ignore samples dbn))
-                          (reconstruction-rmse
-                           (remove-if* chunk-filter layer)))))))
-
-(defun collect-bm-mean-field-errors
-    (sampler bm &key
-     (counters-and-measurers
-      (make-bm-reconstruction-rmse-counters-and-measurers bm)))
-  "Set the hidden and then the visible mean field and collect the
-  errors with COLLECT-BATCH-ERRORS. By default, return the
-  reconstruction rmse."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples bm)
-                          (set-hidden-mean bm)
-                          (set-visible-mean bm))
-                        sampler bm counters-and-measurers))
 
 
 ;;;; Classification
 
-(defclass softmax-label-chunk (softmax-chunk labeled) ())
+(defclass softmax-label-chunk (softmax-chunk) ())
 
-(defmethod stripe-label ((chunk softmax-label-chunk) stripe)
-  (with-facets ((nodes ((nodes chunk) 'backing-array :direction :input
-                        :type flt-vector)))
-    (with-stripes ((stripe chunk start end))
-      (- (max-position nodes start end)
-         start))))
+(defmethod label-indices ((chunk softmax-label-chunk))
+  (max-row-positions (nodes chunk)))
 
-(defmethod classification-confidences ((chunk softmax-label-chunk) stripe)
-  (with-facets ((nodes ((nodes chunk) 'backing-array :direction :input
-                        :type flt-vector)))
-    (with-stripes ((stripe chunk start end))
-      (subseq nodes start end))))
+(defmethod label-index-distributions ((chunk softmax-label-chunk))
+  (rows-to-arrays (nodes chunk)))
+
 
-(defun make-chunk-reconstruction-misclassification-counters-and-measurers
-    (chunks &key chunk-filter)
-  (loop for chunk in (remove-if* chunk-filter chunks)
-        for measurer = (maybe-make-misclassification-measurer chunk)
-        when measurer
-          collect
-          (cons (make-instance 'misclassification-counter
-                               :prepend-name (format nil "chunk ~A"
-                                                     (name chunk)))
-                measurer)))
+;;;; Monitoring
 
-(defun make-chunk-reconstruction-cross-entropy-counters-and-measurers
-    (chunks &key chunk-filter)
-  (loop for chunk in (remove-if* chunk-filter chunks)
-        for measurer = (maybe-make-cross-entropy-measurer chunk)
-        when measurer
-          collect
-          (cons (make-instance 'cross-entropy-counter
-                               :prepend-name (format nil "chunk ~A"
-                                                     (name chunk)))
-                measurer)))
+(defun monitor-bm-mean-field-bottom-up (dataset bm monitors)
+  (monitor-model-results (lambda (batch)
+                           (set-input batch bm)
+                           (set-hidden-mean bm)
+                           bm)
+                         dataset bm monitors))
 
-(defun make-bm-reconstruction-misclassification-counters-and-measurers
-    (bm &key chunk-filter)
-  "Return a list of counter, measurer conses to keep track of cross
-  entropy error suitable for BM-MEAN-FIELD-ERRORS."
-  (make-chunk-reconstruction-misclassification-counters-and-measurers
-   (visible-chunks bm) :chunk-filter chunk-filter))
-
-(defun make-bm-reconstruction-cross-entropy-counters-and-measurers
-    (bm &key chunk-filter)
-  "Return a list of counter, measurer conses to keep track of cross
-  entropy error suitable for BM-MEAN-FIELD-ERRORS."
-  (make-chunk-reconstruction-cross-entropy-counters-and-measurers
-   (visible-chunks bm) :chunk-filter chunk-filter))
-
-(defun mark-labels-present (object)
-  (dolist (chunk (chunks object))
-    (when (labeledp chunk)
-      (setf (indices-present chunk) nil))))
+(defun monitor-bm-mean-field-reconstructions
+    (dataset bm monitors &key set-visible-p)
+  "Like COLLECT-BM-MEAN-FIELD-ERRORS but reconstruct the labels even
+  if they were missing."
+  (monitor-model-results (lambda (batch)
+                           (set-input batch bm)
+                           (set-hidden-mean bm)
+                           (when set-visible-p
+                             (mark-everything-present bm))
+                           (set-visible-mean bm)
+                           bm)
+                         dataset bm monitors))
 
 (defun mark-everything-present (object)
   (dolist (chunk (chunks object))
     (setf (indices-present chunk) nil)))
 
-(defun collect-bm-mean-field-errors/labeled
-    (sampler bm &key
-     (counters-and-measurers
-      (append
-       (make-bm-reconstruction-misclassification-counters-and-measurers bm)
-       (make-bm-reconstruction-cross-entropy-counters-and-measurers bm))))
-  "Like COLLECT-BM-MEAN-FIELD-ERRORS but reconstruct the labels even
-  if they were missing."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples bm)
-                          (set-hidden-mean bm)
-                          (mark-labels-present bm)
-                          (set-visible-mean bm))
-                        sampler bm counters-and-measurers))
+(defun bm-type-name (bm)
+  (cond ((typep bm 'dbm)
+         "dbm")
+        ((typep bm 'rbm)
+         "rbm")
+        (t "bm")))
+
+(defmethod make-classification-accuracy-monitors* ((bm bm) operation-mode
+                                                   label-index-fn attributes)
+  (let ((attributes `(,@attributes :model ,(bm-type-name bm))))
+    (loop for chunk in (append (visible-chunks bm) (hidden-chunks bm))
+          nconc (make-classification-accuracy-monitors*
+                 chunk operation-mode label-index-fn attributes))))
+
+(defmethod make-cross-entropy-monitors* ((bm bm) operation-mode
+                                         label-index-distribution-fn attributes)
+  (let ((attributes `(,@attributes :model ,(bm-type-name bm))))
+    (loop for chunk in (append (visible-chunks bm) (hidden-chunks bm))
+          nconc (make-cross-entropy-monitors* chunk operation-mode
+                                              label-index-distribution-fn
+                                              attributes))))
+
+(defun make-reconstruction-monitors (model &key operation-mode attributes)
+  (make-reconstruction-monitors* model operation-mode attributes))
+
+(defgeneric make-reconstruction-monitors* (model operation-mode attributes))
+
+(defmethod make-reconstruction-monitors* ((bm bm) operation-mode attributes)
+  (let ((attributes `(,@attributes :model ,(bm-type-name bm))))
+    (loop for chunk in (visible-chunks bm)
+          nconc (make-reconstruction-monitors* chunk operation-mode
+                                               attributes))))
+
+(defmethod make-reconstruction-monitors* ((chunk chunk) operation-mode
+                                          attributes)
+  (unless (conditioning-chunk-p chunk)
+    (list
+     (make-instance
+      'monitor
+      :measurer (lambda (samples bm)
+                  (declare (ignore samples bm))
+                  (reconstruction-rmse (list chunk)))
+      :counter (make-instance
+                'rmse-counter
+                :prepend-attributes `(,@attributes
+                                      :component ,(name chunk)))))))

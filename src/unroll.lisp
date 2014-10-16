@@ -178,7 +178,7 @@
             (mapcar #'fourth x))))
 
 (defun lumpies->bpn-definition (lumpies)
-  (let ((lumpies (sort lumpies #'> :key #'lumpy-depth))
+  (let ((lumpies (stable-sort lumpies #'> :key #'lumpy-depth))
         (defs '())
         (clamps '())
         (inits '()))
@@ -204,14 +204,14 @@
                      defs))
               (t
                (multiple-value-bind (cloud-defs cloud-clamps cloud-inits
-                                                linear-symbols)
+                                     linear-symbols)
                    (incoming-list->bpn-definition lumpy incomings)
                  (push-all cloud-defs defs)
                  (push-all cloud-clamps clamps)
                  (push-all cloud-inits inits)
                  (push `(,activation-symbol
                          (->+ :name ',activation-name
-                          :args (list ,@linear-symbols)))
+                              :args (list ,@linear-symbols)))
                        defs)
                  (push `(:from-lump ,name :to-lump ,activation-name)
                        clamps))

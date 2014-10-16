@@ -193,7 +193,7 @@
                       (cons (car x)
                             (/ (cdr x) sum)))
                   v)))
-    (let ((r (sort v #'< :key #'car)))
+    (let ((r (stable-sort v #'< :key #'car)))
       (if (eq kind :compacted-binary)
           (compact-binary-feature-vector r)
           r))))

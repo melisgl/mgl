@@ -47,44 +47,49 @@
                                  (incf dfi)
                                  (incf selfpi))))))))))))))
 
-(defclass test-bpn-gp-base-optimizer (base-optimizer)
+(defclass test-bpn-gp-base-optimizer ()
   ())
 
-(defmethod log-training-period ((optimizer test-bpn-gp-base-optimizer) learner)
+(defun log-training-period (optimizer learner)
+  (declare (ignore optimizer learner))
   100)
 
-(defmethod log-test-period ((optimizer test-bpn-gp-base-optimizer) learner)
+(defun log-test-period (optimizer learner)
+  (declare (ignore optimizer learner))
   100)
 
-(defun make-test-bpn-gp-counters-and-measurers ()
-  (cons (cons (make-instance 'error-counter :name "average neg log likelihood")
-              (lambda (samples bpn)
-                (declare (ignore samples))
-                (cost bpn)))
+(defun make-test-bpn-gp-monitors (&key attributes)
+  (cons (make-instance
+         'monitor
+         :measurer (lambda (samples bpn)
+                     (declare (ignore samples))
+                     (cost bpn))
+         :counter (make-instance
+                   'basic-counter
+                   :prepend-attributes `(,@attributes
+                                         :type "average neg log likelihood")))
         (loop for name in '(means-bias signal-variance length-scale
                             roughness noise-variance bias-variance)
-              collect (cons (make-instance 'error-counter
-                                           :name (string-downcase
-                                                  (symbol-name name)))
-                            (let ((name name))
-                              (lambda (samples bpn)
-                                (declare (ignore samples))
-                                (values (mat-as-scalar
-                                         (nodes (find-lump name bpn)))
-                                        1)))))))
+              collect (make-instance
+                       'monitor
+                       :measurer (let ((name name))
+                                   (lambda (samples bpn)
+                                     (declare (ignore samples))
+                                     (values (mat-as-scalar
+                                              (nodes (find-lump name bpn)))
+                                             1)))
+                       :counter (make-instance
+                                 'basic-counter
+                                 :prepend-attributes
+                                 `(,@attributes
+                                   :var ,(string-downcase
+                                          (symbol-name name))))))))
 
-(defmethod initialize-optimizer* ((optimizer test-bpn-gp-base-optimizer) source
-                                  weights dataset)
-  (when (next-method-p)
-    (call-next-method))
-  (setf (slot-value optimizer 'training-counters-and-measurers)
-        (prepend-name-to-counters
-         "bpn gp: training"
-         (make-test-bpn-gp-counters-and-measurers))))
-
-(defmethod log-test-error ((optimizer test-bpn-gp-base-optimizer) learner)
-  (call-next-method)
-  (let ((counter (make-instance 'rmse-counter :name "test rmse")))
+(defun log-bpn-test-error (optimizer learner)
+  (declare (ignore optimizer))
+  (let ((counter (make-instance 'rmse-counter
+                                :prepend-attributes '(:event "pred."
+                                                      :dataset "test"))))
     (loop repeat 100 do
       (multiple-value-bind (inputs outputs) (make-input-output 5)
         (let ((gp (update-gp (bpn learner) inputs outputs)))
@@ -92,8 +97,10 @@
                 do (let* ((x (random-in-test-domain))
                           (y (test-target x))
                           (y* (mat-as-scalar (gp-means gp (scalar-as-mat x)))))
-                     (add-error counter (expt (- y y*) 2) 1))))))
-    (log-msg "bpn gp: ~A~%" counter)))
+                     (add-to-counter counter (expt (- y y*) 2) 1))))))
+    (log-msg "~A~%" counter))
+  (log-cuda)
+  (log-msg "---------------------------------------------------~%"))
 
 (defclass test-bpn-gp-gd-optimizer (test-bpn-gp-base-optimizer
                                     segmented-gd-optimizer)
@@ -206,7 +213,18 @@
                                           :momentum (flt 0.9)
                                           ;; ??
                                           :batch-size 100)))))))
-    (minimize optimizer (make-instance 'bp-learner :bpn bpn-gp)
+    (monitor-optimization-periodically
+     optimizer '((:fn log-bpn-test-error
+                  :period log-test-period)
+                 (:fn reset-optimization-monitors
+                  :period log-training-period
+                  :last-eval 0)))
+    (minimize optimizer
+              (make-instance 'bp-learner
+                             :bpn bpn-gp
+                             :monitors (make-test-bpn-gp-monitors
+                                        :attributes '(:event "train"
+                                                      :dataset "train+")))
               :dataset sampler)))
 
 #|

@@ -43,17 +43,17 @@
 (defsection @mgl-model-stripe (:title "Batch Processing")
   "Processing instances one by one during training or prediction can
   be slow. The models that support batch processing for greater
-  efficiency are said to be /striped/.
+  efficiency are said to be _striped_.
 
-  Typically after creating a model, ones sets MAX-N-STRIPES on it a
-  positive integer. When a batch of instances is to be fed to the
-  model it is first broken into subbatches of length that's at most
-  MAX-N-STRIPES. For each subbatch, SET-INPUT is called and a before
-  method takes care of setting N-STRIPES to the actual number of
-  instances in the subbatch. When MAX-N-STRIPES is set internal data
-  structures may be resized which is an expensive operation. Setting
-  N-STRIPES is a comparatively cheap operation, often implemented as
-  matrix reshaping.
+  Typically, during or after creating a model, one sets MAX-N-STRIPES
+  on it a positive integer. When a batch of instances is to be fed to
+  the model it is first broken into subbatches of length that's at
+  most MAX-N-STRIPES. For each subbatch, SET-INPUT (FIXDOC) is called
+  and a before method takes care of setting N-STRIPES to the actual
+  number of instances in the subbatch. When MAX-N-STRIPES is set
+  internal data structures may be resized which is an expensive
+  operation. Setting N-STRIPES is a comparatively cheap operation,
+  often implemented as matrix reshaping.
 
   Note that for models made of different parts (for example,
   [MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
@@ -223,7 +223,7 @@
 (defgeneric instance-to-executor-parameters (instance cache)
   (:documentation "Return the parameters for an executor able to
   handle INSTANCE. Called by MAP-OVER-EXECUTORS on CACHE (that's a
-  CACHED-PARAMETERIZED-EXECUTOR-MIXIN). The returned parameters are
+  PARAMETERIZED-EXECUTOR-CACHE-MIXIN). The returned parameters are
   keys in an EQUAL parameters->executor hash table."))
 
 (defun lookup-executor-cache (parameters cache)
@@ -258,119 +258,3 @@
             (when executor
               (insert-into-executor-cache parameters cached executor))
             executor)))))
-
-
-;;;; Error counter
-
-(defclass counter ()
-  ((name :initform () :initarg :name :reader name)))
-
-(defmethod initialize-instance :after ((counter counter) &key
-                                       (prepend-name nil prepend-name-p)
-                                       &allow-other-keys)
-  (when prepend-name-p
-    (push prepend-name (slot-value counter 'name))))
-
-(defclass error-counter (counter)
-  ((sum-errors
-    :initform #.(flt 0) :reader sum-errors
-    :documentation "The sum of errors.")
-   (n-sum-errors
-    :initform 0 :reader n-sum-errors
-    :documentation "The total number of observations whose errors
-    contributed to SUM-ERROR.")))
-
-(defgeneric print-counter (counter stream))
-
-(defmethod print-counter ((counter error-counter) stream)
-  (multiple-value-bind (e c) (get-error counter)
-    (if e
-        (format stream "~,5E" e)
-        (format stream "~A" e))
-    (if (integerp c)
-        (format stream " (~D)" c)
-        (format stream " (~,2F)" c))))
-
-(defclass misclassification-counter (error-counter)
-  ((name :initform '("classification accuracy"))))
-
-(defmethod print-counter ((counter misclassification-counter) stream)
-  (multiple-value-bind (e c) (get-error counter)
-    (if e
-        (format stream "~,2F% (~D)"
-                (* 100 (- 1 e)) c)
-        (format stream "~A (~D)" e c))))
-
-(defclass rmse-counter (error-counter)
-  ((name :initform '("rmse"))))
-
-(defgeneric add-error (counter err n)
-  (:documentation "Add ERR to SUM-ERROR and N to N-SUM-ERRORS.")
-  (:method ((counter error-counter) err n)
-    (incf (slot-value counter 'sum-errors) err)
-    (incf (slot-value counter 'n-sum-errors) n)))
-
-(defgeneric reset-counter (counter)
-  (:method ((counter error-counter))
-    (with-slots (sum-errors n-sum-errors) counter
-      (setf sum-errors #.(flt 0))
-      (setf n-sum-errors 0))))
-
-(defgeneric get-error (counter)
-  (:method ((counter error-counter))
-    (with-slots (sum-errors n-sum-errors) counter
-      (values (if (zerop n-sum-errors)
-                  0
-                  (/ sum-errors n-sum-errors))
-              n-sum-errors)))
-  (:method ((counter rmse-counter))
-    (multiple-value-bind (e n) (call-next-method)
-      (values (sqrt e) n))))
-
-(defmethod print-object ((counter counter) stream)
-  (pprint-logical-block (stream ())
-    (flet ((foo ()
-             (when (slot-boundp counter 'name)
-               (format stream "~{~A~^ ~:_~}: ~:_"
-                       (alexandria:ensure-list (name counter))))
-             (print-counter counter stream)))
-      (if *print-escape*
-          (print-unreadable-object (counter stream :type t)
-            (foo))
-          (foo))))
-  counter)
-
-
-;;;; Collecting errors
-
-(defun add-measured-error (counter-and-measurer &rest args)
-  (destructuring-bind (counter . measurer) counter-and-measurer
-    (cond ((or (functionp measurer) (symbolp measurer))
-           (multiple-value-call #'add-error counter (apply measurer args)))
-          ((and (consp measurer) (eq :adder (car measurer)))
-           (apply (cdr measurer) counter args))
-          (t
-           (error "Bad measurer ~S" measurer)))))
-
-(defun apply-counters-and-measurers (counters-and-measurers &rest args)
-  "Add the errors measured by the measurers to the counters."
-  (map nil
-       (lambda (counter-and-measurer)
-         (apply #'add-measured-error counter-and-measurer args))
-       counters-and-measurers)
-  counters-and-measurers)
-
-(defun collect-batch-errors (fn sampler learner counters-and-measurers)
-  "Sample from SAMPLER until it runs out. Call FN with each batch of
-  samples. COUNTERS-AND-MEASURERS is a sequence of conses of a counter
-  and function. The function takes one parameter: a sequence of
-  samples and is called after each call to FN. Measurers return two
-  values: the cumulative error and the counter, suitable as the second
-  and third argument to ADD-ERROR. Finally, return the counters.
-  Return the list of counters from COUNTERS-AND-MEASURERS."
-  (when counters-and-measurers
-    (do-batches-for-model (samples (sampler learner))
-      (funcall fn samples)
-      (apply-counters-and-measurers counters-and-measurers samples learner)))
-  (map 'list #'car counters-and-measurers))
-

@@ -2,6 +2,7 @@
 
 (defclass dbn ()
   ((rbms :type list :initarg :rbms :reader rbms)
+   (inactive-rbms :type list :initform () :reader inactive-rbms)
    (max-n-stripes :initform 1 :initarg :max-n-stripes :reader max-n-stripes))
   (:documentation "Deep Belief Network: a stack of RBMs. DBNs with
   multiple hidden layers are not Boltzmann Machines. The chunks in the
@@ -15,8 +16,12 @@
   Often one wants to create a DBN that consists of some RBM subclass,
   this is what the :RBM-CLASS initarg is for."))
 
+(defun all-rbms (dbn)
+  (append (rbms dbn) (inactive-rbms dbn)))
+
 (defmethod n-stripes ((dbn dbn))
-  (n-stripes (first (rbms dbn))))
+  (n-stripes (or (first (rbms dbn))
+                 (first (inactive-rbms dbn)))))
 
 (defmethod set-n-stripes (n-stripes (dbn dbn))
   (dolist (rbm (rbms dbn))
@@ -24,7 +29,7 @@
 
 (defmethod set-max-n-stripes (max-n-stripes (dbn dbn))
   (setf (slot-value dbn 'max-n-stripes) max-n-stripes)
-  (dolist (rbm (rbms dbn))
+  (dolist (rbm (all-rbms dbn))
     (setf (max-n-stripes rbm) max-n-stripes)))
 
 (defun check-no-name-clashes (rbms)
@@ -62,6 +67,19 @@
   ;; make sure rbms have the same MAX-N-STRIPES
   (setf (max-n-stripes dbn) (max-n-stripes dbn)))
 
+(defun n-rbms (dbn)
+  (length (rbms dbn)))
+
+(defun set-n-rbms (dbn n-rbms)
+  (when(/= n-rbms (n-rbms dbn))
+    (let ((all-rbms (all-rbms dbn)))
+      (setf (slot-value dbn 'rbms) (subseq all-rbms 0 n-rbms))
+      (setf (slot-value dbn 'inactive-rbms) (subseq all-rbms n-rbms))))
+  n-rbms)
+
+(defsetf n-rbms (dbn) (n-rbms)
+  `(set-n-rbms ,dbn ,n-rbms))
+
 (defmethod chunks ((dbn dbn))
   (apply #'append (mapcar #'chunks (rbms dbn))))
 
@@ -94,9 +112,11 @@
   nil)
 
 (defun add-rbm (rbm dbn)
-  (check-no-name-clashes (cons rbm (rbms dbn)))
-  (setf (slot-value rbm 'dbn) dbn
-        (slot-value dbn 'rbms) (append1 (rbms dbn) rbm))
+  (check-no-name-clashes (cons rbm (all-rbms dbn)))
+  (setf (slot-value rbm 'dbn) dbn)
+  (if (inactive-rbms dbn)
+      (setf (slot-value dbn 'inactive-rbms) (append1 (inactive-rbms dbn) rbm))
+      (setf (slot-value dbn 'rbms) (append1 (rbms dbn) rbm)))
   (setf (max-n-stripes rbm) (max-n-stripes dbn)))
 
 (defun previous-rbm (dbn rbm)
@@ -117,83 +137,59 @@
 (defmethod set-input (samples (dbn dbn))
   (set-input samples (last1 (rbms dbn))))
 
-(defun not-before (list obj)
-  (let ((pos (position obj list)))
-    (if pos
-        (subseq list pos)
-        list)))
+(defun down-mean-field (dbn)
+  "Propagate the means down from the means of DBN."
+  (mapc #'set-visible-mean (reverse (rbms dbn))))
 
-(defun down-mean-field (dbn &key (rbm (last1 (rbms dbn))))
-  "Propagate the means down from the means of RBM."
-  (mapc #'set-visible-mean
-        (not-before (reverse (rbms dbn)) rbm)))
+(defmethod make-reconstruction-monitors* ((dbn dbn) operation-mode attributes)
+  (loop for i upfrom 0
+        for rbm in (rbms dbn)
+        nconc (make-reconstruction-monitors
+               rbm :attributes `(,@attributes
+                                 :model ,(format nil "dbn l~A" i)))))
 
-(defun make-dbn-reconstruction-rmse-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
-  "Return a list of counter, measurer conses to keep track of
-  reconstruction rmse suitable for COLLECT-BM-MEAN-FIELD-ERRORS."
-  (loop for i upto (position rbm (rbms dbn))
-        collect (let ((i i))
-                  (cons (make-instance 'rmse-counter
-                                       :prepend-name (format nil "level ~A" i))
-                        (lambda (samples dbn)
-                          (declare (ignore samples))
-                          (reconstruction-rmse
-                           (remove-if* chunk-filter
-                                       (visible-chunks
-                                        (elt (rbms dbn) i)))))))))
+(defmethod make-classification-accuracy-monitors* ((dbn dbn) operation-mode
+                                                   label-index-fn attributes)
+  (loop for i upfrom 0
+        for rbm in (rbms dbn)
+        nconc (make-classification-accuracy-monitors
+               rbm :label-index-fn label-index-fn
+               :attributes `(,@attributes :model ,(format nil "dbn l~A" i)))))
 
-(defun collect-dbn-mean-field-errors
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (make-dbn-reconstruction-rmse-counters-and-measurers dbn :rbm rbm)))
+(defmethod make-cross-entropy-monitors* ((dbn dbn) operation-mode
+                                         label-index-distribution-fn attributes)
+  (loop for i upfrom 0
+        for rbm in (rbms dbn)
+        nconc (make-cross-entropy-monitors
+               rbm :label-index-distribution-fn label-index-distribution-fn
+               :attributes `(,@attributes :model ,(format nil "dbn l~A" i)))))
+
+(defun monitor-dbn-mean-field-bottom-up (dataset dbn monitors)
   "Run the mean field up to RBM then down to the bottom and collect
   the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
   each level in the DBN."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (down-mean-field dbn :rbm rbm))
-                        sampler dbn counters-and-measurers))
+  (let ((rbm (last1 (rbms dbn))))
+    (monitor-model-results (lambda (batch)
+                             (set-input batch rbm)
+                             (set-hidden-mean rbm)
+                             dbn)
+                           dataset dbn monitors)))
 
-(defun make-dbn-reconstruction-misclassification-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
-  "Return a list of counter, measurer conses to keep track of
-  misclassifications suitable for BM-MEAN-FIELD-ERRORS."
-  (make-chunk-reconstruction-misclassification-counters-and-measurers
-   (apply #'append
-          (mapcar #'visible-chunks
-                  (subseq (rbms dbn)
-                          0 (1+ (position rbm (rbms dbn))))))
-   :chunk-filter chunk-filter))
-
-(defun make-dbn-reconstruction-cross-entropy-counters-and-measurers
-    (dbn &key (rbm (last1 (rbms dbn))) chunk-filter)
-  "Return a list of counter, measurer conses to keep track of
-  misclassifications suitable for BM-MEAN-FIELD-ERRORS."
-  (make-chunk-reconstruction-cross-entropy-counters-and-measurers
-   (apply #'append
-          (mapcar #'visible-chunks
-                  (subseq (rbms dbn)
-                          0 (1+ (position rbm (rbms dbn))))))
-   :chunk-filter chunk-filter))
-
-(defun collect-dbn-mean-field-errors/labeled
-    (sampler dbn &key (rbm (last1 (rbms dbn)))
-     (counters-and-measurers
-      (append
-       (make-dbn-reconstruction-misclassification-counters-and-measurers
-        dbn :rbm rbm)
-       (make-dbn-reconstruction-cross-entropy-counters-and-measurers
-        dbn :rbm rbm))))
-  "Like COLLECT-DBN-MEAN-FIELD-ERRORS but reconstruct labeled chunks
-  even if it's missing in the input."
-  (collect-batch-errors (lambda (samples)
-                          (set-input samples rbm)
-                          (set-hidden-mean rbm)
-                          (mark-labels-present dbn)
-                          (down-mean-field dbn :rbm rbm))
-                        sampler dbn counters-and-measurers))
+(defun monitor-dbn-mean-field-reconstructions (dataset dbn monitors &key
+                                               set-visible-p)
+  "Run the mean field up to RBM then down to the bottom and collect
+  the errors with COLLECT-BATCH-ERRORS. By default, return the rmse at
+  each level in the DBN."
+  (let ((rbm (last1 (rbms dbn))))
+    (monitor-model-results (lambda (batch)
+                             (set-input batch rbm)
+                             (set-hidden-mean rbm)
+                             (when set-visible-p
+                               (loop for rbm in (rbms dbn)
+                                     do (mark-everything-present rbm)))
+                             (down-mean-field dbn)
+                             dbn)
+                           dataset dbn monitors)))
 
 (defmethod write-weights ((dbn dbn) stream)
   (dolist (rbm (rbms dbn))

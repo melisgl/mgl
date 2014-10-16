@@ -12,6 +12,10 @@
   `(if ,test
        (progn ,@body)
        (progn ,@body)))
+
+(defmacro apply-key (key object)
+  (alexandria:once-only (key object)
+    `(if ,key (funcall ,key ,object) ,object)))
 
 
 ;;;; Types
@@ -184,6 +188,10 @@
         (setf previous-values (subseq previous-values 0 n)))
       (when (= n (length previous-values))
         (funcall function (reverse previous-values))))))
+
+(defun applies-to-p (generic-function &rest args)
+  (find nil (compute-applicable-methods generic-function args)
+        :key #'swank-mop:method-qualifiers))
 
 
 ;;;; Periodic functions
@@ -363,31 +371,79 @@
 
 (defun as-column-vector (a)
   (aops:reshape a (list (array-total-size a) 1)))
+
+(defun rows-to-arrays (mat)
+  (let ((arrays ()))
+    (map-displacements (lambda (mat)
+                         (push (mat-to-array mat) arrays))
+                       mat (mat-dimension mat 1))
+    (nreverse arrays)))
+
+(defun max-row-positions (mat)
+  "Find the colums with the maximum in each row of the 2d MAT and
+  return them as a list."
+  (let ((displacement (mat-displacement mat))
+        (n-rows (mat-dimension mat 0))
+        (n-columns (mat-dimension mat 1)))
+    (with-facets ((m (mat 'backing-array :direction :input)))
+      (loop for row below n-rows
+            collect (let ((start (+ displacement (* row n-columns))))
+                      (- (max-position m start (+ start n-columns))
+                         start))))))
 
 
 ;;;; Printing
 
-(defun print-table (list &key (stream t))
+(defun print-table (list &key (stream t) (empty-value nil empty-value-p)
+                    (repeat-marker nil repeat-marker-p) (compactp t)
+                    (new-line-prefix ""))
   (unless (endp list)
-    (format stream "~&")
-    (let* ((n-columns (length (first list)))
-           (column-widths (loop for column below n-columns
-                                collect
-                                (loop for row in list
-                                      maximizing
-                                      (length
-                                       (princ-to-string (elt row column)))))))
-      (loop for row in list
-            do (loop for i below n-columns
-                     for column in row
-                     for width in column-widths
-                     do (let ((s (princ-to-string column)))
-                          (loop repeat (- width (length s))
-                                do (format stream " "))
-                          (format stream "~A" s)
-                          (when (< (1+ i) n-columns)
-                            (format stream " | "))))
-            (terpri stream)))))
+    (flet ((convert (x)
+             (if (and empty-value-p (eq x empty-value))
+                 ""
+                 (princ-to-string x))))
+      (let* ((n-columns (length (first list)))
+             (column-widths (loop for column below n-columns
+                                  collect
+                                  (loop for row in list
+                                        maximizing
+                                        (if (eq row :horizontal-break)
+                                            0
+                                            (length
+                                             (convert (elt row column)))))))
+             (previous-row nil))
+        (loop
+          for row-index upfrom 0
+          for row in list
+          do (unless (zerop row-index)
+               (format stream "~A" new-line-prefix))
+             (cond ((eq row :horizontal-break)
+                    (loop for i below n-columns
+                          for width in column-widths
+                          do (loop repeat width do (format stream "-"))
+                             (when (< (1+ i) n-columns)
+                               (format stream (if compactp "+" "-+-")))))
+                   (t
+                    (loop for i below n-columns
+                          for column in row
+                          for width in column-widths
+                          do (let* ((s (convert column))
+                                    (s (if (and repeat-marker-p
+                                                (not (eq previous-row
+                                                         :horizontal-break))
+                                                (< i (length previous-row))
+                                                (string= (convert
+                                                          (elt previous-row i))
+                                                         s))
+                                           repeat-marker
+                                           s)))
+                               (loop repeat (- width (length s))
+                                     do (format stream " "))
+                               (format stream "~A" s)
+                               (when (< (1+ i) n-columns)
+                                 (format stream (if compactp "|" " | ")))))))
+             (terpri stream)
+             (setq previous-row row))))))
 
 
 ;;;; DESCRIBE customization
@@ -439,3 +495,19 @@
                                                                description))
                                               descriptions))
                               ,%stream)))))
+
+
+;;;; Experiments
+
+(defvar *experiment-random-seed* 1234)
+
+(defun call-repeatably (fn &key (seed *experiment-random-seed*))
+  (with-cuda* (:random-seed seed)
+    (let ((*random-state*
+            #+sbcl (sb-ext:seed-random-state seed)
+            #+allegro (make-random-state t seed)
+            #-(or sbcl allegro) *random-state))
+      (funcall fn))))
+
+(defmacro repeatably ((&key (seed *experiment-random-seed*)) &body body)
+  `(call-repeatably (lambda () ,@body) :seed ,seed))

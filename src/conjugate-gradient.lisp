@@ -77,9 +77,9 @@
   (termination (accessor iterative-optimizer))
   (batch-size (accessor cg-optimizer))
   (cg-args (accessor cg-optimizer))
-  (segment-filter (reader cg-optimizer))
-  (decayed-cg-optimizer-mixin class)
-  (segment-decay-fn (accessor decayed-cg-optimizer-mixin)))
+  (on-cg-batch-done (accessor cg-optimizer))
+  (log-cg-batch-done generic-function)
+  (segment-filter (reader cg-optimizer)))
 
 (defvar *default-int* 0.1
   "Don't reevaluate within INT of the limit of the current bracket.")
@@ -380,6 +380,19 @@
     :initarg :segment-filter :reader segment-filter
     :documentation "A predicate function on segments that filters out
     uninteresting segments. Called from INITIALIZE-OPTIMIZER*.")
+   (on-cg-batch-done
+    :initform ()
+    :initarg :on-cg-batch-done
+    :accessor on-cg-batch-done
+    :documentation "An event hook called when processing a conjugate
+    gradient batch is done. The handlers on the hook are called with 8
+    arguments:
+
+        (optimizer gradient-source instances
+         best-w best-f n-line-searches
+         n-succesful-line-searches n-evaluations)
+
+    The latter 5 of which are the return values of the CG function.")
    (segment-set :reader segment-set :documentation "Segments to train.")
    (weights :initform nil :accessor weights :type mat)
    (spare-vectors
@@ -403,6 +416,22 @@
 
 (defmethod segments ((optimizer cg-optimizer))
   (segments (segment-set optimizer)))
+
+(defgeneric log-cg-batch-done (optimizer gradient-source instances
+                               best-w best-f n-line-searches
+                               n-succesful-line-searches n-evaluations)
+  (:documentation "This is a function can be added to
+  ON-CG-BATCH-DONE. The default implementation simply logs the event
+  arguments.")
+  (:method (optimizer gradient-source instances
+            best-w best-f n-line-searches
+            n-succesful-line-searches n-evaluations)
+    (declare (ignore gradient-source best-w))
+    (log-msg "n-instances: ~S~%"  (n-instances optimizer))
+    (log-msg "best-f: ~,5E (~D), ~:_n-evaluations: ~S~%" best-f
+             (length instances) n-evaluations)
+    (log-msg "n-line-searches: ~S (succesful ~S)~%"
+             n-line-searches n-succesful-line-searches)))
 
 (defmethod initialize-optimizer* ((optimizer cg-optimizer) source weights
                                   dataset)
@@ -429,14 +458,12 @@
       (let ((batch (list-samples sampler (batch-size optimizer))))
         (train-batch optimizer gradient-source batch)))))
 
-(defgeneric train-batch (optimizer learner batch))
-
-;;; FIXME: make this a DEFUN when monitors work
-(defmethod train-batch (optimizer learner batch)
+(defun train-batch (optimizer learner batch)
   (let ((weights (weights optimizer)))
     (cond ((= (length batch) (batch-size optimizer))
            (segment-set->mat (segment-set optimizer) weights)
-           (multiple-value-prog1
+           (multiple-value-bind (best-w best-f n-line-searches
+                                 n-succesful-line-searches n-evaluations)
                (apply #'cg (lambda (weights derivatives)
                              (process-batch optimizer learner
                                             batch weights
@@ -445,8 +472,14 @@
                       :spare-vectors (spare-vectors optimizer)
                       (cg-args optimizer))
              (segment-set<-mat (segment-set optimizer) (weights optimizer))
+             (apply-monitors (on-cg-batch-done optimizer)
+                             optimizer learner batch
+                             best-w best-f n-line-searches
+                             n-succesful-line-searches n-evaluations)
              (set-n-instances optimizer learner
-                              (+ (n-instances optimizer) (length batch)))))
+                              (+ (n-instances optimizer) (length batch)))
+             (values best-w best-f n-line-searches
+                     n-succesful-line-searches n-evaluations)))
           (t
            ;; Updating on shorter than prescribed batches is
            ;; dangerous.
@@ -458,8 +491,7 @@
     (segment-set<-mat segment-set weights)
     (setf (slot-value optimizer 'accumulator) derivatives)
     (fill! 0 derivatives)
-    (let ((*accumulating-interesting-gradients* t))
-      (accumulate-gradients* learner optimizer batch 1 t))))
+    (accumulate-gradients* learner optimizer batch 1 t)))
 
 
 ;;;; Decay
@@ -468,7 +500,10 @@
 ;;; instance in the case of a BPN by adding some lumps to include
 ;;; weight decay in the cost and get the derivatives for free but
 ;;; that's kind of wasteful as the weights and consequently the decay
-;;; does not change in the batch. FIXME: is this true?
+;;; does not change in the batch.
+;;;
+;;; FIXDEAD: This is untested and is not really specific to CG so it
+;;; belongs elsewhere.
 (defclass decayed-cg-optimizer-mixin ()
   ((segment-decay-fn
     :initform nil :initarg :segment-decay-fn :accessor segment-decay-fn
@@ -479,7 +514,7 @@
   add decay on a per-segment basis."))
 
 (defmethod accumulate-gradients*
-    (gradient-source (optimizer decayed-cg-optimizer-mixin)
+    ((optimizer decayed-cg-optimizer-mixin) gradient-source
      batch multiplier valuep)
   (let* ((cost (flt (call-next-method)))
          (segment-decay-fn (segment-decay-fn optimizer))

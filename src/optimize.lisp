@@ -16,14 +16,10 @@
   which are first order methods (they do not need second order
   gradients) but more can be added with the @MGL-OPT-EXTENSION-API."
   (minimize function)
-  (*accumulating-interesting-gradients* variable)
   (@mgl-opt-iterative-optimizer section)
   (mgl-gd:@mgl-gd section)
   (mgl-cg:@mgl-cg section)
   (@mgl-opt-extension-api section))
-
-(defvar *accumulating-interesting-gradients* nil
-  "FIXME: Will go away soon.")
 
 (defun minimize (optimizer gradient-source
                  &key (weights (list-segments gradient-source))
@@ -31,16 +27,20 @@
   "Minimize the value of the real valued function represented by
   GRADIENT-SOURCE by updating some of its parameters in WEIGHTS (a MAT
   or a sequence of MATs). Return WEIGHTS. DATASET (see
-  MGL:@MGL-DATASETS) is a set of unoptimized parameters of the same
+  MGL:@MGL-DATASET) is a set of unoptimized parameters of the same
   function. For example, WEIGHTS may be the weights of a neural
   network while DATASET is the training set consisting of inputs
-  suitable for MGL-TRAIN:SET-INPUT. The default DATASET,
-  (*EMPTY-DATASET*) is suitable for when all parameters are optimized,
-  so there is nothing left to come from the environment.
+  suitable for SET-INPUT. The default
+  DATASET, (*INFINITELY-EMPTY-DATASET*) is suitable for when all
+  parameters are optimized, so there is nothing left to come from the
+  environment.
 
   Optimization terminates if DATASET is a sampler and it runs out or
   when some other condition met (see TERMINATION, for example). If
-  DATASET is a SEQUENCE, then it is reused over and over again."
+  DATASET is a SEQUENCE, then it is reused over and over again.
+
+  Examples for various optimizers are provided in MGL-GD:@MGL-GD and
+  MGL-CG:@MGL-CG."
   (let ((weights (ensure-seq weights)))
     (initialize-optimizer* optimizer gradient-source weights dataset)
     (initialize-gradient-source* optimizer gradient-source weights dataset)
@@ -51,13 +51,25 @@
   (if (typep obj 'sequence)
       obj
       (list obj)))
+
+(defgeneric minimize* (optimizer gradient-source weights dataset)
+  (:documentation "Called by MINIMIZE after INITIALIZE-OPTIMIZER* and
+  INITIALIZE-GRADIENT-SOURCE*, this generic function is the main
+  extension point for writing optimizers."))
 
 
 (defsection @mgl-opt-iterative-optimizer (:title "Iterative Optimizer")
   (iterative-optimizer class)
   (n-instances (reader iterative-optimizer))
   (termination (accessor iterative-optimizer))
-  (set-n-instances generic-function))
+  (on-optimization-started (accessor iterative-optimizer))
+  (on-optimization-finished (accessor iterative-optimizer))
+  (on-n-instances-changed (accessor iterative-optimizer))
+  "Now let's discuss a few handy utilities."
+  (monitor-optimization-periodically function)
+  (reset-optimization-monitors generic-function)
+  (reset-optimization-monitors (method () (iterative-optimizer t)))
+  (report-optimization-parameters generic-function))
 
 (defclass iterative-optimizer ()
   ((n-instances
@@ -73,17 +85,120 @@
     than this value optimization stops. If TERMINATION is NIL, then
     optimization will continue. If it is T, then optimization will
     stop. If it is a function of no arguments, then its return value
-    is processed as if it was returned by TERMINATION."))
+    is processed as if it was returned by TERMINATION.")
+   (on-optimization-started
+    :initform ()
+    :initarg :on-optimization-started
+    :accessor on-optimization-started
+    :documentation "An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called after initializations are
+    performed (INITIALIZE-OPTIMIZER*, INITIALIZE-GRADIENT-SOURCE*) but
+    before optimization is started.")
+   (on-optimization-finished
+    :initform ()
+    :initarg :on-optimization-finished
+    :accessor on-optimization-finished
+    :documentation "An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called when optimization has
+    finished.")
+   (on-n-instances-changed
+    :initform ()
+    :initarg :on-n-instances-changed
+    :accessor on-n-instances-changed
+    :documentation "An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called when optimization of a batch
+    of instances is done and N-INSTANCES is incremented."))
   (:documentation "An abstract base class of MGL-GD:@MGL-GD and
   MGL-CG:@MGL-CG based optimizers that iterate over instances until a
   termination condition is met."))
 
-(defgeneric set-n-instances (optimizer gradient-source n-instances)
-  (:documentation "Called whenever N-INSTANCES of OPTIMIZER is
-  incremented. Hang an :AFTER method on this to print some
-  statistics.")
-  (:method ((optimizer iterative-optimizer) gradient-source n-instances)
-    (setf (slot-value optimizer 'n-instances) n-instances)))
+(defmethod minimize* :around ((optimizer iterative-optimizer) gradient-source
+                              weights dataset)
+  (apply-monitors (on-optimization-started optimizer)
+                  optimizer gradient-source (n-instances optimizer))
+  (multiple-value-prog1
+      (call-next-method)
+    (apply-monitors (on-optimization-finished optimizer)
+                    optimizer gradient-source (n-instances optimizer))))
+
+(defmethod monitors ((optimizer iterative-optimizer))
+  ())
+
+(defun monitor-optimization-periodically (optimizer periodic-fns)
+  "For each periodic function in the list of PERIODIC-FNS, add a
+  monitor to OPTIMIZER's ON-OPTIMIZATION-STARTED,
+  ON-OPTIMIZATION-FINISHED and ON-N-INSTANCES-CHANGED hooks. The
+  monitors are simple functions that just call each periodic function
+  with the event parameters (OPTIMIZER GRADIENT-SOURCE N-INSTANCES).
+  Return OPTIMIZER.
+
+  To log and reset the monitors of the gradient source after every
+  1000 instances seen by OPTIMIZER:
+
+      (monitor-optimization-periodically optimizer
+                                         '((:fn log-my-test-error
+                                            :period 2000)
+                                           (:fn reset-optimization-monitors
+                                            :period 1000
+                                            :last-eval 0)))
+
+  Note how we don't pass it's allowed to just pass the initargs for a
+  PERIODIC-FN instead of PERIODIC-FN itself. The :LAST-EVAL 0 bit
+  prevents RESET-OPTIMIZATION-MONITORS from being called at the start
+  of the optimization when the monitors are empty anyway."
+  (dolist (periodic-fn periodic-fns)
+    (monitor-optimization-periodically* optimizer periodic-fn))
+  optimizer)
+
+(defun monitor-optimization-periodically* (optimizer periodic-fn)
+  (check-type periodic-fn (or periodic-fn list))
+  (let ((periodic-fn (if (listp periodic-fn)
+                         (apply #'make-instance 'periodic-fn
+                                periodic-fn)
+                         periodic-fn)))
+    (push (lambda (optimizer gradient-source n-instances)
+            (call-periodic-fn! n-instances periodic-fn
+                               optimizer gradient-source))
+          (on-optimization-started optimizer))
+    (push (lambda (optimizer gradient-source n-instances)
+            (call-periodic-fn n-instances periodic-fn
+                              optimizer gradient-source))
+          (on-n-instances-changed optimizer))
+    (push (lambda (optimizer gradient-source n-instances)
+            (call-periodic-fn! n-instances periodic-fn
+                               optimizer gradient-source))
+          (on-optimization-finished optimizer))))
+
+(defgeneric reset-optimization-monitors (optimizer gradient-source)
+  (:documentation "Report the state of [MONITORS][generic-function] of
+  OPTIMIZER and GRADIENT-SOURCE and reset their counters. See
+  MONITOR-OPTIMIZATION-PERIODICALLY for an example of how this is
+  used."))
+
+(defmethod reset-optimization-monitors ((optimizer iterative-optimizer)
+                                        gradient-source)
+  "Log the counters of the monitors and reset them."
+  (log-msg "training at n-instances: ~S~%"  (n-instances optimizer))
+  (let ((counters (remove nil (mapcar #'counter
+                                      (append (monitors optimizer)
+                                              (monitors gradient-source))))))
+    (log-padded counters)
+    (map nil #'reset-counter counters)))
+
+(defgeneric report-optimization-parameters (optimizer gradient-source)
+  (:documentation "A utility that's often called at the start of
+  optimization (from ON-OPTIMIZATION-STARTED). The default
+  implementation logs the description of GRADIENT-SOURCE (as in
+  DESCRIBE) and OPTIMIZER and calls LOG-CUDA.")
+  (:method (optimizer gradient-source)
+    (let ((*print-level* nil))
+      (with-logging-entry (stream)
+        (format stream "Describing gradient source:~%")
+        (describe gradient-source stream))
+      (with-logging-entry (stream)
+        (format stream "Describing optimizer:~%")
+        (describe optimizer stream)))
+    (log-cuda)))
 
 
 (defsection @mgl-opt-extension-api (:title "Extension API")
@@ -101,14 +216,13 @@
   "The rest are just useful for utilities for implementing
   optimizers."
   (terminate-optimization-p function)
+  (set-n-instances function)
   (segment-set class)
   (segments (reader segment-set))
   (size (reader segment-set))
   (do-segment-set macro)
   (segment-set<-mat function)
   (segment-set->mat function))
-
-(defgeneric minimize* (optimizer gradient-source weights dataset))
 
 (defgeneric initialize-optimizer* (optimizer gradient-source weights dataset)
   (:documentation "Called automatically before training starts, this
@@ -132,6 +246,15 @@
          termination)
         (t
          (terminate-optimization-p n-instances (funcall termination)))))
+
+(defun set-n-instances (optimizer gradient-source n-instances)
+  "Set [N-INSTANCES][(reader iterative-optimizer)] of OPTIMIZER and
+  fire ON-N-INSTANCES-CHANGED. ITERATIVE-OPTIMIZER subclasses must
+  call this to increment [N-INSTANCES][(reader iterative-optimizer)]."
+  (setf (slot-value optimizer 'n-instances) n-instances)
+  (apply-monitors (on-n-instances-changed optimizer)
+                  optimizer gradient-source n-instances)
+  n-instances)
 
 (defclass segment-set ()
   ((segments

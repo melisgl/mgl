@@ -57,8 +57,7 @@
             do (add-diffun-gradients
                 diff-fn weights args accumulator multiplier)
                (when valuep
-                 (incf cost (evaluate-diffun diff-fn
-                                                              weights args)))))
+                 (incf cost (evaluate-diffun diff-fn weights args)))))
     (when valuep
       cost)))
 

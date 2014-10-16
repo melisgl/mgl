@@ -8,6 +8,7 @@
 - [2 Overview][f995]
     - [2.1 Dependencies][6d2c]
     - [2.2 Code Organization][45db]
+    - [2.3 Glossary][0ab9]
 - [3 Documentation][0dee]
 
 ###### \[in package MGL\]
@@ -109,12 +110,25 @@ The built in tests can be run with:
 Note, that most of the tests are rather stochastic and can fail once
 in a while.
 
+<a name='x-28MGL-3A-40MGL-GLOSSARY-20MGL-PAX-3ASECTION-29'></a>
+
+### 2.3 Glossary
+
+Ultimately machine learning is about creating **models** of some
+domain. The observations in the modelled domain are called
+**instances** (also known as examples or samples). Sets of instances
+are called **datasets**. Datasets are used when fitting a model or
+when making **predictions**. Sometimes the word predictions is too
+specific, and the results obtained from applying a model to some
+instances are simply called **results**.
+
 <a name='x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29'></a>
 
 ## 3 Documentation
 
 See the [MGL Manual](doc/md/mgl-manual.md) for more.
 
+  [0ab9]: #x-28MGL-3A-40MGL-GLOSSARY-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GLOSSARY MGL-PAX:SECTION)"
   [0dee]: #x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DOCUMENTATION MGL-PAX:SECTION)"
   [45db]: #x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-CODE-ORGANIZATION MGL-PAX:SECTION)"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
