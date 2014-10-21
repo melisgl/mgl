@@ -1050,7 +1050,7 @@
 
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))
-  (build-bpn (:class 'mnist-bpn :max-n-stripes 100)
+  (build-bpn (:bpn bpn :class 'mnist-bpn :max-n-stripes 100)
     (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
@@ -1062,8 +1062,7 @@
     (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-3))
     (f3* (->rectified :x f3-activations))
     (f3 (->dropout :x f3* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on
-                  mgl-bp::*bpn-being-built* (list f3)))))
+    (predictions (tack-cross-entropy-softmax-error-on bpn (list f3)))))
 
 ;;; Return a matrix of the same shape as MAT that's zero everywhere,
 ;;; except in at most N randomly chosen positions in each column where
@@ -1107,7 +1106,7 @@
 
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                (group-size 5))
-  (build-bpn (:class 'mnist-bpn)
+  (build-bpn (:bpn bpn :class 'mnist-bpn)
     (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
@@ -1116,8 +1115,7 @@
     (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->max :x f2-activations :group-size group-size))
     (f2 (->dropout :x f2* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on
-                  mgl-bp::*bpn-being-built* '(f2)))))
+    (predictions (tack-cross-entropy-softmax-error-on bpn '(f2)))))
 
 (defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
   (with-example-log ()
@@ -1142,7 +1140,7 @@
 
 (defun build-max-channel-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                     (group-size 2))
-  (build-bpn (:class 'mnist-bpn)
+  (build-bpn (:bpn bpn :class 'mnist-bpn)
     (inputs (->input :size 784 :dropout (flt 0.2)))
     (f1-activations (add-activations :name 'f1 :inputs '(inputs)
                                      :size n-units-1))
@@ -1154,8 +1152,7 @@
     (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-2))
     (f3* (->max-channel :x f3-activations :group-size group-size))
     (f3 (->dropout :x f3* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on
-                  mgl-bp::*bpn-being-built* '(f3)))))
+    (predictions (tack-cross-entropy-softmax-error-on bpn '(f3)))))
 
 (defun train-mnist/5 (&key training test quick-run-p bpn-var bpn-filename)
   (with-example-log ()

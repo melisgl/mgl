@@ -383,14 +383,14 @@ have the same weight.</p>
 <p>To split into 5 sequences:</p>
 
 <pre><code>(fracture 5 '(0 1 2 3 4 5 6 7 8 9))
-=&gt; ((0 1) (2 3) (4 5) (6 7) (8 9))
+=> ((0 1) (2 3) (4 5) (6 7) (8 9))
 </code></pre>
 
 <p>To split into two sequences whose lengths are proportional to 2 and
 3:</p>
 
 <pre><code>(fracture '(2 3) '(0 1 2 3 4 5 6 7 8 9))
-=&gt; ((0 1 2 3) (4 5 6 7 8 9))
+=> ((0 1 2 3) (4 5 6 7 8 9))
 </code></pre></li>
 </ul>
 
@@ -405,7 +405,7 @@ classes are opaque objects compared for equality with <code>TEST</code>. A
 stratum is a sequence of elements with the same (under <code>TEST</code>) <code>KEY</code>.</p>
 
 <pre><code>(stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
-=&gt; ((0 2 4 6 8) (1 3 5 7 9))
+=> ((0 2 4 6 8) (1 3 5 7 9))
 </code></pre></li>
 </ul>
 
@@ -426,7 +426,7 @@ are sorted internally by <code>KEY</code>.</p>
 of even and odd numbers:</p>
 
 <pre><code>(fracture-stratified 2 '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
-=&gt; ((0 2 1 3) (4 6 8 5 7 9))
+=> ((0 2 1 3) (4 6 8 5 7 9))
 </code></pre></li>
 </ul>
 
@@ -446,7 +446,7 @@ results in a list. The simplest demonstration is:</p>
                 (lambda (test training)
                  (list test training))
                 :n-folds 5)
-=&gt; (((0) (1 2 3 4))
+=> (((0) (1 2 3 4))
     ((1) (0 2 3 4))
     ((2) (0 1 3 4))
     ((3) (0 1 2 4))
@@ -462,7 +462,7 @@ want to do only some of the folds and remember which ones they were:</p>
                  (list :fold fold test training))
                 :folds '(2 3)
                 :pass-fold t)
-=&gt; ((:fold 2 (2) (0 1 3 4))
+=> ((:fold 2 (2) (0 1 3 4))
     (:fold 3 (3) (0 1 2 4)))
 </code></pre>
 
@@ -544,24 +544,22 @@ of <code>SEQ</code>.</p>
 
 <p>To randomly select half of the elements:</p>
 
-<pre><code>(sample-from 1/2 '(0 1 2 3 4 5))
-=&gt; (5 3 2)
-</code></pre>
+<pre><code><span class="code"><span class="paren1">(<span class="code">sample-from 1/2 '<span class="paren2">(<span class="code">0 1 2 3 4 5</span>)</span></span>)</span>
+=&gt; <span class="paren1">(<span class="code">5 3 2</span>)</span></span></code></pre>
 
 <p>To randomly select some elements such that the sum of their weights
 constitute about half of the sum of weights across the whole
 sequence:</p>
 
-<pre><code>(sample-from 1/2 '(0 1 2 3 4 5 6 7 8 9) :weight #'identity)
-=&gt; (9 4 1 6 8) ; sums to 28 that's near 45/2
-</code></pre>
+<pre><code><span class="code"><span class="paren1">(<span class="code">sample-from 1/2 '<span class="paren2">(<span class="code">0 1 2 3 4 5 6 7 8 9</span>)</span> <span class="keyword">:weight</span> #'identity</span>)</span>
+=&gt; <span class="comment">;; sums to 28 that's near 45/2
+</span>   <span class="paren1">(<span class="code">9 4 1 6 8</span>)</span></span></code></pre>
 
 <p>To sample with replacement (that is, allowing the element to be
 sampled multiple times):</p>
 
-<pre><code>(sample-from 1 '(0 1 2 3 4 5) :replacement t)
-=&gt; (1 1 5 1 4 4)
-</code></pre></li>
+<pre><code><span class="code"><span class="paren1">(<span class="code">sample-from 1 '<span class="paren2">(<span class="code">0 1 2 3 4 5</span>)</span> <span class="keyword">:replacement</span> t</span>)</span>
+=&gt; <span class="paren1">(<span class="code">1 1 5 1 4 4</span>)</span></span></code></pre></li>
 </ul>
 
 <p><a name='x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29'></a></p>
@@ -592,14 +590,15 @@ repeated CVs until <code>FN</code> performs an non-local exit.</p>
 <p>The following example simply collects the test and training sets for
 2-fold CV repeated 3 times with shuffled data:</p>
 
-<pre><code> (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+<p><code>cl-transcript
+ (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
  =&gt; ((((2 3 4) (1 0))
       ((1 0) (2 3 4)))
      (((2 1 0) (4 3))
       ((4 3) (2 1 0)))
      (((1 0 3) (2 4))
       ((2 4) (1 0 3))))
-</code></pre>
+</code></p>
 
 <p>CV bagging is useful when a single CV is not producing stable
 results. As an ensemble method, CV bagging has the advantage over
@@ -626,7 +625,7 @@ stratum is unchanged.</p>
 evenly:</p>
 
 <pre><code>(spread-strata '(0 2 4 6 8 1 3 5 7 9) :key #'evenp)
-=&gt; (0 1 2 3 4 5 6 7 8 9)
+=> (0 1 2 3 4 5 6 7 8 9)
 </code></pre>
 
 <p>Same thing with unbalanced classes:</p>
@@ -636,7 +635,7 @@ evenly:</p>
                       (if (member x '(1 4))
                           t
                           nil)))
-=&gt; #(0 1 2 3 4 5 6)
+=> #(0 1 2 3 4 5 6)
 </code></pre></li>
 </ul>
 
@@ -653,7 +652,7 @@ If <code>RESULT-TYPE</code> is <code>NIL</code>, then it's determined by the typ
 sequence in <code>SEQS</code>.</p>
 
 <pre><code>(zip-evenly '((0 2 4) (1 3)))
-=&gt; (0 1 2 3 4)
+=> (0 1 2 3 4)
 </code></pre></li>
 </ul>
 

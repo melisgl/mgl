@@ -59,14 +59,18 @@
 
   To split into 5 sequences:
 
-      (fracture 5 '(0 1 2 3 4 5 6 7 8 9))
-      => ((0 1) (2 3) (4 5) (6 7) (8 9))
+  ```cl-transcript
+  (fracture 5 '(0 1 2 3 4 5 6 7 8 9))
+  => ((0 1) (2 3) (4 5) (6 7) (8 9))
+  ```
 
   To split into two sequences whose lengths are proportional to 2 and
   3:
 
-      (fracture '(2 3) '(0 1 2 3 4 5 6 7 8 9))
-      => ((0 1 2 3) (4 5 6 7 8 9))"
+  ```cl-transcript
+  (fracture '(2 3) '(0 1 2 3 4 5 6 7 8 9))
+  => ((0 1 2 3) (4 5 6 7 8 9))
+  ```"
   (let* ((length (length seq))
          (weights-total (if weight (reduce #'+ seq :key weight) length))
          (fractions (if (numberp fractions)
@@ -111,8 +115,10 @@
   classes are opaque objects compared for equality with TEST. A
   stratum is a sequence of elements with the same (under TEST) KEY.
 
-      (stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
-      => ((0 2 4 6 8) (1 3 5 7 9))"
+  ```cl-transcript
+  (stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+  => ((0 2 4 6 8) (1 3 5 7 9))
+  ```"
   (if (member test (list 'eq #'eq 'eql #'eql 'equal #'equal))
       (let ((h (make-hash-table :test test))
             (classes ()))
@@ -160,8 +166,10 @@
   For example, to make two splits with approximately the same number
   of even and odd numbers:
 
-      (fracture-stratified 2 '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
-      => ((0 2 1 3) (4 6 8 5 7 9))"
+  ```cl-transcript
+  (fracture-stratified 2 '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+  => ((0 2 1 3) (4 6 8 5 7 9))
+  ```"
   (let ((stratum-partitions
           (mapcar (lambda (elements)
                     (fracture fractions elements :weight weight))
@@ -188,27 +196,31 @@
   "Map FN over the FOLDS of DATA split with SPLIT-FN and collect the
   results in a list. The simplest demonstration is:
 
-      (cross-validate '(0 1 2 3 4)
-                      (lambda (test training)
-                       (list test training))
-                      :n-folds 5)
-      => (((0) (1 2 3 4))
-          ((1) (0 2 3 4))
-          ((2) (0 1 3 4))
-          ((3) (0 1 2 4))
-          ((4) (0 1 2 3)))
+  ```cl-transcript
+  (cross-validate '(0 1 2 3 4)
+                  (lambda (test training)
+                   (list test training))
+                  :n-folds 5)
+  => (((0) (1 2 3 4))
+      ((1) (0 2 3 4))
+      ((2) (0 1 3 4))
+      ((3) (0 1 2 4))
+      ((4) (0 1 2 3)))
+  ```
 
   Of course, in practice one would typically train a model and return
   the trained model and/or its score on TEST. Also, sometimes one may
   want to do only some of the folds and remember which ones they were:
 
-      (cross-validate '(0 1 2 3 4)
-                      (lambda (fold test training)
-                       (list :fold fold test training))
-                      :folds '(2 3)
-                      :pass-fold t)
-      => ((:fold 2 (2) (0 1 3 4))
-          (:fold 3 (3) (0 1 2 4)))
+  ```cl-transcript
+  (cross-validate '(0 1 2 3 4)
+                  (lambda (fold test training)
+                   (list :fold fold test training))
+                  :folds '(2 3)
+                  :pass-fold t)
+  => ((:fold 2 (2) (0 1 3 4))
+      (:fold 3 (3) (0 1 2 4)))
+  ```
 
   Finally, the way the data is split can be customized. By default
   SPLIT-FOLD/MOD is called with the arguments DATA, the fold (from
@@ -322,21 +334,28 @@
 
   To randomly select half of the elements:
 
-      (sample-from 1/2 '(0 1 2 3 4 5))
-      => (5 3 2)
+  ```common-lisp
+  (sample-from 1/2 '(0 1 2 3 4 5))
+  => (5 3 2)
+  ```
 
   To randomly select some elements such that the sum of their weights
   constitute about half of the sum of weights across the whole
   sequence:
 
-      (sample-from 1/2 '(0 1 2 3 4 5 6 7 8 9) :weight #'identity)
-      => (9 4 1 6 8) ; sums to 28 that's near 45/2
+  ```common-lisp
+  (sample-from 1/2 '(0 1 2 3 4 5 6 7 8 9) :weight #'identity)
+  => ;; sums to 28 that's near 45/2
+     (9 4 1 6 8)
+  ```
 
   To sample with replacement (that is, allowing the element to be
   sampled multiple times):
 
-      (sample-from 1 '(0 1 2 3 4 5) :replacement t)
-      => (1 1 5 1 4 4)"
+  ```common-lisp
+  (sample-from 1 '(0 1 2 3 4 5) :replacement t)
+  => (1 1 5 1 4 4)
+  ```"
   (if replacement
       (sample-with-replacement* ratio seq :weight weight
                                 :random-state random-state)
@@ -422,13 +441,15 @@
   The following example simply collects the test and training sets for
   2-fold CV repeated 3 times with shuffled data:
 
-       (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
-       => ((((2 3 4) (1 0))
-            ((1 0) (2 3 4)))
-           (((2 1 0) (4 3))
-            ((4 3) (2 1 0)))
-           (((1 0 3) (2 4))
-            ((2 4) (1 0 3))))
+  ```cl-transcript
+   (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+   => ((((2 3 4) (1 0))
+        ((1 0) (2 3 4)))
+       (((2 1 0) (4 3))
+        ((4 3) (2 1 0)))
+       (((1 0 3) (2 4))
+        ((2 4) (1 0 3))))
+   ```
 
   CV bagging is useful when a single CV is not producing stable
   results. As an ensemble method, CV bagging has the advantage over
@@ -456,17 +477,21 @@
   For example, to make sure that even and odd numbers are distributed
   evenly:
 
-      (spread-strata '(0 2 4 6 8 1 3 5 7 9) :key #'evenp)
-      => (0 1 2 3 4 5 6 7 8 9)
+  ```cl-transcript
+  (spread-strata '(0 2 4 6 8 1 3 5 7 9) :key #'evenp)
+  => (0 1 2 3 4 5 6 7 8 9)
+  ```
 
   Same thing with unbalanced classes:
 
-      (spread-strata (vector 0 2 3 5 6 1 4)
-                     :key (lambda (x)
-                            (if (member x '(1 4))
-                                t
-                                nil)))
-      => #(0 1 2 3 4 5 6)"
+  ```cl-transcript
+  (spread-strata (vector 0 2 3 5 6 1 4)
+                 :key (lambda (x)
+                        (if (member x '(1 4))
+                            t
+                            nil)))
+  => #(0 1 2 3 4 5 6)
+  ```"
   (zip-evenly (stratify seq :key key :test test)
               :result-type (if (listp seq) 'list 'vector)))
 
@@ -478,8 +503,10 @@
   If RESULT-TYPE is NIL, then it's determined by the type of the first
   sequence in SEQS.
 
-      (zip-evenly '((0 2 4) (1 3)))
-      => (0 1 2 3 4)"
+  ```cl-transcript
+  (zip-evenly '((0 2 4) (1 3)))
+  => (0 1 2 3 4)
+  ```"
   (let* ((n (length seqs))
          (lengths (map 'vector #'length seqs))
          (seq-indices (make-array n :initial-element 0))

@@ -599,8 +599,8 @@
         (delete lump (lumps bpn)))
   lump)
 
-(defmacro build-bpn ((&key (class ''bpn) initargs
-                        (max-n-stripes 1)) &body lumps)
+(defmacro build-bpn ((&key bpn (class ''bpn) initargs
+                      (max-n-stripes 1)) &body lumps)
   "Syntactic sugar to assemble BPNs from lumps. Like LET* it is a
   sequence of bindings (of symbols to lumps). The names of the lumps
   created default to the symbol of the binding. In case a lump is not
@@ -622,15 +622,16 @@
                                   (,(first init-form)
                                    ,@(rest init-form))))))
                   lumps)))
-    `(let ((*bpn-being-built* (apply #'make-instance ,class
-                                     :max-n-stripes ,max-n-stripes
-                                     ,initargs)))
+    `(let* ((*bpn-being-built* (apply #'make-instance ,class
+                                      :max-n-stripes ,max-n-stripes
+                                      ,initargs))
+            ,@(when bpn
+                `((,bpn *bpn-being-built*))))
        (flet ((lump (name)
                 (find-lump name *bpn-being-built* :errorp t)))
+         (declare (ignorable #'lump))
          (let* ,bindings
-           (declare (ignorable ,@(mapcar #'first bindings)))
-           ;; prevent warning if LUMP goes unused
-           #'lump))
+           (declare (ignorable ,@(mapcar #'first bindings)))))
        *bpn-being-built*)))
 
 (defun ->lump (bpn lump-spec)
