@@ -392,6 +392,52 @@
                          start))))))
 
 
+;;;; Classes
+
+(defmacro defclass-now (name direct-superclasses direct-slots &rest options)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (defclass ,name ,direct-superclasses ,direct-slots ,@options)))
+
+(defmacro defmaker (name)
+  (destructuring-bind (name maker-name)
+      (if (listp name) name (list name name))
+    (let ((args (make-instance-args (find-class name))))
+      `(defun ,maker-name (&key ,@args)
+         (apply #'make-instance ',name
+                (append ,@(mapcar (lambda (arg)
+                                    (let ((keyword (alexandria:make-keyword
+                                                    (first arg))))
+                                      (if (= (length arg) 3)
+                                          `(if ,(third arg)
+                                               (list ,keyword ,(first arg))
+                                               ())
+                                          `(list ,keyword ,(first arg)))))
+                                  args)))))))
+
+;;; Adapted from SWANK::EXTRA-KEYWORDS/SLOTS, it doesn't collect every
+;;; initarg like SWANK::EXTRA-KEYWORDS/MAKE-INSTANCE does.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-instance-args (class)
+    (closer-mop:ensure-finalized class)
+    (multiple-value-bind (slots allow-other-keys-p)
+        (if (closer-mop:class-finalized-p class)
+            (values (closer-mop:class-slots class) nil)
+            (values (closer-mop:class-direct-slots class) t))
+      (values
+       (mapcan (lambda (slot)
+                 (mapcar
+                  (lambda (initarg)
+                    (if (swank-mop:slot-definition-initfunction slot)
+                        (list (intern (symbol-name initarg))
+                              (swank-mop:slot-definition-initform slot))
+                        (list (intern (symbol-name initarg))
+                              nil
+                              (gensym (symbol-name initarg)))))
+                  (swank-mop:slot-definition-initargs slot)))
+               slots)
+       allow-other-keys-p))))
+
+
 ;;;; Printing
 
 (defun print-table (list &key (stream t) (empty-value nil empty-value-p)

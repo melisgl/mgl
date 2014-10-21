@@ -70,6 +70,9 @@
    #:as-column-vector
    #:rows-to-arrays
    #:max-row-positions
+   ;; Classes
+   #:defclass-now
+   #:defmaker
    ;; Printing
    #:print-table
    ;; Describe customization
@@ -143,7 +146,7 @@
         #:mgl-opt))
 
 (cl:defpackage #:mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-mat
+  (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt #:mgl-gd #:mgl-cg)
   (:export

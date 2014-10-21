@@ -233,12 +233,14 @@
 ;;; COVARIANCES lumps are supposed to compute the means and
 ;;; covariances of the inputs. The output is the log-likelihood of
 ;;; evidence.
-(deflump ->gp (lump)
+(defclass-now ->gp (lump)
   ((means :initarg :means :reader means)
    (covariances :initarg :covariances :reader covariances)
    (samples :accessor samples)
    ;; one gp per stripe
    (posterior-gps :accessor posterior-gps)))
+
+(defmaker ->gp)
 
 (defmethod default-size ((lump ->gp))
   1)

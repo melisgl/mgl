@@ -12,6 +12,9 @@
 
 (in-package :mgl-bp)
 
+(defsection @mgl-bp (:title "Backpropagation Neural Networks")
+  "")
+
 (defun make-cost-monitors (model &key operation-mode attributes)
   (make-cost-monitors* model operation-mode attributes))
 
@@ -20,8 +23,10 @@
 ;;;; Lump
 
 (defvar *bpn-being-built* nil)
-(defvar *next-lump-name* nil)
+
 (defvar *in-training-p* nil)
+
+(defvar *next-lump-name* nil)
 
 (defun next-lump-name ()
   (prog1 (or *next-lump-name* (gensym))
@@ -32,7 +37,7 @@
     (or (slot-boundp lump 'size)
         (error "Can't compute size for ~S." lump))))
 
-(defclass lump ()
+(defclass-now lump ()
   ((name :initform (next-lump-name) :initarg :name :reader name)
    (size :type index :initarg :size :reader size)
    (same-stripes-p
@@ -57,15 +62,6 @@
     :reader default-value
     :documentation "Upon creation or resize the lump's nodes get
     filled with this value.")))
-
-(defmacro deflump (name direct-superclasses direct-slots &rest options)
-  (destructuring-bind (name maker-name)
-      (if (listp name) name (list name name))
-    `(progn
-       (defclass ,name ,direct-superclasses ,direct-slots ,@options)
-       ;; FIXME: extract initarg names for programmer convenience
-       (defun ,maker-name (&rest args)
-         (apply #'make-instance ',name args)))))
 
 (defmethod n-stripes ((lump lump))
   (let ((nodes (nodes lump)))
@@ -179,11 +175,13 @@
 
 ;;;; Data lumps
 
-(defclass data-lump (lump) ())
+(defclass-now data-lump (lump) ())
 
-(deflump (->weight ->weight*) (data-lump)
+(defclass-now ->weight (data-lump)
   ((same-stripes-p :initform t)
    (dimensions :initarg dimensions :reader dimensions)))
+
+(defmaker (->weight ->weight*))
 
 (defmethod initialize-instance :after ((weight ->weight) &key dimensions size
                                        &allow-other-keys)
@@ -243,8 +241,10 @@
           (t
            (apply #'->weight* args)))))
 
-(deflump ->constant (data-lump)
+(defclass-now ->constant (data-lump)
   ((default-value :initform #.(flt 1))))
+
+(defmaker ->constant)
 
 (defmethod default-size ((lump ->constant))
   1)
@@ -254,7 +254,7 @@
 (defmethod derive-lump ((lump data-lump)))
 
 
-(deflump ->dropout (lump)
+(defclass-now ->dropout (lump)
   ((x :initarg :x :reader x)
    (dropout
     :type (or null flt)
@@ -264,6 +264,8 @@
     'Improving neural networks by preventing co-adaptation of feature
     detectors'.")
    (mask :initform nil :reader mask)))
+
+(defmaker ->dropout)
 
 (defmethod default-size ((lump ->dropout))
   (size (x lump)))
@@ -338,12 +340,14 @@
         (geem! 1 mask ld 1 xd))))
 
 
-(deflump ->multiply-with-gaussian (lump)
+(defclass-now ->multiply-with-gaussian (lump)
   ((x :initarg :x :reader x)
    (variance
     :type (or null flt)
     :initform nil :initarg :variance :reader variance)
    (multipliers :initform nil :reader multipliers)))
+
+(defmaker ->multiply-with-gaussian)
 
 (defmethod default-size ((lump ->multiply-with-gaussian))
   (size (x lump)))
@@ -364,7 +368,8 @@
 
 (defmethod transfer-lump ((lump ->multiply-with-gaussian))
   (if *in-training-p*
-      (mgn! (nodes lump) (nodes (x lump)) (ensure-multipliers lump) (variance lump))
+      (mgn! (nodes lump) (nodes (x lump)) (ensure-multipliers lump)
+            (variance lump))
       (copy! (nodes (x lump)) (nodes lump))))
 
 (defmethod derive-lump ((lump ->multiply-with-gaussian))
@@ -376,9 +381,11 @@
     (geem! 1 multipliers ld 1 xd)))
 
 
-(deflump ->sample-binary (lump)
+(defclass-now ->sample-binary (lump)
   ((x :initarg :x :reader x)
    (randoms :initform nil :reader randoms)))
+
+(defmaker ->sample-binary)
 
 (defmethod default-size ((lump ->sample-binary))
   (size (x lump)))
@@ -442,7 +449,7 @@
 
 ;;;; ->INPUT
 
-(deflump ->input (->dropout data-lump)
+(defclass-now ->input (->dropout data-lump)
   ((running-stats :reader running-stats)
    (update-stats-p :initform nil :initarg :update-stats-p
                    :accessor update-stats-p)
@@ -450,6 +457,8 @@
                            :accessor normalize-with-stats-p)
    (normalized-cap :initform nil :initarg :normalized-cap
                    :accessor normalized-cap)))
+
+(defmaker ->input)
 
 (defmethod set-input-done ((lump ->input))
   (when (or (update-stats-p lump) (normalize-with-stats-p lump))
@@ -503,9 +512,56 @@
 (defmethod derive-lump ((lump ->input)))
 
 
+;;;; ->SUM
+
+(defclass-now ->sum (lump)
+  ((x :initarg :x :reader x))
+  (:documentation "Sum of all nodes \(per stripe)."))
+
+(defmaker ->sum)
+
+(defmethod default-size ((lump ->sum))
+  1)
+
+(define-cuda-kernel (cuda-sum-row)
+    (void ((x :mat :input) (m int) (n int) (y :mat :output)))
+  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
+    (when (< i m)
+      (let ((sum 0.0)
+            (row-start (* i n)))
+        (do ((j 0 (+ j 1)))
+            ((>= j n))
+          (set sum (+ sum (aref x (+ row-start j)))))
+        (set (aref y i) sum)))))
+
+(defmethod transfer-lump ((lump ->sum))
+  (let* ((x (x lump))
+         (xn (nodes x))
+         (ln (nodes lump)))
+    (assert (= (n-stripes lump) (n-stripes x)))
+    (if (use-cuda-p)
+        (let ((m (n-stripes lump)))
+          (cuda-sum-row xn m (size x) ln
+                        :grid-dim (list (ceiling m 256) 1 1)
+                        :block-dim (list 256 1 1)))
+        (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                           :type flt-vector))
+                      (to* ((nodes lump) 'backing-array :direction :output
+                            :type flt-vector)))
+          (declare (optimize (speed 3) #.*no-array-bounds-check*))
+          (loop for stripe of-type index below (n-stripes* lump) do
+            (with-stripes ((stripe x xs xe))
+              (setf (aref to* stripe)
+                    (let ((sum (flt 0)))
+                      (declare (type flt sum))
+                      (loop for xi upfrom xs below xe
+                            do (incf sum (aref x* xi)))
+                      sum))))))))
+
+
 ;;;; ->ERROR
 
-(deflump ->error (->sum)
+(defclass-now ->error (->sum)
   ((importance
     :initform nil
     :initarg :importance
@@ -516,6 +572,8 @@
   derivative: 1. Error lumps have exactly one node \(in each stripe)
   whose value is computed as the sum of nodes in the X parameter
   lump."))
+
+(defmaker ->error)
 
 (defmethod default-size ((lump ->error))
   1)
@@ -736,16 +794,16 @@
     (values sum (n-stripes bpn))))
 
 (defun compute-derivatives (samples optimizer learner)
-  (let ((*in-training-p* t)
-        (bpn (bpn learner))
+  (let ((bpn (bpn learner))
         (cost #.(flt 0)))
     (do-executors (samples bpn)
-      (set-input samples bpn)
-      (forward-bpn bpn)
-      (incf cost (cost bpn))
-      (backward-bpn bpn :last-lump (first-trained-weight-lump
-                                    optimizer learner))
-      (apply-monitors (monitors learner) samples bpn))
+      (let ((*in-training-p* t))
+        (set-input samples bpn)
+        (forward-bpn bpn)
+        (incf cost (cost bpn))
+        (backward-bpn bpn :last-lump (first-trained-weight-lump
+                                      optimizer learner))
+        (apply-monitors (monitors learner) samples bpn)))
     cost))
 
 
@@ -794,7 +852,7 @@
 
 ;;;; ->NORMALIZED
 
-(deflump ->normalized (lump)
+(defclass-now ->normalized (lump)
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)
    (scale
@@ -805,6 +863,8 @@
     changed during training, for instance when clamping. If it is a
     vector then its length must be MAX-N-STRIPES which automatically
     maintained.")))
+
+(defmaker ->normalized)
 
 (defmethod default-size ((lump ->normalized))
   (size (x lump)))
@@ -897,7 +957,7 @@
 
 ;;;; Activation lump
 
-(deflump ->activation (lump)
+(defclass-now ->activation (lump)
   ((weights :type ->weight :initarg :weights :reader weights)
    (x :initarg :x :reader x :documentation "Input comes from here.")
    (transpose-weights-p :initform nil :initarg :transpose-weights-p
@@ -907,6 +967,8 @@
   stored in row major order. N is the size of this lump. If
   TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
   computed."))
+
+(defmaker ->activation)
 
 (defun add-activations (&key name size inputs (add-bias-p t)
                         (bpn *bpn-being-built*))
@@ -994,9 +1056,11 @@
 
 ;;;; Node type library
 
-(deflump ->rep (lump)
+(defclass-now ->rep (lump)
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
+
+(defmaker ->rep)
 
 (defmethod default-size ((lump ->rep))
   (* (n lump) (size (x lump))))
@@ -1043,9 +1107,11 @@
                 (incf (aref xd* (+ xs i)) sum)))))))))
 
 
-(deflump ->stretch (lump)
+(defclass-now ->stretch (lump)
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
+
+(defmaker ->stretch)
 
 (defmethod default-size ((lump ->stretch))
   (* (n lump) (size (x lump))))
@@ -1092,9 +1158,11 @@
                          (incf (aref xd* xi) sum))))))))))
 
 
-(deflump ->+ (lump)
+(defclass-now ->+ (lump)
   ((args :initarg :args :reader args)
    (ones :initform nil :reader ones)))
+
+(defmaker ->+)
 
 (defmethod default-size ((lump ->+))
   (size (first (args lump))))
@@ -1145,9 +1213,11 @@
                               :ldc (size arg))))))))
 
 
-(deflump ->* (lump)
+(defclass-now ->* (lump)
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
+
+(defmaker ->*)
 
 (defmethod default-size ((lump ->*))
   (size (x lump)))
@@ -1178,48 +1248,6 @@
                   (geem! 1 (derivatives lump) (nodes x) 1 (derivatives y)))))
           (t
            (assert nil)))))
-
-(deflump ->sum (lump)
-  ((x :initarg :x :reader x))
-  (:documentation "Sum of all nodes \(per stripe)."))
-
-(defmethod default-size ((lump ->sum))
-  1)
-
-(define-cuda-kernel (cuda-sum-row)
-    (void ((x :mat :input) (m int) (n int) (y :mat :output)))
-  (let ((i (+ (* block-dim-x block-idx-x) thread-idx-x)))
-    (when (< i m)
-      (let ((sum 0.0)
-            (row-start (* i n)))
-        (do ((j 0 (+ j 1)))
-            ((>= j n))
-          (set sum (+ sum (aref x (+ row-start j)))))
-        (set (aref y i) sum)))))
-
-(defmethod transfer-lump ((lump ->sum))
-  (let* ((x (x lump))
-         (xn (nodes x))
-         (ln (nodes lump)))
-    (assert (= (n-stripes lump) (n-stripes x)))
-    (if (use-cuda-p)
-        (let ((m (n-stripes lump)))
-          (cuda-sum-row xn m (size x) ln
-                        :grid-dim (list (ceiling m 256) 1 1)
-                        :block-dim (list 256 1 1)))
-        (with-facets ((x* ((nodes x) 'backing-array :direction :input
-                           :type flt-vector))
-                      (to* ((nodes lump) 'backing-array :direction :output
-                            :type flt-vector)))
-          (declare (optimize (speed 3) #.*no-array-bounds-check*))
-          (loop for stripe of-type index below (n-stripes* lump) do
-            (with-stripes ((stripe x xs xe))
-              (setf (aref to* stripe)
-                    (let ((sum (flt 0)))
-                      (declare (type flt sum))
-                      (loop for xi upfrom xs below xe
-                            do (incf sum (aref x* xi)))
-                      sum))))))))
 
 (define-cuda-kernel (cuda-add-row)
     (void ((x :mat :input) (m int) (n int) (y :mat :io)))
@@ -1254,8 +1282,10 @@
                 (loop for xi upfrom xs below xe
                       do (incf (aref xd* xi) d)))))))))
 
-(deflump ->abs (lump)
+(defclass-now ->abs (lump)
   ((x :initarg :x :reader x)))
+
+(defmaker ->abs)
 
 (defmethod default-size ((lump ->abs))
   (size (x lump)))
@@ -1297,9 +1327,11 @@
                                               (flt -1)
                                               (flt 1))))))))))
 
-(deflump ->linear (lump)
+(defclass-now ->linear (lump)
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
+
+(defmaker ->linear)
 
 (defmethod default-size ((lump ->linear))
   1)
@@ -1356,8 +1388,10 @@
                            (* d (aref x* xi))))))))))
 
 
-(deflump ->sin (->dropout lump)
-  ((x :initarg :x :reader x)))
+(defclass-now ->sin (->dropout lump)
+  ())
+
+(defmaker ->sin)
 
 (defmethod default-size ((lump ->sin))
   (size (x lump)))
@@ -1430,9 +1464,10 @@
     (sin-derivative! (nodes x) (derivatives lump) (derivatives x))))
 
 
+(defclass-now ->sigmoid (->dropout lump)
+  ())
 
-(deflump ->sigmoid (->dropout lump)
-  ((x :initarg :x :reader x)))
+(defmaker ->sigmoid)
 
 (defmethod default-size ((lump ->sigmoid))
   (size (x lump)))
@@ -1518,8 +1553,10 @@
 
 
 
-(deflump ->scaled-tanh (lump)
+(defclass-now ->scaled-tanh (lump)
   ((x :initarg :x :reader x)))
+
+(defmaker ->scaled-tanh)
 
 (defmethod default-size ((lump ->scaled-tanh))
   (size (x lump)))
@@ -1599,12 +1636,14 @@
                       (expt (/ (cosh (* 0.6666667 xe))) 2))))))
 
 
-(deflump ->rectified (lump)
+(defclass-now ->rectified (lump)
   ((x :initarg :x :reader x)
    #+nil
    (noisyp :initform nil :initarg :noisyp :accessor noisyp))
   (:documentation "max(0,x) activation function. If NOISYP then add
   normal(0,sigmoid(x)) noise to x."))
+
+(defmaker ->rectified)
 
 (defmethod default-size ((lump ->rectified))
   (size (x lump)))
@@ -1673,8 +1712,10 @@
                          (incf (aref xd* xi) (aref ld* li))))))))))
 
 
-(deflump ->split-sign (lump)
+(defclass-now ->split-sign (lump)
   ((x :initarg :x :reader x)))
+
+(defmaker ->split-sign)
 
 (defmethod default-size ((lump ->split-sign))
   (* 2 (size (x lump))))
@@ -1752,9 +1793,11 @@
                          (incf (aref xd* xi) (aref ld* li))))))))))
 
 
-(deflump ->softplus (lump)
+(defclass-now ->softplus (lump)
   ((x :initarg :x :reader x))
   (:documentation "log(1+exp(x))) activation function."))
+
+(defmaker ->softplus)
 
 (defmethod default-size ((lump ->softplus))
   (size (x lump)))
@@ -1804,8 +1847,10 @@
                                     #.(flt 1))))))))))))
 
 
-(deflump ->exp (lump)
+(defclass-now ->exp (lump)
   ((x :initarg :x :reader x)))
+
+(defmaker ->exp)
 
 (defmethod default-size ((lump ->exp))
   (size (x lump)))
@@ -1875,11 +1920,13 @@
          (flt 0)
          (* #.(flt -0.25) (abs signal-variance) a2 a1 (* 2 (log a0)))))))
 
-(deflump ->rough-exponential (lump)
+(defclass-now ->rough-exponential (lump)
   ((x :initarg :x :reader x)
    (signal-variance :initarg :signal-variance :reader signal-variance)
    (length-scale :initarg :length-scale :reader length-scale)
    (roughness :initarg :roughness :reader roughness)))
+
+(defmaker ->rough-exponential)
 
 (defmethod default-size ((lump ->rough-exponential))
   (size (x lump)))
@@ -1967,9 +2014,11 @@
                        (incf (aref rd* ri) (* d dr))))))))))
 
 
-(deflump ->periodic (lump)
+(defclass-now ->periodic (lump)
   ((x :initarg :x :reader x)
    (period :initarg :period :reader period)))
+
+(defmaker ->periodic)
 
 (defmethod default-size ((lump ->periodic))
   (size (x lump)))
@@ -2031,13 +2080,15 @@
                                       (expt pev 2))))))))))))
 
 
-(deflump ->ref (lump)
+(defclass-now ->ref (lump)
   ((index :initarg :index :reader index)
    (into :initarg :into :reader into)
    (drop-negative-index-p
     :initform nil
     :initarg :drop-negative-index-p
     :reader drop-negative-index-p)))
+
+(defmaker ->ref)
 
 (defmethod default-size ((lump ->ref))
   (size (index lump)))
@@ -2090,9 +2141,11 @@
                              (aref d* li))))))))))
 
 
-(deflump ->sum-squared-error (lump)
+(defclass-now ->sum-squared-error (lump)
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
+
+(defmaker ->sum-squared-error)
 
 (defmethod default-size ((lump ->sum-squared-error))
   1)
@@ -2151,9 +2204,11 @@
                            (* d 2 (- (aref y* yi)
                                      (aref x* xi)))))))))))
 
-(deflump ->squared-error (lump)
+(defclass-now ->squared-error (lump)
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
+
+(defmaker ->squared-error)
 
 (defmethod default-size ((lump ->squared-error))
   (size (x lump)))
@@ -2217,9 +2272,11 @@
 
 ;;;; ->MAX
 
-(deflump ->max (lump)
+(defclass-now ->max (lump)
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
+
+(defmaker ->max)
 
 (defmethod default-size ((lump ->max))
   (/ (size (x lump)) (group-size lump)))
@@ -2307,9 +2364,11 @@
 
 ;;;; ->MAX-CHANNEL
 
-(deflump ->max-channel (lump)
+(defclass-now ->max-channel (lump)
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
+
+(defmaker ->max-channel)
 
 (defmethod default-size ((lump ->max-channel))
   (size (x lump)))
@@ -2427,9 +2486,11 @@
 
 ;;;; ->MIN
 
-(deflump ->min (lump)
+(defclass-now ->min (lump)
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
+
+(defmaker ->min)
 
 (defmethod default-size ((lump ->min))
   (/ (size (x lump)) (group-size lump)))
@@ -2517,8 +2578,10 @@
 
 ;;;; ->SOFTMAX
 
-(deflump ->softmax (->normalized)
+(defclass-now ->softmax (->normalized)
   ())
+
+(defmaker ->softmax)
 
 (defmethod default-size ((lump ->softmax))
   (size (x lump)))
@@ -2596,7 +2659,7 @@
 
 ;;;; ->CROSS-ENTROPY-SOFTMAX
 
-(deflump ->cross-entropy-softmax (lump)
+(defclass-now ->cross-entropy-softmax (lump)
   ((group-size :initarg :group-size :reader group-size)
    (x :initarg :x :reader x :documentation "This is the input lump.")
    (softmax
@@ -2630,6 +2693,8 @@
   normalized input: d(-sum_k{target_k * ln(softmax_k)})/dx_k = sum_j{
   target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
   target_k if target sums to 1."))
+
+(defmaker ->cross-entropy-softmax)
 
 (defun add-cross-entropy-softmax (&key predictions-name expectations-name
                                   (error-name (list predictions-name :error))
