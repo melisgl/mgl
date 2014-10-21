@@ -98,8 +98,7 @@
                                            :type flt-vector)))
                  (loop for sample in samples
                        for stripe upfrom 0
-                       do
-                          (with-stripes ((stripe inputs start))
+                       do (with-stripes ((stripe inputs start))
                             (setf (aref nodes start) sample)))))))
       (setf (clamper net) #'clamper)
       (minimize (if cg
@@ -401,7 +400,8 @@
   (do-cuda ()
     (dolist (max-n-stripes '(10 100))
       (dolist (cg '(nil t))
-        (log-msg "max-n-stripes: ~S, cg: ~S~%" max-n-stripes cg)
+        (log-msg "cuda: ~S max-n-stripes: ~S, cg: ~S~%" (cuda-available-p)
+                 max-n-stripes cg)
         (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
         (dolist (transposep '(nil t))
           (assert (> 0.01 (test-activation :transposep transposep :cg cg

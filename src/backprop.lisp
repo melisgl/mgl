@@ -601,20 +601,20 @@
 
 (defmacro build-bpn ((&key bpn (class ''bpn) initargs
                       (max-n-stripes 1)) &body lumps)
-  "Syntactic sugar to assemble BPNs from lumps. Like LET* it is a
+  "Syntactic sugar to assemble BPNs from lumps. Like LET*, it is a
   sequence of bindings (of symbols to lumps). The names of the lumps
   created default to the symbol of the binding. In case a lump is not
   bound to a symbol (because it was created in a nested expression),
   the local function LUMP finds the lump with the given name in the
   bpn being built. Example:
 
-      (mgl-bp:build-bpn ()
-        (features (mgl-bp:->input :size n-features))
-        (biases (mgl-bp:->weight :size n-features))
-        (weights (mgl-bp:->weight :size (* n-hiddens n-features)))
-        (activations0 (mgl-bp:->activation :weights weights :x features))
-        (activations (mgl-bp:->+ :args (list biases activations0)))
-        (output (mgl-bp:->sigmoid :x activations)))"
+      (build-bpn ()
+        (features (->input :size n-features))
+        (biases (->weight :size n-features))
+        (weights (->weight :size (* n-hiddens n-features)))
+        (activations0 (->activation :weights weights :x (lump 'features)))
+        (activations (->+ :args (list biases activations0)))
+        (output (->sigmoid :x activations)))"
   (let ((bindings
           (mapcar (lambda (lump)
                     (destructuring-bind (symbol init-form) lump
@@ -3094,7 +3094,7 @@
 (defun find-activation-lump-for-weight (->weight bpn)
   (loop for lump across (lumps bpn) do
     (when (and (typep lump '->activation)
-               (eq (mgl-bp::weights lump) ->weight))
+               (eq (weights lump) ->weight))
       (return lump))))
 
 
