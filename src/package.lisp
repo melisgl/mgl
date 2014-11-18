@@ -158,9 +158,6 @@
    #:lump-size
    #:lump-node-array
    #:->input
-   #:update-stats-p
-   #:normalize-with-stats-p
-   #:normalized-cap
    #:->weight
    #:->constant
    #:default-value

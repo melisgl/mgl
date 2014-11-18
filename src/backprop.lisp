@@ -169,8 +169,6 @@
 
 (defgeneric transfer-lump (lump))
 (defgeneric derive-lump (lump))
-(defgeneric set-input-done (lump)
-  (:method (lump)))
 
 
 ;;;; Data lumps
@@ -450,58 +448,9 @@
 ;;;; ->INPUT
 
 (defclass-now ->input (->dropout data-lump)
-  ((running-stats :reader running-stats)
-   (update-stats-p :initform nil :initarg :update-stats-p
-                   :accessor update-stats-p)
-   (normalize-with-stats-p :initform nil :initarg :normalize-with-stats-p
-                           :accessor normalize-with-stats-p)
-   (normalized-cap :initform nil :initarg :normalized-cap
-                   :accessor normalized-cap)))
+  ())
 
 (defmaker ->input)
-
-(defmethod set-input-done ((lump ->input))
-  (when (or (update-stats-p lump) (normalize-with-stats-p lump))
-    ;; FIXME: cudaize or remove?
-    (with-facet (nodes ((nodes lump) 'backing-array :direction :io
-                        :type flt-vector))
-      (let ((n-stripes* (n-stripes* lump))
-            (size (size lump)))
-        (when (update-stats-p lump)
-          (unless (slot-boundp lump 'running-stats)
-            (setf (slot-value lump 'running-stats)
-                  (coerce (loop repeat (size lump)
-                                collect (make-instance 'running-stat))
-                          'vector)))
-          (let ((running-stats (running-stats lump)))
-            (dotimes (i size)
-              (let ((running-stat (aref running-stats i)))
-                (dotimes (j n-stripes*)
-                  (add-to-running-stat (aref nodes (+ i (* j size)))
-                                       running-stat))))))
-        (when (normalize-with-stats-p lump)
-          (assert (slot-boundp lump 'running-stats))
-          (let ((running-stats (running-stats lump))
-                (cap (normalized-cap lump)))
-            (dotimes (i size)
-              (let* ((running-stat (aref running-stats i))
-                     (mean (running-stat-mean running-stat))
-                     (stddev (sqrt (running-stat-variance running-stat))))
-                (dotimes (j n-stripes*)
-                  (let* ((index (+ i (* j size)))
-                         (x (if (zerop stddev)
-                                (- (aref nodes index) mean)
-                                (/ (- (aref nodes index) mean)
-                                   stddev))))
-                    (setf (aref nodes index)
-                          (cond ((= least-negative-flt x)
-                                 #.(flt 0))
-                                ((and cap (< cap x))
-                                 cap)
-                                ((and cap (< x (- cap)))
-                                 (- cap))
-                                (t
-                                 x)))))))))))))
 
 (defmethod transfer-lump ((lump ->input))
   (setf (slot-value lump 'x) lump)
@@ -638,9 +587,7 @@
 
 (defmethod set-input :around (samples (bpn bpn))
   (setf (n-stripes bpn) (length samples))
-  (call-next-method)
-  (loop for lump across (lumps bpn) do
-    (set-input-done lump)))
+  (call-next-method))
 
 (defun add-lump (lump bpn)
   "Add LUMP to BPN. MAX-N-STRIPES of LUMP gets set to equal that of
