@@ -6,7 +6,65 @@
   feature vector or by a structure holding the feature vector, the
   label, etc. A dataset is a SEQUENCE of such instances or a
   @MGL-SAMPLER object that produces instances."
+  (map-dataset function)
+  (map-datasets function)
   (@mgl-sampler section))
+
+(defun ensure-sampler (dataset)
+  (if (typep dataset 'sequence)
+      (make-sequence-sampler dataset :max-n-samples (length dataset))
+      dataset))
+
+(defun map-dataset (fn dataset)
+  "Call FN with each instance in DATASET. This is basically equivalent
+  to iterating over the elements of a sequence or a sampler (see
+  @MGL-SAMPLER)."
+  (let ((sampler (ensure-sampler dataset)))
+    (loop until (finishedp sampler) do
+      (funcall fn (sample sampler)))))
+
+(defun map-datasets (fn datasets &key (impute nil imputep))
+  "Call FN with a list of instances, one from each dataset in
+  DATASETS. Return nothing. If IMPUTE is specified then iterate until
+  the largest dataset is consumed imputing IMPUTE for missing values.
+  If IMPUTE is not specified then iterate until the smallest dataset
+  runs out.
+
+  ```cl-transcript
+  (map-datasets #'prin1 '((0 1 2) (:a :b)))
+  .. (0 :A)(1 :B)
+  
+  (map-datasets #'prin1 '((0 1 2) (:a :b)) :impute nil)
+  .. (0 :A)(1 :B)(2 NIL)
+  ```
+
+  It is of course allowed to mix sequences with samplers:
+
+  ```cl-transcript
+  (map-datasets #'prin1
+                (list '(0 1 2)
+                      (make-sequence-sampler '(:a :b) :max-n-samples 2)))
+  .. (0 :A)(1 :B)
+  ```"
+  (let ((samplers (map 'vector #'ensure-sampler datasets)))
+    (loop
+      (let* ((seen-finished-sampler-p nil)
+             (seen-live-sampler-p nil)
+             (instances
+               (map 'list (lambda (sampler)
+                            (cond ((finishedp sampler)
+                                   (setq seen-finished-sampler-p t)
+                                   impute)
+                                  (t
+                                   (setq seen-live-sampler-p t)
+                                   (sample sampler))))
+                    samplers)))
+        (when (or (not seen-live-sampler-p)
+                  (and (not imputep)
+                       seen-finished-sampler-p))
+          (return))
+        (funcall fn instances)))
+    (values)))
 
 (defsection @mgl-sampler (:title "Samplers")
   "Some algorithms do not need random access to the entire dataset and
@@ -63,7 +121,6 @@
   (max-n-samples (accessor function-sampler))
   (name (reader function-sampler))
   (n-samples (reader function-sampler)))
-
 
 (defclass function-sampler ()
   ((generator

@@ -46,7 +46,7 @@
         - [8.4.2 Implementing Gradient Sources][984f]
         - [8.4.3 Implementing Gradient Sinks][f18a]
 - [9 Differentiable Functions][1a5d]
-- [10 Backprogation Neural Networks][74a7]
+- [10 Backprogation Neural Networks][1560]
 - [11 Boltzmann Machines][94c7]
 - [12 Gaussian Processes][026c]
 
@@ -171,6 +171,44 @@ It is typically represented by a set of numbers which is called a
 feature vector or by a structure holding the feature vector, the
 label, etc. A dataset is a `SEQUENCE` of such instances or a
 [Samplers][af7d] object that produces instances.
+
+<a name='x-28MGL-DATASET-3AMAP-DATASET-20FUNCTION-29'></a>
+
+- [function] **MAP-DATASET** *FN DATASET*
+
+    Call `FN` with each instance in `DATASET`. This is basically equivalent
+    to iterating over the elements of a sequence or a sampler (see
+    [Samplers][af7d]).
+
+<a name='x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29'></a>
+
+- [function] **MAP-DATASETS** *FN DATASETS &KEY (IMPUTE NIL IMPUTEP)*
+
+    Call `FN` with a list of instances, one from each dataset in
+    `DATASETS`. Return nothing. If `IMPUTE` is specified then iterate until
+    the largest dataset is consumed imputing `IMPUTE` for missing values.
+    If `IMPUTE` is not specified then iterate until the smallest dataset
+    runs out.
+    
+    ```cl-transcript
+    (map-datasets #'prin1 '((0 1 2) (:a :b)))
+    .. (0 :A)(1 :B)
+    
+    (map-datasets #'prin1 '((0 1 2) (:a :b)) :impute nil)
+    .. (0 :A)(1 :B)(2 NIL)
+    
+    ```
+    
+    It is of course allowed to mix sequences with samplers:
+    
+    ```cl-transcript
+    (map-datasets #'prin1
+                  (list '(0 1 2)
+                        (make-sequence-sampler '(:a :b) :max-n-samples 2)))
+    .. (0 :A)(1 :B)
+    
+    ```
+
 
 <a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29'></a>
 
@@ -2364,7 +2402,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
     the values of which will come from the `WEIGHTS` argument of
     [`MINIMIZE`][bca8].
 
-<a name='x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a>
+<a name='x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a>
 
 ## 10 Backprogation Neural Networks
 
@@ -2391,6 +2429,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [12e8]: #x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20MGL-PAX-3AMACRO-29 "(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING MGL-PAX:MACRO)"
   [1426]: #x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)"
   [1541]: #x-28MGL-CORE-3A-40MGL-CONFUSION-MATRIX-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CONFUSION-MATRIX MGL-PAX:SECTION)"
+  [1560]: #x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP MGL-PAX:SECTION)"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)"
   [1f57]: #x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION)"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
@@ -2427,7 +2466,6 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [6fc3]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"
   [72e9]: #x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)"
   [7471]: #x-28MGL-CORE-3ACOUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER GENERIC-FUNCTION)"
-  [74a7]: #x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BP MGL-PAX:SECTION)"
   [7540]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)"
   [76b8]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)"

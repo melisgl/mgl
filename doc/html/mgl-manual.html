@@ -93,7 +93,7 @@
 </ul></li>
 </ul></li>
 <li><a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">9 Differentiable Functions</a></li>
-<li><a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">10 Backprogation Neural Networks</a></li>
+<li><a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">10 Backprogation Neural Networks</a></li>
 <li><a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">11 Boltzmann Machines</a></li>
 <li><a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">12 Gaussian Processes</a></li>
 </ul>
@@ -221,6 +221,43 @@ It is typically represented by a set of numbers which is called a
 feature vector or by a structure holding the feature vector, the
 label, etc. A dataset is a <code>SEQUENCE</code> of such instances or a
 <a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">Samplers</a> object that produces instances.</p>
+
+<p><a name='x-28MGL-DATASET-3AMAP-DATASET-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAP-DATASET</strong> <em>FN DATASET</em></p>
+
+<p>Call <code>FN</code> with each instance in <code>DATASET</code>. This is basically equivalent
+to iterating over the elements of a sequence or a sampler (see
+<a href="#x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)">Samplers</a>).</p></li>
+</ul>
+
+<p><a name='x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAP-DATASETS</strong> <em>FN DATASETS &amp;KEY (IMPUTE NIL IMPUTEP)</em></p>
+
+<p>Call <code>FN</code> with a list of instances, one from each dataset in
+<code>DATASETS</code>. Return nothing. If <code>IMPUTE</code> is specified then iterate until
+the largest dataset is consumed imputing <code>IMPUTE</code> for missing values.
+If <code>IMPUTE</code> is not specified then iterate until the smallest dataset
+runs out.</p>
+
+<pre><code>(map-datasets #'prin1 '((0 1 2) (:a :b)))
+.. (0 :A)(1 :B)
+
+(map-datasets #'prin1 '((0 1 2) (:a :b)) :impute nil)
+.. (0 :A)(1 :B)(2 NIL)
+</code></pre>
+
+<p>It is of course allowed to mix sequences with samplers:</p>
+
+<pre><code>(map-datasets #'prin1
+              (list '(0 1 2)
+                    (make-sequence-sampler '(:a :b) :max-n-samples 2)))
+.. (0 :A)(1 :B)
+</code></pre></li>
+</ul>
 
 <p><a name='x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29'></a></p>
 
@@ -2671,7 +2708,7 @@ each segment and their corresponding accumulator <code>MAT</code> in <code>SINK<
 
 <p><a name='x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8634;</a></span>9 Differentiable Functions</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8634;</a></span>9 Differentiable Functions</h2>
 
 <h6>[in package MGL-DIFFUN]</h6>
 
@@ -2715,13 +2752,13 @@ the values of which will come from the <code>WEIGHTS</code> argument of
 <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>.</p></li>
 </ul>
 
-<p><a name='x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a></p>
+<p><a name='x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>10 Backprogation Neural Networks</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>10 Backprogation Neural Networks</h2>
 
 <p><a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>11 Boltzmann Machines</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>11 Boltzmann Machines</h2>
 
 <p><a name='x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29'></a></p>
 
