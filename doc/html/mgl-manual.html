@@ -82,6 +82,7 @@
 <li><a href="#x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)">8.2.1 Batch GD Optimizer</a></li>
 <li><a href="#x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-SEGMENTED-GD-OPTIMIZER MGL-PAX:SECTION)">8.2.2 Segmented GD Optimizer</a></li>
 <li><a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">8.2.3 Per-weight Optimization</a></li>
+<li><a href="#x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)">8.2.4 Adam Optimizer</a></li>
 </ul></li>
 <li><a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">8.3 Conjugate Gradient</a></li>
 <li><a href="#x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)">8.4 Extension API</a>
@@ -93,9 +94,21 @@
 </ul></li>
 </ul></li>
 <li><a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">9 Differentiable Functions</a></li>
-<li><a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">10 Backprogation Neural Networks</a></li>
+<li><a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">10 Backpropagation Neural Networks</a>
+
+<ul>
+<li><a href="#x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)">10.1 Backprop Overview</a></li>
+<li><a href="#x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-EXTENSION-API MGL-PAX:SECTION)">10.2 Backprop Extension API</a></li>
+<li><a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">10.3 BPNs</a>
+
+<ul>
+<li><a href="#x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN MGL-PAX:SECTION)">10.3.1 Feed-Forward Nets</a></li>
+<li><a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">10.3.2 Recurrent Neural Nets</a></li>
+</ul></li>
+</ul></li>
 <li><a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">11 Boltzmann Machines</a></li>
 <li><a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">12 Gaussian Processes</a></li>
+<li><a href="#x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29" title="(MGL-NLP:@MGL-NLP MGL-PAX:SECTION)">13 Natural Language Processing</a></li>
 </ul>
 
 <h6>[in package MGL]</h6>
@@ -105,7 +118,7 @@
 <h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">&#8634;</a></span>1 mgl ASDF System Details</h2>
 
 <ul>
-<li>Version: 0.0.8</li>
+<li>Version: 0.0.9</li>
 <li>Description: MGL is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.</li>
 <li>Licence: MIT, see COPYING.</li>
@@ -120,40 +133,10 @@
 
 <p>MGL is a Common Lisp machine learning library by <a href="http://quotenil.com" >Gábor
 Melis</a> with some parts originally contributed
-by Ravenpack International. It implements:</p>
-
-<ul>
-<li><p>Gradient descent optimization</p>
-
-<ul>
-<li>Nesterov momentum</li>
-</ul></li>
-<li><p>Conjugate gradient optimization</p></li>
-<li><p>Backpropagation networks (BPN)</p>
-
-<ul>
-<li><p>Dropout</p></li>
-<li><p>Rectified linear units</p></li>
-<li><p>Maxout</p></li>
-<li><p>Max-channel</p></li>
-</ul></li>
-<li><p>Boltzmann Machines</p>
-
-<ul>
-<li><p>Restricted Boltzmann Machines (RBM)</p></li>
-<li><p>Contrastive Divergence (CD) learning</p></li>
-<li><p>Deep Belief Networks (DBN)</p></li>
-<li><p>Semi Restricted Boltzmann Machines</p></li>
-<li><p>Deep Boltzmann Machines</p></li>
-<li><p>Persistent Contrastive Divergence (PCD) learning</p></li>
-<li><p>Unrolling DBN or a DBM to a BPN</p></li>
-</ul></li>
-<li><p>Gaussian Processes</p>
-
-<ul>
-<li>Optimizing Gaussian Processes as BPNs</li>
-</ul></li>
-</ul>
+by Ravenpack International. It mainly concentrates on various forms
+of neural networks (boltzmann machines, feed-forward and recurrent
+backprop nets). Most of MGL is built on top of <code>MGL-MAT</code> so it has
+BLAS and CUDA support.</p>
 
 <p>In general, the focus is on power and performance not on ease of
 use. Perhaps one day there will be a cookie cutter interface with
@@ -627,15 +610,14 @@ repeated CVs until <code>FN</code> performs an non-local exit.</p>
 <p>The following example simply collects the test and training sets for
 2-fold CV repeated 3 times with shuffled data:</p>
 
-<p><code>cl-transcript
- (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
- =&gt; ((((2 3 4) (1 0))
-      ((1 0) (2 3 4)))
-     (((2 1 0) (4 3))
-      ((4 3) (2 1 0)))
-     (((1 0 3) (2 4))
-      ((2 4) (1 0 3))))
-</code></p>
+<pre><code><span class="code"><span class="comment">;;; This is non-deterministic.
+</span><span class="paren1">(<span class="code">bag-cv '<span class="paren2">(<span class="code">0 1 2 3 4</span>)</span> #'list <span class="keyword">:n</span> 3 <span class="keyword">:n-folds</span> 2</span>)</span>
+=&gt; <span class="paren1">(<span class="code"><span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="paren4">(<span class="code">2 3 4</span>)</span> <span class="paren4">(<span class="code">1 0</span>)</span></span>)</span>
+     <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">1 0</span>)</span> <span class="paren4">(<span class="code">2 3 4</span>)</span></span>)</span></span>)</span>
+    <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="paren4">(<span class="code">2 1 0</span>)</span> <span class="paren4">(<span class="code">4 3</span>)</span></span>)</span>
+     <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">4 3</span>)</span> <span class="paren4">(<span class="code">2 1 0</span>)</span></span>)</span></span>)</span>
+    <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="paren4">(<span class="code">1 0 3</span>)</span> <span class="paren4">(<span class="code">2 4</span>)</span></span>)</span>
+     <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">2 4</span>)</span> <span class="paren4">(<span class="code">1 0 3</span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
 
 <p>CV bagging is useful when a single CV is not producing stable
 results. As an ensemble method, CV bagging has the advantage over
@@ -759,7 +741,7 @@ operation. Setting <a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" tit
 often implemented as matrix reshaping.</p>
 
 <p>Note that for models made of different parts (for example,
-[MGL-BP:BPN] consists of [MGL-BP:LUMP][]s) , setting these
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>MGL-BP:BPN</code></a> consists of [MGL-BP:LUMP][]s) , setting these
 values affects the constituent parts, but one should never change
 the number stripes of the parts directly because that would lead to
 an internal inconsistency in the model.</p>
@@ -825,8 +807,8 @@ the Nth input in an input lump of a bpn:</p>
 </code></pre>
 
 <p>Note how the input lump is striped, but the matrix into which we are
-indexing (<code>NODES</code>) is not known to <a href="#x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:WITH-STRIPES MGL-PAX:MACRO)"><code>WITH-STRIPES</code></a>. In fact, for lumps
-the same stripe indices work with <code>NODES</code> and <code>MGL-BP:DERIVATIVES</code>.</p></li>
+indexing (<a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a>) is not known to <a href="#x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:WITH-STRIPES MGL-PAX:MACRO)"><code>WITH-STRIPES</code></a>. In fact, for lumps
+the same stripe indices work with <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> and <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>MGL-BP:DERIVATIVES</code></a>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a></p>
@@ -890,7 +872,7 @@ same function as <code>PROTOTYPE-EXECUTOR</code> and call <code>FN</code> with t
 and the executor for which the instances are.</p>
 
 <p>Some objects conflate function and call: the forward pass of a
-[MGL-BP:BPN] computes output from inputs so it is like a
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>MGL-BP:BPN</code></a> computes output from inputs so it is like a
 function but it also doubles as a function call in the sense that
 the bpn (function) object changes state during the computation of
 the output. Hence not even the forward pass of a bpn is thread safe.
@@ -1164,7 +1146,9 @@ each function.</p>
 <li><p>[generic-function] <strong>ADD-TO-COUNTER</strong> <em>COUNTER &amp;REST ARGS</em></p>
 
 <p>Add <code>ARGS</code> to <code>COUNTER</code> in some way. See specialized
-methods for type specific documentation.</p></li>
+methods for type specific documentation. The kind of arguments to be
+supported is the what the measurer functions (see <a href="#x-28MGL-CORE-3A-40MGL-MEASURER-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-MEASURER MGL-PAX:SECTION)">Measurers</a>)
+intended to be paired with the counter return as multiple values.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ACOUNTER-VALUES-20GENERIC-FUNCTION-29'></a></p>
@@ -2027,7 +2011,7 @@ most practical 'mini-batch' compromise.</p></li>
 <p><a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>LEARNING-RATE</strong> <em>GD-OPTIMIZER</em> <em>(:LEARNING-RATE = 0.10000000149011612d0)</em></p>
+<li><p>[accessor] <strong>LEARNING-RATE</strong> <em>GD-OPTIMIZER</em> <em>(:LEARNING-RATE = 0.1)</em></p>
 
 <p>This is the step size along the gradient. Decrease
 it if optimization diverges, increase it if it doesn't make
@@ -2037,7 +2021,7 @@ progress.</p></li>
 <p><a name='x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>MOMENTUM</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM = 0.0d0)</em></p>
+<li><p>[accessor] <strong>MOMENTUM</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM = 0)</em></p>
 
 <p>A value in the [0, 1) interval. <a href="#x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>MOMENTUM</code></a> times the
 previous weight change is added to the gradient. 0 means no
@@ -2057,7 +2041,7 @@ increases chances of overfitting.</p></li>
 <p><a name='x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>WEIGHT-DECAY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-DECAY = 0.0d0)</em></p>
+<li><p>[accessor] <strong>WEIGHT-DECAY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-DECAY = 0)</em></p>
 
 <p>An L2 penalty. It discourages large weights, much
 like a zero mean gaussian prior. <a href="#x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:WEIGHT-DECAY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>WEIGHT-DECAY</code></a> * WEIGHT is added to
@@ -2069,7 +2053,7 @@ added to it.</p></li>
 <p><a name='x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>WEIGHT-PENALTY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-PENALTY = 0.0d0)</em></p>
+<li><p>[accessor] <strong>WEIGHT-PENALTY</strong> <em>GD-OPTIMIZER</em> <em>(:WEIGHT-PENALTY = 0)</em></p>
 
 <p>An L1 penalty. It encourages sparsity.
 <code>SIGN</code>(WEIGHT) * <a href="#x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:WEIGHT-PENALTY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>WEIGHT-PENALTY</code></a> is added to the gradient pushing the
@@ -2094,7 +2078,8 @@ each weight update.</p></li>
 <li><p>[accessor] <strong>BEFORE-UPDATE-HOOK</strong> <em>BATCH-GD-OPTIMIZER</em> <em>(:BEFORE-UPDATE-HOOK = NIL)</em></p>
 
 <p>A list of functions of no parameters. Each
-function is called just before a weight update takes place.
+function is called just before a weight update takes place (after
+accumulated gradients have been divided the length of the batch).
 Convenient to hang some additional gradient accumulating code
 on.</p></li>
 </ul>
@@ -2158,7 +2143,7 @@ segments mapped to it.</p></li>
 
 <p><a name='x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h4><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-SEGMENTED-GD-OPTIMIZER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8634;</a></span>8.2.3 Per-weight Optimization</h4>
+<h4><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-SEGMENTED-GD-OPTIMIZER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8634;</a></span>8.2.3 Per-weight Optimization</h4>
 
 <p><a name='x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29'></a></p>
 
@@ -2188,9 +2173,68 @@ produce results equivalent to the separated case. Also, adding
 inputs with only missing values does not change anything.</p></li>
 </ul>
 
+<p><a name='x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h4><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)">&#8634;</a></span>8.2.4 Adam Optimizer</h4>
+
+<p><a name='x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>ADAM-OPTIMIZER</strong> <em>BATCH-GD-OPTIMIZER</em></p>
+
+<p>Adam is a first-order stochasistic gradient descent
+optimizer. It maintains an internal estimation for the mean and raw
+variance of each derivative as exponential moving averages. The step
+is takes is basically <code>M/(sqrt(V)+E)</code> where <code>M</code> is the estimated
+mean, <code>V</code> is the estimated variance, and <code>E</code> is a small adjustment
+factor to prevent the gradient from blowing up. See the
+<a href="http://arxiv.org/abs/1412.6980" >paper</a> for more.</p></li>
+</ul>
+
+<p><a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>LEARNING-RATE</strong> <em>ADAM-OPTIMIZER</em> <em>(= 2.e-4)</em></p>
+
+<p>Same thing as <a href="#x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:LEARNING-RATE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>LEARNING-RATE</code></a> but with the default suggested by the Adam paper.</p></li>
+</ul>
+
+<p><a name='x-28MGL-GD-3AMEAN-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>MEAN-UPDATE-RATE</strong> <em>ADAM-OPTIMIZER</em> <em>(:MEAN-UPDATE-RATE = 0.1)</em></p>
+
+<p>A number between 0 and 1 that determines how fast
+the estimated mean of derivatives is updated. 1 basically gives
+you RMSPROP (if <a href="#x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29" title="(MGL-GD:VARIANCE-UPDATE-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"><code>VARIANCE-UPDATE-RATE</code></a> is not too small) or
+AdaGrad (if <a href="#x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29" title="(MGL-GD:VARIANCE-UPDATE-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"><code>VARIANCE-UPDATE-RATE</code></a> is infinitesimal and the learning
+rate is annealed.</p></li>
+</ul>
+
+<p><a name='x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>VARIANCE-UPDATE-RATE</strong> <em>ADAM-OPTIMIZER</em> <em>(:VARIANCE-UPDATE-RATE = 0.001)</em></p>
+
+<p>A number between 0 and 1 that determines how fast
+the estimated variance of derivatives is updated.</p></li>
+</ul>
+
+<p><a name='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>VARIANCE-ADJUSTMENT</strong> <em>ADAM-OPTIMIZER</em> <em>(:VARIANCE-ADJUSTMENT = 1.e-8)</em></p>
+
+<p>Within the bowels of adam, the estimated mean is
+divided by the square root of the estimated variance (per weight)
+which can lead to numerical problems if the denominator is near
+zero. To avoid this, <a href="#x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29" title="(MGL-GD:VARIANCE-ADJUSTMENT (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"><code>VARIANCE-ADJUSTMENT</code></a> which should be a small
+positive number is added to the denominator.</p></li>
+</ul>
+
 <p><a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h3><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8634;</a></span>8.3 Conjugate Gradient</h3>
+<h3><span class="navigation"> <a href="#x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29" title="(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT-EXTENSION-API MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29" title="(MGL-CG:@MGL-CG MGL-PAX:SECTION)">&#8634;</a></span>8.3 Conjugate Gradient</h3>
 
 <h6>[in package MGL-CG]</h6>
 
@@ -2624,7 +2668,7 @@ and <code>OPTIMIZER</code> <a href="#x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-
 <p>Return the weight matrix of <code>SEGMENT</code>. A segment
 doesn't need to be a <code>MAT</code> object itself. For example, it may be a
 <code>MGL-BM:CHUNK</code> of a [MGL-BM:BM] or a <code>MGL-BP:LUMP</code> of a
-[MGL-BP:BPN] whose <code>NODES</code> slot holds the weights.</p></li>
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>MGL-BP:BPN</code></a> whose <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> slot holds the weights.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20-28METHOD-20NIL-20-28MGL-MAT-3AMAT-29-29-29'></a></p>
@@ -2754,15 +2798,843 @@ the values of which will come from the <code>WEIGHTS</code> argument of
 
 <p><a name='x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>10 Backprogation Neural Networks</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29" title="(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8634;</a></span>10 Backpropagation Neural Networks</h2>
+
+<h6>[in package MGL-BP]</h6>
+
+<p><a name='x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-EXTENSION-API MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)">&#8634;</a></span>10.1 Backprop Overview</h3>
+
+<p>Backpropagation Neural Networks are just functions with typically
+lots of parameters called weights. FIXDOC: LOSS <code>FUNCTION</code>, <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MINIMIZE</code></a>,
+LAYERS.</p>
+
+<p>In this implementation, a <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> is assembled from several
+[LUMP][]s (roughly corresponding to layers). Both feed-forward and
+recurrent neural nets are supported (<a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a> and <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>, respectively).
+BPNs can contain not only LUMPs but other BPNs, too.</p>
+
+<p><a name='x-28MGL-BP-3ACLUMP-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>CLUMP</strong></p>
+
+<p>A <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> is a <code>LUMP</code> or <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>. It represents a
+differentiable function. Arguments come from other clumps wired
+permenantly together. This wiring of CLUMPs is how one builds
+feed-forward nets (<a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a>) or recurrent neural networks (<a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>) that are
+CLUMPs themselves so one can build nets in a hiearchical style if
+desired. Non-composite CLUMPs are called <code>LUMP</code> (note the loss of <code>C</code>
+that stands for composite). The various <code>LUMP</code> subtypes correspond to
+different layer types (sigmoid, dropout, rectified linear, tanh,
+etc).</p></li>
+</ul>
+
+<p><a name='x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>NODES</strong> <em>CLUMP</em></p>
+
+<p>Return the <code>MAT</code> object representing the state of
+<code>CLUMP</code> (that is, the result computed by the most recent <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a>). For
+-&gt;INPUT lumps, this is where input values are placed. See FIXDOC.</p></li>
+</ul>
+
+<p>FIXDOC: set-input</p>
+
+<p><a name='x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-EXTENSION-API MGL-PAX:SECTION)">&#8634;</a></span>10.2 Backprop Extension API</h3>
+
+<p><a name='x-28MGL-BP-3ASTRIPEDP-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>STRIPEDP</strong> <em>CLUMP</em></p>
+
+<p>For efficiency, forward and backprop phases do
+their stuff in batch mode: passing a number of instances through the
+network at the same time. Thus clumps must be able to store values
+of and gradients for each of these instances. However, some clumps
+produce the same result for each instance in a batch. These clumps
+are the weights, the parameters of the network. <a href="#x-28MGL-BP-3ASTRIPEDP-20GENERIC-FUNCTION-29" title="(MGL-BP:STRIPEDP GENERIC-FUNCTION)"><code>STRIPEDP</code></a> returns
+true iff <code>CLUMP</code> does not represent weights (i.e. it's not a
+-&gt;WEIGHT).</p>
+
+<p>For striped clumps, their <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> and <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> are <code>MAT</code> objects with
+a leading dimension (number of rows in the 2d case) equal to the
+number of instances in the batch. Non-striped clumps have no
+restriction on their shape apart from what their usage dictates.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>DERIVATIVES</strong> <em>CLUMP</em></p>
+
+<p>Return the <code>MAT</code> object representing the partial
+derivatives of the function <code>CLUMP</code> computes. The returned partial
+derivatives were accumulated by previous <a href="#x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:BACKWARD GENERIC-FUNCTION)"><code>BACKWARD</code></a> calls.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>FORWARD</strong> <em>CLUMP</em></p>
+
+<p>Compute the values of the function represented by
+<code>CLUMP</code> for all stripes and place the results into <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> of <code>CLUMP</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>BACKWARD</strong> <em>CLUMP</em></p>
+
+<p>Compute the partial derivatives of the function
+represented by <code>CLUMP</code> and add them to <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of the
+corresponding argument clumps. The <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of <code>CLUMP</code> contains the
+sum of partial derivatives of all clumps by the corresponding
+output. This function is intended to be called after a <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a> pass.</p>
+
+<p>Take the -&gt;SIGMOID clump for example when the network is being
+applied to a batch of two instances <code>x1</code> and <code>x2</code>. <code>x1</code> and <code>x2</code> are
+set in the -&gt;INPUT lump X. The sigmoid computes <code>1/(1+exp(-x))</code>
+where <code>X</code> is its only argument clump.</p>
+
+<pre><code>f(x) = 1/(1+exp(-x))
+</code></pre>
+
+<p>When <a href="#x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:BACKWARD GENERIC-FUNCTION)"><code>BACKWARD</code></a> is called on the sigmoid lump, its <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> is a
+2x1 <code>MAT</code> object that contains the partial derivatives of the loss
+function:</p>
+
+<pre><code>dL(x1)/df
+dL(x2)/df
+</code></pre>
+
+<p>Now the <a href="#x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:BACKWARD GENERIC-FUNCTION)"><code>BACKWARD</code></a> method of the sigmoid needs to add <code>dL(x1)/dx1</code> and
+<code>dL(x2)/dx2</code> to <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of <code>X</code>. Now, <code>dL(x1)/dx1 = dL(x1)/df *
+df(x1)/dx1</code> and the first term is what we have in <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of the
+sigmoid so it only needs to calculate the second term.</p></li>
+</ul>
+
+<p><a name='x-28MGL-COMMON-3ACOST-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>COST</strong> <em>CLUMP</em></p>
+
+<p>FIXDOC: Return the sum of costs for all active
+stripes. The cost of a stripe is the sum of the corresponding nodes
+in -&gt;ERROR clumps. The second value is the sum of the stripe's
+<code>IMPORTANCE</code> (in the -&gt;ERROR clump) or 1 (if <code>IMPORTANCE</code> is <code>NIL</code>).</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h3><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-EXTENSION-API MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">&#8634;</a></span>10.3 BPNs</h3>
+
+<p><a name='x-28MGL-BP-3ABPN-20CLASS-29'></a></p>
+
+<ul>
+<li>[class] <strong>BPN</strong> <em>CLUMP</em></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ACLUMPS-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li>[generic-function] <strong>CLUMPS</strong> <em>OBJECT</em></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AFIND-CLUMP-20FUNCTION-29'></a></p>
+
+<ul>
+<li>[function] <strong>FIND-CLUMP</strong> <em>NAME BPN &amp;KEY (ERRORP T)</em></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AADD-CLUMP-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>ADD-CLUMP</strong> <em>CLUMP BPN</em></p>
+
+<p>Add <code>CLUMP</code> to <code>BPN</code>. <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> of <code>CLUMP</code> gets set to equal that of
+the previous last, non-weight clump of <code>BPN</code>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3A--3ECLUMP-20FUNCTION-29'></a></p>
+
+<ul>
+<li>[function] <strong>-&gt;CLUMP</strong> <em>BPN CLUMP-SPEC</em></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h4><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN-TUTORIAL MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN MGL-PAX:SECTION)">&#8634;</a></span>10.3.1 Feed-Forward Nets</h4>
+
+<p><a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a> and <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> have a lot in common (see their common superclass, <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>).
+There is very limited functionality that's specific to FNNs so let's
+get them out of they way before we study a full example.</p>
+
+<p><a name='x-28MGL-BP-3AFNN-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>FNN</strong> <em>BPN</em></p>
+
+<p>A feed-forward neural net (as opposed to a
+recurrent one, see <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>).</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>BUILD-FNN</strong> <em>(&amp;KEY FNN (CLASS ''FNN) INITARGS (MAX-N-STRIPES 1) NAME) &amp;BODY CLUMPS</em></p>
+
+<p>Syntactic sugar to assemble FNNs from CLUMPs. Like <code>LET*</code>, it is a
+sequence of bindings (of symbols to CLUMPs). The names of the clumps
+created default to the symbol of the binding. In case a clump is not
+bound to a symbol (because it was created in a nested expression),
+the local function <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> can be used to find the clump with the
+given name in the fnn being built. Example:</p>
+
+<pre><code>(build-fnn ()
+  (features (-&gt;input :size n-features))
+  (biases (-&gt;weight :size n-features))
+  (weights (-&gt;weight :size (* n-hiddens n-features)))
+  (activations0 (-&gt;mm :weights weights :x (clump 'features)))
+  (activations (-&gt;+ :args (list biases activations0)))
+  (output (-&gt;sigmoid :x activations)))
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h5><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN-TUTORIAL MGL-PAX:SECTION)">&#8634;</a></span>FNN Tutorial</h5>
+
+<p>Hopefully this example from <code>example/digit-fnn.lisp</code> illustrates
+the concepts involved. If it's too dense despite the comments, then
+read up on <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" title="(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)">Datasets</a>, <a href="#x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29" title="(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)">Gradient Based Optimization</a> and come back.</p>
+
+<p><a name='x-28MGL-BP-3A-3ADIGIT-FNN-2ELISP-20-28MGL-PAX-3AINCLUDE-20-23P-22-2Fhome-2Fmega-2Fown-2Fmgl-2Fexample-2Fdigit-fnn-2Elisp-22-20-3AHEADER-NL-20-22-60-60-60commonlisp-22-20-3AFOOTER-NL-20-22-60-60-60-22-29-29'></a></p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">cl:defpackage</span></i> <span class="keyword">:mgl-example-digit-fnn</span>
+  <span class="paren2">(<span class="code"><span class="keyword">:use</span> <span class="keyword">#:common-lisp</span> <span class="keyword">#:mgl</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code">in-package <span class="keyword">:mgl-example-digit-fnn</span></span>)</span>
+
+<span class="comment">;;; There are 10 possible digits used as inputs ...
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defparameter</span></i> <span class="special">*n-inputs*</span> 10</span>)</span>
+<span class="comment">;;; and we want to learn the rule that maps the input digit D to (MOD
+</span><span class="comment">;;; (1+ D) 3).
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defparameter</span></i> <span class="special">*n-outputs*</span> 3</span>)</span>
+
+<span class="comment">;;; We define a feed-forward net to be able to specialize how inputs
+</span><span class="comment">;;; are translated by adding a SET-INPUT method later.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defclass</span></i> digit-fnn <span class="paren2">(<span class="code">fnn</span>)</span>
+  <span class="paren2">(<span class="code"></span>)</span></span>)</span>
+
+<span class="comment">;;; Build a DIGIT-FNN with a single hidden layer of rectified linear
+</span><span class="comment">;;; units and a softmax output.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-digit-fnn <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">n-hiddens 5</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">build-fnn <span class="paren3">(<span class="code"><span class="keyword">:class</span> 'digit-fnn</span>)</span>
+    <span class="paren3">(<span class="code">input <span class="paren4">(<span class="code">-&gt;input <span class="keyword">:size</span> <span class="special">*n-inputs*</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">hidden-activation <span class="paren4">(<span class="code">-&gt;activation <span class="keyword">:inputs</span> <span class="paren5">(<span class="code">list input</span>)</span>
+                                     <span class="keyword">:size</span> n-hiddens</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">hidden <span class="paren4">(<span class="code">-&gt;rectified <span class="keyword">:x</span> hidden-activation</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">output-activation <span class="paren4">(<span class="code">-&gt;activation <span class="keyword">:inputs</span> <span class="paren5">(<span class="code">list hidden</span>)</span>
+                                     <span class="keyword">:size</span> <span class="special">*n-outputs*</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">output <span class="paren4">(<span class="code">-&gt;softmax-xe-loss <span class="keyword">:x</span> output-activation</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; This method is called with batches of 'instances' (input digits in
+</span><span class="comment">;;; this case). Its job is to encode the inputs by populating rows of
+</span><span class="comment">;;; the NODES matrix of the INPUTS clump. Each input is encoded as a
+</span><span class="comment">;;; row of zeros with a single 1 at index determined by the input
+</span><span class="comment">;;; digit. This is called one-hot encoding. The TARGET could be
+</span><span class="comment">;;; encoded the same way, but instead we use the sparse option
+</span><span class="comment">;;; supported by TARGET of -&gt;SOFTMAX-XE-LOSS.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defmethod</span></i> set-input <span class="paren2">(<span class="code">digits <span class="paren3">(<span class="code">fnn digit-fnn</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let*</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">input <span class="paren5">(<span class="code">nodes <span class="paren6">(<span class="code">find-clump 'input fnn</span>)</span></span>)</span></span>)</span>
+         <span class="paren4">(<span class="code">output-lump <span class="paren5">(<span class="code">find-clump 'output fnn</span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">fill! 0 input</span>)</span>
+    <span class="paren3">(<span class="code"><i><span class="symbol">loop</span></i> for i upfrom 0
+          for digit in digits
+          do <span class="paren4">(<span class="code">setf <span class="paren5">(<span class="code">mref input i digit</span>)</span> 1</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">setf <span class="paren4">(<span class="code">target output-lump</span>)</span>
+          <span class="paren4">(<span class="code">mapcar <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">digit</span>)</span>
+                    <span class="paren6">(<span class="code">mod <span class="paren1">(<span class="code">1+ digit</span>)</span> <span class="special">*n-outputs*</span></span>)</span></span>)</span>
+                  digits</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Train the network by minimizing the loss (cross-entropy here) with
+</span><span class="comment">;;; stochastic gradient descent.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> train-digit-fnn <span class="paren2">(<span class="code"></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">optimizer
+          <span class="comment">;; First create the optimizer for MINIMIZE.
+</span>          <span class="paren5">(<span class="code">make-instance 'segmented-gd-optimizer
+                         <span class="keyword">:segmenter</span>
+                         <span class="comment">;; We train each weight lump with the same
+</span>                         <span class="comment">;; parameters and, in fact, the same
+</span>                         <span class="comment">;; optimizer. But it need not be so, in
+</span>                         <span class="comment">;; general.
+</span>                         <span class="paren6">(<span class="code">constantly
+                          <span class="paren1">(<span class="code">make-instance 'batch-gd-optimizer
+                                         <span class="keyword">:learning-rate</span> 1
+                                         <span class="keyword">:momentum</span> 0.9
+                                         <span class="keyword">:batch-size</span> 100</span>)</span></span>)</span></span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">fnn <span class="paren5">(<span class="code">make-digit-fnn</span>)</span></span>)</span></span>)</span>
+    <span class="comment">;; The number of instances the FNN can work with in parallel. It's
+</span>    <span class="comment">;; usually equal to the batch size or is a its divisor.
+</span>    <span class="paren3">(<span class="code">setf <span class="paren4">(<span class="code">max-n-stripes fnn</span>)</span> 50</span>)</span>
+    <span class="comment">;; Initialize all weights randomly.
+</span>    <span class="paren3">(<span class="code">map-segments <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">weights</span>)</span>
+                    <span class="paren5">(<span class="code">gaussian-random! <span class="paren6">(<span class="code">nodes weights</span>)</span> <span class="keyword">:stddev</span> 0.01</span>)</span></span>)</span>
+                  fnn</span>)</span>
+    <span class="comment">;; Arrange for training and test error to be logged.
+</span>    <span class="paren3">(<span class="code">monitor-optimization-periodically
+     optimizer '<span class="paren4">(<span class="code"><span class="paren5">(<span class="code"><span class="keyword">:fn</span> log-test-error <span class="keyword">:period</span> 10000</span>)</span>
+                 <span class="paren5">(<span class="code"><span class="keyword">:fn</span> reset-optimization-monitors <span class="keyword">:period</span> 1000</span>)</span></span>)</span></span>)</span>
+    <span class="comment">;; Finally, start the optimization.
+</span>    <span class="paren3">(<span class="code">minimize optimizer
+              <span class="comment">;; Dress FNN in a BP-LEARNER and attach monitors for the
+</span>              <span class="comment">;; cost to it. These monitors are going to be logged and
+</span>              <span class="comment">;; reset after every 100 training instance by
+</span>              <span class="comment">;; RESET-OPTIMIZATION-MONITORS above.
+</span>              <span class="paren4">(<span class="code">make-instance 'bp-learner
+                             <span class="keyword">:bpn</span> fnn
+                             <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-bpn-cost-monitors</span>)</span></span>)</span>
+              <span class="comment">;; Training stops when the sampler runs out (after 10000
+</span>              <span class="comment">;; instances).
+</span>              <span class="keyword">:dataset</span> <span class="paren4">(<span class="code">make-sampler 10000</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Return a sampler object that produces MAX-N-SAMPLES number of
+</span><span class="comment">;;; random inputs (numbers between 0 and 9).
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sampler <span class="paren2">(<span class="code">max-n-samples</span>)</span>
+  <span class="paren2">(<span class="code">make-instance 'function-sampler <span class="keyword">:max-n-samples</span> max-n-samples
+                 <span class="keyword">:generator</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span> <span class="paren4">(<span class="code">random <span class="special">*n-inputs*</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Log the test error. Also, describe the optimizer and the bpn at
+</span><span class="comment">;;; the beginning of training. Called periodically during training
+</span><span class="comment">;;; (see above).
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> log-test-error <span class="paren2">(<span class="code">optimizer learner</span>)</span>
+  <span class="paren2">(<span class="code">when <span class="paren3">(<span class="code">zerop <span class="paren4">(<span class="code">n-instances optimizer</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">describe optimizer</span>)</span>
+    <span class="paren3">(<span class="code">describe <span class="paren4">(<span class="code">bpn learner</span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">log-padded <span class="paren3">(<span class="code">monitor-bpn-results <span class="paren4">(<span class="code">make-sampler 1000</span>)</span> <span class="paren4">(<span class="code">bpn learner</span>)</span>
+                                   <span class="paren4">(<span class="code">make-bpn-cost-monitors <span class="keyword">:dataset</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Return a list of monitor objects (yes, only one here) that will
+</span><span class="comment">;;; measure the cost and accumulate it in a counter.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-bpn-cost-monitors <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">dataset <span class="string">"train"</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">list <span class="paren3">(<span class="code">make-instance 'monitor
+                       <span class="keyword">:measurer</span> <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">instances bpn</span>)</span>
+                                   <span class="paren5">(<span class="code">declare <span class="paren6">(<span class="code">ignore instances</span>)</span></span>)</span>
+                                   <span class="paren5">(<span class="code">cost bpn</span>)</span></span>)</span>
+                       <span class="keyword">:counter</span> <span class="paren4">(<span class="code">make-instance 'basic-counter
+                                               <span class="keyword">:attributes</span> `<span class="paren5">(<span class="code"><span class="keyword">:dataset</span> ,dataset
+                                                             <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">#|
+
+;;; Transcript follows:
+(train-digit-fnn)
+.. #&lt;SEGMENTED-GD-OPTIMIZER {1010870E03}&gt;
+.. SEGMENTED-GD-OPTIMIZER description:
+..   N-INSTANCES = 0
+..   OPTIMIZERS = (#&lt;BATCH-GD-OPTIMIZER
+..                   #&lt;SEGMENT-SET
+..                     (#&lt;-&gt;WEIGHT # :SIZE 15 1/1 :norm 0.02216&gt;
+..                      #&lt;-&gt;WEIGHT # :SIZE 3 1/1 :norm 0.01273&gt;
+..                      #&lt;-&gt;WEIGHT # :SIZE 50 1/1 :norm 0.07184&gt;
+..                      #&lt;-&gt;WEIGHT # :SIZE 5 1/1 :norm 0.01494&gt;)
+..                     {1010889F53}&gt;
+..                   {10107AE833}&gt;)
+..   SEGMENTS = (#&lt;-&gt;WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                 15 1/1 :norm 0.02216&gt;
+..               #&lt;-&gt;WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                 3 1/1 :norm 0.01273&gt;
+..               #&lt;-&gt;WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                 50 1/1 :norm 0.07184&gt;
+..               #&lt;-&gt;WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                 5 1/1 :norm 0.01494&gt;)
+..
+.. #&lt;BATCH-GD-OPTIMIZER {10107AE833}&gt;
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #&lt;SEGMENT-SET
+..                    (#&lt;-&gt;WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                       15 1/1 :norm 0.02216&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                       3 1/1 :norm 0.01273&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                       50 1/1 :norm 0.07184&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                       5 1/1 :norm 0.01494&gt;)
+..                    {1010889F53}&gt;
+..    LEARNING-RATE = 1.00000e+0
+..    MOMENTUM = 9.00000e-1
+..    MOMENTUM-TYPE = :NORMAL
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  #&lt;DIGIT-FNN {1010873BB3}&gt;
+..   BPN description:
+..     CLUMPS = #(#&lt;-&gt;INPUT INPUT :SIZE 10 1/50 :norm 0.00000&gt;
+..                #&lt;-&gt;ACTIVATION
+..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4 {10108796B3}&gt;
+..                #&lt;-&gt;RECTIFIED HIDDEN :SIZE 5 1/50 :norm 0.00000&gt;
+..                #&lt;-&gt;ACTIVATION
+..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4 {101087FAD3}&gt;
+..                #&lt;-&gt;SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :norm 0.00000&gt;)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   2015-01-19 22:22:41: pred. cost: 1.098d+0 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 1000
+.. 2015-01-19 22:22:41: train cost: 1.091d+0 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 2000
+.. 2015-01-19 22:22:41: train cost: 8.317d-1 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 3000
+.. 2015-01-19 22:22:41: train cost: 1.783d-2 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 4000
+.. 2015-01-19 22:22:41: train cost: 1.591d-6 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 5000
+.. 2015-01-19 22:22:41: train cost: 3.709d-8 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 6000
+.. 2015-01-19 22:22:41: train cost: 1.081d-8 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 7000
+.. 2015-01-19 22:22:41: train cost: 7.388d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 8000
+.. 2015-01-19 22:22:41: train cost: 6.042d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 9000
+.. 2015-01-19 22:22:41: train cost: 5.464d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 10000
+.. 2015-01-19 22:22:41: train cost: 5.878d-9 (1000.00)
+.. 2015-01-19 22:22:41: pred. cost: 5.532d-9 (1000.00)
+..
+==&gt; (#&lt;-&gt;WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 3.57507&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 12.18883&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 4.42356&gt;
+--&gt;  #&lt;-&gt;WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 11.36526&gt;)
+
+|#</span></span></code></pre>
+
+<p><a name='x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h4><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN-TUTORIAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BPN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8634;</a></span>10.3.2 Recurrent Neural Nets</h4>
+
+<p><a name='x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h5><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8634;</a></span>RNN Tutorial</h5>
+
+<p>Hopefully this example from <code>example/sum-sign-fnn.lisp</code> illustrates
+the concepts involved. Make sure you are comfortable with
+<a href="#x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-FNN-TUTORIAL MGL-PAX:SECTION)">FNN Tutorial</a> before reading this.</p>
+
+<p><a name='x-28MGL-BP-3A-3ADIGIT-FNN-2ELISP-20-28MGL-PAX-3AINCLUDE-20-23P-22-2Fhome-2Fmega-2Fown-2Fmgl-2Fexample-2Fsum-sign-rnn-2Elisp-22-20-3AHEADER-NL-20-22-60-60-60commonlisp-22-20-3AFOOTER-NL-20-22-60-60-60-22-29-29'></a></p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">cl:defpackage</span></i> <span class="keyword">:mgl-example-sum-sign-rnn</span>
+  <span class="paren2">(<span class="code"><span class="keyword">:use</span> <span class="keyword">#:common-lisp</span> <span class="keyword">#:mgl</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code">in-package <span class="keyword">:mgl-example-sum-sign-rnn</span></span>)</span>
+
+<span class="comment">;;; There is a single input at each time step...
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defparameter</span></i> <span class="special">*n-inputs*</span> 1</span>)</span>
+<span class="comment">;;; and we want to learn the rule that outputs the sign of the sum of
+</span><span class="comment">;;; inputs so far in the sequence.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defparameter</span></i> <span class="special">*n-outputs*</span> 3</span>)</span>
+
+<span class="comment">;;; Generate a training example that's a sequence of random length
+</span><span class="comment">;;; between 1 and 11. Elements of the sequence are lists of two
+</span><span class="comment">;;; elements:
+</span><span class="comment">;;;
+</span><span class="comment">;;; 1. The input for the network (a single random number).
+</span><span class="comment">;;;
+</span><span class="comment">;;; 2. The sign of the sum of inputs so far encoded as 0, 1, 2 (for
+</span><span class="comment">;;;    negative, zero and positive values). To add a twist, the sum is
+</span><span class="comment">;;;    reset whenever a negative input is seen.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sum-sign-instance <span class="paren2">(<span class="code"></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">length <span class="paren5">(<span class="code">1+ <span class="paren6">(<span class="code">random 10</span>)</span></span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">sum 0</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code"><i><span class="symbol">loop</span></i> for i below length
+          collect <span class="paren4">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren5">(<span class="code"><span class="paren6">(<span class="code">x <span class="paren1">(<span class="code">1- <span class="paren2">(<span class="code">* 2 <span class="paren3">(<span class="code">random 2</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+                    <span class="paren5">(<span class="code">incf sum x</span>)</span>
+                    <span class="paren5">(<span class="code">when <span class="paren6">(<span class="code">&lt; x 0</span>)</span>
+                      <span class="paren6">(<span class="code"><i><span class="symbol">setq</span></i> sum x</span>)</span></span>)</span>
+                    <span class="paren5">(<span class="code">list x <span class="paren6">(<span class="code"><i><span class="symbol">cond</span></i> <span class="paren1">(<span class="code"><span class="paren2">(<span class="code">minusp sum</span>)</span> 0</span>)</span>
+                                  <span class="paren1">(<span class="code"><span class="paren2">(<span class="code">zerop sum</span>)</span> 1</span>)</span>
+                                  <span class="paren1">(<span class="code">t 2</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Build an RNN with a single lstm hidden layer and softmax output.
+</span><span class="comment">;;; For each time step, a SUM-SIGN-FNN will be instantiated.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sum-sign-rnn <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">n-hiddens 1</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">build-rnn <span class="paren3">(<span class="code"></span>)</span>
+    <span class="paren3">(<span class="code">build-fnn <span class="paren4">(<span class="code"><span class="keyword">:class</span> 'sum-sign-fnn</span>)</span>
+      <span class="paren4">(<span class="code">input <span class="paren5">(<span class="code">-&gt;input <span class="keyword">:size</span> 1</span>)</span></span>)</span>
+      <span class="paren4">(<span class="code">h <span class="paren5">(<span class="code">-&gt;lstm <span class="keyword">:name</span> 'h <span class="keyword">:inputs</span> <span class="paren6">(<span class="code">list input</span>)</span> <span class="keyword">:n-cells</span> n-hiddens</span>)</span></span>)</span>
+      <span class="paren4">(<span class="code">prediction <span class="paren5">(<span class="code">-&gt;softmax-xe-loss
+                   <span class="keyword">:x</span> <span class="paren6">(<span class="code">-&gt;activation <span class="keyword">:name</span> 'prediction
+                                    <span class="keyword">:size</span> <span class="special">*n-outputs*</span>
+                                    <span class="keyword">:inputs</span> <span class="paren1">(<span class="code">list h</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; We define this class to be able to specialize how inputs are
+</span><span class="comment">;;; translated by adding a SET-INPUT method later.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defclass</span></i> sum-sign-fnn <span class="paren2">(<span class="code">fnn</span>)</span>
+  <span class="paren2">(<span class="code"></span>)</span></span>)</span>
+
+<span class="comment">;;; We have a batch of instances from MAKE-SUM-SIGN-INSTANCE for the
+</span><span class="comment">;;; RNN. This function is invoked with elements of these instances
+</span><span class="comment">;;; belonging to the same time step (i.e. at the same index) and sets
+</span><span class="comment">;;; the input and target up.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defmethod</span></i> set-input <span class="paren2">(<span class="code">instances <span class="paren3">(<span class="code">fnn sum-sign-fnn</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">input-nodes <span class="paren5">(<span class="code">nodes <span class="paren6">(<span class="code">find-clump 'input fnn</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">setf <span class="paren4">(<span class="code">target <span class="paren5">(<span class="code">find-clump 'prediction fnn</span>)</span></span>)</span>
+          <span class="paren4">(<span class="code"><i><span class="symbol">loop</span></i> for stripe upfrom 0
+                for instance in instances
+                collect
+                <span class="comment">;; Sequences in the batch are not of equal length. The
+</span>                <span class="comment">;; RNN sends a NIL our way if a sequence has run out.
+</span>                <span class="paren5">(<span class="code">when instance
+                  <span class="paren6">(<span class="code">destructuring-bind <span class="paren1">(<span class="code">input target</span>)</span> instance
+                    <span class="paren1">(<span class="code">setf <span class="paren2">(<span class="code">mref input-nodes stripe 0</span>)</span> input</span>)</span>
+                    target</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Train the network by minimizing the loss (cross-entropy here) with
+</span><span class="comment">;;; the Adam optimizer.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> train-sum-sign-rnn <span class="paren2">(<span class="code"></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">rnn <span class="paren5">(<span class="code">make-sum-sign-rnn</span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">setf <span class="paren4">(<span class="code">max-n-stripes rnn</span>)</span> 50</span>)</span>
+    <span class="comment">;; Initialize the weights in the usual sqrt(1 / fan-in) style.
+</span>    <span class="paren3">(<span class="code">map-segments <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">weights</span>)</span>
+                    <span class="paren5">(<span class="code"><i><span class="symbol">let*</span></i> <span class="paren6">(<span class="code"><span class="paren1">(<span class="code">fan-in <span class="paren2">(<span class="code">mat-dimension <span class="paren3">(<span class="code">nodes weights</span>)</span> 0</span>)</span></span>)</span>
+                           <span class="paren1">(<span class="code">limit <span class="paren2">(<span class="code">sqrt <span class="paren3">(<span class="code">/ 6 fan-in</span>)</span></span>)</span></span>)</span></span>)</span>
+                      <span class="paren6">(<span class="code">uniform-random! <span class="paren1">(<span class="code">nodes weights</span>)</span>
+                                       <span class="keyword">:limit</span> <span class="paren1">(<span class="code">* 2 limit</span>)</span></span>)</span>
+                      <span class="paren6">(<span class="code">.+! <span class="paren1">(<span class="code">- limit</span>)</span> <span class="paren1">(<span class="code">nodes weights</span>)</span></span>)</span></span>)</span></span>)</span>
+                  rnn</span>)</span>
+    <span class="paren3">(<span class="code">minimize <span class="paren4">(<span class="code">monitor-optimization-periodically
+               <span class="paren5">(<span class="code">make-instance 'adam-optimizer
+                              <span class="keyword">:learning-rate</span> 0.2
+                              <span class="keyword">:batch-size</span> 100</span>)</span>
+               '<span class="paren5">(<span class="code"><span class="paren6">(<span class="code"><span class="keyword">:fn</span> log-test-error <span class="keyword">:period</span> 30000</span>)</span>
+                 <span class="paren6">(<span class="code"><span class="keyword">:fn</span> reset-optimization-monitors <span class="keyword">:period</span> 3000</span>)</span></span>)</span></span>)</span>
+              <span class="paren4">(<span class="code">make-instance 'bp-learner
+                             <span class="keyword">:bpn</span> rnn
+                             <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-bpn-cost-monitors</span>)</span></span>)</span>
+              <span class="keyword">:dataset</span> <span class="paren4">(<span class="code">make-sampler 30000</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Return a sampler object that produces MAX-N-SAMPLES number of
+</span><span class="comment">;;; random inputs.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sampler <span class="paren2">(<span class="code">max-n-samples</span>)</span>
+  <span class="paren2">(<span class="code">make-instance 'function-sampler <span class="keyword">:max-n-samples</span> max-n-samples
+                 <span class="keyword">:generator</span> #'make-sum-sign-instance</span>)</span></span>)</span>
+
+<span class="comment">;;; Log the test error. Also, describe the optimizer and the bpn at
+</span><span class="comment">;;; the beginning of training. Called periodically during training
+</span><span class="comment">;;; (see above).
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> log-test-error <span class="paren2">(<span class="code">optimizer learner</span>)</span>
+  <span class="paren2">(<span class="code">when <span class="paren3">(<span class="code">zerop <span class="paren4">(<span class="code">n-instances optimizer</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">describe optimizer</span>)</span>
+    <span class="paren3">(<span class="code">describe <span class="paren4">(<span class="code">bpn learner</span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">log-padded <span class="paren3">(<span class="code">monitor-bpn-results <span class="paren4">(<span class="code">make-sampler 1000</span>)</span> <span class="paren4">(<span class="code">bpn learner</span>)</span>
+                                   <span class="paren4">(<span class="code">make-bpn-cost-monitors <span class="keyword">:dataset</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">;;; Return a list of monitor objects (yes, only one here) that will
+</span><span class="comment">;;; measure the cost and accumulate it in a counter.
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-bpn-cost-monitors <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">dataset <span class="string">"train"</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">list <span class="paren3">(<span class="code">make-instance 'monitor
+                       <span class="keyword">:measurer</span> <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">instances bpn</span>)</span>
+                                   <span class="paren5">(<span class="code">declare <span class="paren6">(<span class="code">ignore instances</span>)</span></span>)</span>
+                                   <span class="paren5">(<span class="code">cost bpn</span>)</span></span>)</span>
+                       <span class="keyword">:counter</span> <span class="paren4">(<span class="code">make-instance 'basic-counter
+                                               <span class="keyword">:attributes</span> `<span class="paren5">(<span class="code"><span class="keyword">:dataset</span> ,dataset
+                                                             <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="comment">#|
+
+;;; Transcript follows:
+(train-sum-sign-rnn)
+.. 2015-01-19 22:27:01: training at n-instances: 0
+.. 2015-01-19 22:27:01: train cost: 0.000e+0 (0)
+.. #&lt;ADAM-OPTIMIZER {101F9578A3}&gt;
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #&lt;SEGMENT-SET
+..                    (#&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 0.50959&gt;
+..                     #&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.48846&gt;
+..                     #&lt;-&gt;WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 2.07815&gt;
+..                     #&lt;-&gt;WEIGHT (H #2#) :SIZE 1 1/1 :norm 2.31284&gt;
+..                     #&lt;-&gt;WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 0.67760&gt;
+..                     #&lt;-&gt;WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.11992&gt;
+..                     #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE
+..                       3 1/1 :norm 2.43519&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE
+..                       3 1/1 :norm 1.64322&gt;
+..                     #&lt;-&gt;WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 1.23665&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 1.24288&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.43173&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.03770&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.28466&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.43322&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.11231&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.22344&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.44019&gt;)
+..                    {101F9580F3}&gt;
+..    LEARNING-RATE = 2.00000e-1
+..    MOMENTUM = 0.00000e+0
+..    MOMENTUM-TYPE = :NORMAL
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  
+..  ADAM-OPTIMIZER description:
+..    MEAN-UPDATE-RATE = 1.00000e-1
+..    VARIANCE-UPDATE-RATE = 1.00000e-3
+..    VARIANCE-ADJUSTMENT = 1.00000e-8
+..  #&lt;RNN {101F915923}&gt;
+..   BPN description:
+..     CLUMPS = #(#&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F915F63}&gt;
+..                #&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F938893}&gt;)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   
+..   RNN description:
+..     MAX-LAG = 1
+..   2015-01-19 22:27:01: pred. cost: 1.088d+0 (5472.00)
+.. 2015-01-19 22:27:01: training at n-instances: 3000
+.. 2015-01-19 22:27:01: train cost: 4.186d-1 (16481.00)
+.. 2015-01-19 22:27:02: training at n-instances: 6000
+.. 2015-01-19 22:27:02: train cost: 5.619d-2 (16505.00)
+.. 2015-01-19 22:27:02: training at n-instances: 9000
+.. 2015-01-19 22:27:02: train cost: 2.512d-2 (16643.00)
+.. 2015-01-19 22:27:03: training at n-instances: 12000
+.. 2015-01-19 22:27:03: train cost: 1.585d-2 (16946.00)
+.. 2015-01-19 22:27:03: training at n-instances: 15000
+.. 2015-01-19 22:27:03: train cost: 1.135d-2 (16240.00)
+.. 2015-01-19 22:27:04: training at n-instances: 18000
+.. 2015-01-19 22:27:04: train cost: 8.704d-3 (16622.00)
+.. 2015-01-19 22:27:04: training at n-instances: 21000
+.. 2015-01-19 22:27:04: train cost: 6.912d-3 (16690.00)
+.. 2015-01-19 22:27:05: training at n-instances: 24000
+.. 2015-01-19 22:27:05: train cost: 5.627d-3 (16528.00)
+.. 2015-01-19 22:27:05: training at n-instances: 27000
+.. 2015-01-19 22:27:05: train cost: 4.735d-3 (16427.00)
+.. 2015-01-19 22:27:06: training at n-instances: 30000
+.. 2015-01-19 22:27:06: train cost: 4.006d-3 (16453.00)
+.. 2015-01-19 22:27:06: pred. cost: 3.698d-3 (5347.00)
+..
+==&gt; (#&lt;-&gt;WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 1.57197&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.98579&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.25004&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.06433&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.45586&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.14358&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.68755&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.38377&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 3.22046&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 3.07891&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 5.64394&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.79663&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.42101&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.62612&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 4.56776&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 1.44047&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.70072&gt;)
+
+|#</span></span></code></pre>
+
+<p><a name='x-28MGL-BP-3ARNN-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>RNN</strong> <em>BPN</em></p>
+
+<p>A recurrent neural net (as opposed to a
+feed-forward one. It is typically built with <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a> that's no
+more than a shallow convenience macro.</p>
+
+<p>An <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> takes instances as inputs that are sequences of variable
+length. At each time step, the next unprocessed elements of these
+sequences are set as input until all input sequences in the batch
+run out. To be able to perform backpropagation, all intermediate
+LUMPs must be kept around, so the recursive connections are
+transformed out by
+<a href="http://en.wikipedia.org/wiki/Backpropagation_through_time" >unfolding</a>
+the network. Just how many lumps this means depends on the length of
+the sequences.</p>
+
+<p>When an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is created, <code>MAX-LAG + 1</code> BPNs are instantiated so
+that all weights are present and one can start training it.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>UNFOLDER</strong> <em>RNN</em> <em>(:UNFOLDER)</em></p>
+
+<p>The <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is function of no arguments
+that builds and returns a <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>. The unfolder is allowed to create
+networks with arbitrary topology even different ones for different
+<a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a>s with the help of <a href="#x-28MGL-BP-3ALAG-20FUNCTION-29" title="(MGL-BP:LAG FUNCTION)"><code>LAG</code></a>, or nested RNNs. Weights of
+the same name are shared between the folds. That is, if a -&gt;WEIGHT
+lump were to be created and a weight lump of the same name already
+exists, then the existing lump will be added to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> created by
+<a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>MAX-LAG</strong> <em>RNN</em> <em>(:MAX-LAG = 1)</em></p>
+
+<p>The networks built by <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> may contain new
+weights up to time step <a href="#x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"><code>MAX-LAG</code></a>. Beyond that point, all weight
+lumps must be reappearances of weight lumps with the same name at
+previous time steps. Most recurrent networks reference only the
+state of lumps at the previous time step (with the function <a href="#x-28MGL-BP-3ALAG-20FUNCTION-29" title="(MGL-BP:LAG FUNCTION)"><code>LAG</code></a>),
+hence the default of 1. But it is possible to have connections to
+arbitrary time steps. The maximum connection lag must be specified
+when creating the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a></p>
+
+<ul>
+<li><p>[macro] <strong>BUILD-RNN</strong> <em>(&amp;KEY RNN (CLASS ''RNN) NAME INITARGS (MAX-N-STRIPES 1) (MAX-LAG 1)) &amp;BODY BODY</em></p>
+
+<p>Create an <code>RNN</code> with <code>MAX-N-STRIPES</code> and <code>MAX-LAG</code> whose <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> is <code>BODY</code>
+wrapped in a lambda. Bind symbol given as the <code>RNN</code> argument to the
+<code>RNN</code> object so that <code>BODY</code> can see it.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ALAG-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>LAG</strong> <em>NAME &amp;KEY (LAG 1) RNN PATH</em></p>
+
+<p>In <code>RNN</code> or if it's <code>NIL</code> the <code>RNN</code> being extended with another
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> (called <em>unfolding</em>), look up the <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> with <code>NAME</code> in the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>
+that's <code>LAG</code> number of time steps before the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> being added. This
+function can only be called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <code>RNN</code> which is what
+happens behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>.</p>
+
+<p>FIXDOC: <code>PATH</code></p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ATIME-STEP-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>TIME-STEP</strong> </p>
+
+<p>Return the time step corresponding to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> with which an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is
+being extended. This is 0 when the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is being unfolded for the
+first time. This function can only be called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>
+which is what happens behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ASET-INPUT-20-28METHOD-20NIL-20-28T-20MGL-BP-3ARNN-29-29-29'></a></p>
+
+<ul>
+<li><p>[method] <strong>SET-INPUT</strong> <em>INSTANCES (RNN RNN)</em></p>
+
+<p>RNNs operate on batches of instances just like FNNs. But the
+instances here are like datasets: sequences or samplers and they are
+turned into sequences of batches of instances with
+<a href="#x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29" title="(MGL-DATASET:MAP-DATASETS FUNCTION)"><code>MAP-DATASETS</code></a> <code>:IMPUTE</code> <code>NIL</code>. The batch of instances at index 2 is
+clamped onto the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> at time step 2 with <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a>.</p>
+
+<p>When the input sequences in the batch are not of the same length,
+already exhausted sequences will produce <code>NIL</code> (due to <code>:IMPUTE</code> <code>NIL</code>)
+above. When such a <code>NIL</code> is clamped with <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a> on a <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> of the
+<code>RNN</code>, <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a> must set the <code>IMPORTANCE</code> of the -&gt;ERROR lumps to 0
+else training would operate on the noise left there by previous
+invocations.</p></li>
+</ul>
 
 <p><a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>11 Boltzmann Machines</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8634;</a></span>11 Boltzmann Machines</h2>
 
 <p><a name='x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8634;</a></span>12 Gaussian Processes</h2>
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-BM MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29" title="(MGL-NLP:@MGL-NLP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8634;</a></span>12 Gaussian Processes</h2>
+
+<p><a name='x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h2><span class="navigation"> <a href="#x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-GP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29" title="(MGL-NLP:@MGL-NLP MGL-PAX:SECTION)">&#8634;</a></span>13 Natural Language Processing</h2>
+
+<h6>[in package MGL-NLP]</h6>
+
+<p>This in nothing more then a couple of utilities for now which may
+grow into a more serious toolset for NLP eventually.</p>
+
+<p><a name='x-28MGL-NLP-3AMAKE-N-GRAM-MAPPEE-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAKE-N-GRAM-MAPPEE</strong> <em>FUNCTION N</em></p>
+
+<p>Make a function of a single argument that's suitable as the
+function argument to a mapper function. It calls <code>FUNCTION</code> with every
+<code>N</code> element.</p>
+
+<pre><code>(map nil (make-n-gram-mappee #'print 3) '(a b c d e))
+..
+.. (A B C) 
+.. (B C D) 
+.. (C D E) 
+</code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-NLP-3ABLEU-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>BLEU</strong> <em>CORPUS &amp;KEY CANDIDATE-KEY REFERENCE-KEY (N 4)</em></p>
+
+<p>Compute the <a href="http://en.wikipedia.org/wiki/BLEU" >BLEU score</a> for
+bilingual <code>CORPUS</code>. <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> measures how good a translation is compared
+to human reference translations.</p>
+
+<p><code>CORPUS</code> must be a sequence. <code>CANDIDATE-KEY</code> is function called with
+elements of <code>CORPUS</code> and returns a sequence of words (i.e. a tokenized
+translation). <code>REFERENCE-KEY</code> is similar but it returns the reference
+translation. Words are compared with <code>EQUAL</code>, and may be any kind of
+object (not necessarily strings).</p>
+
+<p>Currently there is no support for multiple reference translations. <code>N</code>
+determines the largest n-grams to consider.</p>
+
+<p>The first return value is the <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> score (between 0 and 1, not as a
+percentage), the second value is the brevity penalty and the third
+is a list n-gram precisions (also between 0 and 1 or <code>NIL</code>), one for
+each element in [1..N][].</p>
+
+<p>This is basically a reimplementation of
+<a href="https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl" >multi-bleu.perl</a>.</p>
+
+<pre><code>(bleu '(((1 2 3 4) (1 2 3 4))
+        ((a b) (1 2)))
+      :candidate-key #'first
+      :reference-key #'second)
+=> 0.8408964
+=> 1.0
+=> (;; 1-gram precision: 4/6
+    2/3
+    ;; 2-gram precision: 3/4
+    3/4
+    ;; 3-gram precision: 2/2
+    1
+    ;; 4-gram precision: 1/1
+    1)
+</code></pre></li>
+</ul>
 <hr/><h6>[generated by
           <a href="https://github.com/melisgl/mgl-pax">MGL-PAX</a>]
           </h6>

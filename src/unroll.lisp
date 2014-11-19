@@ -47,8 +47,8 @@
   from which direction the activation crosses the cloud."
   (append (cloud-weight-lump-name cloud-name transposep) '(:linear)))
 
-(defgeneric chunk->bpn-definition (chunk sym name size activation-symbol)
-  (:documentation "Return a bpn definition form (that is a list of
+(defgeneric chunk->fnn-definition (chunk sym name size activation-symbol)
+  (:documentation "Return a fnn definition form (that is a list of
   lump definition forms) for CHUNK that takes a single activation
   parameter given by the symbol ACTIVATION-SYMBOL with NAME and SIZE.
   Only called for non-conditioning chunks. Second value is a list of
@@ -86,7 +86,7 @@
 (defun find-lumpy-by-name (name lumpies)
   (find name lumpies :key #'lumpy-name :test #'equal))
 
-(defgeneric incoming->bpn-defintion (from-lumpy to-lumpy cloud transposep)
+(defgeneric incoming->fnn-defintion (from-lumpy to-lumpy cloud transposep)
   (:documentation "Return a list of four elemenets. The first is a
   list of lump definitions that represent the flow from FROM-LUMPY
   through CLOUD. The chunk of FROM-LUMPY may be either of the end
@@ -106,7 +106,7 @@
                 :name ',weight-name
                 :size ,n-weights))
               (,linear-symbol
-               (->activation
+               (->mm
                 :name ',linear-name
                 :size ,size
                 :weights ,weight-symbol
@@ -143,7 +143,7 @@
               (,weight-a-symbol (->weight
                                  :name ',weight-a-name
                                  :size ,(mat-size (weights cloud-a))))
-              (,shared-symbol (->activation
+              (,shared-symbol (->mm
                                :name ',shared-name
                                :size ,(rank cloud)
                                :weights ,(if transposep
@@ -151,7 +151,7 @@
                                              weight-b-symbol)
                                :x ,(lumpy-symbol from-lumpy)
                                :transpose-weights-p ,transposep))
-              (,linear-symbol (->activation
+              (,linear-symbol (->mm
                                :name ',linear-name
                                :size ,(size (lumpy-chunk to-lumpy))
                                :weights ,(if transposep
@@ -165,9 +165,9 @@
                :weight-a-name ,weight-a-name))
             linear-symbol))))
 
-(defun incoming-list->bpn-definition (to-lumpy incomings)
+(defun incoming-list->fnn-definition (to-lumpy incomings)
   (let ((x (loop for incoming in incomings
-                 collect (incoming->bpn-defintion
+                 collect (incoming->fnn-defintion
                           (incoming-from-lumpy incoming)
                           to-lumpy
                           (incoming-cloud incoming)
@@ -177,7 +177,7 @@
             (mapcan #'third x)
             (mapcar #'fourth x))))
 
-(defun lumpies->bpn-definition (lumpies)
+(defun lumpies->fnn-definition (lumpies)
   (let ((lumpies (stable-sort lumpies #'> :key #'lumpy-depth))
         (defs '())
         (clamps '())
@@ -205,7 +205,7 @@
               (t
                (multiple-value-bind (cloud-defs cloud-clamps cloud-inits
                                      linear-symbols)
-                   (incoming-list->bpn-definition lumpy incomings)
+                   (incoming-list->fnn-definition lumpy incomings)
                  (push-all cloud-defs defs)
                  (push-all cloud-clamps clamps)
                  (push-all cloud-inits inits)
@@ -216,7 +216,7 @@
                  (push `(:from-lump ,name :to-lump ,activation-name)
                        clamps))
                (multiple-value-bind (chunk-defs chunk-clamps chunk-inits)
-                   (chunk->bpn-definition chunk (lumpy-symbol lumpy)
+                   (chunk->fnn-definition chunk (lumpy-symbol lumpy)
                                           name size activation-symbol)
                  (push-all chunk-defs defs)
                  (push-all chunk-clamps clamps)
@@ -259,7 +259,7 @@
 
   Return backprop network lump definition forms, as the second value
   `inits': initialization specifications suitable for
-  INITIALIZE-BPN-FROM-BM.
+  INITIALIZE-FNN-FROM-BM.
 
   If there is no corresponding chunk in the layer below or there is no
   rbm below then the chunk is translated into an INPUT lump. Desired
@@ -302,7 +302,7 @@
                                                         hidden-chunk)
                                     :to (ensure-lumpy (- (1+ depth))
                                                       visible-chunk)))))))
-      (lumpies->bpn-definition lumpies))))
+      (lumpies->fnn-definition lumpies))))
 
 (defun unroll-dbm (dbm &key (chunks (chunks dbm)) (map chunks)
                    (reconstruction ()))
@@ -358,74 +358,79 @@
                                              :reconstruction))
                      :to (ensure-lumpy (- lower-depth) lower-chunk
                                        :reconstruction)))))))
-      (lumpies->bpn-definition lumpies))))
+      (lumpies->fnn-definition lumpies))))
 
-(defgeneric initialize-from-cloud (bpn cloud args)
-  (:method (bpn (cloud full-cloud) args)
+(defgeneric initialize-from-cloud (fnn cloud args)
+  (:method (fnn (cloud full-cloud) args)
     (destructuring-bind (&key weight-name) args
-      (let* ((lump (find-lump weight-name bpn :errorp t))
+      (let* ((lump (find-clump weight-name fnn))
              (weights (weights cloud))
              (nodes (nodes lump)))
         (unless (= (mat-size weights) (mat-size nodes))
           (error "Cannot initialize lump ~S from cloud ~S: size mismatch"
                  lump cloud))
         (copy! (weights cloud) nodes))))
-  (:method (bpn (cloud factored-cloud) args)
+  (:method (fnn (cloud factored-cloud) args)
     (destructuring-bind (&key weight-b-name weight-a-name) args
-      (initialize-from-cloud bpn (cloud-b cloud)
+      (initialize-from-cloud fnn (cloud-b cloud)
                              (list :weight-name weight-b-name))
-      (initialize-from-cloud bpn (cloud-a cloud)
+      (initialize-from-cloud fnn (cloud-a cloud)
                              (list :weight-name weight-a-name)))))
 
-(defun initialize-bpn-from-bm (bpn bm inits)
-  "Initialize BPN from the weights of BM according to cloud INITS that
+(defun initialize-fnn-from-bm (fnn bm inits)
+  "Initialize FNN from the weights of BM according to cloud INITS that
   was returned by UNROLL-DBN or UNROLL-DBM."
   (dolist (init inits)
     (multiple-value-bind (known unknown)
         (split-plist init '(:cloud-name))
       (destructuring-bind (&key cloud-name) known
         (let ((cloud (find-cloud cloud-name bm :errorp t)))
-          (initialize-from-cloud bpn cloud unknown))))))
+          (initialize-from-cloud fnn cloud unknown))))))
 
 
-;;;; BPN setup
+;;;; FNN setup
 
-(defun set-dropout-and-rescale-activation-weights (lump dropout bpn)
+(defun set-dropout-and-rescale-activation-weights (lump dropout fnn)
   "Set the dropout of LUMP to DROPOUT. Find the activation lump to
   which LUMP is fed and rescale its weights to compensate. There must
   be exactly on such activation lump or this function will fail."
   (assert (null (dropout lump)))
   (setf (slot-value lump 'dropout) dropout)
   (let ((scale (/ (- (flt 1) dropout)))
-        (activation-lumps
-          (loop for lump-1 across (lumps bpn)
-                when (and (typep lump-1 '->activation)
-                          (eq lump (mgl-bp::x lump-1))
-                          (typep (mgl-bp::weights lump-1) '->weight))
-                  collect lump-1)))
-    (assert (/= 0 (length activation-lumps)) ()
-            "Can't rescale activation weights for LUMP there is none.")
-    (assert (= 1 (length activation-lumps)) ()
-            "Can't rescale activation weights for LUMP there are too many.")
-    (let ((lump-1 (first activation-lumps)))
+        (mm-lumps (find-mm-lumps-from lump fnn)))
+    (assert (/= 0 (length mm-lumps)) ()
+            "Can't rescale activation weights for LUMP: there is none.")
+    (assert (= 1 (length mm-lumps)) ()
+            "Can't rescale activation weights for LUMP: there are too many.")
+    (let ((lump-1 (first mm-lumps)))
       (scal! scale (nodes (mgl-bp::weights lump-1))))))
+
+(defun find-mm-lumps-from (lump bpn)
+  (loop for clump across (clumps bpn)
+        nconc (cond ((and (typep clump '->mm)
+                          (eq lump (mgl-bp::x clump))
+                          (typep (mgl-bp::weights clump) '->weight))
+                     (list clump))
+                    ;; find nested
+                    ((typep clump 'bpn)
+                     (find-mm-lumps-from lump clump)))))
 
 
-;;;; SET-INPUT support for BPN converted from a DBM with MAP lumps
+;;;; SET-INPUT support for FNN converted from a DBM with MAP lumps
 
-(defun collect-map-chunks-and-lumps (bpn dbm)
+(defun collect-map-chunks-and-lumps (fnn dbm)
   "Return a list of chunk, lump sublists. Elements are MAP lumps in
-  BPN and the corresponding chunk in DBM."
+  FNN and the corresponding chunk in DBM."
   (let ((chunks-and-lumps ()))
     (dolist (chunk (set-difference (hidden-chunks dbm)
                                    (conditioning-chunks dbm)))
       (let* ((lump-name (chunk-lump-name (name chunk) :map))
-             (lump (find-lump lump-name bpn)))
+             (lump (find-clump lump-name fnn :errorp nil)))
         (when lump
           (push (list chunk lump) chunks-and-lumps))))
     chunks-and-lumps))
 
-(defclass bpn-clamping-cache ()
+(defclass fnn-clamping-cache ()
   ((clamping-cache
     :initform (make-hash-table)
     :reader clamping-cache)
@@ -450,12 +455,12 @@
   table. Inherit from this and set input will clamp the arrays to the
   respective lumps for the right sample."))
 
-(defun populate-map-cache (bpn dbm samples &key (key (populate-key bpn))
+(defun populate-map-cache (fnn dbm samples &key (key (populate-key fnn))
                            (convert-to-dbm-sample-fn
-                            (populate-convert-to-dbm-sample-fn bpn))
+                            (populate-convert-to-dbm-sample-fn fnn))
                            (if-exists :skip)
-                           (periodic-fn (populate-periodic-fn bpn)))
-  "Populate the CLAMPING-CACHE of the MAP lumps of BPN unrolled from
+                           (periodic-fn (populate-periodic-fn fnn)))
+  "Populate the CLAMPING-CACHE of the MAP lumps of FNN unrolled from
   DBM. The values for the MAP lumps are taken from mean field of the
   correspending chunk of the DBM. What happens when the cache already
   has an entry for a sample is determined by IF-EXISTS: if :SKIP, the
@@ -465,8 +470,8 @@
   error is signalled."
   (let ((sampler (make-sequence-sampler samples
                                         :max-n-samples (length samples)))
-        (cache (clamping-cache bpn))
-        (map-chunks-and-lumps (collect-map-chunks-and-lumps bpn dbm)))
+        (cache (clamping-cache fnn))
+        (map-chunks-and-lumps (collect-map-chunks-and-lumps fnn dbm)))
     (do-batches-for-model (samples (sampler dbm))
       (when periodic-fn
         (call-periodic-fn (hash-table-count cache) periodic-fn
@@ -506,9 +511,9 @@
       (call-periodic-fn (hash-table-count cache) periodic-fn
                         (hash-table-count cache)))))
 
-(defun clamp-cached-entry-on-bpn (bpn stripe sample &key
-                                  (key (populate-key bpn)))
-  (let ((cache (clamping-cache bpn))
+(defun clamp-cached-entry-on-fnn (fnn stripe sample &key
+                                  (key (populate-key fnn)))
+  (let ((cache (clamping-cache fnn))
         (k (funcall key sample)))
     (unless (nth-value 1 (gethash k cache))
       (error "No clamping cache entry for ~S" k))
@@ -520,10 +525,10 @@
           (with-shape-and-displacement (nodes n lump-start)
             (copy! map-nodes nodes)))))))
 
-(defmethod set-input :before (samples (bpn bpn-clamping-cache))
-  (when (populate-map-cache-lazily-from-dbm bpn)
-    (populate-map-cache bpn (populate-map-cache-lazily-from-dbm bpn) samples
+(defmethod set-input :before (samples (fnn fnn-clamping-cache))
+  (when (populate-map-cache-lazily-from-dbm fnn)
+    (populate-map-cache fnn (populate-map-cache-lazily-from-dbm fnn) samples
                         :if-exists :skip))
   (loop for stripe upfrom 0
         for sample in samples
-        do (clamp-cached-entry-on-bpn bpn stripe sample)))
+        do (clamp-cached-entry-on-fnn fnn stripe sample)))

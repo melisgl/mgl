@@ -1,0 +1,4289 @@
+2015-01-19 23:41:44: TRAIN-MNIST/1 :DROPOUTP NIL
+2015-01-19 23:41:45: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.1
+2015-01-19 23:41:45: init: #<FULL-CLOUD (F1 F2) :NORM 4.99276d+0> 0.1
+2015-01-19 23:41:45: init: #<FULL-CLOUD (F2 F3) :NORM 1.00118d+1> 0.1
+2015-01-19 23:41:45: Starting to train level 0 RBM in DBN.
+2015-01-19 23:41:45: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {10042AB183}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C0 INPUTS) - (C1 F1)>
+  MONITORS                   = (#<MONITOR train train+ rbm INPUTS rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {10042AA313}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {1002E16063}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {101C237873}>
+
+2015-01-19 23:41:45: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {10042AA313}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+                    {10042AEA93}>
+                  {10042AD033}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                    {10042ADF03}>
+                  {10042ACF63}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                    {10042AD103}>
+                  {10042ACE93}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10042AD033}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25548d+1>)
+                  {10042AEA93}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10042ACF63}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {10042ADF03}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10042ACE93}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {10042AD103}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-19 23:41:45: test at n-instances: 0
+2015-01-19 23:41:47: pred. test+ dbn l0, rbm INPUTS rmse: 5.162d-1 (7840000)
+2015-01-19 23:41:47: ---------------------------------------------------
+2015-01-19 23:42:04: training at n-instances: 60000
+2015-01-19 23:42:04: train train+ rbm INPUTS rmse: 1.381d-1 (47040000)
+2015-01-19 23:42:04: test at n-instances: 60000
+2015-01-19 23:42:05: pred. test+ dbn l0, rbm INPUTS rmse: 8.182d-2 (7840000)
+2015-01-19 23:42:05: ---------------------------------------------------
+2015-01-19 23:42:22: training at n-instances: 120000
+2015-01-19 23:42:22: train train+ rbm INPUTS rmse: 1.083d-1 (47040000)
+2015-01-19 23:42:22: test at n-instances: 120000
+2015-01-19 23:42:23: pred. test+ dbn l0, rbm INPUTS rmse: 6.916d-2 (7840000)
+2015-01-19 23:42:23: ---------------------------------------------------
+2015-01-19 23:42:23: Starting to train level 1 RBM in DBN.
+2015-01-19 23:42:24: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {10406B1873}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C1 F1) - (C2 F2)>
+  MONITORS                   = (#<MONITOR train train+ rbm F1 rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {10406B0CA3}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {1002E06133}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {101C237873}>
+
+2015-01-19 23:42:24: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {10406B0CA3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+                    {10406B3083}>
+                  {10406B25D3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                    {10406B2B93}>
+                  {10406B2503}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                    {10406B26A3}>
+                  {10406B2433}>)
+  SEGMENTS = (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10406B25D3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.98544d+1>)
+                  {10406B3083}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10406B2503}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {10406B2B93}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10406B2433}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {10406B26A3}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-19 23:42:24: test at n-instances: 0
+2015-01-19 23:42:26: pred. test+ dbn l0, rbm INPUTS rmse: 3.227d-1 (7840000)
+2015-01-19 23:42:26: pred. test+ dbn l1, rbm F1     rmse: 4.294d-1 (5000000)
+2015-01-19 23:42:26: ---------------------------------------------------
+2015-01-19 23:42:41: training at n-instances: 60000
+2015-01-19 23:42:41: train train+ rbm F1 rmse: 1.803d-1 (30000000)
+2015-01-19 23:42:41: test at n-instances: 60000
+2015-01-19 23:42:44: pred. test+ dbn l0, rbm INPUTS rmse: 9.964d-2 (7840000)
+2015-01-19 23:42:44: pred. test+ dbn l1, rbm F1     rmse: 9.594d-2 (5000000)
+2015-01-19 23:42:44: ---------------------------------------------------
+2015-01-19 23:43:01: training at n-instances: 120000
+2015-01-19 23:43:01: train train+ rbm F1 rmse: 1.454d-1 (30000000)
+2015-01-19 23:43:01: test at n-instances: 120000
+2015-01-19 23:43:03: pred. test+ dbn l0, rbm INPUTS rmse: 9.643d-2 (7840000)
+2015-01-19 23:43:03: pred. test+ dbn l1, rbm F1     rmse: 8.374d-2 (5000000)
+2015-01-19 23:43:03: ---------------------------------------------------
+2015-01-19 23:43:03: Starting to train level 2 RBM in DBN.
+2015-01-19 23:43:03: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {101A45CE73}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C2 F2) - (C3 F3)>
+  MONITORS                   = (#<MONITOR train train+ rbm F2 rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {101A45C2A3}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {101F06A9A3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C2 1(100/100)>
+                    #<SIGMOID-CHUNK F2 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C3 1(1/100)>
+                   #<SIGMOID-CHUNK F3 2000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {101C237873}>
+
+2015-01-19 23:43:03: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {101A45C2A3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+                    {101A45E073}>
+                  {101A45D5C3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                    {101A45DB83}>
+                  {101A45D4F3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                    {101A45D693}>
+                  {101A45D423}>)
+  SEGMENTS = (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>
+              #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {101A45D5C3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 F3) :NORM 1.00091d+2>)
+                  {101A45E073}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {101A45D4F3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                  {101A45DB83}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {101A45D423}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                  {101A45D693}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-19 23:43:03: test at n-instances: 0
+2015-01-19 23:43:09: pred. test+ dbn l0, rbm INPUTS rmse: 3.018d-1 (7840000)
+2015-01-19 23:43:09: pred. test+ dbn l1, rbm F1     rmse: 4.220d-1 (5000000)
+2015-01-19 23:43:09: pred. test+ dbn l2, rbm F2     rmse: 5.255d-1 (5000000)
+2015-01-19 23:43:09: ---------------------------------------------------
+2015-01-19 23:43:56: training at n-instances: 60000
+2015-01-19 23:43:56: train train+ rbm F2 rmse: 1.474d-1 (30000000)
+2015-01-19 23:43:56: test at n-instances: 60000
+2015-01-19 23:44:01: pred. test+ dbn l0, rbm INPUTS rmse: 1.121d-1 (7840000)
+2015-01-19 23:44:01: pred. test+ dbn l1, rbm F1     rmse: 1.118d-1 (5000000)
+2015-01-19 23:44:01: pred. test+ dbn l2, rbm F2     rmse: 6.005d-2 (5000000)
+2015-01-19 23:44:01: ---------------------------------------------------
+2015-01-19 23:44:48: training at n-instances: 120000
+2015-01-19 23:44:48: train train+ rbm F2 rmse: 1.230d-1 (30000000)
+2015-01-19 23:44:48: test at n-instances: 120000
+2015-01-19 23:44:53: pred. test+ dbn l0, rbm INPUTS rmse: 1.112d-1 (7840000)
+2015-01-19 23:44:53: pred. test+ dbn l1, rbm F1     rmse: 1.104d-1 (5000000)
+2015-01-19 23:44:53: pred. test+ dbn l2, rbm F2     rmse: 5.566d-2 (5000000)
+2015-01-19 23:44:53: ---------------------------------------------------
+2015-01-19 23:44:53: bpn inits:
+((:CLOUD-NAME (C2 F3) :WEIGHT-NAME (:CLOUD (C2 F3)))
+ (:CLOUD-NAME (F2 F3) :WEIGHT-NAME (:CLOUD (F2 F3)))
+ (:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1))))
+2015-01-19 23:44:53: bpn def:
+(BUILD-FNN (:CLASS 'MNIST-BPN :MAX-N-STRIPES 1000 :INITARGS 'NIL)
+  (#:G56292 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G56291 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G56296 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G56297
+   (->MM :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS #:G56296 :X
+         #:G56292 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56298 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G56299
+   (->MM :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G56298 :X
+         #:G56291 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56295 (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS (LIST #:G56297 #:G56299)))
+  (#:G56290 (->SIGMOID :NAME '(:CHUNK F1) :X #:G56295))
+  (#:G56289 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G56302 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 250000))
+  (#:G56303
+   (->MM :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G56302 :X
+         #:G56290 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56304 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 500))
+  (#:G56305
+   (->MM :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G56304 :X
+         #:G56289 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56301 (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G56303 #:G56305)))
+  (#:G56288 (->SIGMOID :NAME '(:CHUNK F2) :X #:G56301))
+  (#:G56286 (->CONSTANT :NAME '(:CHUNK C2) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G56308 (->WEIGHT :NAME '(:CLOUD (F2 F3)) :SIZE 1000000))
+  (#:G56309
+   (->MM :NAME '(:CLOUD (F2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G56308 :X
+         #:G56288 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56310 (->WEIGHT :NAME '(:CLOUD (C2 F3)) :SIZE 2000))
+  (#:G56311
+   (->MM :NAME '(:CLOUD (C2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G56310 :X
+         #:G56286 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G56307 (->+ :NAME '(:CHUNK F3 :ACTIVATION) :ARGS (LIST #:G56309 #:G56311)))
+  (#:G56287 (->SIGMOID :NAME '(:CHUNK F3) :X #:G56307)))
+2015-01-19 23:44:53: Starting to train the softmax layer of BPN
+2015-01-19 23:44:53: Describing gradient source:
+#<BP-LEARNER {101CCBC4F3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1/1000 :CLUMPS 24 {101CC70603}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1/1000 :CLUMPS 24 {101CC70603}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {101CC70603}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE 784 1/1000 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1/1000 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 99.73239>
+             #<->MM (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+               500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+               500 1/1 :norm 28.84090>
+             #<->MM (:CLOUD #3# . #2#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+               500 1/1000 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F1) :SIZE 500 1/1000 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1/1000 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+               250000 1/1 :norm 72.64904>
+             #<->MM (:CLOUD #5# . #2#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+               500 1/1 :norm 4.84415>
+             #<->MM (:CLOUD #6# . #2#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->+ (:CHUNK F2 . #4#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F2) :SIZE 500 1/1000 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C2) :SIZE 1 1/1000 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+               1000000 1/1 :norm 117.50261>
+             #<->MM (:CLOUD #7# . #2#) :SIZE 2000 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+               2000 1/1 :norm 6.25000>
+             #<->MM (:CLOUD #8# . #2#) :SIZE 2000 1/1000 :norm 0.00000>
+             #<->+ (:CHUNK F3 . #4#) :SIZE 2000 1/1000 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F3) :SIZE 2000 1/1000 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/1000
+               :CLUMPS 4 {101CCA2F13}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/1000 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 1000
+2015-01-19 23:44:53: Describing optimizer:
+#<MNIST-CG-BP-OPTIMIZER {101CCBC293}>
+CG-OPTIMIZER description:
+  N-INSTANCES = 0
+  BATCH-SIZE = 1000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.00000>
+                   #<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                     20000 1/1 :norm 0.00000>)
+                  {101CCBE913}>
+2015-01-19 23:44:53: test at n-instances: 0
+2015-01-19 23:44:56: pred. test bpn PREDICTION acc.: 9.80% (10000)
+2015-01-19 23:44:56: pred. test bpn PREDICTION xent: 2.303d-3 (10000)
+2015-01-19 23:44:56: ---------------------------------------------------
+2015-01-19 23:45:02: n-instances: 0
+2015-01-19 23:45:02: best-f: 5.65386d+2 (1000), n-evaluations: 14
+2015-01-19 23:45:02: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:06: n-instances: 1000
+2015-01-19 23:45:06: best-f: 4.60304d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:06: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:11: n-instances: 2000
+2015-01-19 23:45:11: best-f: 3.98445d+2 (1000), n-evaluations: 11
+2015-01-19 23:45:11: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:15: n-instances: 3000
+2015-01-19 23:45:15: best-f: 3.56920d+2 (1000), n-evaluations: 9
+2015-01-19 23:45:15: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:19: n-instances: 4000
+2015-01-19 23:45:19: best-f: 3.23055d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:19: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:23: n-instances: 5000
+2015-01-19 23:45:23: best-f: 2.90770d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:23: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:28: n-instances: 6000
+2015-01-19 23:45:28: best-f: 2.96668d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:28: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:32: n-instances: 7000
+2015-01-19 23:45:32: best-f: 2.70499d+2 (1000), n-evaluations: 9
+2015-01-19 23:45:32: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:35: n-instances: 8000
+2015-01-19 23:45:35: best-f: 3.05125d+2 (1000), n-evaluations: 9
+2015-01-19 23:45:35: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:39: n-instances: 9000
+2015-01-19 23:45:39: best-f: 2.87950d+2 (1000), n-evaluations: 9
+2015-01-19 23:45:39: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:43: n-instances: 10000
+2015-01-19 23:45:43: best-f: 2.39327d+2 (1000), n-evaluations: 9
+2015-01-19 23:45:43: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:48: n-instances: 11000
+2015-01-19 23:45:48: best-f: 2.84184d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:48: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:52: n-instances: 12000
+2015-01-19 23:45:52: best-f: 2.43920d+2 (1000), n-evaluations: 10
+2015-01-19 23:45:52: n-line-searches: 3 (succesful 3)
+2015-01-19 23:45:57: n-instances: 13000
+2015-01-19 23:45:57: best-f: 2.43739d+2 (1000), n-evaluations: 11
+2015-01-19 23:45:57: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:01: n-instances: 14000
+2015-01-19 23:46:01: best-f: 2.46622d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:01: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:05: n-instances: 15000
+2015-01-19 23:46:05: best-f: 2.27473d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:05: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:10: n-instances: 16000
+2015-01-19 23:46:10: best-f: 2.52581d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:10: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:14: n-instances: 17000
+2015-01-19 23:46:14: best-f: 2.09802d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:14: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:18: n-instances: 18000
+2015-01-19 23:46:18: best-f: 2.07516d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:18: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:22: n-instances: 19000
+2015-01-19 23:46:22: best-f: 2.24470d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:22: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:26: n-instances: 20000
+2015-01-19 23:46:26: best-f: 2.27476d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:26: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:30: n-instances: 21000
+2015-01-19 23:46:30: best-f: 2.63036d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:30: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:34: n-instances: 22000
+2015-01-19 23:46:34: best-f: 2.17550d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:34: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:38: n-instances: 23000
+2015-01-19 23:46:38: best-f: 2.23222d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:38: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:42: n-instances: 24000
+2015-01-19 23:46:42: best-f: 2.16984d+2 (1000), n-evaluations: 8
+2015-01-19 23:46:42: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:46: n-instances: 25000
+2015-01-19 23:46:46: best-f: 2.73814d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:46: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:50: n-instances: 26000
+2015-01-19 23:46:50: best-f: 2.20459d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:50: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:55: n-instances: 27000
+2015-01-19 23:46:55: best-f: 2.27622d+2 (1000), n-evaluations: 9
+2015-01-19 23:46:55: n-line-searches: 3 (succesful 3)
+2015-01-19 23:46:59: n-instances: 28000
+2015-01-19 23:46:59: best-f: 2.08777d+2 (1000), n-evaluations: 10
+2015-01-19 23:46:59: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:03: n-instances: 29000
+2015-01-19 23:47:03: best-f: 2.17935d+2 (1000), n-evaluations: 8
+2015-01-19 23:47:03: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:06: n-instances: 30000
+2015-01-19 23:47:06: best-f: 1.89946d+2 (1000), n-evaluations: 7
+2015-01-19 23:47:06: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:10: n-instances: 31000
+2015-01-19 23:47:10: best-f: 1.95725d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:10: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:14: n-instances: 32000
+2015-01-19 23:47:14: best-f: 2.15470d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:14: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:17: n-instances: 33000
+2015-01-19 23:47:17: best-f: 1.99352d+2 (1000), n-evaluations: 7
+2015-01-19 23:47:17: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:20: n-instances: 34000
+2015-01-19 23:47:20: best-f: 1.79484d+2 (1000), n-evaluations: 8
+2015-01-19 23:47:20: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:24: n-instances: 35000
+2015-01-19 23:47:24: best-f: 1.99448d+2 (1000), n-evaluations: 8
+2015-01-19 23:47:24: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:27: n-instances: 36000
+2015-01-19 23:47:27: best-f: 2.08338d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:27: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:31: n-instances: 37000
+2015-01-19 23:47:31: best-f: 2.15737d+2 (1000), n-evaluations: 8
+2015-01-19 23:47:31: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:35: n-instances: 38000
+2015-01-19 23:47:35: best-f: 2.07153d+2 (1000), n-evaluations: 10
+2015-01-19 23:47:35: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:39: n-instances: 39000
+2015-01-19 23:47:39: best-f: 2.12588d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:39: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:43: n-instances: 40000
+2015-01-19 23:47:43: best-f: 1.86334d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:43: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:47: n-instances: 41000
+2015-01-19 23:47:47: best-f: 1.67284d+2 (1000), n-evaluations: 10
+2015-01-19 23:47:47: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:51: n-instances: 42000
+2015-01-19 23:47:51: best-f: 1.62057d+2 (1000), n-evaluations: 9
+2015-01-19 23:47:51: n-line-searches: 3 (succesful 3)
+2015-01-19 23:47:55: n-instances: 43000
+2015-01-19 23:47:55: best-f: 2.14840d+2 (1000), n-evaluations: 10
+2015-01-19 23:47:55: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:00: n-instances: 44000
+2015-01-19 23:48:00: best-f: 2.02641d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:00: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:04: n-instances: 45000
+2015-01-19 23:48:04: best-f: 1.74907d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:04: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:08: n-instances: 46000
+2015-01-19 23:48:08: best-f: 1.39539d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:08: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:11: n-instances: 47000
+2015-01-19 23:48:11: best-f: 2.18219d+2 (1000), n-evaluations: 8
+2015-01-19 23:48:11: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:15: n-instances: 48000
+2015-01-19 23:48:15: best-f: 2.08400d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:15: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:19: n-instances: 49000
+2015-01-19 23:48:19: best-f: 1.56727d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:19: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:23: n-instances: 50000
+2015-01-19 23:48:23: best-f: 2.10356d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:23: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:27: n-instances: 51000
+2015-01-19 23:48:27: best-f: 1.59362d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:27: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:32: n-instances: 52000
+2015-01-19 23:48:32: best-f: 1.65076d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:32: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:35: n-instances: 53000
+2015-01-19 23:48:35: best-f: 1.88695d+2 (1000), n-evaluations: 8
+2015-01-19 23:48:35: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:39: n-instances: 54000
+2015-01-19 23:48:39: best-f: 1.91277d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:39: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:43: n-instances: 55000
+2015-01-19 23:48:43: best-f: 1.68915d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:43: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:46: n-instances: 56000
+2015-01-19 23:48:46: best-f: 1.80350d+2 (1000), n-evaluations: 8
+2015-01-19 23:48:46: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:51: n-instances: 57000
+2015-01-19 23:48:51: best-f: 1.94604d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:51: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:55: n-instances: 58000
+2015-01-19 23:48:55: best-f: 1.58858d+2 (1000), n-evaluations: 9
+2015-01-19 23:48:55: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:59: n-instances: 59000
+2015-01-19 23:48:59: best-f: 1.84822d+2 (1000), n-evaluations: 10
+2015-01-19 23:48:59: n-line-searches: 3 (succesful 3)
+2015-01-19 23:48:59: test at n-instances: 60000
+2015-01-19 23:49:01: pred. test bpn PREDICTION acc.: 93.87% (10000)
+2015-01-19 23:49:01: pred. test bpn PREDICTION xent: 2.067d-4 (10000)
+2015-01-19 23:49:01: ---------------------------------------------------
+2015-01-19 23:49:01: Starting to train the whole BPN
+2015-01-19 23:49:01: Describing gradient source:
+#<BP-LEARNER {1011D10EC3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1000/1000 :CLUMPS 24 {101CC70603}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1000/1000 :CLUMPS 24 {101CC70603}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {101CC70603}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE
+               784 1000/1000 :norm 298.81957>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1000/1000 :norm 31.62278>
+             #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 99.73239>
+             #<->MM (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+               500 1000/1000 :norm 2974.88560>
+             #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+               500 1/1 :norm 28.84090>
+             #<->MM (:CLOUD #3# . #2#) :SIZE
+               500 1000/1000 :norm 912.02922>
+             #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+               500 1000/1000 :norm 2487.97678>
+             #<->SIGMOID (:CHUNK F1) :SIZE
+               500 1000/1000 :norm 374.55784>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1000/1000 :norm 31.62278>
+             #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+               250000 1/1 :norm 72.64904>
+             #<->MM (:CLOUD #5# . #2#) :SIZE
+               500 1000/1000 :norm 3411.83509>
+             #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+               500 1/1 :norm 4.84415>
+             #<->MM (:CLOUD #6# . #2#) :SIZE
+               500 1000/1000 :norm 153.18541>
+             #<->+ (:CHUNK F2 . #4#) :SIZE
+               500 1000/1000 :norm 3360.66123>
+             #<->SIGMOID (:CHUNK F2) :SIZE
+               500 1000/1000 :norm 304.08656>
+             #<->CONSTANT (:CHUNK C2) :SIZE 1 1000/1000 :norm 31.62278>
+             #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+               1000000 1/1 :norm 117.50261>
+             #<->MM (:CLOUD #7# . #2#) :SIZE
+               2000 1000/1000 :norm 9662.99983>
+             #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+               2000 1/1 :norm 6.25000>
+             #<->MM (:CLOUD #8# . #2#) :SIZE
+               2000 1000/1000 :norm 197.64242>
+             #<->+ (:CHUNK F3 . #4#) :SIZE
+               2000 1000/1000 :norm 9826.33758>
+             #<->SIGMOID (:CHUNK F3) :SIZE
+               2000 1000/1000 :norm 369.85956>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1000/1000
+               :CLUMPS 4 {105F163FC3}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1000/1000 :norm 29.78505>)
+  N-STRIPES = 1000
+  MAX-N-STRIPES = 1000
+2015-01-19 23:49:01: Describing optimizer:
+#<MNIST-CG-BP-OPTIMIZER {1011D10C43}>
+CG-OPTIMIZER description:
+  N-INSTANCES = 0
+  BATCH-SIZE = 1000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000 1/1 :norm 99.73239>
+                   #<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500 1/1 :norm 28.84090>
+                   #<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                     250000 1/1 :norm 72.64904>
+                   #<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     500 1/1 :norm 4.84415>
+                   #<->WEIGHT (:CLOUD (F2 F3)) :SIZE
+                     1000000 1/1 :norm 117.50261>
+                   #<->WEIGHT (:CLOUD (C2 F3)) :SIZE
+                     2000 1/1 :norm 6.25000>
+                   #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.16327>
+                   #<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                     20000 1/1 :norm 10.17437>)
+                  {1011D111E3}>
+2015-01-19 23:49:01: test at n-instances: 0
+2015-01-19 23:49:04: pred. test bpn PREDICTION acc.: 93.87% (10000)
+2015-01-19 23:49:04: pred. test bpn PREDICTION xent: 2.067d-4 (10000)
+2015-01-19 23:49:04: ---------------------------------------------------
+2015-01-19 23:49:08: n-instances: 0
+2015-01-19 23:49:08: best-f: 1.36672d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:08: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:13: n-instances: 1000
+2015-01-19 23:49:13: best-f: 1.31090d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:13: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:17: n-instances: 2000
+2015-01-19 23:49:17: best-f: 1.62490d+2 (1000), n-evaluations: 9
+2015-01-19 23:49:17: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:21: n-instances: 3000
+2015-01-19 23:49:21: best-f: 1.61579d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:21: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:26: n-instances: 4000
+2015-01-19 23:49:26: best-f: 1.53045d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:26: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:30: n-instances: 5000
+2015-01-19 23:49:30: best-f: 1.44072d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:30: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:35: n-instances: 6000
+2015-01-19 23:49:35: best-f: 1.56399d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:35: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:39: n-instances: 7000
+2015-01-19 23:49:39: best-f: 1.51908d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:39: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:44: n-instances: 8000
+2015-01-19 23:49:44: best-f: 1.64683d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:44: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:48: n-instances: 9000
+2015-01-19 23:49:48: best-f: 1.67431d+2 (1000), n-evaluations: 9
+2015-01-19 23:49:48: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:52: n-instances: 10000
+2015-01-19 23:49:52: best-f: 1.81553d+2 (1000), n-evaluations: 9
+2015-01-19 23:49:52: n-line-searches: 3 (succesful 3)
+2015-01-19 23:49:57: n-instances: 11000
+2015-01-19 23:49:57: best-f: 1.10589d+2 (1000), n-evaluations: 10
+2015-01-19 23:49:57: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:01: n-instances: 12000
+2015-01-19 23:50:01: best-f: 1.06974d+2 (1000), n-evaluations: 9
+2015-01-19 23:50:01: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:06: n-instances: 13000
+2015-01-19 23:50:06: best-f: 1.34038d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:06: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:10: n-instances: 14000
+2015-01-19 23:50:10: best-f: 1.80412d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:10: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:16: n-instances: 15000
+2015-01-19 23:50:16: best-f: 1.35973d+2 (1000), n-evaluations: 9
+2015-01-19 23:50:16: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:20: n-instances: 16000
+2015-01-19 23:50:20: best-f: 1.19937d+2 (1000), n-evaluations: 9
+2015-01-19 23:50:20: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:25: n-instances: 17000
+2015-01-19 23:50:25: best-f: 1.13795d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:25: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:29: n-instances: 18000
+2015-01-19 23:50:29: best-f: 1.27705d+2 (1000), n-evaluations: 9
+2015-01-19 23:50:29: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:33: n-instances: 19000
+2015-01-19 23:50:33: best-f: 1.18574d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:33: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:37: n-instances: 20000
+2015-01-19 23:50:37: best-f: 1.23006d+2 (1000), n-evaluations: 8
+2015-01-19 23:50:37: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:41: n-instances: 21000
+2015-01-19 23:50:41: best-f: 1.33179d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:41: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:45: n-instances: 22000
+2015-01-19 23:50:45: best-f: 1.12950d+2 (1000), n-evaluations: 8
+2015-01-19 23:50:45: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:50: n-instances: 23000
+2015-01-19 23:50:50: best-f: 1.19225d+2 (1000), n-evaluations: 9
+2015-01-19 23:50:50: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:55: n-instances: 24000
+2015-01-19 23:50:55: best-f: 1.57553d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:55: n-line-searches: 3 (succesful 3)
+2015-01-19 23:50:59: n-instances: 25000
+2015-01-19 23:50:59: best-f: 1.26545d+2 (1000), n-evaluations: 10
+2015-01-19 23:50:59: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:05: n-instances: 26000
+2015-01-19 23:51:05: best-f: 1.01726d+2 (1000), n-evaluations: 10
+2015-01-19 23:51:05: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:09: n-instances: 27000
+2015-01-19 23:51:09: best-f: 1.04497d+2 (1000), n-evaluations: 9
+2015-01-19 23:51:09: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:14: n-instances: 28000
+2015-01-19 23:51:14: best-f: 1.03598d+2 (1000), n-evaluations: 10
+2015-01-19 23:51:14: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:18: n-instances: 29000
+2015-01-19 23:51:18: best-f: 1.36493d+2 (1000), n-evaluations: 10
+2015-01-19 23:51:18: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:23: n-instances: 30000
+2015-01-19 23:51:23: best-f: 8.44609d+1 (1000), n-evaluations: 10
+2015-01-19 23:51:23: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:28: n-instances: 31000
+2015-01-19 23:51:28: best-f: 1.15354d+2 (1000), n-evaluations: 8
+2015-01-19 23:51:28: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:32: n-instances: 32000
+2015-01-19 23:51:32: best-f: 1.04969d+2 (1000), n-evaluations: 10
+2015-01-19 23:51:32: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:37: n-instances: 33000
+2015-01-19 23:51:37: best-f: 9.89707d+1 (1000), n-evaluations: 10
+2015-01-19 23:51:37: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:43: n-instances: 34000
+2015-01-19 23:51:43: best-f: 7.40465d+1 (1000), n-evaluations: 10
+2015-01-19 23:51:43: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:48: n-instances: 35000
+2015-01-19 23:51:48: best-f: 1.19686d+2 (1000), n-evaluations: 10
+2015-01-19 23:51:48: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:52: n-instances: 36000
+2015-01-19 23:51:52: best-f: 7.76412d+1 (1000), n-evaluations: 9
+2015-01-19 23:51:52: n-line-searches: 3 (succesful 3)
+2015-01-19 23:51:57: n-instances: 37000
+2015-01-19 23:51:57: best-f: 9.09975d+1 (1000), n-evaluations: 10
+2015-01-19 23:51:57: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:02: n-instances: 38000
+2015-01-19 23:52:02: best-f: 1.21913d+2 (1000), n-evaluations: 10
+2015-01-19 23:52:02: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:07: n-instances: 39000
+2015-01-19 23:52:07: best-f: 1.08236d+2 (1000), n-evaluations: 10
+2015-01-19 23:52:07: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:13: n-instances: 40000
+2015-01-19 23:52:13: best-f: 9.46454d+1 (1000), n-evaluations: 9
+2015-01-19 23:52:13: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:19: n-instances: 41000
+2015-01-19 23:52:19: best-f: 8.42288d+1 (1000), n-evaluations: 10
+2015-01-19 23:52:19: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:24: n-instances: 42000
+2015-01-19 23:52:24: best-f: 1.02559d+2 (1000), n-evaluations: 10
+2015-01-19 23:52:24: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:28: n-instances: 43000
+2015-01-19 23:52:28: best-f: 9.20053d+1 (1000), n-evaluations: 9
+2015-01-19 23:52:28: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:32: n-instances: 44000
+2015-01-19 23:52:32: best-f: 8.55040d+1 (1000), n-evaluations: 8
+2015-01-19 23:52:32: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:36: n-instances: 45000
+2015-01-19 23:52:36: best-f: 1.06570d+2 (1000), n-evaluations: 9
+2015-01-19 23:52:36: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:40: n-instances: 46000
+2015-01-19 23:52:40: best-f: 9.51353d+1 (1000), n-evaluations: 10
+2015-01-19 23:52:40: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:45: n-instances: 47000
+2015-01-19 23:52:45: best-f: 9.50329d+1 (1000), n-evaluations: 9
+2015-01-19 23:52:45: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:49: n-instances: 48000
+2015-01-19 23:52:49: best-f: 7.74332d+1 (1000), n-evaluations: 10
+2015-01-19 23:52:49: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:54: n-instances: 49000
+2015-01-19 23:52:54: best-f: 1.01621d+2 (1000), n-evaluations: 10
+2015-01-19 23:52:54: n-line-searches: 3 (succesful 3)
+2015-01-19 23:52:59: n-instances: 50000
+2015-01-19 23:52:59: best-f: 9.83972d+1 (1000), n-evaluations: 11
+2015-01-19 23:52:59: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:03: n-instances: 51000
+2015-01-19 23:53:03: best-f: 8.91022d+1 (1000), n-evaluations: 8
+2015-01-19 23:53:03: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:09: n-instances: 52000
+2015-01-19 23:53:09: best-f: 7.41353d+1 (1000), n-evaluations: 10
+2015-01-19 23:53:09: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:16: n-instances: 53000
+2015-01-19 23:53:16: best-f: 8.82033d+1 (1000), n-evaluations: 11
+2015-01-19 23:53:16: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:21: n-instances: 54000
+2015-01-19 23:53:21: best-f: 9.15115d+1 (1000), n-evaluations: 10
+2015-01-19 23:53:21: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:26: n-instances: 55000
+2015-01-19 23:53:26: best-f: 9.15401d+1 (1000), n-evaluations: 10
+2015-01-19 23:53:26: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:30: n-instances: 56000
+2015-01-19 23:53:30: best-f: 9.17782d+1 (1000), n-evaluations: 9
+2015-01-19 23:53:30: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:35: n-instances: 57000
+2015-01-19 23:53:35: best-f: 8.66476d+1 (1000), n-evaluations: 10
+2015-01-19 23:53:35: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:39: n-instances: 58000
+2015-01-19 23:53:39: best-f: 7.73181d+1 (1000), n-evaluations: 10
+2015-01-19 23:53:39: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:43: n-instances: 59000
+2015-01-19 23:53:43: best-f: 1.14221d+2 (1000), n-evaluations: 9
+2015-01-19 23:53:43: n-line-searches: 3 (succesful 3)
+2015-01-19 23:53:43: test at n-instances: 60000
+2015-01-19 23:53:46: pred. test bpn PREDICTION acc.: 95.86% (10000)
+2015-01-19 23:53:46: pred. test bpn PREDICTION xent: 1.367d-4 (10000)
+2015-01-19 23:53:46: ---------------------------------------------------
+2015-01-20 00:11:24: TRAIN-MNIST/1 :DROPOUTP T
+2015-01-20 00:11:30: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.1
+2015-01-20 00:11:30: init: #<FULL-CLOUD (F1 F2) :NORM 4.99276d+0> 0.1
+2015-01-20 00:11:30: init: #<FULL-CLOUD (F2 F3) :NORM 1.00118d+1> 0.1
+2015-01-20 00:11:30: Starting to train level 0 RBM in DBN.
+2015-01-20 00:11:30: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {102613F533}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C0 INPUTS) - (C1 F1)>
+  MONITORS                   = (#<MONITOR train train+ rbm INPUTS rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {102613E923}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {100911F603}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25445d+1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {10090ECD73}>
+
+2015-01-20 00:11:30: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {102613E923}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d+1>)
+                    {10261B8733}>
+                  {102613FC83}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                    {10261B8243}>
+                  {102613FBB3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                    {102613FD53}>
+                  {102613FAE3}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {102613FC83}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d+1>)
+                  {10261B8733}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {102613FBB3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {10261B8243}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {102613FAE3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {102613FD53}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:11:30: cuda mats: 41, copies: h->d: 0, d->h: 3
+2015-01-20 00:11:30: test at n-instances: 0
+2015-01-20 00:11:31: pred. test+ dbn l0, rbm INPUTS rmse: 5.215d-1 (7840000)
+2015-01-20 00:11:31: cuda mats: 10047, copies: h->d: 10000, d->h: 3
+2015-01-20 00:11:31: ---------------------------------------------------
+2015-01-20 00:11:49: training at n-instances: 60000
+2015-01-20 00:11:49: train train+ rbm INPUTS rmse: 1.382d-1 (47040000)
+2015-01-20 00:11:49: test at n-instances: 60000
+2015-01-20 00:11:51: pred. test+ dbn l0, rbm INPUTS rmse: 8.175d-2 (7840000)
+2015-01-20 00:11:51: cuda mats: 70054, copies: h->d: 70000, d->h: 3
+2015-01-20 00:11:51: ---------------------------------------------------
+2015-01-20 00:12:07: training at n-instances: 120000
+2015-01-20 00:12:07: train train+ rbm INPUTS rmse: 1.084d-1 (47040000)
+2015-01-20 00:12:07: test at n-instances: 120000
+2015-01-20 00:12:08: pred. test+ dbn l0, rbm INPUTS rmse: 6.940d-2 (7840000)
+2015-01-20 00:12:08: cuda mats: 70054, copies: h->d: 70000, d->h: 3
+2015-01-20 00:12:08: ---------------------------------------------------
+2015-01-20 00:12:08: Starting to train level 1 RBM in DBN.
+2015-01-20 00:12:08: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {100B83E653}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C1 F1) - (C2 F2)>
+  MONITORS                   = (#<MONITOR train train+ rbm F1 rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {100B83DA83}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {103328CC53}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 5.00045d+1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {10090ECD73}>
+
+2015-01-20 00:12:08: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {100B83DA83}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 5.00045d+1>)
+                    {100B83F853}>
+                  {100B83EDA3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                    {100B83F363}>
+                  {100B83ECD3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                    {100B83EE73}>
+                  {100B83EC03}>)
+  SEGMENTS = (#<FULL-CLOUD (F1 F2) :NORM 5.00045d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {100B83EDA3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 5.00045d+1>)
+                  {100B83F853}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {100B83ECD3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {100B83F363}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {100B83EC03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {100B83EE73}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:12:08: cuda mats: 70054, copies: h->d: 70000, d->h: 6
+2015-01-20 00:12:08: test at n-instances: 0
+2015-01-20 00:12:10: pred. test+ dbn l0, rbm INPUTS rmse: 3.194d-1 (7840000)
+2015-01-20 00:12:10: pred. test+ dbn l1, rbm F1     rmse: 4.153d-1 (5000000)
+2015-01-20 00:12:10: cuda mats: 70060, copies: h->d: 70000, d->h: 6
+2015-01-20 00:12:10: ---------------------------------------------------
+2015-01-20 00:12:24: training at n-instances: 60000
+2015-01-20 00:12:24: train train+ rbm F1 rmse: 1.791d-1 (30000000)
+2015-01-20 00:12:24: test at n-instances: 60000
+2015-01-20 00:12:26: pred. test+ dbn l0, rbm INPUTS rmse: 9.856d-2 (7840000)
+2015-01-20 00:12:26: pred. test+ dbn l1, rbm F1     rmse: 9.226d-2 (5000000)
+2015-01-20 00:12:26: cuda mats: 70067, copies: h->d: 70000, d->h: 6
+2015-01-20 00:12:26: ---------------------------------------------------
+2015-01-20 00:12:40: training at n-instances: 120000
+2015-01-20 00:12:40: train train+ rbm F1 rmse: 1.449d-1 (30000000)
+2015-01-20 00:12:40: test at n-instances: 120000
+2015-01-20 00:12:42: pred. test+ dbn l0, rbm INPUTS rmse: 9.599d-2 (7840000)
+2015-01-20 00:12:42: pred. test+ dbn l1, rbm F1     rmse: 8.186d-2 (5000000)
+2015-01-20 00:12:42: cuda mats: 70067, copies: h->d: 70000, d->h: 6
+2015-01-20 00:12:42: ---------------------------------------------------
+2015-01-20 00:12:42: Starting to train level 2 RBM in DBN.
+2015-01-20 00:12:42: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {1025F99C93}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM (C2 F2) - (C3 F3)>
+  MONITORS                   = (#<MONITOR train train+ rbm F2 rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = NIL
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {1025F990C3}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = NIL
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM {103328CB23}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C2 1(100/100)>
+                    #<SIGMOID-CHUNK F2 500(100/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C3 1(1/100)>
+                   #<SIGMOID-CHUNK F3 2000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F2 F3) :NORM 9.98857d+1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN/1 {10090ECD73}>
+
+2015-01-20 00:12:42: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {1025F990C3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F2 F3) :NORM 9.98857d+1>)
+                    {1025F9AE93}>
+                  {1025F9A3E3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                    {1025F9A9A3}>
+                  {1025F9A313}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                    {1025F9A4B3}>
+                  {1025F9A243}>)
+  SEGMENTS = (#<FULL-CLOUD (F2 F3) :NORM 9.98857d+1>
+              #<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1025F9A3E3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 F3) :NORM 9.98857d+1>)
+                  {1025F9AE93}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1025F9A313}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F2 C3) :NORM 0.00000d+0>)
+                  {1025F9A9A3}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1025F9A243}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C2 F3) :NORM 0.00000d+0>)
+                  {1025F9A4B3}>
+  LEARNING-RATE = 1.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:12:42: cuda mats: 70061, copies: h->d: 70000, d->h: 9
+2015-01-20 00:12:42: test at n-instances: 0
+2015-01-20 00:12:47: pred. test+ dbn l0, rbm INPUTS rmse: 2.974d-1 (7840000)
+2015-01-20 00:12:47: pred. test+ dbn l1, rbm F1     rmse: 4.073d-1 (5000000)
+2015-01-20 00:12:47: pred. test+ dbn l2, rbm F2     rmse: 5.084d-1 (5000000)
+2015-01-20 00:12:47: cuda mats: 70067, copies: h->d: 70000, d->h: 9
+2015-01-20 00:12:47: ---------------------------------------------------
+2015-01-20 00:13:32: training at n-instances: 60000
+2015-01-20 00:13:32: train train+ rbm F2 rmse: 1.504d-1 (30000000)
+2015-01-20 00:13:32: test at n-instances: 60000
+2015-01-20 00:13:36: pred. test+ dbn l0, rbm INPUTS rmse: 1.116d-1 (7840000)
+2015-01-20 00:13:36: pred. test+ dbn l1, rbm F1     rmse: 1.106d-1 (5000000)
+2015-01-20 00:13:36: pred. test+ dbn l2, rbm F2     rmse: 6.187d-2 (5000000)
+2015-01-20 00:13:36: cuda mats: 70074, copies: h->d: 70000, d->h: 9
+2015-01-20 00:13:36: ---------------------------------------------------
+2015-01-20 00:14:21: training at n-instances: 120000
+2015-01-20 00:14:21: train train+ rbm F2 rmse: 1.249d-1 (30000000)
+2015-01-20 00:14:21: test at n-instances: 120000
+2015-01-20 00:14:26: pred. test+ dbn l0, rbm INPUTS rmse: 1.108d-1 (7840000)
+2015-01-20 00:14:26: pred. test+ dbn l1, rbm F1     rmse: 1.082d-1 (5000000)
+2015-01-20 00:14:26: pred. test+ dbn l2, rbm F2     rmse: 5.623d-2 (5000000)
+2015-01-20 00:14:26: cuda mats: 70074, copies: h->d: 70000, d->h: 9
+2015-01-20 00:14:26: ---------------------------------------------------
+2015-01-20 00:14:28: bpn inits:
+((:CLOUD-NAME (C2 F3) :WEIGHT-NAME (:CLOUD (C2 F3)))
+ (:CLOUD-NAME (F2 F3) :WEIGHT-NAME (:CLOUD (F2 F3)))
+ (:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1))))
+2015-01-20 00:14:28: bpn def:
+(BUILD-FNN (:CLASS 'MNIST-BPN :MAX-N-STRIPES 1000 :INITARGS 'NIL)
+  (#:G99986 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G99985 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G99990 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G99991
+   (->MM :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS #:G99990 :X
+         #:G99986 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G99992 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G99993
+   (->MM :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G99992 :X
+         #:G99985 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G99989 (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS (LIST #:G99991 #:G99993)))
+  (#:G99984 (->SIGMOID :NAME '(:CHUNK F1) :X #:G99989))
+  (#:G99983 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G99996 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 250000))
+  (#:G99997
+   (->MM :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G99996 :X
+         #:G99984 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G99998 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 500))
+  (#:G99999
+   (->MM :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 500 :WEIGHTS #:G99998 :X
+         #:G99983 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G99995 (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G99997 #:G99999)))
+  (#:G99982 (->SIGMOID :NAME '(:CHUNK F2) :X #:G99995))
+  (#:G99980 (->CONSTANT :NAME '(:CHUNK C2) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G100002 (->WEIGHT :NAME '(:CLOUD (F2 F3)) :SIZE 1000000))
+  (#:G100003
+   (->MM :NAME '(:CLOUD (F2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G100002 :X
+         #:G99982 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G100004 (->WEIGHT :NAME '(:CLOUD (C2 F3)) :SIZE 2000))
+  (#:G100005
+   (->MM :NAME '(:CLOUD (C2 F3) :LINEAR) :SIZE 2000 :WEIGHTS #:G100004 :X
+         #:G99980 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G100001
+   (->+ :NAME '(:CHUNK F3 :ACTIVATION) :ARGS (LIST #:G100003 #:G100005)))
+  (#:G99981 (->SIGMOID :NAME '(:CHUNK F3) :X #:G100001)))
+2015-01-20 00:14:28: Starting to train the softmax layer of BPN
+2015-01-20 00:14:28: Describing gradient source:
+#<BP-LEARNER {1029090793}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1/100 :CLUMPS 24 {102906E9D3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1/100 :CLUMPS 24 {102906E9D3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {102906E9D3}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE 784 1/100 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1/100 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 99.85369>
+             #<->MM (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+               500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+               500 1/1 :norm 28.44436>
+             #<->MM (:CLOUD #3# . #2#) :SIZE 500 1/100 :norm 0.00000>
+             #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+               500 1/100 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F1) :SIZE 500 1/100 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1/100 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+               250000 1/1 :norm 71.69626>
+             #<->MM (:CLOUD #5# . #2#) :SIZE 500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+               500 1/1 :norm 4.61589>
+             #<->MM (:CLOUD #6# . #2#) :SIZE 500 1/100 :norm 0.00000>
+             #<->+ (:CHUNK F2 . #4#) :SIZE 500 1/100 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F2) :SIZE 500 1/100 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C2) :SIZE 1 1/100 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+               1000000 1/1 :norm 115.95142>
+             #<->MM (:CLOUD #7# . #2#) :SIZE 2000 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+               2000 1/1 :norm 5.88131>
+             #<->MM (:CLOUD #8# . #2#) :SIZE 2000 1/100 :norm 0.00000>
+             #<->+ (:CHUNK F3 . #4#) :SIZE 2000 1/100 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F3) :SIZE 2000 1/100 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/100
+               :CLUMPS 4 {102907D5A3}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/100 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+2015-01-20 00:14:28: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {102908DE53}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                       20000 1/1 :norm 0.00000>)
+                    {10290914D3}>
+                  {1029090F03}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.00000>)
+                    {1029090FE3}>
+                  {1029090E03}>)
+  SEGMENTS = (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                20000 1/1 :norm 0.00000>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                10 1/1 :norm 0.00000>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {1029090F03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                     20000 1/1 :norm 0.00000>)
+                  {10290914D3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {1029090E03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.00000>)
+                  {1029090FE3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:14:28: cuda mats: 31, copies: h->d: 6, d->h: 0
+2015-01-20 00:14:28: test at n-instances: 0
+2015-01-20 00:14:31: pred. test bpn PREDICTION acc.: 9.80% (10000)
+2015-01-20 00:14:31: pred. test bpn PREDICTION xent: 2.303d-2 (10000)
+2015-01-20 00:14:31: cuda mats: 10033, copies: h->d: 10006, d->h: 100
+2015-01-20 00:14:31: ---------------------------------------------------
+2015-01-20 00:15:13: training at n-instances: 60000
+2015-01-20 00:15:13: train train+ bpn PREDICTION acc.: 91.21% (60000)
+2015-01-20 00:15:13: train train+ bpn PREDICTION xent: 3.090d-3 (60000)
+2015-01-20 00:15:13: test at n-instances: 60000
+2015-01-20 00:15:15: pred. test bpn PREDICTION acc.: 93.83% (10000)
+2015-01-20 00:15:15: pred. test bpn PREDICTION xent: 2.136d-3 (10000)
+2015-01-20 00:15:15: cuda mats: 70062, copies: h->d: 70006, d->h: 800
+2015-01-20 00:15:15: ---------------------------------------------------
+2015-01-20 00:15:15: dropout #<->INPUT (:CHUNK INPUTS) :SIZE
+                               784 100/100 :norm 94.08260> 0.2
+2015-01-20 00:15:15: dropout #<->SIGMOID (:CHUNK F1) :SIZE
+                               500 100/100 :norm 118.12746> 0.5
+2015-01-20 00:15:15: dropout #<->SIGMOID (:CHUNK F2) :SIZE
+                               500 100/100 :norm 98.13294> 0.5
+2015-01-20 00:15:15: dropout #<->SIGMOID (:CHUNK F3) :SIZE
+                               2000 100/100 :norm 116.72581> 0.5
+2015-01-20 00:15:15: Starting to train the whole BPN
+2015-01-20 00:15:15: Describing gradient source:
+#<BP-LEARNER {101B7B0273}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 100/100 :CLUMPS 24 {102906E9D3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 100/100 :CLUMPS 24 {102906E9D3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {102906E9D3}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK INPUTS) :SIZE
+               784 100/100 :norm 94.08260>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 100/100 :norm 10.00000>
+             #<->WEIGHT (:CLOUD #1=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 124.81711>
+             #<->MM (:CLOUD #1# . #2=(:LINEAR)) :SIZE
+               500 100/100 :norm 944.69777>
+             #<->WEIGHT (:CLOUD #3=(C0 F1)) :SIZE
+               500 1/1 :norm 28.44436>
+             #<->MM (:CLOUD #3# . #2#) :SIZE
+               500 100/100 :norm 284.44364>
+             #<->+ (:CHUNK F1 . #4=(:ACTIVATION)) :SIZE
+               500 100/100 :norm 793.13614>
+             #<->SIGMOID (:CHUNK F1) :SIZE 500 100/100 :norm 118.12746>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 100/100 :norm 10.00000>
+             #<->WEIGHT (:CLOUD #5=(F1 F2)) :SIZE
+               250000 1/1 :norm 143.39251>
+             #<->MM (:CLOUD #5# . #2#) :SIZE
+               500 100/100 :norm 995.21594>
+             #<->WEIGHT (:CLOUD #6=(C1 F2)) :SIZE
+               500 1/1 :norm 4.61589>
+             #<->MM (:CLOUD #6# . #2#) :SIZE
+               500 100/100 :norm 46.15887>
+             #<->+ (:CHUNK F2 . #4#) :SIZE 500 100/100 :norm 979.23698>
+             #<->SIGMOID (:CHUNK F2) :SIZE 500 100/100 :norm 98.13294>
+             #<->CONSTANT (:CHUNK C2) :SIZE 1 100/100 :norm 10.00000>
+             #<->WEIGHT (:CLOUD #7=(F2 F3)) :SIZE
+               1000000 1/1 :norm 231.90284>
+             #<->MM (:CLOUD #7# . #2#) :SIZE
+               2000 100/100 :norm 3052.13876>
+             #<->WEIGHT (:CLOUD #8=(C2 F3)) :SIZE
+               2000 1/1 :norm 5.88131>
+             #<->MM (:CLOUD #8# . #2#) :SIZE
+               2000 100/100 :norm 58.81307>
+             #<->+ (:CHUNK F3 . #4#) :SIZE
+               2000 100/100 :norm 3099.12304>
+             #<->SIGMOID (:CHUNK F3) :SIZE
+               2000 100/100 :norm 116.72581>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 100/100
+               :CLUMPS 4 {103CE32493}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 100/100 :norm 9.54701>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+2015-01-20 00:15:16: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {101B7AD8B3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                       20000 1/1 :norm 22.87275>)
+                    {101B7B3253}>
+                  {101B7B0EE3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.15064>)
+                    {101B7B2D63}>
+                  {101B7B0E03}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (C2 F3)) :SIZE
+                       2000 1/1 :norm 5.88131>)
+                    {101B7B2873}>
+                  {101B7B0D23}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (F2 F3)) :SIZE
+                       1000000 1/1 :norm 231.90284>)
+                    {101B7B2383}>
+                  {101B7B0C43}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                       500 1/1 :norm 4.61589>)
+                    {101B7B1E93}>
+                  {101B7B0B63}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                       250000 1/1 :norm 143.39251>)
+                    {101B7B19A3}>
+                  {101B7B0A83}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                       500 1/1 :norm 28.44436>)
+                    {101B7B14B3}>
+                  {101B7B09A3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                       392000 1/1 :norm 124.81711>)
+                    {101B7B0FC3}>
+                  {101B7B08C3}>)
+  SEGMENTS = (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                20000 1/1 :norm 22.87275>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE 10 1/1 :norm 0.15064>
+              #<->WEIGHT (:CLOUD (C2 F3)) :SIZE 2000 1/1 :norm 5.88131>
+              #<->WEIGHT (:CLOUD (F2 F3)) :SIZE
+                1000000 1/1 :norm 231.90284>
+              #<->WEIGHT (:CLOUD (C1 F2)) :SIZE 500 1/1 :norm 4.61589>
+              #<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                250000 1/1 :norm 143.39251>
+              #<->WEIGHT (:CLOUD (C0 F1)) :SIZE 500 1/1 :norm 28.44436>
+              #<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                392000 1/1 :norm 124.81711>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0EE3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT ((:CHUNK F3) PREDICTION) :SIZE
+                     20000 1/1 :norm 22.87275>)
+                  {101B7B3253}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0E03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.15064>)
+                  {101B7B2D63}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0D23}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C2 F3)) :SIZE
+                     2000 1/1 :norm 5.88131>)
+                  {101B7B2873}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0C43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F2 F3)) :SIZE
+                     1000000 1/1 :norm 231.90284>)
+                  {101B7B2383}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0B63}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     500 1/1 :norm 4.61589>)
+                  {101B7B1E93}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B0A83}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                     250000 1/1 :norm 143.39251>)
+                  {101B7B19A3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B09A3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500 1/1 :norm 28.44436>)
+                  {101B7B14B3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {101B7B08C3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000 1/1 :norm 124.81711>)
+                  {101B7B0FC3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:15:16: cuda mats: 70062, copies: h->d: 70006, d->h: 800
+2015-01-20 00:15:16: test at n-instances: 0
+2015-01-20 00:15:18: pred. test bpn PREDICTION acc.: 93.83% (10000)
+2015-01-20 00:15:18: pred. test bpn PREDICTION xent: 2.136d-3 (10000)
+2015-01-20 00:15:18: cuda mats: 70062, copies: h->d: 70006, d->h: 900
+2015-01-20 00:15:18: ---------------------------------------------------
+2015-01-20 00:16:02: training at n-instances: 60000
+2015-01-20 00:16:02: train train+ bpn PREDICTION acc.: 81.40% (60000)
+2015-01-20 00:16:02: train train+ bpn PREDICTION xent: 5.940d-3 (60000)
+2015-01-20 00:16:02: test at n-instances: 60000
+2015-01-20 00:16:04: pred. test bpn PREDICTION acc.: 94.24% (10000)
+2015-01-20 00:16:04: pred. test bpn PREDICTION xent: 2.002d-3 (10000)
+2015-01-20 00:16:04: cuda mats: 70082, copies: h->d: 70006, d->h: 1600
+2015-01-20 00:16:04: ---------------------------------------------------
+2015-01-20 00:16:48: training at n-instances: 120000
+2015-01-20 00:16:48: train train+ bpn PREDICTION acc.: 85.67% (60000)
+2015-01-20 00:16:48: train train+ bpn PREDICTION xent: 4.526d-3 (60000)
+2015-01-20 00:16:48: test at n-instances: 120000
+2015-01-20 00:16:51: pred. test bpn PREDICTION acc.: 94.34% (10000)
+2015-01-20 00:16:51: pred. test bpn PREDICTION xent: 1.883d-3 (10000)
+2015-01-20 00:16:51: cuda mats: 70082, copies: h->d: 70006, d->h: 2300
+2015-01-20 00:16:51: ---------------------------------------------------
+2015-01-20 00:37:34: TRAIN-MNIST/2 :DROPOUTP NIL
+2015-01-20 00:37:35: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.001
+2015-01-20 00:37:35: init: #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0> 0.01
+2015-01-20 00:37:35: init: #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0> 0.01
+2015-01-20 00:37:35: Starting to train level 0 RBM in DBN.
+2015-01-20 00:37:35: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {106D430DA3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C0 INPUTS) - (C1 F1)>
+  MONITORS                   = (#<MONITOR train train+ rbm INPUTS rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {106D3655B3}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM/2 {1063E86CF3}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {1063E959C3}>
+
+2015-01-20 00:37:35: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {106D3655B3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+                    {106D5EA973}>
+                  {106D5E97F3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                    {106D5EA483}>
+                  {106D5E9723}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                    {106D5E98C3}>
+                  {106D5E9653}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106D5E97F3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+                  {106D5EA973}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106D5E9723}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {106D5EA483}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106D5E9653}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {106D5E98C3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:37:35: cuda mats: 8, copies: h->d: 0, d->h: 3
+2015-01-20 00:37:35: test at n-instances: 0
+2015-01-20 00:37:36: pred. test+ dbn l0, rbm INPUTS rmse: 4.812d-1 (7840000)
+2015-01-20 00:37:36: cuda mats: 10022, copies: h->d: 10003, d->h: 3
+2015-01-20 00:37:36: ---------------------------------------------------
+2015-01-20 00:37:55: training at n-instances: 60000
+2015-01-20 00:37:55: train train+ rbm INPUTS rmse: 3.123d-1 (47040000)
+2015-01-20 00:37:55: test at n-instances: 60000
+2015-01-20 00:37:56: pred. test+ dbn l0, rbm INPUTS rmse: 1.190d-1 (7840000)
+2015-01-20 00:37:56: cuda mats: 70030, copies: h->d: 70003, d->h: 3
+2015-01-20 00:37:56: ---------------------------------------------------
+2015-01-20 00:38:12: training at n-instances: 120000
+2015-01-20 00:38:12: train train+ rbm INPUTS rmse: 2.567d-1 (47040000)
+2015-01-20 00:38:12: test at n-instances: 120000
+2015-01-20 00:38:14: pred. test+ dbn l0, rbm INPUTS rmse: 9.815d-2 (7840000)
+2015-01-20 00:38:14: cuda mats: 70030, copies: h->d: 70003, d->h: 3
+2015-01-20 00:38:14: ---------------------------------------------------
+2015-01-20 00:38:14: Starting to train level 1 RBM in DBN.
+2015-01-20 00:38:14: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {10633F7213}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C1 F1 LABEL) - (C2 F2)>
+  MONITORS                   = (#<MONITOR #1=train #2=train+ #3=rbm F1 #4=rmse: 0.000e+0 (0)>..
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = #<CLOSURE (LAMBDA (OPTIMIZER) :IN TRAIN-MNIST/2) {106D267EAB}>
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {10633F5A73}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = "#<error printing object>"
+
+#<MNIST-RBM/2 {1063E92123}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>
+                    #<SOFTMAX-LABEL-CHUNK LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>
+            #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {1063E959C3}>
+
+2015-01-20 00:38:14: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {10633F5A73}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+                    {1063470FD3}>
+                  {10633F7B43}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                    {1063470AE3}>
+                  {10633F7A73}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>)
+                    {10634705F3}>
+                  {10633F79A3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                    {1063470103}>
+                  {10633F78D3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                    {10633F7C13}>
+                  {10633F7803}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>
+              #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10633F7B43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+                  {1063470FD3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10633F7A73}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {1063470AE3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10633F79A3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>)
+                  {10634705F3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10633F78D3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {1063470103}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10633F7803}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {10633F7C13}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:38:14: cuda mats: 70030, copies: h->d: 70003, d->h: 8
+2015-01-20 00:38:14: test at n-instances: 0
+2015-01-20 00:38:20: pred. train+ dbn l1, rbm LABEL  acc.: 9.40% (1000)
+2015-01-20 00:38:20: pred. train+ dbn l1, rbm LABEL  xent: 2.296d-2 (1000)
+2015-01-20 00:38:20: pred. train  dbn l1, rbm LABEL  acc.: 9.40% (1000)
+2015-01-20 00:38:20: pred. train  dbn l1, rbm LABEL  xent: 2.318d-2 (1000)
+2015-01-20 00:38:20: pred. test+  dbn l0, rbm INPUTS rmse: 3.306d-1 (7840000)
+2015-01-20 00:38:20: pred. test+  dbn l1, rbm F1     rmse: 4.331d-1 (5000000)
+2015-01-20 00:38:20: pred. test+  dbn l1, rbm LABEL  rmse: 2.999d-1 (100000)
+2015-01-20 00:38:20: pred. test   dbn l1, rbm LABEL  acc.: 9.58% (10000)
+2015-01-20 00:38:20: pred. test   dbn l1, rbm LABEL  xent: 2.321d-2 (10000)
+2015-01-20 00:38:20: cuda mats: 70048, copies: h->d: 70224, d->h: 12570
+2015-01-20 00:38:20: ---------------------------------------------------
+2015-01-20 00:38:47: training at n-instances: 60000
+2015-01-20 00:38:47: train train+ rbm F1    rmse: 4.536d-1 (30000000)
+2015-01-20 00:38:47: train train+ rbm LABEL rmse: 2.562d-1 (600000)
+2015-01-20 00:38:47: train train+ rbm LABEL acc.: 67.19% (60000)
+2015-01-20 00:38:47: train train+ rbm LABEL xent: 1.133d-1 (60000)
+2015-01-20 00:38:47: test at n-instances: 60000
+2015-01-20 00:38:53: pred. train+ dbn l1, rbm LABEL  acc.: 91.30% (1000)
+2015-01-20 00:38:53: pred. train+ dbn l1, rbm LABEL  xent: 2.887d-3 (1000)
+2015-01-20 00:38:53: pred. train  dbn l1, rbm LABEL  acc.: 89.70% (1000)
+2015-01-20 00:38:53: pred. train  dbn l1, rbm LABEL  xent: 3.590d-3 (1000)
+2015-01-20 00:38:53: pred. test+  dbn l0, rbm INPUTS rmse: 1.190d-1 (7840000)
+2015-01-20 00:38:53: pred. test+  dbn l1, rbm F1     rmse: 1.071d-1 (5000000)
+2015-01-20 00:38:53: pred. test+  dbn l1, rbm LABEL  rmse: 1.061d-1 (100000)
+2015-01-20 00:38:53: pred. test   dbn l1, rbm LABEL  acc.: 91.02% (10000)
+2015-01-20 00:38:53: pred. test   dbn l1, rbm LABEL  xent: 3.266d-3 (10000)
+2015-01-20 00:38:53: cuda mats: 70060, copies: h->d: 71044, d->h: 86333
+2015-01-20 00:38:53: ---------------------------------------------------
+2015-01-20 00:39:20: training at n-instances: 120000
+2015-01-20 00:39:20: train train+ rbm F1    rmse: 3.968d-1 (30000000)
+2015-01-20 00:39:20: train train+ rbm LABEL rmse: 1.849d-1 (600000)
+2015-01-20 00:39:20: train train+ rbm LABEL acc.: 82.91% (60000)
+2015-01-20 00:39:20: train train+ rbm LABEL xent: 5.903d-2 (60000)
+2015-01-20 00:39:20: test at n-instances: 120000
+2015-01-20 00:39:26: pred. train+ dbn l1, rbm LABEL  acc.: 94.20% (1000)
+2015-01-20 00:39:26: pred. train+ dbn l1, rbm LABEL  xent: 2.120d-3 (1000)
+2015-01-20 00:39:26: pred. train  dbn l1, rbm LABEL  acc.: 92.10% (1000)
+2015-01-20 00:39:26: pred. train  dbn l1, rbm LABEL  xent: 2.784d-3 (1000)
+2015-01-20 00:39:26: pred. test+  dbn l0, rbm INPUTS rmse: 1.150d-1 (7840000)
+2015-01-20 00:39:26: pred. test+  dbn l1, rbm F1     rmse: 8.911d-2 (5000000)
+2015-01-20 00:39:26: pred. test+  dbn l1, rbm LABEL  rmse: 8.815d-2 (100000)
+2015-01-20 00:39:26: pred. test   dbn l1, rbm LABEL  acc.: 93.46% (10000)
+2015-01-20 00:39:26: pred. test   dbn l1, rbm LABEL  xent: 2.523d-3 (10000)
+2015-01-20 00:39:26: cuda mats: 70060, copies: h->d: 71864, d->h: 160096
+2015-01-20 00:39:26: ---------------------------------------------------
+2015-01-20 00:39:27: Starting to train DBM.
+2015-01-20 00:39:27: Describing gradient source:
+#<BM-PCD-LEARNER {1005D61C53}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+  MONITORS                   = (#<MONITOR #1=train #2=train+ #3=dbm INPUTS #4=rmse: 0.000e+0 (0)>..
+  SPARSITY-GRADIENT-SOURCES  = (#<CHEATING-SPARSITY-GRADIENT-SOURCE (C0 F1) F1 {1005F8CF63}>..
+  SPARSER                    = #<FUNCTION (LAMBDA (CLOUD CHUNK) :IN TRAIN-MNIST-DBM) {107930EDDB}>
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 5
+  N-PARTICLES                = 100
+  PERSISTENT-CHAINS          = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = (#<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C0 F1) F1 {1005F8CF63}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (INPUTS F1) F1 {1005F8E7A3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C1 F2) F2 {1005F8F843}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (F1 C2) F1 {1005F90893}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 #1=(F1 F2) F1 {1005F91893}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE #1#
+                                 F2 {1005F92893}>)
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 5
+
+BM-PCD-LEARNER description:
+  N-PARTICLES = 100
+
+#<MNIST-DBM {10793BB813}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>
+                    #<SOFTMAX-LABEL-CHUNK LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>
+                   #<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>
+            #<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+            #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+            #<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>
+            #<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F8CF63}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F8E7A3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F8F843}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F90893}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F91893}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {1005F92893}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+2015-01-20 00:39:27: Describing optimizer:
+#<MNIST-DBM-OPTIMIZER {1005D5F403}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+                    {1005F8A983}>
+                  {1005F88623}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>)
+                    {1005F8A493}>
+                  {1005F88553}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>)
+                    {1005F89FA3}>
+                  {1005F88483}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>)
+                    {1005F89AB3}>
+                  {1005F883B3}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>)
+                    {1005F895C3}>
+                  {1005F882E3}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>)
+                    {1005F890D3}>
+                  {1005F88213}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>)
+                    {1005F88BE3}>
+                  {1005F88143}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+                    {1005F886F3}>
+                  {1005F88073}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>
+              #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+              #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88623}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+                  {1005F8A983}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88553}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>)
+                  {1005F8A493}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88483}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>)
+                  {1005F89FA3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F883B3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>)
+                  {1005F89AB3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F882E3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>)
+                  {1005F895C3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88213}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>)
+                  {1005F890D3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88143}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>)
+                  {1005F88BE3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {1005F88073}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+                  {1005F886F3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:39:27: cuda mats: 165, copies: h->d: 106, d->h: 1
+2015-01-20 00:39:27: test at n-instances: 0
+2015-01-20 00:40:08: pred. train+ dbm LABEL acc.: 100.00% (1000)
+2015-01-20 00:40:08: pred. train+ dbm LABEL xent: 0.000d+0 (1000)
+2015-01-20 00:40:08: pred. train  dbm LABEL acc.: 9.70% (1000)
+2015-01-20 00:40:08: pred. train  dbm LABEL xent: 3.454d-1 (1000)
+2015-01-20 00:40:08: pred. test   dbm LABEL acc.: 9.80% (10000)
+2015-01-20 00:40:08: pred. test   dbm LABEL xent: 3.454d-1 (10000)
+2015-01-20 00:40:08: cuda mats: 11168, copies: h->d: 11230, d->h: 1233
+2015-01-20 00:40:08: ---------------------------------------------------
+2015-01-20 00:44:55: training at n-instances: 60000
+2015-01-20 00:44:55: train train+ dbm INPUTS rmse: 1.659d-1 (47040000)
+2015-01-20 00:44:55: train train+ dbm LABEL  rmse: 8.505d-2 (600000)
+2015-01-20 00:44:55: train train+ dbm LABEL  acc.: 95.73% (60000)
+2015-01-20 00:44:55: train train+ dbm LABEL  xent: 1.746d-3 (60000)
+2015-01-20 00:44:55: test at n-instances: 60000
+2015-01-20 00:45:31: pred. train+ dbm LABEL acc.: 100.00% (1000)
+2015-01-20 00:45:31: pred. train+ dbm LABEL xent: 0.000d+0 (1000)
+2015-01-20 00:45:31: pred. train  dbm LABEL acc.: 9.70% (1000)
+2015-01-20 00:45:31: pred. train  dbm LABEL xent: 3.454d-1 (1000)
+2015-01-20 00:45:31: pred. test   dbm LABEL acc.: 9.80% (10000)
+2015-01-20 00:45:31: pred. test   dbm LABEL xent: 3.454d-1 (10000)
+2015-01-20 00:45:31: cuda mats: 70118, copies: h->d: 70854, d->h: 63666
+2015-01-20 00:45:31: ---------------------------------------------------
+2015-01-20 00:45:32: inits:
+((:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1)))
+ (:CLOUD-NAME (F1 C2) :WEIGHT-NAME (:CLOUD (F1 C2) :TRANSPOSE))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2) :TRANSPOSE)))
+2015-01-20 00:45:32: bpn def:
+(BUILD-FNN (:CLASS 'MNIST-BPN/2 :MAX-N-STRIPES 1000 :INITARGS
+            '(:POPULATE-KEY #<FUNCTION FIRST>
+              :POPULATE-CONVERT-TO-DBM-SAMPLE-FN
+              #<FUNCTION (LAMBDA (SAMPLE) :IN TRAIN-MNIST/2) {10527D8F7B}>
+              :POPULATE-MAP-CACHE-LAZILY-FROM-DBM
+              #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+              :POPULATE-PERIODIC-FN #<PERIODIC-FN {105279E4C3}>))
+  (#:G282112 (->INPUT :NAME '(:CHUNK F2 :MAP) :SIZE 1000))
+  (#:G282111 (->CONSTANT :NAME '(:CHUNK C2 :MAP) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G282108 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G282106 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G282109 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G282119 (->WEIGHT :NAME '(:CLOUD (F1 F2) :TRANSPOSE) :SIZE 500000))
+  (#:G282120
+   (->MM :NAME '(:CLOUD (F1 F2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+         #:G282119 :X #:G282112 :TRANSPOSE-WEIGHTS-P T))
+  (#:G282121 (->WEIGHT :NAME '(:CLOUD (F1 C2) :TRANSPOSE) :SIZE 500))
+  (#:G282122
+   (->MM :NAME '(:CLOUD (F1 C2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+         #:G282121 :X #:G282111 :TRANSPOSE-WEIGHTS-P T))
+  (#:G282123 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G282124
+   (->MM :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS #:G282123 :X
+         #:G282108 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G282125 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G282126
+   (->MM :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G282125 :X
+         #:G282106 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G282118
+   (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS
+        (LIST #:G282120 #:G282122 #:G282124 #:G282126)))
+  (#:G282107 (->SIGMOID :NAME '(:CHUNK F1) :X #:G282118))
+  (#:G282128 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 500000))
+  (#:G282129
+   (->MM :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G282128 :X
+         #:G282107 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G282130 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 1000))
+  (#:G282131
+   (->MM :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G282130 :X
+         #:G282109 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G282127
+   (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G282129 #:G282131)))
+  (#:G282110 (->SIGMOID :NAME '(:CHUNK F2) :X #:G282127)))
+2015-01-20 00:45:32: Starting to train the softmax layer of BPN
+2015-01-20 00:45:32: Describing gradient source:
+#<BP-LEARNER {105A3A2353}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN/2 :STRIPES 1/1000 :CLUMPS 23 {10551A11B3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :STRIPES 1/1000 :CLUMPS 23 {10551A11B3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN/2 {10551A11B3}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE
+               1000 1/1000 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C2 :MAP) :SIZE
+               1 1/1000 :norm 1.00000>
+             #<->INPUT (:CHUNK INPUTS) :SIZE 784 1/1000 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1/1000 :norm 1.00000>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1/1000 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+               500000 1/1 :norm 41.67121>
+             #<->MM (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+               500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+               500 1/1 :norm 2.61220>
+             #<->MM (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+               500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 54.93315>
+             #<->MM (:CLOUD #5# . #3#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+               500 1/1 :norm 19.13577>
+             #<->MM (:CLOUD #6# . #3#) :SIZE 500 1/1000 :norm 0.00000>
+             #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+               500 1/1000 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F1) :SIZE 500 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #1#) :SIZE 500000 1/1 :norm 41.67121>
+             #<->MM (:CLOUD #1# . #3#) :SIZE 1000 1/1000 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+               1000 1/1 :norm 9.38863>
+             #<->MM (:CLOUD #8# . #3#) :SIZE 1000 1/1000 :norm 0.00000>
+             #<->+ (:CHUNK F2 . #7#) :SIZE 1000 1/1000 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F2) :SIZE 1000 1/1000 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/1000
+               :CLUMPS 4 {10551B09C3}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/1000 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 1000
+2015-01-20 00:45:32: Describing optimizer:
+#<MNIST-CG-BP-OPTIMIZER {105A3A1283}>
+CG-OPTIMIZER description:
+  N-INSTANCES = 0
+  BATCH-SIZE = 10000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.08449>
+                   #<->WEIGHT ((:CHUNK F2) PREDICTION) :SIZE
+                     10000 1/1 :norm 7.42682>)
+                  {105A3A2F03}>
+2015-01-20 00:45:32: cuda mats: 31, copies: h->d: 7, d->h: 0
+2015-01-20 00:45:32: test at n-instances: 0
+2015-01-20 00:45:32: populated: 0
+2015-01-20 00:45:35: populated: 1000
+2015-01-20 00:45:38: populated: 2000
+2015-01-20 00:45:41: populated: 3000
+2015-01-20 00:45:45: populated: 4000
+2015-01-20 00:45:48: populated: 5000
+2015-01-20 00:45:51: populated: 6000
+2015-01-20 00:45:55: populated: 7000
+2015-01-20 00:45:58: populated: 8000
+2015-01-20 00:46:01: populated: 9000
+2015-01-20 00:46:04: populated: 10000
+2015-01-20 00:46:05: pred. test bpn PREDICTION acc.: 93.62% (10000)
+2015-01-20 00:46:05: pred. test bpn PREDICTION xent: 2.487d-4 (10000)
+2015-01-20 00:46:05: cuda mats: 20055, copies: h->d: 10111, d->h: 210
+2015-01-20 00:46:05: ---------------------------------------------------
+2015-01-20 00:46:08: populated: 11000
+2015-01-20 00:46:11: populated: 12000
+2015-01-20 00:46:15: populated: 13000
+2015-01-20 00:46:18: populated: 14000
+2015-01-20 00:46:22: populated: 15000
+2015-01-20 00:46:26: populated: 16000
+2015-01-20 00:46:29: populated: 17000
+2015-01-20 00:46:33: populated: 18000
+2015-01-20 00:46:36: populated: 19000
+2015-01-20 00:46:40: populated: 20000
+2015-01-20 00:47:26: n-instances: 0
+2015-01-20 00:47:26: best-f: 2.36773d+3 (10000), n-evaluations: 11
+2015-01-20 00:47:26: n-line-searches: 3 (succesful 3)
+2015-01-20 00:47:30: populated: 21000
+2015-01-20 00:47:33: populated: 22000
+2015-01-20 00:47:37: populated: 23000
+2015-01-20 00:47:40: populated: 24000
+2015-01-20 00:47:44: populated: 25000
+2015-01-20 00:47:47: populated: 26000
+2015-01-20 00:47:51: populated: 27000
+2015-01-20 00:47:55: populated: 28000
+2015-01-20 00:47:58: populated: 29000
+2015-01-20 00:48:02: populated: 30000
+2015-01-20 00:48:49: n-instances: 10000
+2015-01-20 00:48:49: best-f: 2.26352d+3 (10000), n-evaluations: 11
+2015-01-20 00:48:49: n-line-searches: 3 (succesful 3)
+2015-01-20 00:48:52: populated: 31000
+2015-01-20 00:48:55: populated: 32000
+2015-01-20 00:48:59: populated: 33000
+2015-01-20 00:49:02: populated: 34000
+2015-01-20 00:49:06: populated: 35000
+2015-01-20 00:49:09: populated: 36000
+2015-01-20 00:49:13: populated: 37000
+2015-01-20 00:49:17: populated: 38000
+2015-01-20 00:49:20: populated: 39000
+2015-01-20 00:49:24: populated: 40000
+2015-01-20 00:50:11: n-instances: 20000
+2015-01-20 00:50:11: best-f: 2.33585d+3 (10000), n-evaluations: 11
+2015-01-20 00:50:11: n-line-searches: 3 (succesful 3)
+2015-01-20 00:50:14: populated: 41000
+2015-01-20 00:50:17: populated: 42000
+2015-01-20 00:50:21: populated: 43000
+2015-01-20 00:50:24: populated: 44000
+2015-01-20 00:50:28: populated: 45000
+2015-01-20 00:50:31: populated: 46000
+2015-01-20 00:50:35: populated: 47000
+2015-01-20 00:50:38: populated: 48000
+2015-01-20 00:50:42: populated: 49000
+2015-01-20 00:50:46: populated: 50000
+2015-01-20 00:51:28: n-instances: 30000
+2015-01-20 00:51:28: best-f: 2.23332d+3 (10000), n-evaluations: 10
+2015-01-20 00:51:28: n-line-searches: 3 (succesful 3)
+2015-01-20 00:51:31: populated: 51000
+2015-01-20 00:51:34: populated: 52000
+2015-01-20 00:51:38: populated: 53000
+2015-01-20 00:51:42: populated: 54000
+2015-01-20 00:51:45: populated: 55000
+2015-01-20 00:51:49: populated: 56000
+2015-01-20 00:51:52: populated: 57000
+2015-01-20 00:51:56: populated: 58000
+2015-01-20 00:51:59: populated: 59000
+2015-01-20 00:52:03: populated: 60000
+2015-01-20 00:52:40: n-instances: 40000
+2015-01-20 00:52:40: best-f: 2.09496d+3 (10000), n-evaluations: 9
+2015-01-20 00:52:40: n-line-searches: 3 (succesful 3)
+2015-01-20 00:52:44: populated: 61000
+2015-01-20 00:52:47: populated: 62000
+2015-01-20 00:52:51: populated: 63000
+2015-01-20 00:52:54: populated: 64000
+2015-01-20 00:52:58: populated: 65000
+2015-01-20 00:53:01: populated: 66000
+2015-01-20 00:53:05: populated: 67000
+2015-01-20 00:53:08: populated: 68000
+2015-01-20 00:53:12: populated: 69000
+2015-01-20 00:53:16: populated: 70000
+2015-01-20 00:53:58: n-instances: 50000
+2015-01-20 00:53:58: best-f: 2.11216d+3 (10000), n-evaluations: 10
+2015-01-20 00:53:58: n-line-searches: 3 (succesful 3)
+2015-01-20 00:53:58: test at n-instances: 60000
+2015-01-20 00:54:00: pred. test bpn PREDICTION acc.: 94.53% (10000)
+2015-01-20 00:54:00: pred. test bpn PREDICTION xent: 2.061d-4 (10000)
+2015-01-20 00:54:00: cuda mats: 140086, copies: h->d: 70711, d->h: 2040
+2015-01-20 00:54:00: ---------------------------------------------------
+2015-01-20 00:54:00: Starting to train the whole BPN
+2015-01-20 00:54:00: Describing gradient source:
+#<BP-LEARNER {105F08C363}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN/2 :STRIPES 1000/1000 :CLUMPS 23 {10551A11B3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = NIL
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :STRIPES 1000/1000 :CLUMPS 23 {10551A11B3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN/2 {10551A11B3}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE
+               1000 1000/1000 :norm 313.80043>
+             #<->CONSTANT (:CHUNK C2 :MAP) :SIZE
+               1 1000/1000 :norm 31.62278>
+             #<->INPUT (:CHUNK INPUTS) :SIZE
+               784 1000/1000 :norm 298.81957>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1000/1000 :norm 31.62278>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1000/1000 :norm 31.62278>
+             #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+               500000 1/1 :norm 41.67121>
+             #<->MM (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+               500 1000/1000 :norm 1724.25943>
+             #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+               500 1/1 :norm 2.61220>
+             #<->MM (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+               500 1000/1000 :norm 82.60500>
+             #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 54.93315>
+             #<->MM (:CLOUD #5# . #3#) :SIZE
+               500 1000/1000 :norm 2411.46834>
+             #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+               500 1/1 :norm 19.13577>
+             #<->MM (:CLOUD #6# . #3#) :SIZE
+               500 1000/1000 :norm 605.12608>
+             #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+               500 1000/1000 :norm 3753.45332>
+             #<->SIGMOID (:CHUNK F1) :SIZE
+               500 1000/1000 :norm 372.08374>
+             #<->WEIGHT (:CLOUD #1#) :SIZE 500000 1/1 :norm 41.67121>
+             #<->MM (:CLOUD #1# . #3#) :SIZE
+               1000 1000/1000 :norm 3137.07277>
+             #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+               1000 1/1 :norm 9.38863>
+             #<->MM (:CLOUD #8# . #3#) :SIZE
+               1000 1000/1000 :norm 296.89460>
+             #<->+ (:CHUNK F2 . #7#) :SIZE
+               1000 1000/1000 :norm 3337.23338>
+             #<->SIGMOID (:CHUNK F2) :SIZE
+               1000 1000/1000 :norm 313.80044>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1000/1000
+               :CLUMPS 4 {10551B09C3}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1000/1000 :norm 29.28736>)
+  N-STRIPES = 1000
+  MAX-N-STRIPES = 1000
+2015-01-20 00:54:00: Describing optimizer:
+#<MNIST-CG-BP-OPTIMIZER {105F08C0E3}>
+CG-OPTIMIZER description:
+  N-INSTANCES = 0
+  BATCH-SIZE = 10000
+  CG-ARGS = (:MAX-N-LINE-SEARCHES 3)
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE))
+                     :SIZE 500000 1/1 :norm 41.67121>
+                   #<->WEIGHT (:CLOUD (F1 C2) . #2#) :SIZE
+                     500 1/1 :norm 2.61220>
+                   #<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000 1/1 :norm 54.93315>
+                   #<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500 1/1 :norm 19.13577>
+                   #<->WEIGHT (:CLOUD #1#) :SIZE
+                     500000 1/1 :norm 41.67121>
+                   #<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     1000 1/1 :norm 9.38863>
+                   #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.12378>
+                   #<->WEIGHT ((:CHUNK F2) PREDICTION) :SIZE
+                     10000 1/1 :norm 8.54089>)
+                  {105F08C683}>
+2015-01-20 00:54:00: cuda mats: 140086, copies: h->d: 70711, d->h: 2040
+2015-01-20 00:54:00: test at n-instances: 0
+2015-01-20 00:54:02: pred. test bpn PREDICTION acc.: 94.53% (10000)
+2015-01-20 00:54:02: pred. test bpn PREDICTION xent: 2.061d-4 (10000)
+2015-01-20 00:54:02: cuda mats: 140086, copies: h->d: 70711, d->h: 2050
+2015-01-20 00:54:02: ---------------------------------------------------
+2015-01-20 00:54:06: TRAIN-MNIST/2 :DROPOUTP T
+2015-01-20 00:54:06: init: #<FULL-CLOUD (INPUTS F1) :NORM 6.25386d+0> 0.001
+2015-01-20 00:54:06: init: #<FULL-CLOUD (F1 F2) :NORM 7.07140d+0> 0.01
+2015-01-20 00:54:06: init: #<FULL-CLOUD (LABEL F2) :NORM 1.00568d+0> 0.01
+2015-01-20 00:54:06: Starting to train level 0 RBM in DBN.
+2015-01-20 00:54:06: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {106FBD87F3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C0 INPUTS) - (C1 F1)>
+  MONITORS                   = (#<MONITOR train train+ rbm INPUTS rmse: 0.000e+0 (0)>)
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 1
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {106FBD7BD3}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 1
+
+#<MNIST-RBM/2 {10613B9123}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {10613C7A83}>
+
+2015-01-20 00:54:06: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {106FBD7BD3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+                    {106FBD99F3}>
+                  {106FBD8F43}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                    {106FBD9503}>
+                  {106FBD8E73}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                    {106FBD9013}>
+                  {106FBD8DA3}>)
+  SEGMENTS = (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106FBD8F43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 6.25445d-1>)
+                  {106FBD99F3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106FBD8E73}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 0.00000d+0>)
+                  {106FBD9503}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {106FBD8DA3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 0.00000d+0>)
+                  {106FBD9013}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:54:06: cuda mats: 8, copies: h->d: 0, d->h: 3
+2015-01-20 00:54:06: test at n-instances: 0
+2015-01-20 00:54:08: pred. test+ dbn l0, rbm INPUTS rmse: 4.812d-1 (7840000)
+2015-01-20 00:54:08: cuda mats: 10022, copies: h->d: 10003, d->h: 3
+2015-01-20 00:54:08: ---------------------------------------------------
+2015-01-20 00:54:26: training at n-instances: 60000
+2015-01-20 00:54:26: train train+ rbm INPUTS rmse: 3.123d-1 (47040000)
+2015-01-20 00:54:26: test at n-instances: 60000
+2015-01-20 00:54:27: pred. test+ dbn l0, rbm INPUTS rmse: 1.190d-1 (7840000)
+2015-01-20 00:54:27: cuda mats: 70030, copies: h->d: 70003, d->h: 3
+2015-01-20 00:54:27: ---------------------------------------------------
+2015-01-20 00:54:44: training at n-instances: 120000
+2015-01-20 00:54:44: train train+ rbm INPUTS rmse: 2.567d-1 (47040000)
+2015-01-20 00:54:44: test at n-instances: 120000
+2015-01-20 00:54:45: pred. test+ dbn l0, rbm INPUTS rmse: 9.815d-2 (7840000)
+2015-01-20 00:54:45: cuda mats: 70030, copies: h->d: 70003, d->h: 3
+2015-01-20 00:54:45: ---------------------------------------------------
+2015-01-20 00:54:45: Starting to train level 1 RBM in DBN.
+2015-01-20 00:54:45: Describing gradient source:
+#<MNIST-RBM-CD-LEARNER {1003437213}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-RBM/2 (C1 F1 LABEL) - (C2 F2)>
+  MONITORS                   = (#<MONITOR #1=train #2=train+ #3=rbm F1 #4=rmse: 0.000e+0 (0)>..
+  SPARSITY-GRADIENT-SOURCES  = NIL
+  SPARSER                    = NIL
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = #<CLOSURE (LAMBDA (OPTIMIZER) :IN TRAIN-MNIST/2) {106FBD2F2B}>
+  OPTIMIZER                  = #<MNIST-RBM-OPTIMIZER {1003435A73}>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = NIL
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = "#<error printing object>"
+
+#<MNIST-RBM/2 {10613C4523}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C1 1(100/100)>
+                    #<SIGMOID-CHUNK F1 500(100/100)>
+                    #<SOFTMAX-LABEL-CHUNK LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>
+            #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+            #<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+  N-STRIPES = 100
+  MAX-N-STRIPES = 100
+
+RBM description:
+  DBN = #<MNIST-DBN {10613C7A83}>
+
+2015-01-20 00:54:45: Describing optimizer:
+#<MNIST-RBM-OPTIMIZER {1003435A73}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+                    {10034B8FD3}>
+                  {1003437B43}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                    {10034B8AE3}>
+                  {1003437A73}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>)
+                    {10034B85F3}>
+                  {10034379A3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                    {10034B8103}>
+                  {10034378D3}>
+                #<MNIST-RBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                    {1003437C13}>
+                  {1003437803}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>
+              #<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>
+              #<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1003437B43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 9.97621d-1>)
+                  {10034B8FD3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1003437A73}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 0.00000d+0>)
+                  {10034B8AE3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10034379A3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 7.07103d+0>)
+                  {10034B85F3}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 1.00000e-3
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {10034378D3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 0.00000d+0>)
+                  {10034B8103}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-RBM-SEGMENT-OPTIMIZER {1003437803}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 0.00000d+0>)
+                  {1003437C13}>
+  LEARNING-RATE = 5.00000e-2
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:54:45: cuda mats: 70030, copies: h->d: 70003, d->h: 8
+2015-01-20 00:54:45: test at n-instances: 0
+2015-01-20 00:54:52: pred. train+ dbn l1, rbm LABEL  acc.: 9.40% (1000)
+2015-01-20 00:54:52: pred. train+ dbn l1, rbm LABEL  xent: 2.296d-2 (1000)
+2015-01-20 00:54:52: pred. train  dbn l1, rbm LABEL  acc.: 9.40% (1000)
+2015-01-20 00:54:52: pred. train  dbn l1, rbm LABEL  xent: 2.318d-2 (1000)
+2015-01-20 00:54:52: pred. test+  dbn l0, rbm INPUTS rmse: 3.306d-1 (7840000)
+2015-01-20 00:54:52: pred. test+  dbn l1, rbm F1     rmse: 4.331d-1 (5000000)
+2015-01-20 00:54:52: pred. test+  dbn l1, rbm LABEL  rmse: 2.999d-1 (100000)
+2015-01-20 00:54:52: pred. test   dbn l1, rbm LABEL  acc.: 9.58% (10000)
+2015-01-20 00:54:52: pred. test   dbn l1, rbm LABEL  xent: 2.321d-2 (10000)
+2015-01-20 00:54:52: cuda mats: 70048, copies: h->d: 70224, d->h: 12570
+2015-01-20 00:54:52: ---------------------------------------------------
+2015-01-20 00:55:18: training at n-instances: 60000
+2015-01-20 00:55:18: train train+ rbm F1    rmse: 4.536d-1 (30000000)
+2015-01-20 00:55:18: train train+ rbm LABEL rmse: 2.562d-1 (600000)
+2015-01-20 00:55:18: train train+ rbm LABEL acc.: 67.19% (60000)
+2015-01-20 00:55:18: train train+ rbm LABEL xent: 1.133d-1 (60000)
+2015-01-20 00:55:18: test at n-instances: 60000
+2015-01-20 00:55:25: pred. train+ dbn l1, rbm LABEL  acc.: 91.30% (1000)
+2015-01-20 00:55:25: pred. train+ dbn l1, rbm LABEL  xent: 2.887d-3 (1000)
+2015-01-20 00:55:25: pred. train  dbn l1, rbm LABEL  acc.: 89.70% (1000)
+2015-01-20 00:55:25: pred. train  dbn l1, rbm LABEL  xent: 3.590d-3 (1000)
+2015-01-20 00:55:25: pred. test+  dbn l0, rbm INPUTS rmse: 1.190d-1 (7840000)
+2015-01-20 00:55:25: pred. test+  dbn l1, rbm F1     rmse: 1.071d-1 (5000000)
+2015-01-20 00:55:25: pred. test+  dbn l1, rbm LABEL  rmse: 1.061d-1 (100000)
+2015-01-20 00:55:25: pred. test   dbn l1, rbm LABEL  acc.: 91.02% (10000)
+2015-01-20 00:55:25: pred. test   dbn l1, rbm LABEL  xent: 3.266d-3 (10000)
+2015-01-20 00:55:25: cuda mats: 70060, copies: h->d: 71044, d->h: 86333
+2015-01-20 00:55:25: ---------------------------------------------------
+2015-01-20 00:55:52: training at n-instances: 120000
+2015-01-20 00:55:52: train train+ rbm F1    rmse: 3.968d-1 (30000000)
+2015-01-20 00:55:52: train train+ rbm LABEL rmse: 1.849d-1 (600000)
+2015-01-20 00:55:52: train train+ rbm LABEL acc.: 82.91% (60000)
+2015-01-20 00:55:52: train train+ rbm LABEL xent: 5.903d-2 (60000)
+2015-01-20 00:55:52: test at n-instances: 120000
+2015-01-20 00:55:58: pred. train+ dbn l1, rbm LABEL  acc.: 94.20% (1000)
+2015-01-20 00:55:58: pred. train+ dbn l1, rbm LABEL  xent: 2.120d-3 (1000)
+2015-01-20 00:55:58: pred. train  dbn l1, rbm LABEL  acc.: 92.10% (1000)
+2015-01-20 00:55:58: pred. train  dbn l1, rbm LABEL  xent: 2.784d-3 (1000)
+2015-01-20 00:55:58: pred. test+  dbn l0, rbm INPUTS rmse: 1.150d-1 (7840000)
+2015-01-20 00:55:58: pred. test+  dbn l1, rbm F1     rmse: 8.911d-2 (5000000)
+2015-01-20 00:55:58: pred. test+  dbn l1, rbm LABEL  rmse: 8.815d-2 (100000)
+2015-01-20 00:55:58: pred. test   dbn l1, rbm LABEL  acc.: 93.46% (10000)
+2015-01-20 00:55:58: pred. test   dbn l1, rbm LABEL  xent: 2.523d-3 (10000)
+2015-01-20 00:55:58: cuda mats: 70060, copies: h->d: 71864, d->h: 160096
+2015-01-20 00:55:58: ---------------------------------------------------
+2015-01-20 00:55:59: Starting to train DBM.
+2015-01-20 00:55:59: Describing gradient source:
+#<BM-PCD-LEARNER {109EFEED53}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BM                         = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+  MONITORS                   = (#<MONITOR #1=train #2=train+ #3=dbm INPUTS #4=rmse: 0.000e+0 (0)>..
+  SPARSITY-GRADIENT-SOURCES  = (#<CHEATING-SPARSITY-GRADIENT-SOURCE (C0 F1) F1 {109F088CC3}>..
+  SPARSER                    = #<FUNCTION (LAMBDA (CLOUD CHUNK) :IN TRAIN-MNIST-DBM) {10069E3DEB}>
+  VISIBLE-SAMPLING           = T
+  HIDDEN-SAMPLING            = :HALF-HEARTED
+  N-GIBBS                    = 5
+  N-PARTICLES                = 100
+  PERSISTENT-CHAINS          = #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+
+SPARSE-BM-LEARNER description:
+  SPARSITY-GRADIENT-SOURCES = (#<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C0 F1) F1 {109F088CC3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (INPUTS F1) F1 {109F08A503}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (C1 F2) F2 {109F08B5A3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 (F1 C2) F1 {109F08C5F3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE
+                                 #1=(F1 F2) F1 {109F08D5F3}>
+                               #<CHEATING-SPARSITY-GRADIENT-SOURCE #1#
+                                 F2 {109F08E5F3}>)
+
+BM-MCMC-LEARNER description:
+  VISIBLE-SAMPLING = T
+  HIDDEN-SAMPLING = :HALF-HEARTED
+  N-GIBBS = 5
+
+BM-PCD-LEARNER description:
+  N-PARTICLES = 100
+
+#<MNIST-DBM {10B462C203}>
+BM description:
+  VISIBLE-CHUNKS = (#<CONSTANT-CHUNK C0 1(1/100)>
+                    #<SIGMOID-CHUNK INPUTS 784(1/100)>
+                    #<SOFTMAX-LABEL-CHUNK LABEL 10(1/100)>)
+  HIDDEN-CHUNKS = (#<CONSTANT-CHUNK C1 1(1/100)>
+                   #<SIGMOID-CHUNK F1 500(1/100)>
+                   #<CONSTANT-CHUNK C2 1(1/100)>
+                   #<SIGMOID-CHUNK F2 1000(1/100)>)
+  CLOUDS = (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>
+            #<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>
+            #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+            #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+            #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+            #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+            #<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>
+            #<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F088CC3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F08A503}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F08B5A3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F08C5F3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F08D5F3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+  CHUNK = #<SIGMOID-CHUNK F1 500(1/100)>
+  TARGET = 2.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+#<CHEATING-SPARSITY-GRADIENT-SOURCE {109F08E5F3}>
+SPARSITY-GRADIENT-SOURCE description:
+  CLOUD = #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+  CHUNK = #<SIGMOID-CHUNK F2 1000(1/100)>
+  TARGET = 1.00000e-1
+  COST = 1.00000e-3
+  DAMPING = 9.00000e-1
+2015-01-20 00:55:59: Describing optimizer:
+#<MNIST-DBM-OPTIMIZER {109EFED3B3}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+                    {109F088173}>
+                  {109F00DE13}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>)
+                    {109F00FC83}>
+                  {109F00DD43}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>)
+                    {109F00F793}>
+                  {109F00DC73}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>)
+                    {109F00F2A3}>
+                  {109F00DBA3}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>)
+                    {109F00EDB3}>
+                  {109F00DAD3}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>)
+                    {109F00E8C3}>
+                  {109F00DA03}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>)
+                    {109F00E3D3}>
+                  {109F00D933}>
+                #<MNIST-DBM-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+                    {109F00DEE3}>
+                  {109F00D863}>)
+  SEGMENTS = (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>
+              #<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>
+              #<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>
+              #<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>
+              #<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>
+              #<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>
+              #<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>
+              #<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DE13}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL F2) :NORM 7.37013d+0>)
+                  {109F088173}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DD43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (LABEL C2) :NORM 8.66429d-2>)
+                  {109F00FC83}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DC73}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 F2) :NORM 4.18160d+1>)
+                  {109F00F793}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DBA3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (F1 C2) :NORM 2.63970d+0>)
+                  {109F00F2A3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DAD3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C1 F2) :NORM 9.35606d+0>)
+                  {109F00EDB3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00DA03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS F1) :NORM 5.48217d+1>)
+                  {109F00E8C3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 2.00000e-4
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00D933}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<FULL-CLOUD (INPUTS C1) :NORM 5.53860d+0>)
+                  {109F00E3D3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-DBM-SEGMENT-OPTIMIZER {109F00D863}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET (#<FULL-CLOUD (C0 F1) :NORM 1.91929d+1>)
+                  {109F00DEE3}>
+  LEARNING-RATE = 1.00000e-3
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 00:55:59: cuda mats: 136, copies: h->d: 106, d->h: 1
+2015-01-20 00:55:59: test at n-instances: 0
+2015-01-20 00:56:40: pred. train+ dbm LABEL acc.: 100.00% (1000)
+2015-01-20 00:56:40: pred. train+ dbm LABEL xent: 0.000d+0 (1000)
+2015-01-20 00:56:40: pred. train  dbm LABEL acc.: 9.70% (1000)
+2015-01-20 00:56:40: pred. train  dbm LABEL xent: 3.454d-1 (1000)
+2015-01-20 00:56:40: pred. test   dbm LABEL acc.: 9.80% (10000)
+2015-01-20 00:56:40: pred. test   dbm LABEL xent: 3.454d-1 (10000)
+2015-01-20 00:56:40: cuda mats: 11160, copies: h->d: 11230, d->h: 1233
+2015-01-20 00:56:40: ---------------------------------------------------
+2015-01-20 01:01:26: training at n-instances: 60000
+2015-01-20 01:01:26: train train+ dbm INPUTS rmse: 1.659d-1 (47040000)
+2015-01-20 01:01:26: train train+ dbm LABEL  rmse: 8.505d-2 (600000)
+2015-01-20 01:01:26: train train+ dbm LABEL  acc.: 95.73% (60000)
+2015-01-20 01:01:26: train train+ dbm LABEL  xent: 1.746d-3 (60000)
+2015-01-20 01:01:26: test at n-instances: 60000
+2015-01-20 01:02:03: pred. train+ dbm LABEL acc.: 100.00% (1000)
+2015-01-20 01:02:03: pred. train+ dbm LABEL xent: 0.000d+0 (1000)
+2015-01-20 01:02:03: pred. train  dbm LABEL acc.: 9.70% (1000)
+2015-01-20 01:02:03: pred. train  dbm LABEL xent: 3.454d-1 (1000)
+2015-01-20 01:02:03: pred. test   dbm LABEL acc.: 9.80% (10000)
+2015-01-20 01:02:03: pred. test   dbm LABEL xent: 3.454d-1 (10000)
+2015-01-20 01:02:03: cuda mats: 70110, copies: h->d: 70855, d->h: 63666
+2015-01-20 01:02:03: ---------------------------------------------------
+2015-01-20 01:02:03: inits:
+((:CLOUD-NAME (C1 F2) :WEIGHT-NAME (:CLOUD (C1 F2)))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2)))
+ (:CLOUD-NAME (C0 F1) :WEIGHT-NAME (:CLOUD (C0 F1)))
+ (:CLOUD-NAME (INPUTS F1) :WEIGHT-NAME (:CLOUD (INPUTS F1)))
+ (:CLOUD-NAME (F1 C2) :WEIGHT-NAME (:CLOUD (F1 C2) :TRANSPOSE))
+ (:CLOUD-NAME (F1 F2) :WEIGHT-NAME (:CLOUD (F1 F2) :TRANSPOSE)))
+2015-01-20 01:02:03: bpn def:
+(BUILD-FNN (:CLASS 'MNIST-BPN/2 :MAX-N-STRIPES 1000 :INITARGS
+            '(:POPULATE-KEY #<FUNCTION FIRST>
+              :POPULATE-CONVERT-TO-DBM-SAMPLE-FN
+              #<FUNCTION (LAMBDA (SAMPLE) :IN TRAIN-MNIST/2) {10527D8F7B}>
+              :POPULATE-MAP-CACHE-LAZILY-FROM-DBM
+              #<MNIST-DBM (C0 INPUTS LABEL) - (C1 F1 C2 F2)>
+              :POPULATE-PERIODIC-FN #<PERIODIC-FN {10A5026483}>))
+  (#:G402659 (->INPUT :NAME '(:CHUNK F2 :MAP) :SIZE 1000))
+  (#:G402658 (->CONSTANT :NAME '(:CHUNK C2 :MAP) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G402655 (->INPUT :NAME '(:CHUNK INPUTS) :SIZE 784))
+  (#:G402653 (->CONSTANT :NAME '(:CHUNK C0) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G402656 (->CONSTANT :NAME '(:CHUNK C1) :SIZE 1 :DEFAULT-VALUE 1.0d0))
+  (#:G402666 (->WEIGHT :NAME '(:CLOUD (F1 F2) :TRANSPOSE) :SIZE 500000))
+  (#:G402667
+   (->MM :NAME '(:CLOUD (F1 F2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+         #:G402666 :X #:G402659 :TRANSPOSE-WEIGHTS-P T))
+  (#:G402668 (->WEIGHT :NAME '(:CLOUD (F1 C2) :TRANSPOSE) :SIZE 500))
+  (#:G402669
+   (->MM :NAME '(:CLOUD (F1 C2) :TRANSPOSE :LINEAR) :SIZE 500 :WEIGHTS
+         #:G402668 :X #:G402658 :TRANSPOSE-WEIGHTS-P T))
+  (#:G402670 (->WEIGHT :NAME '(:CLOUD (INPUTS F1)) :SIZE 392000))
+  (#:G402671
+   (->MM :NAME '(:CLOUD (INPUTS F1) :LINEAR) :SIZE 500 :WEIGHTS #:G402670 :X
+         #:G402655 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G402672 (->WEIGHT :NAME '(:CLOUD (C0 F1)) :SIZE 500))
+  (#:G402673
+   (->MM :NAME '(:CLOUD (C0 F1) :LINEAR) :SIZE 500 :WEIGHTS #:G402672 :X
+         #:G402653 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G402665
+   (->+ :NAME '(:CHUNK F1 :ACTIVATION) :ARGS
+        (LIST #:G402667 #:G402669 #:G402671 #:G402673)))
+  (#:G402654 (->SIGMOID :NAME '(:CHUNK F1) :X #:G402665))
+  (#:G402675 (->WEIGHT :NAME '(:CLOUD (F1 F2)) :SIZE 500000))
+  (#:G402676
+   (->MM :NAME '(:CLOUD (F1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G402675 :X
+         #:G402654 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G402677 (->WEIGHT :NAME '(:CLOUD (C1 F2)) :SIZE 1000))
+  (#:G402678
+   (->MM :NAME '(:CLOUD (C1 F2) :LINEAR) :SIZE 1000 :WEIGHTS #:G402677 :X
+         #:G402656 :TRANSPOSE-WEIGHTS-P NIL))
+  (#:G402674
+   (->+ :NAME '(:CHUNK F2 :ACTIVATION) :ARGS (LIST #:G402676 #:G402678)))
+  (#:G402657 (->SIGMOID :NAME '(:CHUNK F2) :X #:G402674)))
+2015-01-20 01:02:03: dropout #<->INPUT (:CHUNK INPUTS) :SIZE
+                               784 1/100 :norm 0.00000> 0.2
+2015-01-20 01:02:03: dropout #<->SIGMOID (:CHUNK F1) :SIZE
+                               500 1/100 :norm 0.00000> 0.5
+2015-01-20 01:02:03: dropout #<->SIGMOID (:CHUNK F2) :SIZE
+                               1000 1/100 :norm 0.00000> 0.5
+2015-01-20 01:02:03: Starting to train the whole BPN
+2015-01-20 01:02:03: Describing gradient source:
+#<BP-LEARNER {10A53F9F63}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN/2 :STRIPES 1/100 :CLUMPS 23 {10A52BFAA3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN/2 :STRIPES 1/100 :CLUMPS 23 {10A52BFAA3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN/2 {10A52BFAA3}>
+BPN description:
+  CLUMPS = #(#<->INPUT (:CHUNK F2 :MAP) :SIZE 1000 1/100 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C2 :MAP) :SIZE 1 1/100 :norm 1.00000>
+             #<->INPUT (:CHUNK INPUTS) :SIZE 784 1/100 :norm 0.00000>
+             #<->CONSTANT (:CHUNK C0) :SIZE 1 1/100 :norm 1.00000>
+             #<->CONSTANT (:CHUNK C1) :SIZE 1 1/100 :norm 1.00000>
+             #<->WEIGHT (:CLOUD #1=(F1 F2) . #2=(:TRANSPOSE)) :SIZE
+               500000 1/1 :norm 41.67121>
+             #<->MM (:CLOUD #1# :TRANSPOSE . #3=(:LINEAR)) :SIZE
+               500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #4=(F1 C2) . #2#) :SIZE
+               500 1/1 :norm 2.61220>
+             #<->MM (:CLOUD #4# :TRANSPOSE . #3#) :SIZE
+               500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #5=(INPUTS F1)) :SIZE
+               392000 1/1 :norm 68.66643>
+             #<->MM (:CLOUD #5# . #3#) :SIZE 500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #6=(C0 F1)) :SIZE
+               500 1/1 :norm 19.13577>
+             #<->MM (:CLOUD #6# . #3#) :SIZE 500 1/100 :norm 0.00000>
+             #<->+ (:CHUNK F1 . #7=(:ACTIVATION)) :SIZE
+               500 1/100 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F1) :SIZE 500 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #1#) :SIZE 500000 1/1 :norm 83.34242>
+             #<->MM (:CLOUD #1# . #3#) :SIZE 1000 1/100 :norm 0.00000>
+             #<->WEIGHT (:CLOUD #8=(C1 F2)) :SIZE
+               1000 1/1 :norm 9.38863>
+             #<->MM (:CLOUD #8# . #3#) :SIZE 1000 1/100 :norm 0.00000>
+             #<->+ (:CHUNK F2 . #7#) :SIZE 1000 1/100 :norm 0.00000>
+             #<->SIGMOID (:CHUNK F2) :SIZE 1000 1/100 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/100
+               :CLUMPS 4 {10A52CE3E3}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/100 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 100
+2015-01-20 01:02:03: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {10A53F5213}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT ((:CHUNK F2) PREDICTION) :SIZE
+                       10000 1/1 :norm 14.85363>)
+                    {10A55D0433}>
+                  {10A55CD9A3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.08449>)
+                    {10A55CFEF3}>
+                  {10A55CD8C3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                       1000 1/1 :norm 9.38863>)
+                    {10A55CFA03}>
+                  {10A55CD7E3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD #1=(F1 F2)) :SIZE
+                       500000 1/1 :norm 83.34242>)
+                    {10A55CF513}>
+                  {10A55CD703}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                       500 1/1 :norm 19.13577>)
+                    {10A55CF023}>
+                  {10A55CD623}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                       392000 1/1 :norm 68.66643>)
+                    {10A55CEB33}>
+                  {10A55CD543}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD (F1 C2) . #2=(:TRANSPOSE))
+                       :SIZE 500 1/1 :norm 2.61220>)
+                    {10A55CE643}>
+                  {10A55CD463}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:CLOUD #1# . #2#) :SIZE
+                       500000 1/1 :norm 41.67121>)
+                    {10A55CDA83}>
+                  {10A55CD383}>)
+  SEGMENTS = (#<->WEIGHT ((:CHUNK F2) PREDICTION) :SIZE
+                10000 1/1 :norm 14.85363>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE 10 1/1 :norm 0.08449>
+              #<->WEIGHT (:CLOUD (C1 F2)) :SIZE 1000 1/1 :norm 9.38863>
+              #<->WEIGHT (:CLOUD #1=(F1 F2)) :SIZE
+                500000 1/1 :norm 83.34242>
+              #<->WEIGHT (:CLOUD (C0 F1)) :SIZE 500 1/1 :norm 19.13577>
+              #<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                392000 1/1 :norm 68.66643>
+              #<->WEIGHT (:CLOUD (F1 C2) . #2=(:TRANSPOSE)) :SIZE
+                500 1/1 :norm 2.61220>
+              #<->WEIGHT (:CLOUD #1# . #2#) :SIZE
+                500000 1/1 :norm 41.67121>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD9A3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT ((:CHUNK F2) PREDICTION) :SIZE
+                     10000 1/1 :norm 14.85363>)
+                  {10A55D0433}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD8C3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.08449>)
+                  {10A55CFEF3}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD7E3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C1 F2)) :SIZE
+                     1000 1/1 :norm 9.38863>)
+                  {10A55CFA03}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD703}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 F2)) :SIZE
+                     500000 1/1 :norm 83.34242>)
+                  {10A55CF513}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD623}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (C0 F1)) :SIZE
+                     500 1/1 :norm 19.13577>)
+                  {10A55CF023}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD543}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (INPUTS F1)) :SIZE
+                     392000 1/1 :norm 68.66643>)
+                  {10A55CEB33}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD463}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 C2) :TRANSPOSE) :SIZE
+                     500 1/1 :norm 2.61220>)
+                  {10A55CE643}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10A55CD383}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:CLOUD (F1 F2) :TRANSPOSE) :SIZE
+                     500000 1/1 :norm 41.67121>)
+                  {10A55CDA83}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 0
+  BATCH-SIZE = 100
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 01:02:03: cuda mats: 31, copies: h->d: 7, d->h: 0
+2015-01-20 01:02:03: test at n-instances: 0
+2015-01-20 01:02:03: populated: 0
+2015-01-20 01:02:07: populated: 1000
+2015-01-20 01:02:10: populated: 2000
+2015-01-20 01:02:13: populated: 3000
+2015-01-20 01:02:17: populated: 4000
+2015-01-20 01:02:20: populated: 5000
+2015-01-20 01:02:23: populated: 6000
+2015-01-20 01:02:27: populated: 7000
+2015-01-20 01:02:30: populated: 8000
+2015-01-20 01:02:33: populated: 9000
+2015-01-20 01:02:37: populated: 10000
+2015-01-20 01:02:37: pred. test bpn PREDICTION acc.: 93.62% (10000)
+2015-01-20 01:02:37: pred. test bpn PREDICTION xent: 2.487d-3 (10000)
+2015-01-20 01:02:37: cuda mats: 20055, copies: h->d: 10112, d->h: 300
+2015-01-20 01:02:37: ---------------------------------------------------
+2015-01-20 01:02:40: populated: 11000
+2015-01-20 01:02:44: populated: 12000
+2015-01-20 01:02:48: populated: 13000
+2015-01-20 01:02:52: populated: 14000
+2015-01-20 01:02:55: populated: 15000
+2015-01-20 01:02:59: populated: 16000
+2015-01-20 01:03:03: populated: 17000
+2015-01-20 01:03:06: populated: 18000
+2015-01-20 01:03:10: populated: 19000
+2015-01-20 01:03:14: populated: 20000
+2015-01-20 01:03:17: populated: 21000
+2015-01-20 01:03:21: populated: 22000
+2015-01-20 01:03:25: populated: 23000
+2015-01-20 01:03:29: populated: 24000
+2015-01-20 01:03:32: populated: 25000
+2015-01-20 01:03:36: populated: 26000
+2015-01-20 01:03:40: populated: 27000
+2015-01-20 01:03:43: populated: 28000
+2015-01-20 01:03:47: populated: 29000
+2015-01-20 01:03:51: populated: 30000
+2015-01-20 01:03:55: populated: 31000
+2015-01-20 01:03:58: populated: 32000
+2015-01-20 01:04:02: populated: 33000
+2015-01-20 01:04:06: populated: 34000
+2015-01-20 01:04:09: populated: 35000
+2015-01-20 01:04:13: populated: 36000
+2015-01-20 01:04:17: populated: 37000
+2015-01-20 01:04:21: populated: 38000
+2015-01-20 01:04:24: populated: 39000
+2015-01-20 01:04:28: populated: 40000
+2015-01-20 01:04:32: populated: 41000
+2015-01-20 01:04:36: populated: 42000
+2015-01-20 01:04:39: populated: 43000
+2015-01-20 01:04:43: populated: 44000
+2015-01-20 01:04:47: populated: 45000
+2015-01-20 01:04:50: populated: 46000
+2015-01-20 01:04:54: populated: 47000
+2015-01-20 01:04:58: populated: 48000
+2015-01-20 01:05:02: populated: 49000
+2015-01-20 01:05:05: populated: 50000
+2015-01-20 01:05:09: populated: 51000
+2015-01-20 01:05:13: populated: 52000
+2015-01-20 01:05:16: populated: 53000
+2015-01-20 01:05:20: populated: 54000
+2015-01-20 01:05:24: populated: 55000
+2015-01-20 01:05:28: populated: 56000
+2015-01-20 01:05:31: populated: 57000
+2015-01-20 01:05:35: populated: 58000
+2015-01-20 01:05:39: populated: 59000
+2015-01-20 01:05:43: populated: 60000
+2015-01-20 01:05:47: populated: 61000
+2015-01-20 01:05:50: populated: 62000
+2015-01-20 01:05:54: populated: 63000
+2015-01-20 01:05:58: populated: 64000
+2015-01-20 01:06:01: populated: 65000
+2015-01-20 01:06:05: populated: 66000
+2015-01-20 01:06:09: populated: 67000
+2015-01-20 01:06:12: populated: 68000
+2015-01-20 01:06:16: populated: 69000
+2015-01-20 01:06:20: populated: 70000
+2015-01-20 01:06:20: training at n-instances: 60000
+2015-01-20 01:06:20: train train+ bpn PREDICTION acc.: 90.15% (60000)
+2015-01-20 01:06:20: train train+ bpn PREDICTION xent: 3.189d-3 (60000)
+2015-01-20 01:06:20: test at n-instances: 60000
+2015-01-20 01:06:22: pred. test bpn PREDICTION acc.: 95.28% (10000)
+2015-01-20 01:06:22: pred. test bpn PREDICTION xent: 1.676d-3 (10000)
+2015-01-20 01:06:22: cuda mats: 140098, copies: h->d: 70712, d->h: 2200
+2015-01-20 01:06:22: ---------------------------------------------------
+2015-01-20 01:06:59: training at n-instances: 120000
+2015-01-20 01:06:59: train train+ bpn PREDICTION acc.: 92.24% (60000)
+2015-01-20 01:06:59: train train+ bpn PREDICTION xent: 2.543d-3 (60000)
+2015-01-20 01:06:59: test at n-instances: 120000
+2015-01-20 01:07:01: pred. test bpn PREDICTION acc.: 95.74% (10000)
+2015-01-20 01:07:01: pred. test bpn PREDICTION xent: 1.486d-3 (10000)
+2015-01-20 01:07:01: cuda mats: 140098, copies: h->d: 70712, d->h: 2900
+2015-01-20 01:07:01: ---------------------------------------------------
+2015-01-20 01:07:05: TRAIN-MNIST/3
+2015-01-20 01:07:05: Starting to train the whole BPN
+2015-01-20 01:07:05: Describing gradient source:
+#<BP-LEARNER {10822CED23}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 12 {10822A8453}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 12 {10822A8453}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {10822A8453}>
+BPN description:
+  CLUMPS = #(#<->INPUT INPUTS :SIZE 784 1/96 :norm 0.00000>
+             #<->ACTIVATION (F1 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10822AA2B3}>
+             #<->RECTIFIED F1* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F1 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (F2 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10822B55B3}>
+             #<->RECTIFIED F2* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F2 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (F3 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10822B8DB3}>
+             #<->RECTIFIED F3* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F3 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/96
+               :CLUMPS 4 {10822BC603}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/96 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 96
+2015-01-20 01:07:05: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {10822CB953}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F3 PREDICTION) :SIZE
+                       12000 1/1 :norm 1.09774>
+                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.03284>)
+                    {1082349343}>
+                  {10822CFDA3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F2 F3) :SIZE
+                       1440000 1/1 :norm 11.98193>
+                     #<->WEIGHT (:BIAS F3) :SIZE
+                       1200 1/1 :norm 0.34220>)
+                    {1082348E33}>
+                  {10822CFC43}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F1 F2) :SIZE
+                       1440000 1/1 :norm 11.98457>
+                     #<->WEIGHT (:BIAS F2) :SIZE
+                       1200 1/1 :norm 0.33265>)
+                    {1082348923}>
+                  {10822CFAE3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (INPUTS F1) :SIZE
+                       940800 1/1 :norm 9.69657>)
+                    {1082348433}>
+                  {10822CF993}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS F1) :SIZE
+                       1200 1/1 :norm 0.35523>)
+                    {10822CFF03}>
+                  {10822CF3D3}>)
+  SEGMENTS = (#<->WEIGHT (F3 PREDICTION) :SIZE 12000 1/1 :norm 1.09774>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE 10 1/1 :norm 0.03284>
+              #<->WEIGHT (F2 F3) :SIZE 1440000 1/1 :norm 11.98193>
+              #<->WEIGHT (:BIAS F3) :SIZE 1200 1/1 :norm 0.34220>
+              #<->WEIGHT (F1 F2) :SIZE 1440000 1/1 :norm 11.98457>
+              #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>
+              #<->WEIGHT (INPUTS F1) :SIZE 940800 1/1 :norm 9.69657>
+              #<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10822CFDA3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F3 PREDICTION) :SIZE
+                     12000 1/1 :norm 1.09774>
+                   #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.03284>)
+                  {1082349343}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10822CFC43}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F2 F3) :SIZE 1440000 1/1 :norm 11.98193>
+                   #<->WEIGHT (:BIAS F3) :SIZE 1200 1/1 :norm 0.34220>)
+                  {1082348E33}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10822CFAE3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE 1440000 1/1 :norm 11.98457>
+                   #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>)
+                  {1082348923}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10822CF993}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800 1/1 :norm 9.69657>)
+                  {1082348433}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 1.00000e-6
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10822CF3D3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+                  {10822CFF03}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 01:07:05: cuda mats: 16, copies: h->d: 0, d->h: 0
+2015-01-20 01:07:05: test at n-instances: 0
+2015-01-20 01:07:09: pred. test bpn PREDICTION acc.: 11.35% (10000)
+2015-01-20 01:07:09: pred. test bpn PREDICTION xent: 2.417d-2 (10000)
+2015-01-20 01:07:09: cuda mats: 10021, copies: h->d: 10001, d->h: 105
+2015-01-20 01:07:09: ---------------------------------------------------
+2015-01-20 01:08:50: training at n-instances: 60000
+2015-01-20 01:08:50: train train+ bpn PREDICTION acc.: 51.18% (60000)
+2015-01-20 01:08:50: train train+ bpn PREDICTION xent: 1.379d-2 (60000)
+2015-01-20 01:08:50: test at n-instances: 60000
+2015-01-20 01:08:54: pred. test bpn PREDICTION acc.: 93.12% (10000)
+2015-01-20 01:08:54: pred. test bpn PREDICTION xent: 2.516d-3 (10000)
+2015-01-20 01:08:54: cuda mats: 70056, copies: h->d: 70001, d->h: 835
+2015-01-20 01:08:54: ---------------------------------------------------
+2015-01-20 01:10:33: training at n-instances: 120000
+2015-01-20 01:10:33: train train+ bpn PREDICTION acc.: 92.03% (60000)
+2015-01-20 01:10:33: train train+ bpn PREDICTION xent: 2.748d-3 (60000)
+2015-01-20 01:10:33: test at n-instances: 120000
+2015-01-20 01:10:37: pred. test bpn PREDICTION acc.: 96.22% (10000)
+2015-01-20 01:10:37: pred. test bpn PREDICTION xent: 1.388d-3 (10000)
+2015-01-20 01:10:37: cuda mats: 70056, copies: h->d: 70001, d->h: 1565
+2015-01-20 01:10:37: ---------------------------------------------------
+2015-01-20 01:10:38: TRAIN-MNIST/4
+2015-01-20 01:10:38: Starting to train the whole BPN
+2015-01-20 01:10:38: Describing gradient source:
+#<BP-LEARNER {10040B2873}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 9 {10040974E3}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 9 {10040974E3}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {10040974E3}>
+BPN description:
+  CLUMPS = #(#<->INPUT INPUTS :SIZE 784 1/96 :norm 0.00000>
+             #<->ACTIVATION (F1 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10040983A3}>
+             #<->MAX F1* :SIZE 240 1/96 :norm 0.00000>
+             #<->DROPOUT F1 :SIZE 240 1/96 :norm 0.00000>
+             #<->ACTIVATION (F2 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {100409FA63}>
+             #<->MAX F2* :SIZE 240 1/96 :norm 0.00000>
+             #<->DROPOUT F2 :SIZE 240 1/96 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/96
+               :CLUMPS 4 {10040A3383}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/96 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 96
+2015-01-20 01:10:38: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {10040B0103}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F2 PREDICTION) :SIZE
+                       2400 1/1 :norm 0.49172>
+                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.02431>)
+                    {10040B4313}>
+                  {10040B32C3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F1 F2) :SIZE 288000 1/1 :norm 5.34213>
+                     #<->WEIGHT (:BIAS F2) :SIZE
+                       1200 1/1 :norm 0.33265>)
+                    {10040B3E03}>
+                  {10040B3163}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (INPUTS F1) :SIZE
+                       940800 1/1 :norm 9.69657>)
+                    {10040B3913}>
+                  {10040B3013}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS F1) :SIZE
+                       1200 1/1 :norm 0.35523>)
+                    {10040B3423}>
+                  {10040B2EC3}>)
+  SEGMENTS = (#<->WEIGHT (F2 PREDICTION) :SIZE 2400 1/1 :norm 0.49172>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE 10 1/1 :norm 0.02431>
+              #<->WEIGHT (F1 F2) :SIZE 288000 1/1 :norm 5.34213>
+              #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>
+              #<->WEIGHT (INPUTS F1) :SIZE 940800 1/1 :norm 9.69657>
+              #<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10040B32C3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F2 PREDICTION) :SIZE
+                     2400 1/1 :norm 0.49172>
+                   #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.02431>)
+                  {10040B4313}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10040B3163}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE 288000 1/1 :norm 5.34213>
+                   #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>)
+                  {10040B3E03}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10040B3013}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800 1/1 :norm 9.69657>)
+                  {10040B3913}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 1.00000e-6
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10040B2EC3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+                  {10040B3423}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 01:10:38: cuda mats: 12, copies: h->d: 0, d->h: 0
+2015-01-20 01:10:38: test at n-instances: 0
+2015-01-20 01:10:40: pred. test bpn PREDICTION acc.: 9.82% (10000)
+2015-01-20 01:10:40: pred. test bpn PREDICTION xent: 2.418d-2 (10000)
+2015-01-20 01:10:40: cuda mats: 10016, copies: h->d: 10001, d->h: 105
+2015-01-20 01:10:40: ---------------------------------------------------
+2015-01-20 01:11:16: training at n-instances: 60000
+2015-01-20 01:11:16: train train+ bpn PREDICTION acc.: 71.58% (60000)
+2015-01-20 01:11:16: train train+ bpn PREDICTION xent: 8.487d-3 (60000)
+2015-01-20 01:11:16: test at n-instances: 60000
+2015-01-20 01:11:17: pred. test bpn PREDICTION acc.: 95.10% (10000)
+2015-01-20 01:11:17: pred. test bpn PREDICTION xent: 1.695d-3 (10000)
+2015-01-20 01:11:17: cuda mats: 70043, copies: h->d: 70003, d->h: 835
+2015-01-20 01:11:17: ---------------------------------------------------
+2015-01-20 01:11:51: training at n-instances: 120000
+2015-01-20 01:11:51: train train+ bpn PREDICTION acc.: 93.60% (60000)
+2015-01-20 01:11:51: train train+ bpn PREDICTION xent: 2.225d-3 (60000)
+2015-01-20 01:11:51: test at n-instances: 120000
+2015-01-20 01:11:53: pred. test bpn PREDICTION acc.: 96.54% (10000)
+2015-01-20 01:11:53: pred. test bpn PREDICTION xent: 1.206d-3 (10000)
+2015-01-20 01:11:53: cuda mats: 70043, copies: h->d: 70003, d->h: 1565
+2015-01-20 01:11:53: ---------------------------------------------------
+2015-01-20 01:11:54: TRAIN-MNIST/5
+2015-01-20 01:11:54: Starting to train the whole BPN
+2015-01-20 01:11:54: Describing gradient source:
+#<BP-LEARNER {10CA9ED3B3}>
+  [standard-object]
+
+Slots with :INSTANCE allocation:
+  BPN                  = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 12 {10CA875C03}>
+  FIRST-TRAINED-CLUMP  = NIL
+  MONITORS             = (#<MONITOR #1=train #2=train+ #3=bpn PREDICTION acc.: 0.00% (0)>..
+
+BP-LEARNER description:
+  BPN = #<MNIST-BPN :STRIPES 1/96 :CLUMPS 12 {10CA875C03}>
+  FIRST-TRAINED-CLUMP = NIL
+#<MNIST-BPN {10CA875C03}>
+BPN description:
+  CLUMPS = #(#<->INPUT INPUTS :SIZE 784 1/96 :norm 0.00000>
+             #<->ACTIVATION (F1 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10CA876AC3}>
+             #<->MAX-CHANNEL F1* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F1 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (F2 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10CA88DC33}>
+             #<->MAX-CHANNEL F2* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F2 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (F3 :ACTIVATION) :STRIPES 1/96 :CLUMPS 4
+               {10CA92B663}>
+             #<->MAX-CHANNEL F3* :SIZE 1200 1/96 :norm 0.00000>
+             #<->DROPOUT F3 :SIZE 1200 1/96 :norm 0.00000>
+             #<->ACTIVATION (PREDICTION :ACTIVATION) :STRIPES 1/96
+               :CLUMPS 4 {10CA92EF53}>
+             #<->SOFTMAX-XE-LOSS PREDICTION :SIZE
+               10 1/96 :norm 0.00000>)
+  N-STRIPES = 1
+  MAX-N-STRIPES = 96
+2015-01-20 01:11:54: Describing optimizer:
+#<MNIST-BPN-GD-OPTIMIZER {10CA9EA563}>
+SEGMENTED-GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  OPTIMIZERS = (#<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F3 PREDICTION) :SIZE
+                       12000 1/1 :norm 1.09774>
+                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                       10 1/1 :norm 0.03284>)
+                    {10CA9EF523}>
+                  {10CA9EDFC3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F2 F3) :SIZE
+                       1440000 1/1 :norm 11.98193>
+                     #<->WEIGHT (:BIAS F3) :SIZE
+                       1200 1/1 :norm 0.34220>)
+                    {10CA9EF013}>
+                  {10CA9EDE63}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (F1 F2) :SIZE
+                       1440000 1/1 :norm 11.98457>
+                     #<->WEIGHT (:BIAS F2) :SIZE
+                       1200 1/1 :norm 0.33265>)
+                    {10CA9EEB03}>
+                  {10CA9EDD03}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (INPUTS F1) :SIZE
+                       940800 1/1 :norm 9.69657>)
+                    {10CA9EE613}>
+                  {10CA9EDBB3}>
+                #<MNIST-BPN-GD-SEGMENT-OPTIMIZER
+                  #<SEGMENT-SET
+                    (#<->WEIGHT (:BIAS F1) :SIZE
+                       1200 1/1 :norm 0.35523>)
+                    {10CA9EE123}>
+                  {10CA9EDA63}>)
+  SEGMENTS = (#<->WEIGHT (F3 PREDICTION) :SIZE 12000 1/1 :norm 1.09774>
+              #<->WEIGHT (:BIAS PREDICTION) :SIZE 10 1/1 :norm 0.03284>
+              #<->WEIGHT (F2 F3) :SIZE 1440000 1/1 :norm 11.98193>
+              #<->WEIGHT (:BIAS F3) :SIZE 1200 1/1 :norm 0.34220>
+              #<->WEIGHT (F1 F2) :SIZE 1440000 1/1 :norm 11.98457>
+              #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>
+              #<->WEIGHT (INPUTS F1) :SIZE 940800 1/1 :norm 9.69657>
+              #<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10CA9EDFC3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F3 PREDICTION) :SIZE
+                     12000 1/1 :norm 1.09774>
+                   #<->WEIGHT (:BIAS PREDICTION) :SIZE
+                     10 1/1 :norm 0.03284>)
+                  {10CA9EF523}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10CA9EDE63}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F2 F3) :SIZE 1440000 1/1 :norm 11.98193>
+                   #<->WEIGHT (:BIAS F3) :SIZE 1200 1/1 :norm 0.34220>)
+                  {10CA9EF013}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10CA9EDD03}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (F1 F2) :SIZE 1440000 1/1 :norm 11.98457>
+                   #<->WEIGHT (:BIAS F2) :SIZE 1200 1/1 :norm 0.33265>)
+                  {10CA9EEB03}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10CA9EDBB3}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (INPUTS F1) :SIZE
+                     940800 1/1 :norm 9.69657>)
+                  {10CA9EE613}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 1.00000e-6
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+#<MNIST-BPN-GD-SEGMENT-OPTIMIZER {10CA9EDA63}>
+GD-OPTIMIZER description:
+  N-INSTANCES = 0
+  SEGMENT-SET = #<SEGMENT-SET
+                  (#<->WEIGHT (:BIAS F1) :SIZE 1200 1/1 :norm 0.35523>)
+                  {10CA9EE123}>
+  LEARNING-RATE = 5.00000e-1
+  MOMENTUM = 5.00000e-1
+  MOMENTUM-TYPE = :NORMAL
+  WEIGHT-DECAY = 0.00000e+0
+  WEIGHT-PENALTY = 0.00000e+0
+  N-AFTER-UPATE-HOOK = 1
+  BATCH-SIZE = 96
+
+BATCH-GD-OPTIMIZER description:
+  N-BEFORE-UPATE-HOOK = 0
+2015-01-20 01:11:54: cuda mats: 16, copies: h->d: 0, d->h: 0
+2015-01-20 01:11:54: test at n-instances: 0
+2015-01-20 01:11:58: pred. test bpn PREDICTION acc.: 11.35% (10000)
+2015-01-20 01:11:58: pred. test bpn PREDICTION xent: 2.417d-2 (10000)
+2015-01-20 01:11:58: cuda mats: 10021, copies: h->d: 10001, d->h: 105
+2015-01-20 01:11:58: ---------------------------------------------------
+2015-01-20 01:13:39: training at n-instances: 60000
+2015-01-20 01:13:39: train train+ bpn PREDICTION acc.: 49.07% (60000)
+2015-01-20 01:13:39: train train+ bpn PREDICTION xent: 1.440d-2 (60000)
+2015-01-20 01:13:39: test at n-instances: 60000
+2015-01-20 01:13:44: pred. test bpn PREDICTION acc.: 91.75% (10000)
+2015-01-20 01:13:44: pred. test bpn PREDICTION xent: 2.925d-3 (10000)
+2015-01-20 01:13:44: cuda mats: 70056, copies: h->d: 70003, d->h: 835
+2015-01-20 01:13:44: ---------------------------------------------------
+2015-01-20 01:15:23: training at n-instances: 120000
+2015-01-20 01:15:23: train train+ bpn PREDICTION acc.: 90.41% (60000)
+2015-01-20 01:15:23: train train+ bpn PREDICTION xent: 3.302d-3 (60000)
+2015-01-20 01:15:23: test at n-instances: 120000
+2015-01-20 01:15:27: pred. test bpn PREDICTION acc.: 94.87% (10000)
+2015-01-20 01:15:27: pred. test bpn PREDICTION xent: 1.795d-3 (10000)
+2015-01-20 01:15:27: cuda mats: 70056, copies: h->d: 70003, d->h: 1565
+2015-01-20 01:15:27: ---------------------------------------------------

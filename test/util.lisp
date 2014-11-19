@@ -8,10 +8,6 @@
        (vectorp v2)
        (every #'= v1 v2)))
 
-(defun log-msg (format &rest args)
-  (format *trace-output* "~&")
-  (apply #'format *trace-output* format args))
-
 (defmacro do-cuda (() &body body)
   `(loop for enabled in (if (cuda-available-p)
                             '(nil t)

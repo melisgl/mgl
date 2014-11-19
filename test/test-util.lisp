@@ -1,14 +1,5 @@
 (in-package :mgl-test)
 
-(defun test-make-n-gram-mappee ()
-  (assert (equal (let ((r ()))
-                   (map nil (make-n-gram-mappee (lambda (x)
-                                                  (push x r))
-                                                3)
-                        '(0 1 2 3))
-                   (reverse r))
-                 '((0 1 2) (1 2 3)))))
-
 (defun test-log-likelihood-ratio ()
   (assert (= 1.2785435
              (binomial-log-likelihood-ratio 3 7 2 11)
@@ -31,7 +22,6 @@
 
 (defun test-util ()
   (do-cuda ()
-    (test-make-n-gram-mappee)
     (test-log-likelihood-ratio)
     (test-copy)
     (test-confusion-matrix)

@@ -441,15 +441,16 @@
   The following example simply collects the test and training sets for
   2-fold CV repeated 3 times with shuffled data:
 
-  ```cl-transcript
-   (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
-   => ((((2 3 4) (1 0))
-        ((1 0) (2 3 4)))
-       (((2 1 0) (4 3))
-        ((4 3) (2 1 0)))
-       (((1 0 3) (2 4))
-        ((2 4) (1 0 3))))
-   ```
+  ```commonlisp
+  ;;; This is non-deterministic.
+  (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+  => ((((2 3 4) (1 0))
+       ((1 0) (2 3 4)))
+      (((2 1 0) (4 3))
+       ((4 3) (2 1 0)))
+      (((1 0 3) (2 4))
+       ((2 4) (1 0 3))))
+  ```
 
   CV bagging is useful when a single CV is not producing stable
   results. As an ensemble method, CV bagging has the advantage over

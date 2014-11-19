@@ -8,6 +8,8 @@
   (test-cg)
   (test-bm)
   (test-bp)
+  (test-rnn)
   (test-unroll)
   (test-gp)
+  (test-nlp)
   (values))

@@ -16,7 +16,7 @@
 
 ## 1 mgl ASDF System Details
 
-- Version: 0.0.8
+- Version: 0.0.9
 - Description: MGL is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.
 - Licence: MIT, see COPYING.
@@ -30,43 +30,10 @@
 
 MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
-by Ravenpack International. It implements:
-
-- Gradient descent optimization
-
-    - Nesterov momentum
-
-- Conjugate gradient optimization
-
-- Backpropagation networks (BPN)
-
-    - Dropout
-
-    - Rectified linear units
-
-    - Maxout
-
-    - Max-channel
-
-- Boltzmann Machines
-
-    - Restricted Boltzmann Machines (RBM)
-
-    - Contrastive Divergence (CD) learning
-
-    - Deep Belief Networks (DBN)
-
-    - Semi Restricted Boltzmann Machines
-
-    - Deep Boltzmann Machines
-
-    - Persistent Contrastive Divergence (PCD) learning
-
-    - Unrolling DBN or a DBM to a BPN
-
-- Gaussian Processes
-
-    - Optimizing Gaussian Processes as BPNs
+by Ravenpack International. It mainly concentrates on various forms
+of neural networks (boltzmann machines, feed-forward and recurrent
+backprop nets). Most of MGL is built on top of `MGL-MAT` so it has
+BLAS and CUDA support.
 
 In general, the focus is on power and performance not on ease of
 use. Perhaps one day there will be a cookie cutter interface with

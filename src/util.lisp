@@ -133,8 +133,33 @@
   (subseq sequence start end))
 
 (defun max-position (seq start end)
-  (position (loop for i upfrom start below end maximizing (elt seq i))
-            seq :start start :end end))
+  (declare (type index start end))
+  (cond ((typep seq '(simple-array single-float (*)))
+         (let ((max most-negative-single-float)
+               (pos nil))
+           (declare (optimize speed)
+                    (type (simple-array single-float (*)) seq))
+           (loop for i of-type index upfrom start below end
+                 do (let ((x (aref seq i)))
+                      (when (< max x)
+                        (setq max x)
+                        (setq pos i))))
+           pos))
+        ((typep seq '(simple-array double-float (*)))
+         (let ((max most-negative-double-float)
+               (pos nil))
+           (declare (optimize speed)
+                    (type (simple-array double-float (*)) seq))
+           (loop for i of-type index upfrom start below end
+                 do (let ((x (aref seq i)))
+                      (when (< max x)
+                        (setq max x)
+                        (setq pos i))))
+           pos))
+        (t
+         (position (loop for i upfrom start below end
+                         maximizing (elt seq i))
+                   seq :start start :end end))))
 
 (defun hash-table->vector (hash-table)
   (let ((v (make-array (hash-table-count hash-table)))
@@ -155,7 +180,7 @@
 (defun make-sequence-generator (seq)
   "Return a function that returns elements of SEQ in order without
   end. When there are no more elements, start over."
-  (let* ((vector (copy-seq (coerce seq 'vector)))
+  (let* ((vector (coerce seq 'vector))
          (l (length vector))
          (n 0))
     (lambda ()
@@ -163,7 +188,7 @@
           (aref vector n)
         (setf n (mod (1+ n) l))))))
 
-(defun make-random-generator (seq &key (reorder #'mgl-resample:shuffle))
+(defun make-random-generator (seq &key (reorder #'mgl-resample:shuffle!))
   "Return a function that returns elements of VECTOR in random order
   without end. When there are no more elements, start over with a
   different random order."
@@ -176,18 +201,6 @@
       (prog1
           (aref vector n)
         (setf n (mod (1+ n) l))))))
-
-(defun make-n-gram-mappee (function n)
-  "Make a function of a single argument that's suitable for the
-  function arguments to a mapper function. It calls FUNCTION with
-  every N element."
-  (let ((previous-values '()))
-    (lambda (x)
-      (push x previous-values)
-      (when (< n (length previous-values))
-        (setf previous-values (subseq previous-values 0 n)))
-      (when (= n (length previous-values))
-        (funcall function (reverse previous-values))))))
 
 (defun applies-to-p (generic-function &rest args)
   (find nil (compute-applicable-methods generic-function args)
@@ -379,17 +392,19 @@
                        mat (mat-dimension mat 1))
     (nreverse arrays)))
 
-(defun max-row-positions (mat)
+(defun max-row-positions (mat &key start end)
   "Find the colums with the maximum in each row of the 2d MAT and
   return them as a list."
-  (let ((displacement (mat-displacement mat))
-        (n-rows (mat-dimension mat 0))
-        (n-columns (mat-dimension mat 1)))
+  (let* ((displacement (mat-displacement mat))
+         (n-rows (mat-dimension mat 0))
+         (n-columns (mat-dimension mat 1))
+         (start (or start 0))
+         (end (or end n-columns)))
     (with-facets ((m (mat 'backing-array :direction :input)))
       (loop for row below n-rows
-            collect (let ((start (+ displacement (* row n-columns))))
-                      (- (max-position m start (+ start n-columns))
-                         start))))))
+            collect (let ((row-start (+ displacement (* row n-columns))))
+                      (- (max-position m (+ row-start start) (+ row-start end))
+                         (+ row-start start)))))))
 
 
 ;;;; Classes

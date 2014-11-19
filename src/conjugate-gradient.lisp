@@ -342,7 +342,7 @@
                                (min ratio
                                     (/ d3
                                        (- d0
-                                          least-positive-flt))))
+                                          least-positive-single-float))))
                          ls-failed nil))
                   (t
                    ;; restore best point so far
@@ -516,16 +516,14 @@
 (defmethod accumulate-gradients*
     ((optimizer decayed-cg-optimizer-mixin) gradient-source
      batch multiplier valuep)
-  (let* ((cost (flt (call-next-method)))
+  (let* ((cost (call-next-method))
          (segment-decay-fn (segment-decay-fn optimizer))
          (accumulator (accumulator optimizer)))
-    (declare (type flt cost))
-    (with-facets ((accumulator* (accumulator 'backing-array
-                                             :direction :io
-                                             :type flt-vector)))
+    (declare (type real cost))
+    (with-facets ((accumulator* (accumulator 'backing-array :direction :io)))
       (do-segment-set (segment segment-start) (segment-set optimizer)
         (let ((decay (funcall segment-decay-fn segment)))
-          (declare (type (or null flt) decay))
+          (declare (type (or null real) decay))
           (when (and decay (not (zerop decay)))
             ;; Because d(regularizer*x^2)/dx = 2*penalty*x hence
             ;; regularizer=decay/2.
@@ -536,9 +534,8 @@
                    (end (+ start (mat-size weights))))
               (declare (type index start end))
               (with-facets ((weights* (weights 'backing-array
-                                               :direction :input
-                                               :type flt-vector)))
-                (declare (optimize (speed 3)))
+                                               :direction :input)))
+                #+nil (declare (optimize (speed 3)))
                 (loop for i upfrom start below end
                       for j upfrom segment-start
                       do (let ((x (aref weights* i)))

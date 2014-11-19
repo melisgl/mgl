@@ -113,11 +113,11 @@
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump ->activation))
+(defmethod graph-node-fields append (x (lump ->mm))
   (when (transpose-weights-p lump)
     (list (format nil "TRANSPOSE: ~S" (transpose-weights-p lump)))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->activation))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->mm))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
@@ -138,12 +138,17 @@
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->linear))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->*))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
         (make-instance 'cl-dot:attributed
                        :object (mgl-bp::y lump)
+                       :attributes '(:dir :back))))
+
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->identity))
+  (list (make-instance 'cl-dot:attributed
+                       :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
 (defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->sigmoid))
@@ -164,11 +169,10 @@
                        :object (mgl-bp::y lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump ->cross-entropy-softmax))
+(defmethod graph-node-fields append (x (lump ->softmax-xe-loss))
   (list (format nil "GROUP-SIZE: ~S" (group-size lump))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn)
-                                          (lump ->cross-entropy-softmax))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->softmax-xe-loss))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
@@ -176,6 +180,12 @@
                        :object (target lump)
                        :attributes '(:dir :back
                                      :label "target"))))
+
+(defmethod cl-dot:graph-object-points-to ((bpn bpn)
+                                          (lump ->scaled-tanh))
+  (list (make-instance 'cl-dot:attributed
+                       :object (mgl-bp::x lump)
+                       :attributes '(:dir :back))))
 
 #|
 
@@ -198,21 +208,21 @@
                        (:chunk1 c0 :chunk2 label :class nil)
                        (:chunk1 inputs :chunk2 label :class nil))))
        (dbn (dbm->dbn dbm))
-       (bpn (eval `(build-bpn () ,@(unroll-dbm dbm)))))
+       (bpn (eval `(build-fnn () ,@(unroll-dbm dbm)))))
   (let ((dgraph (cl-dot:generate-graph-from-roots dbn (chunks dbn)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "src/visuals/test-dbn.png")
+                      (asdf-system-relative-pathname "visuals/test-dbn.png")
                       :format :png))
   (let ((dgraph (cl-dot:generate-graph-from-roots dbm (chunks dbm)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "src/visuals/test-dbm.png")
+                      (asdf-system-relative-pathname "visuals/test-dbm.png")
                       :format :png))
-  (let ((dgraph (cl-dot:generate-graph-from-roots bpn (lumps bpn)
+  (let ((dgraph (cl-dot:generate-graph-from-roots bpn (clumps bpn)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "src/visuals/test-bpn.png")
+                      (asdf-system-relative-pathname "visuals/test-bpn.png")
                       :format :png)))
 
 |#

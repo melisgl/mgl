@@ -65,17 +65,19 @@
 ;;;;
 ;;;; Rectified Dropout BPN (see TRAIN-MNIST/3)
 ;;;;
-;;;; An 784-1200-1200-1200 BPN is trained directly. ~99.00%
+;;;; A 784-1200-1200-1200 BPN is trained directly. ~98.91% in 7-fold
+;;;; CV. ~98.97% with INPUT-WEIGHT-PENALTY.
 ;;;;
 ;;;;
 ;;;; Maxout BPN (see TRAIN-MNIST/4)
 ;;;;
 ;;;; I couldn't quite reproduce the 99.06% claimed in the paper.
+;;;; 98.91% in 7-fold CV . 98.97% with INPUT-WEIGHT-PENALTY.
 ;;;;
 ;;;;
 ;;;; Max-channel BPN (see TRAIN-MNIST/5)
 ;;;;
-;;;; 99.16%
+;;;; 7-fold CV: 99.01%. 99.07% with INPUT-WEIGHT-PENALTY.
 
 (in-package :mgl-example-mnist)
 
@@ -117,9 +119,9 @@
     (loop repeat n collect (read-byte stream))))
 
 (defun read-image-array (stream)
-  (let ((a (make-array (* 28 28) :element-type 'mgl-util:flt)))
+  (let ((a (make-array (* 28 28))))
     (loop for i below (* 28 28) do
-      (let ((pixel (/ (read-byte stream) #.(flt 255))))
+      (let ((pixel (/ (read-byte stream) 255)))
         (unless (<= 0 pixel 1)
           (error "~S" pixel))
         (setf (aref a i) pixel)))
@@ -213,8 +215,9 @@
   (assert (= (length samples) (mat-dimension mat 0)))
   (fill! 0 mat)
   (let ((n-columns (mat-dimension mat 1))
-        (displacement (mat-displacement mat)))
-    (with-facets ((a (mat 'backing-array :direction :io :type flt-vector)))
+        (displacement (mat-displacement mat))
+        (one (coerce-to-ctype 1 :ctype (mat-ctype mat))))
+    (with-facets ((a (mat 'backing-array :direction :io)))
       (loop for sample in samples
             for row upfrom 0
             do (destructuring-bind (image &key discard-label-p sample-visible-p)
@@ -224,7 +227,18 @@
                    (setf (aref a (+ displacement
                                     (* row n-columns)
                                     (image-label image)))
-                         #.(flt 1))))))))
+                         one)))))))
+
+;;; Create a list of indices suitable as TARGET for ->SOFTMAX-XE-LOSS.
+(defun label-target-list (samples)
+  (loop for sample in samples
+        collect (destructuring-bind (image &key discard-label-p
+                                     sample-visible-p)
+                    sample
+                  (declare (ignore sample-visible-p))
+                  (if discard-label-p
+                      nil
+                      (image-label image)))))
 
 (defun make-mnist-label-monitors (model &key attributes)
   (make-label-monitors
@@ -329,8 +343,8 @@
 
 (defmethod momentum ((optimizer mnist-rbm-segment-optimizer))
   (if (< (n-instances optimizer) (* 5 (n-instances-in-epoch optimizer)))
-      #.(flt 0.5)
-      #.(flt 0.9)))
+      0.5
+      0.9))
 
 (defun init-mnist-dbn (dbn &key stddev (start-level 0))
   (loop for i upfrom start-level
@@ -341,7 +355,7 @@
                        x)))
             (do-clouds (cloud rbm)
               (if (conditioning-cloud-p cloud)
-                  (fill! (flt 0) (weights cloud))
+                  (fill! 0 (weights cloud))
                   (progn
                     (log-msg "init: ~A ~A~%" cloud (this stddev))
                     (gaussian-random! (weights cloud)
@@ -372,7 +386,7 @@
                                                  :weight-decay
                                                  (if (conditioning-cloud-p
                                                       cloud)
-                                                     (flt 0)
+                                                     0
                                                      (this decay))
                                                  :batch-size 100)))))
           
@@ -404,35 +418,34 @@
 (defclass mnist-bpn (bpn) ())
 
 (defmethod set-input (samples (bpn mnist-bpn))
-  (let* ((inputs (or (find-lump (chunk-lump-name 'inputs nil) bpn)
-                     (find-lump 'inputs bpn)))
-         (expectations (find-lump 'expectations bpn :errorp t)))
+  (let* ((inputs (or (find-clump (chunk-lump-name 'inputs nil) bpn :errorp nil)
+                     (find-clump 'inputs bpn)))
+         (prediction (find-clump 'prediction bpn)))
     (clamp-images samples (nodes inputs))
-    (clamp-labels samples (nodes expectations))))
+    (setf (target prediction) (label-target-list samples))))
 
-(defun tack-cross-entropy-softmax-error-on (bpn inputs)
-  (add-cross-entropy-softmax :predictions-name 'predictions
-                             :expectations-name 'expectations
-                             :size 10
-                             :inputs inputs
-                             :bpn bpn))
+(defun make-softmax (inputs)
+  (->softmax-xe-loss :name 'prediction
+                     :x (->activation :name 'prediction :size 10
+                                      :inputs inputs)))
 
 (defun prediction-weight-p (lump)
   (let ((name (name lump)))
     (and (listp name)
          (= 2 (length name))
-         (eq 'predictions (second name)))))
+         (eq 'prediction (second name)))))
 
 (defun make-bpn (defs chunk-name &key class initargs)
-  (let ((bpn-def `(build-bpn (:class ',class
+  (let ((bpn-def `(build-fnn (:class ',class
                               :max-n-stripes 1000
                               :initargs ',initargs)
                     ,@defs)))
     (log-msg "bpn def:~%~S~%" bpn-def)
     (let* ((bpn (eval bpn-def))
            (name (chunk-lump-name chunk-name nil))
-           (lump (find-lump name bpn)))
-      (tack-cross-entropy-softmax-error-on bpn (list lump))
+           (lump (find-clump name bpn)))
+      (let ((mgl-bp::*bpn-being-built* bpn))
+        (make-softmax (list lump)))
       bpn)))
 
 
@@ -452,8 +465,8 @@
   (log-cuda)
   (log-msg "---------------------------------------------------~%"))
 
-(defun init-bpn-lump-weights (name bpn stddev)
-  (gaussian-random! (nodes (find-lump name bpn :errorp t)) :stddev stddev))
+(defun init-bpn-lump-weights (lump stddev)
+  (gaussian-random! (nodes lump) :stddev stddev))
 
 ;;;; BPN CG training
 
@@ -514,11 +527,11 @@
   (multiple-value-bind (defs inits) (unroll-dbn dbn :bottom-up-only t)
     (log-msg "bpn inits:~%~S~%" inits)
     (let ((bpn (make-bpn defs 'f3 :class 'mnist-bpn)))
-      (initialize-bpn-from-bm bpn dbn inits)
+      (initialize-fnn-from-bm bpn dbn inits)
       (map nil (lambda (lump)
                  (when (prediction-weight-p lump)
-                   (init-bpn-lump-weights (name lump) bpn 0.1)))
-           (lumps bpn))
+                   (init-bpn-lump-weights lump 0.1)))
+           (clumps bpn))
       bpn)))
 
 (defun train-mnist/1 (&key training test load-dbn-p quick-run-p dropoutp
@@ -543,8 +556,8 @@
                (init-mnist-dbn dbn :stddev 0.1)
                (train-mnist-dbn dbn training test
                                 :n-epochs (if quick-run-p 2 50) :n-gibbs 1
-                                :start-level 0 :learning-rate (flt 0.1)
-                                :decay (flt 0.0002) :visible-sampling nil)
+                                :start-level 0 :learning-rate 0.1
+                                :decay 0.0002 :visible-sampling nil)
                (unless quick-run-p
                  (save-weights dbn-filename dbn)))))
       (repeatably ()
@@ -553,8 +566,8 @@
                (train-mnist-bpn-gd bpn training test
                                    :n-softmax-epochs (if quick-run-p 1 10)
                                    :n-epochs (if quick-run-p 2 1000)
-                                   :learning-rate (flt 1)
-                                   :learning-rate-decay (flt 0.998)
+                                   :learning-rate 1
+                                   :learning-rate-decay 0.998
                                    :l2-upper-bound nil
                                    :set-dropout-p t
                                    :rescale-on-dropout-p t)
@@ -573,7 +586,7 @@
 ;;;; dropout training with the bpn (paper [3]) with :DROPOUT T.
 
 (defclass mnist-rbm/2 (mnist-rbm) ())
-(defclass mnist-bpn/2 (mnist-bpn bpn-clamping-cache) ())
+(defclass mnist-bpn/2 (mnist-bpn fnn-clamping-cache) ())
 
 (defun clamp-chunk-labels (samples chunk)
   (setf (indices-present chunk)
@@ -667,15 +680,15 @@
   ;; This is adjusted for each batch. Ruslan's code adjusts it per
   ;; epoch.
   (/ (slot-value optimizer 'learning-rate)
-     (min (flt 10)
+     (min 10
           (expt 1.000015
                 (* (/ (n-instances optimizer) (n-instances-in-epoch optimizer))
                    600)))))
 
 (defmethod momentum ((optimizer mnist-dbm-segment-optimizer))
   (if (< (n-instances optimizer) (* 5 (n-instances-in-epoch optimizer)))
-      #.(flt 0.5)
-      #.(flt 0.9)))
+      0.5
+      0.9))
 
 (defmethod initialize-gradient-source* ((optimizer mnist-dbm-optimizer) learner
                                         weights dataset)
@@ -698,11 +711,11 @@
                               (lambda (cloud)
                                 (make-instance 'mnist-dbm-segment-optimizer
                                                :n-instances-in-epoch n
-                                               :learning-rate (flt 0.001)
+                                               :learning-rate 0.001
                                                :weight-decay
                                                (if (conditioning-cloud-p cloud)
-                                                   (flt 0)
-                                                   (flt 0.0002))
+                                                   0
+                                                   0.0002)
                                                :batch-size 100)))
                '((:fn log-dbm-test-error :period log-test-period)
                  (:fn reset-optimization-monitors
@@ -725,11 +738,11 @@
                     'cheating-sparsity-gradient-source
                     :cloud cloud
                     :chunk chunk
-                    :sparsity (flt (if (eq 'f2 (name chunk))
-                                       0.1
-                                       0.2))
-                    :cost (flt 0.001)
-                    :damping (flt 0.9))))
+                    :sparsity (if (eq 'f2 (name chunk))
+                                  0.1
+                                  0.2)
+                    :cost 0.001
+                    :damping 0.9)))
                :monitors
                (let ((attributes '(:event "train" :dataset "train+")))
                  (append
@@ -750,19 +763,18 @@
           (name (chunk-lump-name 'f2 nil)))
       ;; In the DBM, the label is computed top-down so make sure its
       ;; weights we'll copy to the BPN will be transposed.
-      (setf (slot-value (find-lump `((,name predictions) :activation) bpn
-                                   :errorp t)
+      (setf (slot-value (find-clump `((,name prediction) :activation)
+                                    (find-clump '(prediction :activation) bpn))
                         'mgl-bp::transpose-weights-p)
             t)
-      (initialize-bpn-from-bm bpn dbm
-                              (if use-label-weights
-                                  (list*
-                                   '(:cloud-name (label c2)
-                                     :weight-name (:bias predictions))
-                                   '(:cloud-name (label f2)
-                                     :weight-name ((:chunk f2) predictions))
-                                   inits)
-                                  inits))
+      (initialize-fnn-from-bm bpn dbm inits)
+      (when use-label-weights
+        (initialize-fnn-from-bm (find-clump '(prediction :activation) bpn) dbm
+                                (list
+                                 '(:cloud-name (label c2)
+                                   :weight-name (:bias prediction))
+                                 '(:cloud-name (label f2)
+                                   :weight-name ((:chunk f2) prediction)))))
       bpn)))
 
 (defun train-mnist/2 (&key training test load-dbn-p load-dbm-p dropoutp
@@ -784,13 +796,13 @@
                                  (lambda (optimizer)
                                    (ceiling (1+ (n-instances optimizer))
                                             (* 20 (length training)))))
-                  :learning-rate (list (flt 0.05)
+                  :learning-rate (list 0.05
                                        (lambda (optimizer)
-                                         (/ (flt 0.05)
+                                         (/ 0.05
                                             (ceiling
                                              (1+ (n-instances optimizer))
                                              (* 20 (length training))))))
-                  :decay (flt 0.001)
+                  :decay 0.001
                   :visible-sampling t))
                (unless quick-run-p
                  (save-weights dbn-filename dbn)))
@@ -850,8 +862,8 @@
                  (train-mnist-bpn-gd bpn training test
                                      :n-softmax-epochs 0
                                      :n-epochs (if quick-run-p 2 1000)
-                                     :learning-rate (flt 1)
-                                     :learning-rate-decay (flt 0.998)
+                                     :learning-rate 1
+                                     :learning-rate-decay 0.998
                                      :l2-upper-bound nil
                                      :set-dropout-p t
                                      :rescale-on-dropout-p t)
@@ -897,7 +909,7 @@
     :initarg :n-epochs-to-reach-final-momentum
     :reader n-epochs-to-reach-final-momentum)
    (learning-rate-decay
-    :initform (flt 0.998)
+    :initform 0.998
     :initarg :learning-rate-decay
     :accessor learning-rate-decay)))
 
@@ -910,8 +922,8 @@
 
 (defmethod momentum ((optimizer mnist-bpn-gd-segment-optimizer))
   (let ((n-epochs-to-reach-final (n-epochs-to-reach-final-momentum optimizer))
-        (initial (flt 0.5))
-        (final (flt 0.99))
+        (initial 0.5)
+        (final 0.99)
         (epoch (/ (n-instances optimizer) (n-instances-in-epoch optimizer))))
     (if (< epoch n-epochs-to-reach-final)
         (let ((weight (/ epoch n-epochs-to-reach-final)))
@@ -940,13 +952,11 @@
 
 (defun train-mnist-bpn-gd (bpn training test &key (n-softmax-epochs 5)
                            (n-epochs 200) l2-upper-bound
-                           class-weights learning-rate learning-rate-decay
+                           learning-rate learning-rate-decay
                            set-dropout-p
                            input-weight-penalty
                            rescale-on-dropout-p
                            (batch-size 100))
-  (when class-weights
-    (setf (class-weights (find-lump 'predictions bpn)) class-weights))
   (setf (max-n-stripes bpn) batch-size)
   (flet ((make-optimizer (lump &key softmaxp)
            (let ((optimizer (make-instance
@@ -956,14 +966,14 @@
                              (min 500
                                   (/ (if softmaxp n-softmax-epochs n-epochs)
                                      2))
-                             :learning-rate (flt learning-rate)
-                             :learning-rate-decay (flt learning-rate-decay)
+                             :learning-rate learning-rate
+                             :learning-rate-decay learning-rate-decay
                              :weight-penalty (if (and input-weight-penalty
                                                       (member (name lump)
                                                               '((inputs f1))
                                                               :test #'name=))
-                                                 (flt input-weight-penalty)
-                                                 (flt 0))
+                                                 input-weight-penalty
+                                                 0)
                              :batch-size batch-size)))
              (when l2-upper-bound
                (arrange-for-renormalizing-activations
@@ -1016,8 +1026,8 @@
                    (log-msg "dropout ~A ~A~%" lump 0.5)
                    (if rescale-on-dropout-p
                        (set-dropout-and-rescale-activation-weights
-                        lump (flt 0.5) bpn)
-                       (setf (slot-value lump 'dropout) (flt 0.5))))
+                        lump 0.5 bpn)
+                       (setf (slot-value lump 'dropout) 0.5)))
                  (when (and (typep lump '->input)
                             (member (name lump) '((:chunk inputs)
                                                   inputs)
@@ -1025,9 +1035,9 @@
                    (log-msg "dropout ~A ~A~%" lump 0.2)
                    (if rescale-on-dropout-p
                        (set-dropout-and-rescale-activation-weights
-                        lump (flt 0.2) bpn)
-                       (setf (slot-value lump 'dropout) (flt 0.2)))))
-           (lumps bpn)))
+                        lump 0.2 bpn)
+                       (setf (slot-value lump 'dropout) 0.2))))
+           (clumps bpn)))
     (unless (zerop n-epochs)
       (log-msg "Starting to train the whole BPN~%")
       (minimize (monitor-optimization-periodically
@@ -1050,38 +1060,39 @@
 
 (defun build-rectified-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                   (n-units-3 1200))
-  (build-bpn (:bpn bpn :class 'mnist-bpn :max-n-stripes 100)
-    (inputs (->input :size 784 :dropout (flt 0.2)))
-    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
-                                     :size n-units-1))
+  (build-fnn (:class 'mnist-bpn :max-n-stripes 100)
+    (inputs (->input :size 784 :dropout 0.2))
+    (f1-activations (->activation :name 'f1 :inputs '(inputs)
+                                  :size n-units-1))
     (f1* (->rectified :x f1-activations))
-    (f1 (->dropout :x f1* :dropout (flt 0.5)))
-    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
+    (f1 (->dropout :x f1*))
+    (f2-activations (->activation :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->rectified :x f2-activations))
-    (f2 (->dropout :x f2* :dropout (flt 0.5)))
-    (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-3))
+    (f2 (->dropout :x f2*))
+    (f3-activations (->activation :name 'f3 :inputs '(f2) :size n-units-3))
     (f3* (->rectified :x f3-activations))
-    (f3 (->dropout :x f3* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on bpn (list f3)))))
+    (f3 (->dropout :x f3*))
+    (prediction (make-softmax (list f3)))))
 
 ;;; Return a matrix of the same shape as MAT that's zero everywhere,
 ;;; except in at most N randomly chosen positions in each column where
 ;;; it's one.
 (defun make-sparse-column-mask (mat n)
-  (let ((mask (make-mat (mat-dimensions mat) :ctype (mat-ctype mat))))
+  (let ((mask (make-mat (mat-dimensions mat) :ctype (mat-ctype mat)))
+        (one (coerce-to-ctype 1 :ctype (mat-ctype mat))))
     (destructuring-bind (n-rows n-columns) (mat-dimensions mat)
       (with-facets ((mask* (mask 'backing-array :direction :io)))
         (loop for column below n-columns do
           (loop repeat n
                 do (setf (aref mask* (+ (* (random n-rows) n-columns)
                                         column))
-                         (flt 1))))))
+                         one)))))
     mask))
 
 (defun init-bpn-weights (bpn &key stddev)
-  (loop for lump across (lumps bpn) do
-    (when (typep lump '->weight)
-      (gaussian-random! (nodes lump) :stddev stddev))))
+  (map-segments (lambda (weight)
+                  (gaussian-random! (nodes weight) :stddev stddev))
+                bpn))
 
 (defun train-mnist/3 (&key training test quick-run-p bpn-var bpn-filename)
   (with-example-log ()
@@ -1093,10 +1104,10 @@
         (train-mnist-bpn-gd bpn training test
                             :n-softmax-epochs 0
                             :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate (flt 1)
-                            :learning-rate-decay (flt 0.998)
-                            :l2-upper-bound (sqrt (flt 15))
-                            :input-weight-penalty (flt 0.000001)
+                            :learning-rate 1
+                            :learning-rate-decay 0.998
+                            :l2-upper-bound (sqrt 15)
+                            :input-weight-penalty 0.000001
                             :batch-size 96)
         (when (and bpn-filename (not quick-run-p))
           (save-weights bpn-filename bpn))))))
@@ -1106,16 +1117,16 @@
 
 (defun build-maxout-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                (group-size 5))
-  (build-bpn (:bpn bpn :class 'mnist-bpn)
-    (inputs (->input :size 784 :dropout (flt 0.2)))
-    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
-                                     :size n-units-1))
+  (build-fnn (:class 'mnist-bpn)
+    (inputs (->input :size 784 :dropout 0.2))
+    (f1-activations (->activation :name 'f1 :inputs '(inputs)
+                                  :size n-units-1))
     (f1* (->max :x f1-activations :group-size group-size))
-    (f1 (->dropout :x f1* :dropout (flt 0.5)))
-    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
+    (f1 (->dropout :x f1*))
+    (f2-activations (->activation :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->max :x f2-activations :group-size group-size))
-    (f2 (->dropout :x f2* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on bpn '(f2)))))
+    (f2 (->dropout :x f2*))
+    (prediction (make-softmax '(f2)))))
 
 (defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
   (with-example-log ()
@@ -1127,10 +1138,10 @@
         (train-mnist-bpn-gd bpn training test
                             :n-softmax-epochs 0
                             :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate (flt 1)
-                            :learning-rate-decay (flt 0.998)
-                            :l2-upper-bound (sqrt (flt 3.75))
-                            :input-weight-penalty (flt 0.000001)
+                            :learning-rate 1
+                            :learning-rate-decay 0.998
+                            :l2-upper-bound (sqrt 3.75)
+                            :input-weight-penalty 0.000001
                             :batch-size 96)
         (when (and bpn-filename (not quick-run-p))
           (save-weights bpn-filename bpn))))))
@@ -1140,19 +1151,19 @@
 
 (defun build-max-channel-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                     (group-size 2))
-  (build-bpn (:bpn bpn :class 'mnist-bpn)
-    (inputs (->input :size 784 :dropout (flt 0.2)))
-    (f1-activations (add-activations :name 'f1 :inputs '(inputs)
-                                     :size n-units-1))
+  (build-fnn (:class 'mnist-bpn)
+    (inputs (->input :size 784 :dropout 0.2))
+    (f1-activations (->activation :name 'f1 :inputs '(inputs)
+                                  :size n-units-1))
     (f1* (->max-channel :x f1-activations :group-size group-size))
-    (f1 (->dropout :x f1* :dropout (flt 0.5)))
-    (f2-activations (add-activations :name 'f2 :inputs '(f1) :size n-units-2))
+    (f1 (->dropout :x f1*))
+    (f2-activations (->activation :name 'f2 :inputs '(f1) :size n-units-2))
     (f2* (->max-channel :x f2-activations :group-size group-size))
-    (f2 (->dropout :x f2* :dropout (flt 0.5)))
-    (f3-activations (add-activations :name 'f3 :inputs '(f2) :size n-units-2))
+    (f2 (->dropout :x f2*))
+    (f3-activations (->activation :name 'f3 :inputs '(f2) :size n-units-2))
     (f3* (->max-channel :x f3-activations :group-size group-size))
-    (f3 (->dropout :x f3* :dropout (flt 0.5)))
-    (predictions (tack-cross-entropy-softmax-error-on bpn '(f3)))))
+    (f3 (->dropout :x f3*))
+    (prediction (make-softmax '(f3)))))
 
 (defun train-mnist/5 (&key training test quick-run-p bpn-var bpn-filename)
   (with-example-log ()
@@ -1164,10 +1175,10 @@
         (train-mnist-bpn-gd bpn training test
                             :n-softmax-epochs 0
                             :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate (flt 1)
-                            :learning-rate-decay (flt 0.998)
-                            :l2-upper-bound (sqrt (flt 3.75))
-                            :input-weight-penalty (flt 0.000001)
+                            :learning-rate 1
+                            :learning-rate-decay 0.998
+                            :l2-upper-bound (sqrt 3.75)
+                            :input-weight-penalty 0.000001
                             :batch-size 96)
         (when (and bpn-filename (not quick-run-p))
           (save-weights bpn-filename bpn))))))
@@ -1283,6 +1294,20 @@
                                             seq fold n-folds
                                             :key #'image-label))
                                :pass-fold t))
+
+(with-example-log ()
+  (let ((*default-mat-ctype* :float))
+    (train-mnist/5 :training (training-images) :test (test-images))))
+
+(with-example-log ()
+  ;; This only works with doubles for now, because boltzmann
+  ;; machines do not yet support single floats.
+  (let ((*default-mat-ctype* :double))
+    (run-quick-test)))
+
+(progn
+  (makunbound '*training-images*)
+  (makunbound '*test-images*))
 
 /3 with 1000 epochs
 

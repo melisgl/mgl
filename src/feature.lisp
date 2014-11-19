@@ -1,16 +1,17 @@
 (in-package :mgl-util)
 
-(defun count-features (documents mapper)
+(defun count-features (documents mapper &key (key #'identity))
   "Return scored features as an EQUAL hash table whose keys are
   features of DOCUMENTS and values are counts of occurrences of
   features. MAPPER takes a function and a document and calls function
   with features of the document."
   (let ((features (make-hash-table :test #'equal)))
     (map nil (lambda (document)
-               (funcall mapper
-                        (lambda (feature)
-                          (incf (gethash feature features 0)))
-                        document))
+               (let ((document (funcall key document)))
+                 (funcall mapper
+                          (lambda (feature)
+                            (incf (gethash feature features 0)))
+                          document)))
          documents)
     features))
 

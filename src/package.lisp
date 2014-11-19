@@ -41,7 +41,6 @@
    #:repeatedly
    #:make-sequence-generator
    #:make-random-generator
-   #:make-n-gram-mappee
    #:applies-to-p
    ;; Periodic fn
    #:periodic-fn
@@ -145,10 +144,11 @@
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt))
 
-(cl:defpackage #:mgl-bp
-  (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
-        #:mgl-common #:mgl-util #:mgl-core
-        #:mgl-opt #:mgl-gd #:mgl-cg)
+(mgl-pax:define-package #:mgl-bp
+    (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
+          #:mgl-common #:mgl-util
+          #:mgl-dataset #:mgl-core
+          #:mgl-opt #:mgl-gd #:mgl-cg)
   (:export
    #:lump
    #:deflump
@@ -164,25 +164,26 @@
    #:->normalized
    #:group-size
    #:->activation
+   #:->mm
    #:transpose-weights-p
-   #:add-activations
+   #:->activation
    #:->error
    #:importance
    #:cost
-   #:transfer-lump
-   #:derive-lump
+   #:forward
+   #:backward
    ;; BPN
    #:bpn
    #:nodes
    #:derivatives
-   #:lumps
-   #:find-lump
-   #:initialize-lump
-   #:initialize-bpn
-   #:add-lump
-   #:remove-lump
+   #:clump
+   #:find-clump
+   #:add-clump
+   #:remove-clump
    #:with-weights-copied
-   #:build-bpn
+   #:clumps
+   #:fnn
+   #:build-fnn
    #:forward-bpn
    #:backward-bpn
    #:bp-learner
@@ -196,10 +197,12 @@
    #:->+
    #:->*
    #:->sum
-   #:->linear
    #:->sigmoid
+   #:->tanh
    #:->scaled-tanh
    #:->rectified
+   #:->identity
+   #:derivative-limit
    #:->split-sign
    #:noisyp
    #:->dropout
@@ -211,6 +214,7 @@
    #:->sin
    #:->rough-exponential
    #:->ref
+   #:->embedding
    #:->periodic
    #:->sum-squared-error
    #:->squared-error
@@ -218,16 +222,24 @@
    #:->max-channel
    #:->min
    #:->softmax
-   #:->cross-entropy
-   #:->cross-entropy-softmax
+   #:->softmax-xe-loss
    #:softmax
    #:target
-   #:class-weights
-   #:add-cross-entropy-softmax
+   #:ensure-softmax-target-matrix
+   ;; RNN
+   #:rnn
+   #:lag
+   #:time-step
+   #:build-rnn
+   #:->lstm
+   #:->seq-barrier
+   #:seq-lengths
    ;; Utilities
    #:monitor-bpn-results
    #:renormalize-activations
-   #:arrange-for-renormalizing-activations)
+   #:arrange-for-renormalizing-activations
+   #:clip-gradients
+   #:arrange-for-clipping-gradients)
   (:documentation "Backpropagation."))
 
 (cl:defpackage #:mgl-bm
@@ -361,11 +373,11 @@
    #:chunk-lump-name
    #:unroll-dbn
    #:unroll-dbm
-   #:initialize-bpn-from-bm
+   #:initialize-fnn-from-bm
    ;; BPN setup
    #:set-dropout-and-rescale-activation-weights
    ;; SET-INPUT support for BPN converted from a DBM with MAP lumps
-   #:bpn-clamping-cache
+   #:fnn-clamping-cache
    #:clamping-cache
    #:populate-key
    #:populate-map-cache-lazily-from-dbm
@@ -398,6 +410,10 @@
   (:documentation "Gaussian processes with support for training with
   backpropagation."))
 
+(mgl-pax:define-package #:mgl-nlp
+  (:documentation "See MGL-NLP:@MGL-NLP.")
+  (:use #:common-lisp #:mgl-pax))
+
 (mgl-pax:define-package #:mgl
   (:documentation "See MGL:@MGL-MANUAL. This package reexports
   everything from other packages defined here plus MGL-MAT.")
@@ -405,4 +421,5 @@
         #:mgl-common #:mgl-util #:mgl-log
         #:mgl-dataset #:mgl-resample #:mgl-core
         #:mgl-opt #:mgl-gd #:mgl-cg
-        #:mgl-diffun #:mgl-bp #:mgl-bm #:mgl-unroll #:mgl-gp))
+        #:mgl-diffun #:mgl-bp #:mgl-bm #:mgl-unroll #:mgl-gp
+        #:mgl-nlp))

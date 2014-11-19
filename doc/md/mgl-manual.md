@@ -40,22 +40,29 @@
         - [8.2.1 Batch GD Optimizer][df57]
         - [8.2.2 Segmented GD Optimizer][25a8]
         - [8.2.3 Per-weight Optimization][d275]
+        - [8.2.4 Adam Optimizer][332c]
     - [8.3 Conjugate Gradient][8729]
     - [8.4 Extension API][2730]
         - [8.4.1 Implementing Optimizers][794a]
         - [8.4.2 Implementing Gradient Sources][984f]
         - [8.4.3 Implementing Gradient Sinks][f18a]
 - [9 Differentiable Functions][1a5d]
-- [10 Backprogation Neural Networks][1560]
+- [10 Backpropagation Neural Networks][1560]
+    - [10.1 Backprop Overview][8b70]
+    - [10.2 Backprop Extension API][181f]
+    - [10.3 BPNs][e87a]
+        - [10.3.1 Feed-Forward Nets][a105]
+        - [10.3.2 Recurrent Neural Nets][09f9]
 - [11 Boltzmann Machines][94c7]
 - [12 Gaussian Processes][026c]
+- [13 Natural Language Processing][86fd]
 
 ###### \[in package MGL\]
 <a name='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a>
 
 ## 1 mgl ASDF System Details
 
-- Version: 0.0.8
+- Version: 0.0.9
 - Description: MGL is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.
 - Licence: MIT, see COPYING.
@@ -69,43 +76,10 @@
 
 MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
-by Ravenpack International. It implements:
-
-- Gradient descent optimization
-
-    - Nesterov momentum
-
-- Conjugate gradient optimization
-
-- Backpropagation networks (BPN)
-
-    - Dropout
-
-    - Rectified linear units
-
-    - Maxout
-
-    - Max-channel
-
-- Boltzmann Machines
-
-    - Restricted Boltzmann Machines (RBM)
-
-    - Contrastive Divergence (CD) learning
-
-    - Deep Belief Networks (DBN)
-
-    - Semi Restricted Boltzmann Machines
-
-    - Deep Boltzmann Machines
-
-    - Persistent Contrastive Divergence (PCD) learning
-
-    - Unrolling DBN or a DBM to a BPN
-
-- Gaussian Processes
-
-    - Optimizing Gaussian Processes as BPNs
+by Ravenpack International. It mainly concentrates on various forms
+of neural networks (boltzmann machines, feed-forward and recurrent
+backprop nets). Most of MGL is built on top of `MGL-MAT` so it has
+BLAS and CUDA support.
 
 In general, the focus is on power and performance not on ease of
 use. Perhaps one day there will be a cookie cutter interface with
@@ -558,15 +532,16 @@ contains it.
     The following example simply collects the test and training sets for
     2-fold CV repeated 3 times with shuffled data:
     
-    `cl-transcript
-     (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
-     => ((((2 3 4) (1 0))
-          ((1 0) (2 3 4)))
-         (((2 1 0) (4 3))
-          ((4 3) (2 1 0)))
-         (((1 0 3) (2 4))
-          ((2 4) (1 0 3))))
-    `
+    ```commonlisp
+    ;;; This is non-deterministic.
+    (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+    => ((((2 3 4) (1 0))
+         ((1 0) (2 3 4)))
+        (((2 1 0) (4 3))
+         ((4 3) (2 1 0)))
+        (((1 0 3) (2 4))
+         ((2 4) (1 0 3))))
+    ```
     
     CV bagging is useful when a single CV is not producing stable
     results. As an ensemble method, CV bagging has the advantage over
@@ -684,7 +659,7 @@ operation. Setting [`N-STRIPES`][dca7] is a comparatively cheap operation,
 often implemented as matrix reshaping.
 
 Note that for models made of different parts (for example,
-[MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
+[`MGL-BP:BPN`][0e98] consists of [MGL-BP:LUMP][]s) , setting these
 values affects the constituent parts, but one should never change
 the number stripes of the parts directly because that would lead to
 an internal inconsistency in the model.
@@ -739,8 +714,8 @@ an internal inconsistency in the model.
                  do (setf (mref (nodes input-lump) i) 0d0)))
     
     Note how the input lump is striped, but the matrix into which we are
-    indexing (`NODES`) is not known to [`WITH-STRIPES`][3ed1]. In fact, for lumps
-    the same stripe indices work with `NODES` and `MGL-BP:DERIVATIVES`.
+    indexing ([`NODES`][136a]) is not known to [`WITH-STRIPES`][3ed1]. In fact, for lumps
+    the same stripe indices work with [`NODES`][136a] and [`MGL-BP:DERIVATIVES`][3aa4].
 
 <a name='x-28MGL-CORE-3ASTRIPE-START-20GENERIC-FUNCTION-29'></a>
 
@@ -792,7 +767,7 @@ an internal inconsistency in the model.
     and the executor for which the instances are.
     
     Some objects conflate function and call: the forward pass of a
-    [MGL-BP:BPN][class] computes output from inputs so it is like a
+    [`MGL-BP:BPN`][0e98] computes output from inputs so it is like a
     function but it also doubles as a function call in the sense that
     the bpn (function) object changes state during the computation of
     the output. Hence not even the forward pass of a bpn is thread safe.
@@ -1036,7 +1011,9 @@ For a list of measurer functions see [Classification Measurers][505e].
 - [generic-function] **ADD-TO-COUNTER** *COUNTER &REST ARGS*
 
     Add `ARGS` to `COUNTER` in some way. See specialized
-    methods for type specific documentation.
+    methods for type specific documentation. The kind of arguments to be
+    supported is the what the measurer functions (see [Measurers][2364])
+    intended to be paired with the counter return as multiple values.
 
 <a name='x-28MGL-CORE-3ACOUNTER-VALUES-20GENERIC-FUNCTION-29'></a>
 
@@ -1788,7 +1765,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
-- [accessor] **LEARNING-RATE** *GD-OPTIMIZER* *(:LEARNING-RATE = 0.10000000149011612d0)*
+- [accessor] **LEARNING-RATE** *GD-OPTIMIZER* *(:LEARNING-RATE = 0.1)*
 
     This is the step size along the gradient. Decrease
     it if optimization diverges, increase it if it doesn't make
@@ -1796,7 +1773,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
-- [accessor] **MOMENTUM** *GD-OPTIMIZER* *(:MOMENTUM = 0.0d0)*
+- [accessor] **MOMENTUM** *GD-OPTIMIZER* *(:MOMENTUM = 0)*
 
     A value in the [0, 1) interval. [`MOMENTUM`][ed3d] times the
     previous weight change is added to the gradient. 0 means no
@@ -1812,7 +1789,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
-- [accessor] **WEIGHT-DECAY** *GD-OPTIMIZER* *(:WEIGHT-DECAY = 0.0d0)*
+- [accessor] **WEIGHT-DECAY** *GD-OPTIMIZER* *(:WEIGHT-DECAY = 0)*
 
     An L2 penalty. It discourages large weights, much
     like a zero mean gaussian prior. [`WEIGHT-DECAY`][ce14] \* WEIGHT is added to
@@ -1822,7 +1799,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
-- [accessor] **WEIGHT-PENALTY** *GD-OPTIMIZER* *(:WEIGHT-PENALTY = 0.0d0)*
+- [accessor] **WEIGHT-PENALTY** *GD-OPTIMIZER* *(:WEIGHT-PENALTY = 0)*
 
     An L1 penalty. It encourages sparsity.
     `SIGN`(WEIGHT) \* [`WEIGHT-PENALTY`][a7de] is added to the gradient pushing the
@@ -1843,7 +1820,8 @@ mini-batch basis:
 - [accessor] **BEFORE-UPDATE-HOOK** *BATCH-GD-OPTIMIZER* *(:BEFORE-UPDATE-HOOK = NIL)*
 
     A list of functions of no parameters. Each
-    function is called just before a weight update takes place.
+    function is called just before a weight update takes place (after
+    accumulated gradients have been divided the length of the batch).
     Convenient to hang some additional gradient accumulating code
     on.
 
@@ -1921,6 +1899,55 @@ mini-batch basis:
     without adding any connections between them and the learning will
     produce results equivalent to the separated case. Also, adding
     inputs with only missing values does not change anything.
+
+<a name='x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
+
+#### 8.2.4 Adam Optimizer
+
+<a name='x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29'></a>
+
+- [class] **ADAM-OPTIMIZER** *BATCH-GD-OPTIMIZER*
+
+    Adam is a first-order stochasistic gradient descent
+    optimizer. It maintains an internal estimation for the mean and raw
+    variance of each derivative as exponential moving averages. The step
+    is takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
+    mean, `V` is the estimated variance, and `E` is a small adjustment
+    factor to prevent the gradient from blowing up. See the
+    [paper](http://arxiv.org/abs/1412.6980) for more.
+
+<a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **LEARNING-RATE** *ADAM-OPTIMIZER* *(= 2.e-4)*
+
+    Same thing as [`LEARNING-RATE`][4ffe] but with the default suggested by the Adam paper.
+
+<a name='x-28MGL-GD-3AMEAN-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **MEAN-UPDATE-RATE** *ADAM-OPTIMIZER* *(:MEAN-UPDATE-RATE = 0.1)*
+
+    A number between 0 and 1 that determines how fast
+    the estimated mean of derivatives is updated. 1 basically gives
+    you RMSPROP (if [`VARIANCE-UPDATE-RATE`][ef56] is not too small) or
+    AdaGrad (if [`VARIANCE-UPDATE-RATE`][ef56] is infinitesimal and the learning
+    rate is annealed.
+
+<a name='x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **VARIANCE-UPDATE-RATE** *ADAM-OPTIMIZER* *(:VARIANCE-UPDATE-RATE = 0.001)*
+
+    A number between 0 and 1 that determines how fast
+    the estimated variance of derivatives is updated.
+
+<a name='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **VARIANCE-ADJUSTMENT** *ADAM-OPTIMIZER* *(:VARIANCE-ADJUSTMENT = 1.e-8)*
+
+    Within the bowels of adam, the estimated mean is
+    divided by the square root of the estimated variance (per weight)
+    which can lead to numerical problems if the denominator is near
+    zero. To avoid this, [`VARIANCE-ADJUSTMENT`][578e] which should be a small
+    positive number is added to the denominator.
 
 <a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a>
 
@@ -2298,7 +2325,7 @@ new gradient sources except where noted.
     Return the weight matrix of `SEGMENT`. A segment
     doesn't need to be a `MAT` object itself. For example, it may be a
     `MGL-BM:CHUNK` of a [MGL-BM:BM][CLASS] or a `MGL-BP:LUMP` of a
-    [MGL-BP:BPN][CLASS] whose `NODES` slot holds the weights.
+    [`MGL-BP:BPN`][0e98] whose [`NODES`][136a] slot holds the weights.
 
 <a name='x-28MGL-OPT-3ASEGMENT-WEIGHTS-20-28METHOD-20NIL-20-28MGL-MAT-3AMAT-29-29-29'></a>
 
@@ -2404,8 +2431,725 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 
 <a name='x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29'></a>
 
-## 10 Backprogation Neural Networks
+## 10 Backpropagation Neural Networks
 
+###### \[in package MGL-BP\]
+<a name='x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29'></a>
+
+### 10.1 Backprop Overview
+
+Backpropagation Neural Networks are just functions with typically
+lots of parameters called weights. FIXDOC: LOSS `FUNCTION`, [`MINIMIZE`][bca8],
+LAYERS.
+
+In this implementation, a [`BPN`][0e98] is assembled from several
+[LUMP][]s (roughly corresponding to layers). Both feed-forward and
+recurrent neural nets are supported ([`FNN`][622d] and [`RNN`][b9d7], respectively).
+BPNs can contain not only LUMPs but other BPNs, too.
+
+<a name='x-28MGL-BP-3ACLUMP-20CLASS-29'></a>
+
+- [class] **CLUMP**
+
+    A [`CLUMP`][0e4a] is a `LUMP` or [`BPN`][0e98]. It represents a
+    differentiable function. Arguments come from other clumps wired
+    permenantly together. This wiring of CLUMPs is how one builds
+    feed-forward nets ([`FNN`][622d]) or recurrent neural networks ([`RNN`][b9d7]) that are
+    CLUMPs themselves so one can build nets in a hiearchical style if
+    desired. Non-composite CLUMPs are called `LUMP` (note the loss of `C`
+    that stands for composite). The various `LUMP` subtypes correspond to
+    different layer types (sigmoid, dropout, rectified linear, tanh,
+    etc).
+
+<a name='x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **NODES** *CLUMP*
+
+    Return the `MAT` object representing the state of
+    `CLUMP` (that is, the result computed by the most recent [`FORWARD`][9233]). For
+    ->INPUT lumps, this is where input values are placed. See FIXDOC.
+
+FIXDOC: set-input
+
+<a name='x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
+
+### 10.2 Backprop Extension API
+
+<a name='x-28MGL-BP-3ASTRIPEDP-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **STRIPEDP** *CLUMP*
+
+    For efficiency, forward and backprop phases do
+    their stuff in batch mode: passing a number of instances through the
+    network at the same time. Thus clumps must be able to store values
+    of and gradients for each of these instances. However, some clumps
+    produce the same result for each instance in a batch. These clumps
+    are the weights, the parameters of the network. [`STRIPEDP`][9745] returns
+    true iff `CLUMP` does not represent weights (i.e. it's not a
+    ->WEIGHT).
+    
+    For striped clumps, their [`NODES`][136a] and [`DERIVATIVES`][3aa4] are `MAT` objects with
+    a leading dimension (number of rows in the 2d case) equal to the
+    number of instances in the batch. Non-striped clumps have no
+    restriction on their shape apart from what their usage dictates.
+
+<a name='x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **DERIVATIVES** *CLUMP*
+
+    Return the `MAT` object representing the partial
+    derivatives of the function `CLUMP` computes. The returned partial
+    derivatives were accumulated by previous [`BACKWARD`][9186] calls.
+
+<a name='x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **FORWARD** *CLUMP*
+
+    Compute the values of the function represented by
+    `CLUMP` for all stripes and place the results into [`NODES`][136a] of `CLUMP`.
+
+<a name='x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **BACKWARD** *CLUMP*
+
+    Compute the partial derivatives of the function
+    represented by `CLUMP` and add them to [`DERIVATIVES`][3aa4] of the
+    corresponding argument clumps. The [`DERIVATIVES`][3aa4] of `CLUMP` contains the
+    sum of partial derivatives of all clumps by the corresponding
+    output. This function is intended to be called after a [`FORWARD`][9233] pass.
+    
+    Take the ->SIGMOID clump for example when the network is being
+    applied to a batch of two instances `x1` and `x2`. `x1` and `x2` are
+    set in the ->INPUT lump X. The sigmoid computes `1/(1+exp(-x))`
+    where `X` is its only argument clump.
+    
+        f(x) = 1/(1+exp(-x))
+    
+    When [`BACKWARD`][9186] is called on the sigmoid lump, its [`DERIVATIVES`][3aa4] is a
+    2x1 `MAT` object that contains the partial derivatives of the loss
+    function:
+    
+        dL(x1)/df
+        dL(x2)/df
+    
+    Now the [`BACKWARD`][9186] method of the sigmoid needs to add `dL(x1)/dx1` and
+    `dL(x2)/dx2` to [`DERIVATIVES`][3aa4] of `X`. Now, `dL(x1)/dx1 = dL(x1)/df *
+    df(x1)/dx1` and the first term is what we have in [`DERIVATIVES`][3aa4] of the
+    sigmoid so it only needs to calculate the second term.
+
+<a name='x-28MGL-COMMON-3ACOST-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **COST** *CLUMP*
+
+    FIXDOC: Return the sum of costs for all active
+    stripes. The cost of a stripe is the sum of the corresponding nodes
+    in ->ERROR clumps. The second value is the sum of the stripe's
+    `IMPORTANCE` (in the ->ERROR clump) or 1 (if `IMPORTANCE` is `NIL`).
+
+<a name='x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29'></a>
+
+### 10.3 BPNs
+
+<a name='x-28MGL-BP-3ABPN-20CLASS-29'></a>
+
+- [class] **BPN** *CLUMP*
+
+<a name='x-28MGL-BP-3ACLUMPS-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **CLUMPS** *OBJECT*
+
+<a name='x-28MGL-BP-3AFIND-CLUMP-20FUNCTION-29'></a>
+
+- [function] **FIND-CLUMP** *NAME BPN &KEY (ERRORP T)*
+
+<a name='x-28MGL-BP-3AADD-CLUMP-20FUNCTION-29'></a>
+
+- [function] **ADD-CLUMP** *CLUMP BPN*
+
+    Add `CLUMP` to `BPN`. [`MAX-N-STRIPES`][9598] of `CLUMP` gets set to equal that of
+    the previous last, non-weight clump of `BPN`.
+
+<a name='x-28MGL-BP-3A--3ECLUMP-20FUNCTION-29'></a>
+
+- [function] **-\>CLUMP** *BPN CLUMP-SPEC*
+
+<a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a>
+
+#### 10.3.1 Feed-Forward Nets
+
+[`FNN`][622d] and [`RNN`][b9d7] have a lot in common (see their common superclass, [`BPN`][0e98]).
+There is very limited functionality that's specific to FNNs so let's
+get them out of they way before we study a full example.
+
+<a name='x-28MGL-BP-3AFNN-20CLASS-29'></a>
+
+- [class] **FNN** *BPN*
+
+    A feed-forward neural net (as opposed to a
+    recurrent one, see [`RNN`][b9d7]).
+
+<a name='x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **BUILD-FNN** *(&KEY FNN (CLASS ''FNN) INITARGS (MAX-N-STRIPES 1) NAME) &BODY CLUMPS*
+
+    Syntactic sugar to assemble FNNs from CLUMPs. Like `LET*`, it is a
+    sequence of bindings (of symbols to CLUMPs). The names of the clumps
+    created default to the symbol of the binding. In case a clump is not
+    bound to a symbol (because it was created in a nested expression),
+    the local function [`CLUMP`][0e4a] can be used to find the clump with the
+    given name in the fnn being built. Example:
+    
+        (build-fnn ()
+          (features (->input :size n-features))
+          (biases (->weight :size n-features))
+          (weights (->weight :size (* n-hiddens n-features)))
+          (activations0 (->mm :weights weights :x (clump 'features)))
+          (activations (->+ :args (list biases activations0)))
+          (output (->sigmoid :x activations)))
+
+
+<a name='x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29'></a>
+
+##### FNN Tutorial
+
+Hopefully this example from `example/digit-fnn.lisp` illustrates
+the concepts involved. If it's too dense despite the comments, then
+read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
+
+<a name='x-28MGL-BP-3A-3ADIGIT-FNN-2ELISP-20-28MGL-PAX-3AINCLUDE-20-23P-22-2Fhome-2Fmega-2Fown-2Fmgl-2Fexample-2Fdigit-fnn-2Elisp-22-20-3AHEADER-NL-20-22-60-60-60commonlisp-22-20-3AFOOTER-NL-20-22-60-60-60-22-29-29'></a>
+
+```commonlisp
+(cl:defpackage :mgl-example-digit-fnn
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-digit-fnn)
+
+;;; There are 10 possible digits used as inputs ...
+(defparameter *n-inputs* 10)
+;;; and we want to learn the rule that maps the input digit D to (MOD
+;;; (1+ D) 3).
+(defparameter *n-outputs* 3)
+
+;;; We define a feed-forward net to be able to specialize how inputs
+;;; are translated by adding a SET-INPUT method later.
+(defclass digit-fnn (fnn)
+  ())
+
+;;; Build a DIGIT-FNN with a single hidden layer of rectified linear
+;;; units and a softmax output.
+(defun make-digit-fnn (&key (n-hiddens 5))
+  (build-fnn (:class 'digit-fnn)
+    (input (->input :size *n-inputs*))
+    (hidden-activation (->activation :inputs (list input)
+                                     :size n-hiddens))
+    (hidden (->rectified :x hidden-activation))
+    (output-activation (->activation :inputs (list hidden)
+                                     :size *n-outputs*))
+    (output (->softmax-xe-loss :x output-activation))))
+
+;;; This method is called with batches of 'instances' (input digits in
+;;; this case). Its job is to encode the inputs by populating rows of
+;;; the NODES matrix of the INPUTS clump. Each input is encoded as a
+;;; row of zeros with a single 1 at index determined by the input
+;;; digit. This is called one-hot encoding. The TARGET could be
+;;; encoded the same way, but instead we use the sparse option
+;;; supported by TARGET of ->SOFTMAX-XE-LOSS.
+(defmethod set-input (digits (fnn digit-fnn))
+  (let* ((input (nodes (find-clump 'input fnn)))
+         (output-lump (find-clump 'output fnn)))
+    (fill! 0 input)
+    (loop for i upfrom 0
+          for digit in digits
+          do (setf (mref input i digit) 1))
+    (setf (target output-lump)
+          (mapcar (lambda (digit)
+                    (mod (1+ digit) *n-outputs*))
+                  digits))))
+
+;;; Train the network by minimizing the loss (cross-entropy here) with
+;;; stochastic gradient descent.
+(defun train-digit-fnn ()
+  (let ((optimizer
+          ;; First create the optimizer for MINIMIZE.
+          (make-instance 'segmented-gd-optimizer
+                         :segmenter
+                         ;; We train each weight lump with the same
+                         ;; parameters and, in fact, the same
+                         ;; optimizer. But it need not be so, in
+                         ;; general.
+                         (constantly
+                          (make-instance 'batch-gd-optimizer
+                                         :learning-rate 1
+                                         :momentum 0.9
+                                         :batch-size 100))))
+        (fnn (make-digit-fnn)))
+    ;; The number of instances the FNN can work with in parallel. It's
+    ;; usually equal to the batch size or is a its divisor.
+    (setf (max-n-stripes fnn) 50)
+    ;; Initialize all weights randomly.
+    (map-segments (lambda (weights)
+                    (gaussian-random! (nodes weights) :stddev 0.01))
+                  fnn)
+    ;; Arrange for training and test error to be logged.
+    (monitor-optimization-periodically
+     optimizer '((:fn log-test-error :period 10000)
+                 (:fn reset-optimization-monitors :period 1000)))
+    ;; Finally, start the optimization.
+    (minimize optimizer
+              ;; Dress FNN in a BP-LEARNER and attach monitors for the
+              ;; cost to it. These monitors are going to be logged and
+              ;; reset after every 100 training instance by
+              ;; RESET-OPTIMIZATION-MONITORS above.
+              (make-instance 'bp-learner
+                             :bpn fnn
+                             :monitors (make-bpn-cost-monitors))
+              ;; Training stops when the sampler runs out (after 10000
+              ;; instances).
+              :dataset (make-sampler 10000))))
+
+;;; Return a sampler object that produces MAX-N-SAMPLES number of
+;;; random inputs (numbers between 0 and 9).
+(defun make-sampler (max-n-samples)
+  (make-instance 'function-sampler :max-n-samples max-n-samples
+                 :generator (lambda () (random *n-inputs*))))
+
+;;; Log the test error. Also, describe the optimizer and the bpn at
+;;; the beginning of training. Called periodically during training
+;;; (see above).
+(defun log-test-error (optimizer learner)
+  (when (zerop (n-instances optimizer))
+    (describe optimizer)
+    (describe (bpn learner)))
+  (log-padded (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                                   (make-bpn-cost-monitors :dataset "pred."))))
+
+;;; Return a list of monitor objects (yes, only one here) that will
+;;; measure the cost and accumulate it in a counter.
+(defun make-bpn-cost-monitors (&key (dataset "train"))
+  (list (make-instance 'monitor
+                       :measurer (lambda (instances bpn)
+                                   (declare (ignore instances))
+                                   (cost bpn))
+                       :counter (make-instance 'basic-counter
+                                               :attributes `(:dataset ,dataset
+                                                             :type "cost")))))
+
+#|
+
+;;; Transcript follows:
+(train-digit-fnn)
+.. #<SEGMENTED-GD-OPTIMIZER {1010870E03}>
+.. SEGMENTED-GD-OPTIMIZER description:
+..   N-INSTANCES = 0
+..   OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
+..                   #<SEGMENT-SET
+..                     (#<->WEIGHT # :SIZE 15 1/1 :norm 0.02216>
+..                      #<->WEIGHT # :SIZE 3 1/1 :norm 0.01273>
+..                      #<->WEIGHT # :SIZE 50 1/1 :norm 0.07184>
+..                      #<->WEIGHT # :SIZE 5 1/1 :norm 0.01494>)
+..                     {1010889F53}>
+..                   {10107AE833}>)
+..   SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                 15 1/1 :norm 0.02216>
+..               #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                 3 1/1 :norm 0.01273>
+..               #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                 50 1/1 :norm 0.07184>
+..               #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                 5 1/1 :norm 0.01494>)
+..
+.. #<BATCH-GD-OPTIMIZER {10107AE833}>
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #<SEGMENT-SET
+..                    (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                       15 1/1 :norm 0.02216>
+..                     #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                       3 1/1 :norm 0.01273>
+..                     #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                       50 1/1 :norm 0.07184>
+..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                       5 1/1 :norm 0.01494>)
+..                    {1010889F53}>
+..    LEARNING-RATE = 1.00000e+0
+..    MOMENTUM = 9.00000e-1
+..    MOMENTUM-TYPE = :NORMAL
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  #<DIGIT-FNN {1010873BB3}>
+..   BPN description:
+..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :norm 0.00000>
+..                #<->ACTIVATION
+..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4 {10108796B3}>
+..                #<->RECTIFIED HIDDEN :SIZE 5 1/50 :norm 0.00000>
+..                #<->ACTIVATION
+..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4 {101087FAD3}>
+..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :norm 0.00000>)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   2015-01-19 22:22:41: pred. cost: 1.098d+0 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 1000
+.. 2015-01-19 22:22:41: train cost: 1.091d+0 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 2000
+.. 2015-01-19 22:22:41: train cost: 8.317d-1 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 3000
+.. 2015-01-19 22:22:41: train cost: 1.783d-2 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 4000
+.. 2015-01-19 22:22:41: train cost: 1.591d-6 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 5000
+.. 2015-01-19 22:22:41: train cost: 3.709d-8 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 6000
+.. 2015-01-19 22:22:41: train cost: 1.081d-8 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 7000
+.. 2015-01-19 22:22:41: train cost: 7.388d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 8000
+.. 2015-01-19 22:22:41: train cost: 6.042d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 9000
+.. 2015-01-19 22:22:41: train cost: 5.464d-9 (1000.00)
+.. 2015-01-19 22:22:41: training at n-instances: 10000
+.. 2015-01-19 22:22:41: train cost: 5.878d-9 (1000.00)
+.. 2015-01-19 22:22:41: pred. cost: 5.532d-9 (1000.00)
+..
+==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 3.57507>
+-->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 12.18883>
+-->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 4.42356>
+-->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 11.36526>)
+
+|#
+```
+
+<a name='x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29'></a>
+
+#### 10.3.2 Recurrent Neural Nets
+
+<a name='x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29'></a>
+
+##### RNN Tutorial
+
+Hopefully this example from `example/sum-sign-fnn.lisp` illustrates
+the concepts involved. Make sure you are comfortable with
+[FNN Tutorial][c2a0] before reading this.
+
+<a name='x-28MGL-BP-3A-3ADIGIT-FNN-2ELISP-20-28MGL-PAX-3AINCLUDE-20-23P-22-2Fhome-2Fmega-2Fown-2Fmgl-2Fexample-2Fsum-sign-rnn-2Elisp-22-20-3AHEADER-NL-20-22-60-60-60commonlisp-22-20-3AFOOTER-NL-20-22-60-60-60-22-29-29'></a>
+
+```commonlisp
+(cl:defpackage :mgl-example-sum-sign-rnn
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-sum-sign-rnn)
+
+;;; There is a single input at each time step...
+(defparameter *n-inputs* 1)
+;;; and we want to learn the rule that outputs the sign of the sum of
+;;; inputs so far in the sequence.
+(defparameter *n-outputs* 3)
+
+;;; Generate a training example that's a sequence of random length
+;;; between 1 and 11. Elements of the sequence are lists of two
+;;; elements:
+;;;
+;;; 1. The input for the network (a single random number).
+;;;
+;;; 2. The sign of the sum of inputs so far encoded as 0, 1, 2 (for
+;;;    negative, zero and positive values). To add a twist, the sum is
+;;;    reset whenever a negative input is seen.
+(defun make-sum-sign-instance ()
+  (let ((length (1+ (random 10)))
+        (sum 0))
+    (loop for i below length
+          collect (let ((x (1- (* 2 (random 2)))))
+                    (incf sum x)
+                    (when (< x 0)
+                      (setq sum x))
+                    (list x (cond ((minusp sum) 0)
+                                  ((zerop sum) 1)
+                                  (t 2)))))))
+
+;;; Build an RNN with a single lstm hidden layer and softmax output.
+;;; For each time step, a SUM-SIGN-FNN will be instantiated.
+(defun make-sum-sign-rnn (&key (n-hiddens 1))
+  (build-rnn ()
+    (build-fnn (:class 'sum-sign-fnn)
+      (input (->input :size 1))
+      (h (->lstm :name 'h :inputs (list input) :n-cells n-hiddens))
+      (prediction (->softmax-xe-loss
+                   :x (->activation :name 'prediction
+                                    :size *n-outputs*
+                                    :inputs (list h)))))))
+
+;;; We define this class to be able to specialize how inputs are
+;;; translated by adding a SET-INPUT method later.
+(defclass sum-sign-fnn (fnn)
+  ())
+
+;;; We have a batch of instances from MAKE-SUM-SIGN-INSTANCE for the
+;;; RNN. This function is invoked with elements of these instances
+;;; belonging to the same time step (i.e. at the same index) and sets
+;;; the input and target up.
+(defmethod set-input (instances (fnn sum-sign-fnn))
+  (let ((input-nodes (nodes (find-clump 'input fnn))))
+    (setf (target (find-clump 'prediction fnn))
+          (loop for stripe upfrom 0
+                for instance in instances
+                collect
+                ;; Sequences in the batch are not of equal length. The
+                ;; RNN sends a NIL our way if a sequence has run out.
+                (when instance
+                  (destructuring-bind (input target) instance
+                    (setf (mref input-nodes stripe 0) input)
+                    target))))))
+
+;;; Train the network by minimizing the loss (cross-entropy here) with
+;;; the Adam optimizer.
+(defun train-sum-sign-rnn ()
+  (let ((rnn (make-sum-sign-rnn)))
+    (setf (max-n-stripes rnn) 50)
+    ;; Initialize the weights in the usual sqrt(1 / fan-in) style.
+    (map-segments (lambda (weights)
+                    (let* ((fan-in (mat-dimension (nodes weights) 0))
+                           (limit (sqrt (/ 6 fan-in))))
+                      (uniform-random! (nodes weights)
+                                       :limit (* 2 limit))
+                      (.+! (- limit) (nodes weights))))
+                  rnn)
+    (minimize (monitor-optimization-periodically
+               (make-instance 'adam-optimizer
+                              :learning-rate 0.2
+                              :batch-size 100)
+               '((:fn log-test-error :period 30000)
+                 (:fn reset-optimization-monitors :period 3000)))
+              (make-instance 'bp-learner
+                             :bpn rnn
+                             :monitors (make-bpn-cost-monitors))
+              :dataset (make-sampler 30000))))
+
+;;; Return a sampler object that produces MAX-N-SAMPLES number of
+;;; random inputs.
+(defun make-sampler (max-n-samples)
+  (make-instance 'function-sampler :max-n-samples max-n-samples
+                 :generator #'make-sum-sign-instance))
+
+;;; Log the test error. Also, describe the optimizer and the bpn at
+;;; the beginning of training. Called periodically during training
+;;; (see above).
+(defun log-test-error (optimizer learner)
+  (when (zerop (n-instances optimizer))
+    (describe optimizer)
+    (describe (bpn learner)))
+  (log-padded (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                                   (make-bpn-cost-monitors :dataset "pred."))))
+
+;;; Return a list of monitor objects (yes, only one here) that will
+;;; measure the cost and accumulate it in a counter.
+(defun make-bpn-cost-monitors (&key (dataset "train"))
+  (list (make-instance 'monitor
+                       :measurer (lambda (instances bpn)
+                                   (declare (ignore instances))
+                                   (cost bpn))
+                       :counter (make-instance 'basic-counter
+                                               :attributes `(:dataset ,dataset
+                                                             :type "cost")))))
+
+#|
+
+;;; Transcript follows:
+(train-sum-sign-rnn)
+.. 2015-01-19 22:27:01: training at n-instances: 0
+.. 2015-01-19 22:27:01: train cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {101F9578A3}>
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #<SEGMENT-SET
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 0.50959>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.48846>
+..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 2.07815>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 2.31284>
+..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 0.67760>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.11992>
+..                     #<->WEIGHT (H PREDICTION) :SIZE
+..                       3 1/1 :norm 2.43519>
+..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
+..                       3 1/1 :norm 1.64322>
+..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
+..                       1 1/1 :norm 1.23665>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 1.24288>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.43173>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.03770>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.28466>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.43322>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.11231>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.22344>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.44019>)
+..                    {101F9580F3}>
+..    LEARNING-RATE = 2.00000e-1
+..    MOMENTUM = 0.00000e+0
+..    MOMENTUM-TYPE = :NORMAL
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  
+..  ADAM-OPTIMIZER description:
+..    MEAN-UPDATE-RATE = 1.00000e-1
+..    VARIANCE-UPDATE-RATE = 1.00000e-3
+..    VARIANCE-ADJUSTMENT = 1.00000e-8
+..  #<RNN {101F915923}>
+..   BPN description:
+..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F915F63}>
+..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F938893}>)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   
+..   RNN description:
+..     MAX-LAG = 1
+..   2015-01-19 22:27:01: pred. cost: 1.088d+0 (5472.00)
+.. 2015-01-19 22:27:01: training at n-instances: 3000
+.. 2015-01-19 22:27:01: train cost: 4.186d-1 (16481.00)
+.. 2015-01-19 22:27:02: training at n-instances: 6000
+.. 2015-01-19 22:27:02: train cost: 5.619d-2 (16505.00)
+.. 2015-01-19 22:27:02: training at n-instances: 9000
+.. 2015-01-19 22:27:02: train cost: 2.512d-2 (16643.00)
+.. 2015-01-19 22:27:03: training at n-instances: 12000
+.. 2015-01-19 22:27:03: train cost: 1.585d-2 (16946.00)
+.. 2015-01-19 22:27:03: training at n-instances: 15000
+.. 2015-01-19 22:27:03: train cost: 1.135d-2 (16240.00)
+.. 2015-01-19 22:27:04: training at n-instances: 18000
+.. 2015-01-19 22:27:04: train cost: 8.704d-3 (16622.00)
+.. 2015-01-19 22:27:04: training at n-instances: 21000
+.. 2015-01-19 22:27:04: train cost: 6.912d-3 (16690.00)
+.. 2015-01-19 22:27:05: training at n-instances: 24000
+.. 2015-01-19 22:27:05: train cost: 5.627d-3 (16528.00)
+.. 2015-01-19 22:27:05: training at n-instances: 27000
+.. 2015-01-19 22:27:05: train cost: 4.735d-3 (16427.00)
+.. 2015-01-19 22:27:06: training at n-instances: 30000
+.. 2015-01-19 22:27:06: train cost: 4.006d-3 (16453.00)
+.. 2015-01-19 22:27:06: pred. cost: 3.698d-3 (5347.00)
+..
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 1.57197>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.98579>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.25004>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.06433>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.45586>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.14358>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.68755>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.38377>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 3.22046>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 3.07891>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 5.64394>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.79663>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.42101>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.62612>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 4.56776>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 1.44047>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.70072>)
+
+|#
+```
+
+<a name='x-28MGL-BP-3ARNN-20CLASS-29'></a>
+
+- [class] **RNN** *BPN*
+
+    A recurrent neural net (as opposed to a
+    feed-forward one. It is typically built with [`BUILD-RNN`][7832] that's no
+    more than a shallow convenience macro.
+    
+    An [`RNN`][b9d7] takes instances as inputs that are sequences of variable
+    length. At each time step, the next unprocessed elements of these
+    sequences are set as input until all input sequences in the batch
+    run out. To be able to perform backpropagation, all intermediate
+    LUMPs must be kept around, so the recursive connections are
+    transformed out by
+    [unfolding](http://en.wikipedia.org/wiki/Backpropagation_through_time)
+    the network. Just how many lumps this means depends on the length of
+    the sequences.
+    
+    When an [`RNN`][b9d7] is created, `MAX-LAG + 1` BPNs are instantiated so
+    that all weights are present and one can start training it.
+
+<a name='x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
+
+- [reader] **UNFOLDER** *RNN* *(:UNFOLDER)*
+
+    The [`UNFOLDER`][8b7ff] of an [`RNN`][b9d7] is function of no arguments
+    that builds and returns a [`BPN`][0e98]. The unfolder is allowed to create
+    networks with arbitrary topology even different ones for different
+    [`TIME-STEP`][9b9d]s with the help of [`LAG`][1374], or nested RNNs. Weights of
+    the same name are shared between the folds. That is, if a ->WEIGHT
+    lump were to be created and a weight lump of the same name already
+    exists, then the existing lump will be added to the [`BPN`][0e98] created by
+    [`UNFOLDER`][8b7ff].
+
+<a name='x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
+
+- [reader] **MAX-LAG** *RNN* *(:MAX-LAG = 1)*
+
+    The networks built by [`UNFOLDER`][8b7ff] may contain new
+    weights up to time step [`MAX-LAG`][0302]. Beyond that point, all weight
+    lumps must be reappearances of weight lumps with the same name at
+    previous time steps. Most recurrent networks reference only the
+    state of lumps at the previous time step (with the function [`LAG`][1374]),
+    hence the default of 1. But it is possible to have connections to
+    arbitrary time steps. The maximum connection lag must be specified
+    when creating the [`RNN`][b9d7].
+
+<a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a>
+
+- [macro] **BUILD-RNN** *(&KEY RNN (CLASS ''RNN) NAME INITARGS (MAX-N-STRIPES 1) (MAX-LAG 1)) &BODY BODY*
+
+    Create an `RNN` with `MAX-N-STRIPES` and `MAX-LAG` whose [`UNFOLDER`][8b7ff] is `BODY`
+    wrapped in a lambda. Bind symbol given as the `RNN` argument to the
+    `RNN` object so that `BODY` can see it.
+
+<a name='x-28MGL-BP-3ALAG-20FUNCTION-29'></a>
+
+- [function] **LAG** *NAME &KEY (LAG 1) RNN PATH*
+
+    In `RNN` or if it's `NIL` the `RNN` being extended with another
+    [`BPN`][0e98] (called *unfolding*), look up the [`CLUMP`][0e4a] with `NAME` in the [`BPN`][0e98]
+    that's `LAG` number of time steps before the [`BPN`][0e98] being added. This
+    function can only be called from [`UNFOLDER`][8b7ff] of an `RNN` which is what
+    happens behind the scene in the body of [`BUILD-RNN`][7832].
+    
+    FIXDOC: `PATH`
+
+<a name='x-28MGL-BP-3ATIME-STEP-20FUNCTION-29'></a>
+
+- [function] **TIME-STEP** 
+
+    Return the time step corresponding to the [`BPN`][0e98] with which an [`RNN`][b9d7] is
+    being extended. This is 0 when the [`RNN`][b9d7] is being unfolded for the
+    first time. This function can only be called from [`UNFOLDER`][8b7ff] of an [`RNN`][b9d7]
+    which is what happens behind the scene in the body of [`BUILD-RNN`][7832].
+
+<a name='x-28MGL-CORE-3ASET-INPUT-20-28METHOD-20NIL-20-28T-20MGL-BP-3ARNN-29-29-29'></a>
+
+- [method] **SET-INPUT** *INSTANCES (RNN RNN)*
+
+    RNNs operate on batches of instances just like FNNs. But the
+    instances here are like datasets: sequences or samplers and they are
+    turned into sequences of batches of instances with
+    [`MAP-DATASETS`][a519] `:IMPUTE` `NIL`. The batch of instances at index 2 is
+    clamped onto the [`BPN`][0e98] at time step 2 with [`SET-INPUT`][8795].
+    
+    When the input sequences in the batch are not of the same length,
+    already exhausted sequences will produce `NIL` (due to `:IMPUTE` `NIL`)
+    above. When such a `NIL` is clamped with [`SET-INPUT`][8795] on a [`BPN`][0e98] of the
+    `RNN`, [`SET-INPUT`][8795] must set the `IMPORTANCE` of the ->ERROR lumps to 0
+    else training would operate on the noise left there by previous
+    invocations.
 
 <a name='x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29'></a>
 
@@ -2417,19 +3161,96 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
 ## 12 Gaussian Processes
 
 
+<a name='x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29'></a>
+
+## 13 Natural Language Processing
+
+###### \[in package MGL-NLP\]
+This in nothing more then a couple of utilities for now which may
+grow into a more serious toolset for NLP eventually.
+
+<a name='x-28MGL-NLP-3AMAKE-N-GRAM-MAPPEE-20FUNCTION-29'></a>
+
+- [function] **MAKE-N-GRAM-MAPPEE** *FUNCTION N*
+
+    Make a function of a single argument that's suitable as the
+    function argument to a mapper function. It calls `FUNCTION` with every
+    `N` element.
+    
+    ```cl-transcript
+    (map nil (make-n-gram-mappee #'print 3) '(a b c d e))
+    ..
+    .. (A B C) 
+    .. (B C D) 
+    .. (C D E) 
+    
+    ```
+
+
+<a name='x-28MGL-NLP-3ABLEU-20FUNCTION-29'></a>
+
+- [function] **BLEU** *CORPUS &KEY CANDIDATE-KEY REFERENCE-KEY (N 4)*
+
+    Compute the [BLEU score](http://en.wikipedia.org/wiki/BLEU) for
+    bilingual `CORPUS`. [`BLEU`][edb3] measures how good a translation is compared
+    to human reference translations.
+    
+    `CORPUS` must be a sequence. `CANDIDATE-KEY` is function called with
+    elements of `CORPUS` and returns a sequence of words (i.e. a tokenized
+    translation). `REFERENCE-KEY` is similar but it returns the reference
+    translation. Words are compared with `EQUAL`, and may be any kind of
+    object (not necessarily strings).
+    
+    Currently there is no support for multiple reference translations. `N`
+    determines the largest n-grams to consider.
+    
+    The first return value is the [`BLEU`][edb3] score (between 0 and 1, not as a
+    percentage), the second value is the brevity penalty and the third
+    is a list n-gram precisions (also between 0 and 1 or `NIL`), one for
+    each element in [1..N][].
+    
+    This is basically a reimplementation of
+    [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
+    
+    ```cl-transcript
+    (bleu '(((1 2 3 4) (1 2 3 4))
+            ((a b) (1 2)))
+          :candidate-key #'first
+          :reference-key #'second)
+    => 0.8408964
+    => 1.0
+    => (;; 1-gram precision: 4/6
+        2/3
+        ;; 2-gram precision: 3/4
+        3/4
+        ;; 3-gram precision: 2/2
+        1
+        ;; 4-gram precision: 1/1
+        1)
+    
+    ```
+
+
   [026c]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GP MGL-PAX:SECTION)"
   [02de]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"
+  [0302]: #x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
   [089c]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION)"
   [08c9]: #x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29 "(MGL-CORE:CONFUSION-MATRIX CLASS)"
   [0924]: #x-28MGL-CORE-3A-40MGL-MONITORING-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MONITORING MGL-PAX:SECTION)"
   [0966]: #x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29 "(MGL-DATASET:*INFINITELY-EMPTY-DATASET* VARIABLE)"
+  [09f9]: #x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-RNN MGL-PAX:SECTION)"
   [0ab9]: #x-28MGL-3A-40MGL-GLOSSARY-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GLOSSARY MGL-PAX:SECTION)"
+  [0e4a]: #x-28MGL-BP-3ACLUMP-20CLASS-29 "(MGL-BP:CLUMP CLASS)"
+  [0e98]: #x-28MGL-BP-3ABPN-20CLASS-29 "(MGL-BP:BPN CLASS)"
   [12e8]: #x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20MGL-PAX-3AMACRO-29 "(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING MGL-PAX:MACRO)"
+  [136a]: #x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29 "(MGL-COMMON:NODES GENERIC-FUNCTION)"
+  [1374]: #x-28MGL-BP-3ALAG-20FUNCTION-29 "(MGL-BP:LAG FUNCTION)"
   [1426]: #x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-PARAMETERIZED-EXECUTOR-CACHE MGL-PAX:SECTION)"
   [1541]: #x-28MGL-CORE-3A-40MGL-CONFUSION-MATRIX-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CONFUSION-MATRIX MGL-PAX:SECTION)"
   [1560]: #x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP MGL-PAX:SECTION)"
+  [181f]: #x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-EXTENSION-API MGL-PAX:SECTION)"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "(MGL-DIFFUN:@MGL-DIFFUN MGL-PAX:SECTION)"
   [1f57]: #x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION)"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
@@ -2442,10 +3263,12 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [2cc2]: #x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29 "(MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO)"
   [326c]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20GENERIC-FUNCTION-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS GENERIC-FUNCTION)"
   [32b3]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-COUNTER MGL-PAX:SECTION)"
+  [332c]: #x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)"
   [3339]: #x-28MGL-CORE-3AMEASURER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "(MGL-CORE:MEASURER (MGL-PAX:READER MGL-CORE:MONITOR))"
   [3626]: #x-28MGL-CORE-3AMAKE-CLASSIFICATION-ACCURACY-MONITORS-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-CLASSIFICATION-ACCURACY-MONITORS* GENERIC-FUNCTION)"
   [39c1]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29 "(MGL-CORE:DO-BATCHES-FOR-MODEL MGL-PAX:MACRO)"
   [3a6e]: #x-28MGL-OPT-3AMINIMIZE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:MINIMIZE* GENERIC-FUNCTION)"
+  [3aa4]: #x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29 "(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"
   [3ca8]: #x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29 "(MGL-CORE:MONITOR-MODEL-RESULTS FUNCTION)"
   [3ed1]: #x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29 "(MGL-CORE:WITH-STRIPES MGL-PAX:MACRO)"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CROSS-VALIDATION MGL-PAX:SECTION)"
@@ -2453,11 +3276,14 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
   [4c7c]: #x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:ACCUMULATE-GRADIENTS* GENERIC-FUNCTION)"
   [4e21]: #x-28MGL-CORE-3ACOUNTER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "(MGL-CORE:COUNTER (MGL-PAX:READER MGL-CORE:MONITOR))"
+  [4ffe]: #x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:LEARNING-RATE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [505e]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MEASURER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MEASURER MGL-PAX:SECTION)"
   [51ad]: #x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
   [56ee]: #x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)"
+  [578e]: #x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-ADJUSTMENT (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
+  [622d]: #x-28MGL-BP-3AFNN-20CLASS-29 "(MGL-BP:FNN CLASS)"
   [643d]: #x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29 "(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"
   [66a1]: #x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
@@ -2468,6 +3294,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [7471]: #x-28MGL-CORE-3ACOUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER GENERIC-FUNCTION)"
   [7540]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-MISC MGL-PAX:SECTION)"
   [76b8]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"
+  [7832]: #x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29 "(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)"
   [7ae7]: #x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"
   [7f6b]: #x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:CG-ARGS (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
@@ -2476,27 +3303,36 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [83bf]: #x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29 "(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)"
   [8521]: #x-28MGL-DATASET-3AGENERATOR-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:GENERATOR (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [864e]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "(MGL-CG:CG-OPTIMIZER CLASS)"
+  [86fd]: #x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29 "(MGL-NLP:@MGL-NLP MGL-PAX:SECTION)"
   [8729]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "(MGL-CG:@MGL-CG MGL-PAX:SECTION)"
   [8795]: #x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29 "(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"
   [8966]: #x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-COUNTER-CLASSES MGL-PAX:SECTION)"
   [8a3b]: #x-28MGL-CORE-3ACOUNTER-VALUES-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER-VALUES GENERIC-FUNCTION)"
+  [8b70]: #x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)"
   [8b7f]: #x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)"
+  [8b7ff]: #x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE MGL-PAX:SECTION)"
   [9112]: #x-28MGL-CORE-3AATTRIBUTES-20-28MGL-PAX-3AACCESSOR-20MGL-CORE-3AATTRIBUTED-29-29 "(MGL-CORE:ATTRIBUTES (MGL-PAX:ACCESSOR MGL-CORE:ATTRIBUTED))"
+  [9186]: #x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29 "(MGL-BP:BACKWARD GENERIC-FUNCTION)"
   [918e]: #x-28MGL-OPT-3AMONITOR-OPTIMIZATION-PERIODICALLY-20FUNCTION-29 "(MGL-OPT:MONITOR-OPTIMIZATION-PERIODICALLY FUNCTION)"
+  [9233]: #x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29 "(MGL-BP:FORWARD GENERIC-FUNCTION)"
   [93e5]: #x-28MGL-CORE-3ACROSS-ENTROPY-COUNTER-20CLASS-29 "(MGL-CORE:CROSS-ENTROPY-COUNTER CLASS)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"
   [950d]: #x-28MGL-CORE-3ALABEL-INDEX-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX GENERIC-FUNCTION)"
   [9589]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FCONT-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/CONT FUNCTION)"
   [9598]: #x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"
+  [9745]: #x-28MGL-BP-3ASTRIPEDP-20GENERIC-FUNCTION-29 "(MGL-BP:STRIPEDP GENERIC-FUNCTION)"
   [97ba]: #x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-GRADIENT-SINK GENERIC-FUNCTION)"
   [984f]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SOURCE MGL-PAX:SECTION)"
   [998f]: #x-28MGL-CORE-3A-40MGL-COUNTER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-COUNTER MGL-PAX:SECTION)"
   [9aa2]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:BATCH-GD-OPTIMIZER CLASS)"
+  [9b9d]: #x-28MGL-BP-3ATIME-STEP-20FUNCTION-29 "(MGL-BP:TIME-STEP FUNCTION)"
   [9c36]: #x-28MGL-OPT-3AON-OPTIMIZATION-FINISHED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:ON-OPTIMIZATION-FINISHED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
   [9cdc]: #x-28MGL-OPT-3AON-N-INSTANCES-CHANGED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:ON-N-INSTANCES-CHANGED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
   [9f93]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-PARTITIONS MGL-PAX:SECTION)"
+  [a105]: #x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-FNN MGL-PAX:SECTION)"
   [a22b]: #x-28MGL-CORE-3AMONITOR-20CLASS-29 "(MGL-CORE:MONITOR CLASS)"
+  [a519]: #x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29 "(MGL-DATASET:MAP-DATASETS FUNCTION)"
   [a7de]: #x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:WEIGHT-PENALTY (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
@@ -2505,11 +3341,13 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [b73e]: #x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"
   [b8b6]: #x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION)"
   [b96b]: #x-28MGL-COMMON-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "(MGL-COMMON:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN))"
+  [b9d7]: #x-28MGL-BP-3ARNN-20CLASS-29 "(MGL-BP:RNN CLASS)"
   [bca8]: #x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29 "(MGL-OPT:MINIMIZE FUNCTION)"
   [bec0]: #x-28MGL-OPT-3ATERMINATION-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:TERMINATION (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
   [c1b6]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION MGL-PAX:SECTION)"
   [c246]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTIONS-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTIONS GENERIC-FUNCTION)"
   [c27a]: #x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"
+  [c2a0]: #x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-FNN-TUTORIAL MGL-PAX:SECTION)"
   [c54c]: #x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-GRADIENT-SOURCE* GENERIC-FUNCTION)"
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)"
   [cc50]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MONITOR MGL-PAX:SECTION)"
@@ -2527,9 +3365,12 @@ are defined entirely by [`MAP-GRADIENT-SINK`][97ba].
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"
   [e57e]: #x-28MGL-RESAMPLE-3AFRACTURE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE-STRATIFIED FUNCTION)"
   [e6a3]: #x-28MGL-CG-3AON-CG-BATCH-DONE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:ON-CG-BATCH-DONE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
+  [e87a]: #x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BPN MGL-PAX:SECTION)"
   [ec6a]: #x-28MGL-CORE-3AMAKE-CLASSIFICATION-ACCURACY-MONITORS-20FUNCTION-29 "(MGL-CORE:MAKE-CLASSIFICATION-ACCURACY-MONITORS FUNCTION)"
   [ed3d]: #x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
+  [edb3]: #x-28MGL-NLP-3ABLEU-20FUNCTION-29 "(MGL-NLP:BLEU FUNCTION)"
   [edd9]: #x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-STRATIFIED FUNCTION)"
+  [ef56]: #x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-UPDATE-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [f18a]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)"
   [f1be]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS* GENERIC-FUNCTION)"
   [f1cd]: #x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:SEGMENTS GENERIC-FUNCTION)"

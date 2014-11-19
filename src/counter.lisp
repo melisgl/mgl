@@ -9,7 +9,9 @@
 
 (defgeneric add-to-counter (counter &rest args)
   (:documentation "Add ARGS to COUNTER in some way. See specialized
-  methods for type specific documentation."))
+  methods for type specific documentation. The kind of arguments to be
+  supported is the what the measurer functions (see @MGL-MEASURER)
+  intended to be paired with the counter return as multiple values."))
 
 (defgeneric counter-values (counter)
   (:documentation "Return any number of values representing the state

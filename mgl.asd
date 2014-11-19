@@ -3,7 +3,7 @@
 ;;; See MGL:@MGL-MANUAL for the user guide.
 (asdf:defsystem #:mgl
   :licence "MIT, see COPYING."
-  :version "0.0.8"
+  :version "0.0.9"
   :name "MGL, the machine learning library"
   :author "Gábor Melis"
   :mailto "mega@retes.hu"
@@ -32,8 +32,10 @@
                              (:file "boltzmann-machine")
                              (:file "deep-belief-network")
                              (:file "backprop")
+                             (:file "lumps")
                              (:file "unroll")
                              (:file "gaussian-process")
+                             (:file "nlp")
                              (:file "mgl"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
                             #:mgl-gnuplot #:mgl-mat #:mgl-pax))

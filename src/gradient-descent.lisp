@@ -67,7 +67,8 @@
                  (/ (n-instances optimizer) 60000))))"
   (@mgl-gd-batch-gd-optimizer section)
   (@mgl-gd-segmented-gd-optimizer section)
-  (@mgl-gd-per-weight-optimization section))
+  (@mgl-gd-per-weight-optimization section)
+  (@mgl-gd-adam-optimizer section))
 
 (defsection @mgl-gd-batch-gd-optimizer (:title "Batch GD Optimizer")
   (batch-gd-optimizer class)
@@ -144,12 +145,12 @@
     descent. With BATCH-SIZE between these two extremes, one gets the
     most practical 'mini-batch' compromise.")
    (learning-rate
-    :initform #.(flt 0.1) :initarg :learning-rate :accessor learning-rate
+    :initform 0.1 :initarg :learning-rate :accessor learning-rate
     :documentation "This is the step size along the gradient. Decrease
     it if optimization diverges, increase it if it doesn't make
     progress.")
    (momentum
-    :initform #.(flt 0) :initarg :momentum :accessor momentum
+    :initform 0 :initarg :momentum :accessor momentum
     :documentation "A value in the [0, 1) interval. MOMENTUM times the
     previous weight change is added to the gradient. 0 means no
     momentum.")
@@ -160,14 +161,14 @@
     optimization Nesterov's momentum may be better, but it also
     increases chances of overfitting.")
    (weight-decay
-    :initform #.(flt 0) :initarg :weight-decay :accessor weight-decay
+    :initform 0 :initarg :weight-decay :accessor weight-decay
     :documentation "An L2 penalty. It discourages large weights, much
     like a zero mean gaussian prior. WEIGHT-DECAY * WEIGHT is added to
     the gradient to penalize large weights. It's as if the function
     whose minimum is sought had WEIGHT-DECAY*sum_i{0.5 * WEIGHT_i^2}
     added to it.")
    (weight-penalty
-    :initform #.(flt 0) :initarg :weight-penalty :accessor weight-penalty
+    :initform 0 :initarg :weight-penalty :accessor weight-penalty
     :documentation "An L1 penalty. It encourages sparsity.
     SIGN(WEIGHT) * WEIGHT-PENALTY is added to the gradient pushing the
     weight towards negative infinity. It's as if the function whose
@@ -211,8 +212,11 @@
   (setf (slot-value optimizer 'segment-set)
         (make-instance 'segment-set :segments weights))
   (let ((n-weights (size (segment-set optimizer))))
-    (setf (accumulator optimizer) (make-mat n-weights :ctype flt-ctype))
-    (setf (weight-deltas optimizer) (make-mat n-weights :ctype flt-ctype))))
+    (setf (accumulator optimizer) (make-mat n-weights))
+    ;; ADAM-OPTIMIZER sets this to NIL to prevent it from being
+    ;; created.
+    (when (not (slot-boundp optimizer 'weight-deltas))
+      (setf (weight-deltas optimizer) (make-mat n-weights)))))
 
 (defmethod segments ((optimizer gd-optimizer))
   (segments (segment-set optimizer)))
@@ -236,7 +240,8 @@
     :type list :initform () :initarg :before-update-hook
     :accessor before-update-hook
     :documentation "A list of functions of no parameters. Each
-    function is called just before a weight update takes place.
+    function is called just before a weight update takes place (after
+    accumulated gradients have been divided the length of the batch).
     Convenient to hang some additional gradient accumulating code
     on."))
   (:documentation "Updates all weights simultaneously after chewing
@@ -264,6 +269,9 @@
   normal momentum, Nesterov's momentum (see MOMENTUM-TYPE) momentum is
   also available."))
 
+(define-descriptions (optimizer batch-gd-optimizer :inheritp t)
+  (n-before-upate-hook (length (before-update-hook optimizer)) "~S"))
+
 (defmethod n-instances-until-update ((optimizer batch-gd-optimizer))
   ;; BATCH-SIZE may be setf'ed to a value lower than N-INSTANCES-IN-BATCH
   (max 0 (- (batch-size optimizer)
@@ -282,19 +290,21 @@
                    (+ (n-instances optimizer) n-new-inputs)))
 
 (defun update-all-weights/nesterov (optimizer)
-  (map nil #'funcall (before-update-hook optimizer))
   (let ((accumulator (accumulator optimizer))
         (weight-deltas (weight-deltas optimizer))
         (learning-rate (learning-rate optimizer))
-        (n-instances (flt (n-instances-in-batch optimizer)))
+        (n-instances (n-instances-in-batch optimizer))
         (momentum (momentum optimizer))
         (weight-decay (weight-decay optimizer))
         (weight-penalty (weight-penalty optimizer)))
-    (declare (type flt learning-rate n-instances momentum
-                   weight-decay #+nil weight-penalty))
     (assert (and (<= 0 momentum) (< momentum 1)))
-    (mgl-mat:scal! momentum weight-deltas)
-    (mgl-mat:axpy! (/ n-instances) accumulator weight-deltas)
+    (scal! momentum weight-deltas)
+    (cond ((before-update-hook optimizer)
+           (scal! (/ n-instances) accumulator)
+           (map nil #'funcall (before-update-hook optimizer))
+           (axpy! 1 accumulator weight-deltas))
+          (t
+           (axpy! (/ n-instances) accumulator weight-deltas)))
     (with-shape-and-displacement (weight-deltas)
       (with-shape-and-displacement (accumulator)
         (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
@@ -304,33 +314,33 @@
             (reshape-and-displace! accumulator (mat-size weights)
                                    start-in-segment-set)
             (unless (zerop weight-decay)
-              (mgl-mat:axpy! weight-decay weights weight-deltas)
-              (mgl-mat:scal! (- 1 (* learning-rate weight-decay)) weights))
-            (mgl-mat:axpy! (- (/ learning-rate n-instances)) accumulator
-                           weights)
-            (mgl-mat:axpy! (- (* learning-rate momentum)) weight-deltas
-                           weights)
+              (axpy! weight-decay weights weight-deltas)
+              (scal! (- 1 (* learning-rate weight-decay)) weights))
+            (axpy! (- (/ learning-rate n-instances)) accumulator weights)
+            (axpy! (- (* learning-rate momentum)) weight-deltas weights)
             (unless (zerop weight-penalty)
               (add-sign! (* learning-rate weight-penalty) weights 0 accumulator)
               (axpy! 1 accumulator weights))))))
-    (fill! (flt 0) accumulator)
+    (fill! 0 accumulator)
     (setf (n-instances-in-batch optimizer) 0))
   (map nil #'funcall (after-update-hook optimizer)))
 
 (defun update-all-weights/normal (optimizer)
-  (map nil #'funcall (before-update-hook optimizer))
   (let ((accumulator (accumulator optimizer))
         (weight-deltas (weight-deltas optimizer))
         (learning-rate (learning-rate optimizer))
-        (n-instances (flt (n-instances-in-batch optimizer)))
+        (n-instances (n-instances-in-batch optimizer))
         (momentum (momentum optimizer))
         (weight-decay (weight-decay optimizer))
         (weight-penalty (weight-penalty optimizer)))
-    (declare (type flt learning-rate n-instances momentum
-                   weight-decay #+nil weight-penalty))
     (assert (and (<= 0 momentum) (< momentum 1)))
-    (mgl-mat:scal! momentum weight-deltas)
-    (mgl-mat:axpy! (flt (/ n-instances)) accumulator weight-deltas)
+    (scal! momentum weight-deltas)
+    (cond ((before-update-hook optimizer)
+           (scal! (/ n-instances) accumulator)
+           (map nil #'funcall (before-update-hook optimizer))
+           (axpy! 1 accumulator weight-deltas))
+          (t
+           (axpy! (/ n-instances) accumulator weight-deltas)))
     (with-shape-and-displacement (weight-deltas)
       (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (let ((weights (segment-weights segment)))
@@ -340,8 +350,8 @@
             (add-sign! weight-penalty weights 1 weight-deltas))
           (unless (zerop weight-decay)
             (axpy! weight-decay weights weight-deltas))
-          (mgl-mat:axpy! (- learning-rate) weight-deltas weights))))
-    (fill! (flt 0) accumulator)
+          (axpy! (- learning-rate) weight-deltas weights))))
+    (fill! 0 accumulator)
     (setf (n-instances-in-batch optimizer) 0))
   (map nil #'funcall (after-update-hook optimizer)))
 
@@ -388,12 +398,10 @@
         (weight-penalty (weight-penalty optimizer))
         (batch-size (batch-size optimizer)))
     (declare (type index-vector n-weight-uses-in-batch)
-             (type flt learning-rate momentum weight-decay weight-penalty)
+             (type real learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
-    (with-facets ((accumulator (accumulator 'array :direction :io
-                                            :type flt-vector))
-                  (weight-deltas (weight-deltas 'array :direction :io
-                                                :type flt-vector)))
+    (with-facets ((accumulator (accumulator 'array :direction :io))
+                  (weight-deltas (weight-deltas 'array :direction :io)))
       (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (map-segment-runs
          (lambda (start end)
@@ -416,25 +424,23 @@
           (let* ((weights (segment-weights segment))
                  (start (mat-displacement weights))
                  (end (the! index (+ start (the index (mat-size weights))))))
-            (declare (optimize (speed 3) #.*no-array-bounds-check*)
+            (declare #+nil (optimize (speed 3) #.*no-array-bounds-check*)
                      (type index start end))
-            (with-facets ((weights (weights 'backing-array :direction :io
-                                            :type flt-vector)))
+            (with-facets ((weights (weights 'backing-array :direction :io)))
               (do ((i start-in-segment-set (the! index (1+ i)))
                    (j start (1+ j)))
                   ((<= end j))
                 (let ((delta (+ (* momentum (aref weight-deltas i))
                                 (* (if (zerop (aref n-weight-uses-in-batch i))
-                                       #.(flt 0)
-                                       (/ (flt
-                                           (aref n-weight-uses-in-batch i))))
+                                       0
+                                       (/ (aref n-weight-uses-in-batch i)))
                                    (aref accumulator i))
                                 (* weight-decay (aref weights j))
                                 weight-penalty)))
                   (setf (aref weight-deltas i) delta)
                   (decf (aref weights j) (* learning-rate delta))
                   (setf (aref n-weight-uses-in-batch i) 0
-                        (aref accumulator i) #.(flt 0)))))))
+                        (aref accumulator i) 0))))))
         (map nil #'funcall (after-update-hook optimizer)))))
   (set-n-instances optimizer gradient-source
                    (+ (n-instances optimizer) n-new-inputs)))
@@ -476,17 +482,14 @@
         (weight-penalty (weight-penalty optimizer))
         (batch-size (batch-size optimizer)))
     (declare (type index-vector n-weight-uses-in-batch)
-             (type flt learning-rate momentum weight-decay weight-penalty)
+             (type real learning-rate momentum weight-decay weight-penalty)
              (type index batch-size))
-    (with-facets ((accumulator (accumulator 'array :direction :io
-                                            :type flt-vector))
-                  (weight-deltas (weight-deltas 'array :direction :io
-                                                :type flt-vector)))
-      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+    (with-facets ((accumulator (accumulator 'array :direction :io))
+                  (weight-deltas (weight-deltas 'array :direction :io)))
+      #+nil (declare (optimize (speed 3) #.*no-array-bounds-check*))
       (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
         (let ((weights (segment-weights segment)))
-          (with-facets ((weights (weights 'array :direction :io
-                                          :type flt-vector)))
+          (with-facets ((weights (weights 'array :direction :io)))
             (map-segment-runs
              (lambda (start end)
                (declare (type index start end))
@@ -506,7 +509,7 @@
                      (setf (aref weight-deltas i) delta)
                      (decf (aref weights j) (* learning-rate delta))
                      (setf (aref n-weight-uses-in-batch i) 0
-                           (aref accumulator i) #.(flt 0))))))
+                           (aref accumulator i) (* 0 (aref accumulator i)))))))
              segment)))))
     (map nil #'funcall (after-update-hook optimizer)))
   (set-n-instances optimizer gradient-source
@@ -583,3 +586,168 @@
 (defmethod map-gradient-sink (fn (optimizer segmented-gd-optimizer))
   (dolist (optimizer (optimizers optimizer))
     (map-gradient-sink fn optimizer)))
+
+
+(defsection @mgl-gd-adam-optimizer (:title "Adam Optimizer")
+  (adam-optimizer class)
+  (learning-rate (accessor adam-optimizer))
+  (mean-update-rate (accessor adam-optimizer))
+  (variance-update-rate (accessor adam-optimizer))
+  (variance-adjustment (accessor adam-optimizer)))
+
+;;; FIXME: this isn't really a BATCH-GD-OPTIMIZER (that should be
+;;; called SGD, really).
+(defclass adam-optimizer (batch-gd-optimizer)
+  ((weight-deltas :initform nil)
+   (learning-rate
+    :initform 0.0002 :accessor learning-rate
+    :documentation "Same thing as [LEARNING-RATE][(ACCESSOR
+    GD-OPTIMIZER)] but with the default suggested by the Adam paper.")
+   (mean-update-rate
+    :initform 0.1 :initarg :mean-update-rate
+    :accessor mean-update-rate
+    :documentation "A number between 0 and 1 that determines how fast
+    the estimated mean of derivatives is updated. 1 basically gives
+    you RMSPROP (if VARIANCE-UPDATE-RATE is not too small) or
+    AdaGrad (if VARIANCE-UPDATE-RATE is infinitesimal and the learning
+    rate is annealed.")
+   (variance-update-rate
+    :initform 0.001 :initarg :variance-update-rate
+    :accessor variance-update-rate
+    :documentation "A number between 0 and 1 that determines how fast
+    the estimated variance of derivatives is updated.")
+   (variance-adjustment
+    :initform 1e-8 :initarg :variance-adjustment
+    :accessor variance-adjustment
+    :documentation "Within the bowels of adam, the estimated mean is
+    divided by the square root of the estimated variance (per weight)
+    which can lead to numerical problems if the denominator is near
+    zero. To avoid this, VARIANCE-ADJUSTMENT which should be a small
+    positive number is added to the denominator.")
+   (mean-estimates :accessor mean-estimates)
+   (variance-estimates :accessor variance-estimates)
+   (adam-time-step :initform 0 :accessor adam-time-step))
+  (:documentation "Adam is a first-order stochasistic gradient descent
+  optimizer. It maintains an internal estimation for the mean and raw
+  variance of each derivative as exponential moving averages. The step
+  is takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
+  mean, `V` is the estimated variance, and `E` is a small adjustment
+  factor to prevent the gradient from blowing up. See the
+  [paper](http://arxiv.org/abs/1412.6980) for more."))
+
+(define-descriptions (optimizer adam-optimizer :inheritp t)
+  (mean-update-rate (mean-update-rate optimizer) "~,5E")
+  (variance-update-rate (variance-update-rate optimizer) "~,5E")
+  (variance-adjustment (variance-adjustment optimizer) "~,5E"))
+
+(defmethod initialize-optimizer* ((optimizer adam-optimizer) source weights
+                                  dataset)
+  (when (next-method-p)
+    (call-next-method))
+  (let ((n-weights (size (segment-set optimizer))))
+    (setf (variance-estimates optimizer) (make-mat n-weights))
+    (setf (mean-estimates optimizer) (make-mat n-weights))))
+
+(defmethod maybe-update-weights ((optimizer adam-optimizer)
+                                 gradient-source n-new-inputs)
+  (when (<= (batch-size optimizer)
+            (incf (n-instances-in-batch optimizer) n-new-inputs))
+    (update-all-weights/adam optimizer))
+  (set-n-instances optimizer gradient-source
+                   (+ (n-instances optimizer) n-new-inputs)))
+
+(defun update-all-weights/adam (optimizer)
+  (assert (zerop (momentum optimizer)) ()
+          "Momentum is not implemented for ADAM-OPTIMIZER.")
+  (incf (adam-time-step optimizer))
+  (let ((accumulator (accumulator optimizer))
+        (mean-estimates (mean-estimates optimizer))
+        (variance-estimates (variance-estimates optimizer))
+        (learning-rate (learning-rate optimizer))
+        (mean-update-rate (mean-update-rate optimizer))
+        (variance-update-rate (variance-update-rate optimizer))
+        (variance-adjustment (variance-adjustment optimizer))
+        (n-instances (n-instances-in-batch optimizer))
+        (weight-decay (weight-decay optimizer))
+        (weight-penalty (weight-penalty optimizer))
+        (step (adam-time-step optimizer)))
+    (scal! (/ n-instances) accumulator)
+    (map nil #'funcall (before-update-hook optimizer))
+    ;; add weight decay and penalty gradients
+    (when (or (not (zerop weight-decay))
+              (not (zerop weight-penalty)))
+      (with-shape-and-displacement (accumulator)
+        (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
+          (let ((weights (segment-weights segment)))
+            (reshape-and-displace! accumulator (mat-size weights)
+                                   start-in-segment-set)
+            (unless (zerop weight-penalty)
+              (add-sign! weight-penalty weights 1 accumulator))
+            (unless (zerop weight-decay)
+              (axpy! weight-decay weights accumulator))))))
+    (scal! (- 1 mean-update-rate) mean-estimates)
+    (axpy! mean-update-rate accumulator mean-estimates)
+    (scal! (- 1 variance-update-rate) variance-estimates)
+    ;; We don't need the gradients anywhere, only their elementwise
+    ;; square.
+    (.*! accumulator accumulator)
+    (axpy! variance-update-rate accumulator variance-estimates)
+    (adam-update (* learning-rate
+                    (/ (- 1 (expt (- 1 mean-update-rate) step)))
+                    (sqrt (- 1 (expt (- 1 variance-update-rate) step))))
+                 mean-estimates variance-estimates variance-adjustment
+                 accumulator)
+    (with-shape-and-displacement (accumulator)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
+        (let ((weights (segment-weights segment)))
+          (reshape-and-displace! accumulator (mat-size weights)
+                                 start-in-segment-set)
+          (axpy! -1 accumulator weights))))
+    (fill! 0 accumulator)
+    (setf (n-instances-in-batch optimizer) 0))
+  (map nil #'funcall (after-update-hook optimizer)))
+
+(defun adam-update (step-size mean-estimates variance-estimates
+                    variance-adjustment weight-deltas)
+  (let* ((n (mat-size mean-estimates))
+         (ctype (mat-ctype mean-estimates))
+         (step-size (coerce-to-ctype step-size :ctype ctype))
+         (variance-adjustment (coerce-to-ctype variance-adjustment
+                                               :ctype ctype)))
+    (assert (= (mat-size mean-estimates)
+               (mat-size variance-estimates)
+               (mat-size weight-deltas)))
+    (if (use-cuda-p)
+        (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
+          (cuda-adam-update step-size mean-estimates variance-estimates
+                            variance-adjustment weight-deltas n
+                            :grid-dim grid-dim :block-dim block-dim))
+        (progn
+          (assert (= 0 (mat-displacement mean-estimates)
+                     (mat-displacement variance-estimates)
+                     (mat-displacement weight-deltas)))
+          (lisp-adam-update step-size mean-estimates variance-estimates
+                            variance-adjustment weight-deltas
+                            (mat-size mean-estimates))))))
+
+(define-lisp-kernel (lisp-adam-update)
+    ((step-size single-float) (mean-estimates :mat :input)
+     (variance-estimates :mat :input) (variance-adjustment single-float)
+     (weight-deltas :mat :output) (n index))
+  (loop for i of-type index below n
+        do (setf (aref weight-deltas i)
+                 (/ (* step-size (aref mean-estimates i))
+                    (+ (the! single-float (sqrt (aref variance-estimates i)))
+                       variance-adjustment)))))
+
+(define-cuda-kernel (cuda-adam-update)
+    (cl-cuda:void ((step-size float) (mean-estimates :mat :input)
+                   (variance-estimates :mat :input) (variance-adjustment float)
+                   (weight-deltas :mat :output) (n cl-cuda:int)))
+  (let ((stride (* cl-cuda:block-dim-x cl-cuda:grid-dim-x)))
+    (do ((i (+ (* cl-cuda:block-dim-x cl-cuda:block-idx-x) cl-cuda:thread-idx-x)
+            (+ i stride)))
+        ((>= i n))
+      (set (aref weight-deltas i) (/ (* step-size (aref mean-estimates i))
+                                     (+ (sqrt (aref variance-estimates i))
+                                        variance-adjustment))))))

@@ -162,12 +162,12 @@
      bias-variance))
 
 
-;;;; BPN-GP
+;;;; FNN-GP
 
-;;; A gp with BPN based mean and covariance. Can be trained and
+;;; A gp with FNN based mean and covariance. Can be trained and
 ;;; updated.
 ;;;
-;;; It is a bpn with two of its lumps standing for mean and
+;;; It is a fnn with two of its lumps standing for mean and
 ;;; covariance. SET-INPUT is expected to take lists of elements of the
 ;;; form (&KEY X1 X2 Y1 &ALLOW-OTHER-KEYS) where X1 and X2 are inputs
 ;;; as in GP-COVARIANCES, and Y1 is the output for X1. The mean lump
@@ -178,14 +178,14 @@
 ;;; prediction, too), it's there for training the gp.
 ;;;
 ;;; During training X1 must be EQ to X2.
-(defclass bpn-gp (bpn gp)
+(defclass fnn-gp (fnn gp)
   ((mean-lump-name :initarg :mean-lump-name
                    :reader mean-lump-name)
    (covariance-lump-name :initarg :covariance-lump-name
                          :reader covariance-lump-name)))
 
 ;;; For subclasses that use TRIVIAL-CACHED-EXECUTOR-MIXIN or such.
-(defmethod instance-to-executor-parameters (sample (bpn-gp bpn-gp))
+(defmethod instance-to-executor-parameters (sample (fnn-gp fnn-gp))
   (destructuring-bind (&key x1 x2 &allow-other-keys) sample
     (list (mat-size x1) (mat-size x2))))
 
@@ -201,31 +201,31 @@
 (defun extract-covariances (lump stripe n-rows n-cols)
   (make-matrix-from-lump-stripe lump n-rows n-cols stripe))
 
-(defmethod gp-means-and-covariances* ((bpn bpn-gp) x1 x2)
+(defmethod gp-means-and-covariances* ((fnn fnn-gp) x1 x2)
   (let ((samples (list (list :x1 x1 :x2 x2))))
-    (do-executors (samples bpn)
-      (let ((gp-lump (find-gp-lump bpn)))
-        (set-input samples bpn)
-        (forward-bpn bpn
+    (do-executors (samples fnn)
+      (let ((gp-lump (find-gp-lump fnn)))
+        (set-input samples fnn)
+        (forward-bpn fnn
                      ;; Skip the heavy duty part that's only necessary
                      ;; for training anyway.
-                     :end-lump gp-lump)
+                     :end-clump gp-lump)
         (return-from gp-means-and-covariances*
           (values (extract-means (means gp-lump) 0)
                   (extract-covariances (covariances gp-lump) 0
                                        (mat-size x1) (mat-size x2))))))))
 
-(defmethod gp-means ((bpn bpn-gp) x)
-  (nth-value 0 (gp-means-and-covariances bpn x)))
+(defmethod gp-means ((fnn fnn-gp) x)
+  (nth-value 0 (gp-means-and-covariances fnn x)))
 
-(defmethod gp-covariances* ((bpn bpn-gp) x1 x2)
-  (nth-value 1 (gp-means-and-covariances bpn x1 x2)))
+(defmethod gp-covariances* ((fnn fnn-gp) x1 x2)
+  (nth-value 1 (gp-means-and-covariances fnn x1 x2)))
 
 
-;;;; BPN-GP training
+;;;; FNN-GP training
 
-(defmethod set-input :after (samples (bpn bpn-gp))
-  (let ((gp-lump (find-gp-lump bpn)))
+(defmethod set-input :after (samples (fnn fnn-gp))
+  (let ((gp-lump (find-gp-lump fnn)))
     (when gp-lump
       (setf (samples gp-lump) samples))))
 
@@ -245,7 +245,7 @@
 (defmethod default-size ((lump ->gp))
   1)
 
-(defmethod transfer-lump ((lump ->gp))
+(defmethod forward ((lump ->gp))
   ;; be kind to gc in case gps are huge
   (setf (posterior-gps lump) ())
   (setf (posterior-gps lump)
@@ -267,7 +267,7 @@
                                            (mat-size x1) (mat-size x1)))))))
   (with-facets ((nodes ((nodes lump) 'backing-array :direction :output
                         :type flt-vector)))
-    (loop for stripe of-type index below (mgl-bp::n-stripes* lump)
+    (loop for stripe of-type index below (n-stripes lump)
           for gp in (posterior-gps lump)
           do (let* ((inverted-covariances (inverted-covariances gp))
                     (centered-outputs (centered-evidence-outputs gp))
@@ -282,14 +282,14 @@
                                   centered-outputs))
                             (* n (log (* 2 pi)))))))))))
 
-(defmethod derive-lump ((lump ->gp))
+(defmethod backward ((lump ->gp))
   (let* ((means (means lump))
          (means-d (derivatives means))
          (covariances (covariances lump))
          (cov-d (derivatives covariances)))
     (with-facets ((derivatives ((derivatives lump) 'backing-array
                                 :direction :input :type flt-vector)))
-      (loop for stripe of-type index below (mgl-bp::n-stripes* lump)
+      (loop for stripe of-type index below (n-stripes lump)
             for gp in (posterior-gps lump)
             do (let* ((d (aref derivatives stripe))
                       (inverted-covariances (inverted-covariances gp))
@@ -308,10 +308,10 @@
                    (reshape-to-row-matrix! cov-d stripe)
                    (axpy! (- (* d 0.5)) 2dcov cov-d)))))))
 
-(defun find-gp-lump (bpn)
+(defun find-gp-lump (fnn)
   (find-if (lambda (lump)
              (typep lump '->gp))
-           (lumps bpn)))
+           (clumps fnn)))
 
 
 ;;;; Utilities for plotting

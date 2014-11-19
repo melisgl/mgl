@@ -8,8 +8,8 @@
     (build-simple-bpn-gp n-x1 n-x2 :weights-from bpn-gp)))
 
 (defmethod set-input (samples (bpn test-bpn-gp))
-  (let ((df (find-lump 'distance-field bpn :errorp t))
-        (selfp (find-lump 'selfp bpn :errorp t)))
+  (let ((df (find-clump 'distance-field bpn))
+        (selfp (find-clump 'selfp bpn)))
     (with-facets ((df* ((nodes df) 'backing-array :direction :output
                         :type flt-vector))
                   (selfp* ((nodes selfp) 'backing-array :direction :output
@@ -76,7 +76,7 @@
                                    (lambda (samples bpn)
                                      (declare (ignore samples))
                                      (values (mat-as-scalar
-                                              (nodes (find-lump name bpn)))
+                                              (nodes (find-clump name bpn)))
                                              1)))
                        :counter (make-instance
                                  'basic-counter
@@ -107,14 +107,14 @@
   ())
 
 (defun fill-lump (name bpn value)
-  (let ((mat (segment-weights (find-lump name bpn :errorp t))))
+  (let ((mat (segment-weights (find-clump name bpn))))
     (fill! value mat)))
 
 (defun build-simple-bpn-gp (n-x1 n-x2 &key weights-from)
   (with-weights-copied (weights-from)
     (let* ((n-cov (* n-x1 n-x2))
            (bpn-gp
-             (build-bpn (:class 'test-bpn-gp
+             (build-fnn (:class 'test-bpn-gp
                          :initargs (list
                                     :mean-lump-name 'means
                                     :covariance-lump-name 'covariances))

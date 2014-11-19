@@ -8,6 +8,7 @@
                 :serial t
                 :components ((:file "package")
                              (:file "util")
+                             (:file "digit-fnn")
                              (:file "mnist")
                              (:file "gaussian-process"))))
   :depends-on (#:mgl))
