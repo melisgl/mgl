@@ -726,19 +726,23 @@
 
 (defmethod cost (bpn)
   "Return the sum of costs for all active stripes. The cost of a
-  stripe is the sum of the error nodes. The second value is the number
-  of stripes."
-  (let ((sum (flt 0)))
+  stripe is the sum of the corresponding nodes in ->ERROR lumps. The
+  second value is the sum of the stripe's IMPORTANCE (in the ->ERROR
+  lump) or 1 (if IMPORTANCE is NIL)."
+  (let ((sum (flt 0))
+        (sum-importances 0))
     (loop for lump across (lumps bpn) do
       (when (typep lump '->error)
-        (with-facet (nodes ((nodes lump) 'backing-array :direction :input
-                            :type flt-vector))
-          (declare (type flt-vector nodes))
-          (incf sum (if (same-stripes-p lump)
-                        (* (n-stripes lump) (aref nodes 0))
-                        (loop for i below (n-stripes lump)
-                              sum (aref nodes i)))))))
-    (values sum (n-stripes bpn))))
+        (assert (not (same-stripes-p lump)))
+        (with-facets ((nodes ((nodes lump) 'backing-array :direction :input
+                              :type flt-vector)))
+          (let ((importances (importance lump)))
+            (loop for i below (n-stripes lump)
+                  do (incf sum (aref nodes i))
+                     (incf sum-importances (if importances
+                                               (mref importances i)
+                                               1)))))))
+    (values sum sum-importances)))
 
 (defun compute-derivatives (samples optimizer learner)
   (let ((bpn (bpn learner))
