@@ -271,11 +271,10 @@
 (defun ensure-mask (lump)
   (when (dropout lump)
     (let ((x (nodes (x lump))))
-      (unless (and (mask lump)
-                   (= (mat-size x)
-                      (mat-size (mask lump))))
-        (setf (slot-value lump 'mask)
-              (make-mat (mat-size x) :ctype flt-ctype)))))
+      (setf (slot-value lump 'mask)
+            (if (mask lump)
+                (adjust! (mask lump) (mat-size x) 0)
+                (make-mat (mat-size x) :ctype flt-ctype)))))
   (mask lump))
 
 (define-cuda-kernel (cuda-dropout-xorwow)
@@ -353,11 +352,10 @@
 (defun ensure-multipliers (lump)
   (when (variance lump)
     (let ((x (nodes (x lump))))
-      (unless (and (multipliers lump)
-                   (= (mat-size x)
-                      (mat-size (multipliers lump))))
-        (setf (slot-value lump 'multipliers)
-              (make-mat (mat-size x) :ctype flt-ctype)))))
+      (setf (slot-value lump 'multipliers)
+            (if (multipliers lump)
+                (adjust! (multipliers lump) (mat-size x) 0)
+                (make-mat (mat-size x) :ctype flt-ctype)))))
   (multipliers lump))
 
 (defun mgn! (l x multipliers variance)
@@ -390,12 +388,10 @@
 
 (defun ensure-randoms (lump)
   (let ((x (nodes (x lump))))
-    (unless (and (randoms lump)
-                 (= (mat-size x)
-                    (mat-size (randoms lump))))
-      (setf (slot-value lump 'randoms)
-            (make-mat (mat-size x) :ctype flt-ctype))))
-  (randoms lump))
+    (setf (slot-value lump 'randoms)
+          (if (randoms lump)
+              (adjust! (randoms lump) (mat-size x) 0)
+              (make-mat (mat-size x) :ctype flt-ctype)))))
 
 (defmethod transfer-lump ((lump ->sample-binary))
   (let ((x (x lump)))
@@ -593,7 +589,7 @@
   "Add LUMP to BPN. MAX-N-STRIPES of LUMP gets set to equal that of
   the previous last, non-weight lump of BPN."
   (when (find-lump (name lump) bpn)
-    (error "Cannot add ~S: ~%
+    (error "Cannot add ~S: ~
             a lump of same name has already been added to this network." lump))
   (setf (max-n-stripes lump) (max-n-stripes bpn))
   (vector-push-extend lump (slot-value bpn 'lumps) 1)
@@ -962,10 +958,12 @@
     ;; FIXEXT:
     (assert (not (same-stripes-p x)))
     (if (transpose-weights-p lump)
+        ;; a = x*w'
         (gemm! (flt 1) (nodes x) (nodes weights)
                        (flt 0) (nodes lump)
                        :transpose-b? t :lda nx :ldb nx :ldc nl
                        :m n-stripes :n nl :k nx)
+        ;; a = x*w
         (gemm! (flt 1) (nodes x) (nodes weights)
                        (flt 0) (nodes lump)
                        :lda nx :ldb nl :ldc nl
@@ -984,21 +982,21 @@
          (dw* (derivatives weights))
          (dl* (derivatives lump)))
     (if (transpose-weights-p lump)
-        ;; dx += a*w
+        ;; dx += da*w
         (gemm! (flt 1) dl* w* (flt 1) dx*
                        :lda nl :ldb nx :ldc nx
                        :m n-stripes :n nx :k nl)
-        ;; dx += a*w'
+        ;; dx += da*w'
         (gemm! (flt 1) dl* w* (flt 1) dx*
                        :transpose-b? t :lda nl :ldb nl :ldc nx
                        :m n-stripes :n nx :k nl))
     (if (transpose-weights-p lump)
-        ;; dw += a'*x
+        ;; dw += da'*x
         (gemm! (flt 1) dl* x* (flt 1) dw*
                        :transpose-a? t
                        :lda nl :ldb nx :ldc nx
                        :m nl :n nx :k n-stripes)
-        ;; dw += x'*a
+        ;; dw += x'*da
         (gemm! (flt 1) x* dl* (flt 1) dw*
                        :transpose-a? t
                        :lda nx :ldb nl :ldc nl
@@ -1120,13 +1118,11 @@
 
 (defun ensure-+-ones (lump)
   (let ((n-stripes* (n-stripes* lump)))
-    (unless (and (ones lump)
-                 (= n-stripes*
-                    (mat-size (ones lump))))
-      (setf (slot-value lump 'ones)
-            (make-mat n-stripes* :ctype flt-ctype))
-      (fill! (flt 1) (ones lump))))
-  (ones lump))
+    (setf (slot-value lump 'ones)
+          (if (ones lump)
+              (adjust! (ones lump) n-stripes* 0)
+              (make-mat n-stripes* :ctype flt-ctype
+                        :initial-element 1)))))
 
 (defmethod transfer-lump ((lump ->+))
   (let* ((nodes (nodes lump))
@@ -2679,16 +2675,12 @@
   (size (x lump)))
 
 (defun ensure-softmax (lump)
-  (unless (and (slot-boundp lump 'softmax)
-               (= (mat-size (nodes (x lump)))
-                  (mat-size (softmax lump))))
-    (when (slot-boundp lump 'softmax)
-      (mgl-cube:destroy-cube (softmax lump)))
-    (setf (slot-value lump 'softmax)
-          (make-instance 'mat
-                         :ctype flt-ctype
-                         :dimensions (mat-dimensions (nodes (x lump))))))
-  (softmax lump))
+  (setf (slot-value lump 'softmax)
+        (if (slot-boundp lump 'softmax)
+            (adjust! (softmax lump) (mat-dimensions (nodes (x lump))) 0)
+            (make-instance 'mat
+                           :ctype flt-ctype
+                           :dimensions (mat-dimensions (nodes (x lump)))))))
 
 (define-cuda-kernel (cuda-cross-entropy-softmax)
     (void ((group-size int) (x :mat :input) (n int) (target :mat :input)
