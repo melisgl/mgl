@@ -20,7 +20,7 @@
    (make-instance 'monitor
                   :measurer (lambda (instances bpn)
                               (declare (ignore instances))
-                              (mgl-bp:cost bpn))
+                              (cost bpn))
                   :counter (make-instance
                             'basic-counter
                             :attributes '(:dataset "train" :type "cost")))))
