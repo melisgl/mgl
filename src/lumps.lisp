@@ -2402,6 +2402,9 @@
             (make-mat (list n (size lump))
                       :max-size (* (max-n-stripes lump) (size lump))))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *n-softmax-threads* 128))
+
 (defmethod forward ((lump ->softmax-xe-loss))
   (let* ((x (nodes (x lump)))
          (group-size (group-size lump))
@@ -2409,8 +2412,8 @@
          (n (* (n-stripes lump) (size lump))))
     (if (use-cuda-p)
         (cuda-softmax-xe group-size x n softmax
-                         :grid-dim (list (ceiling (/ n group-size) 256) 1 1)
-                         :block-dim (list 256 1 1))
+                         :grid-dim (list (/ n group-size) 1 1)
+                         :block-dim (list *n-softmax-threads* 1 1))
         (lisp-softmax-xe group-size x n softmax))))
 
 (define-lisp-kernel (lisp-softmax-xe)
@@ -2435,32 +2438,55 @@
                                     sum)))
                           (setf (aref softmax i) s)))))))
 
+;;; This implementation was translated from SoftMax.cu in cunn.
 (define-cuda-kernel (cuda-softmax-xe)
-    (void ((group-size int) (x :mat :input) (n int) (softmax :mat :output)))
-  (let ((i (* group-size
-              (+ (* block-dim-x block-idx-x) thread-idx-x))))
-    (when (<= (+ i group-size) n)
-      (let ((max (aref x i)))
-        ;; It's more stable numerically to subtract the max from
-        ;; elements in the group before exponentiating.
-        (do ((a 1 (+ a 1)))
-            ((>= a group-size))
-          (let ((xe (aref x (+ i a))))
-            (when (< max xe)
-              (set max xe))))
-        (let ((sum 0.0))
-          (do ((a 0 (+ a 1)))
-              ((>= a group-size))
-            (let* ((ia (+ i a))
-                   (xe (aref x ia))
-                   (unnormalized-s (exp (- xe max))))
-              (set (aref softmax ia) unnormalized-s)
-              (set sum (+ sum unnormalized-s))))
-          (do ((a 0 (+ a 1)))
-              ((>= a group-size))
-            (let* ((ia (+ i a))
-                   (s (/ (aref softmax ia) sum)))
-              (set (aref softmax ia) s))))))))
+    (void ((group-size int) (input :mat :input) (n int) (output :mat :output)))
+  (with-shared-memory ((buffer float #.(1+ *n-softmax-threads*)))
+    (let* ((k block-idx-x)
+           (base-index (* k group-size))
+           (i-start (+ base-index thread-idx-x))
+           (i-end (+ base-index group-size))
+           (i-step block-dim-x))
+      (set (aref buffer thread-idx-x) #.most-negative-single-float)
+      ;; start working on the max
+      (do ((i i-start (+ i i-step)))
+          ((<= i-end i))
+        (let ((z (aref input i)))
+          (when (< (aref buffer thread-idx-x) z)
+            (set (aref buffer thread-idx-x) z))))
+      (syncthreads)
+      ;; reduce
+      (when (= thread-idx-x 0)
+        (let ((max-k #.most-negative-single-float))
+          (do ((i 0 (1+ i)))
+              ((<= block-dim-x i))
+            (when (< max-k (aref buffer i))
+              (set max-k (aref buffer i))))
+          (set (aref buffer #.*n-softmax-threads*) max-k)))
+      (syncthreads)
+      ;; start working on the sum
+      (let ((max-k (aref buffer #.*n-softmax-threads*)))
+        (set (aref buffer thread-idx-x) 0.0)
+        (do ((i i-start (+ i i-step)))
+            ((<= i-end i))
+          (let ((z (exp (- (aref input i) max-k))))
+            (set (aref buffer thread-idx-x)
+                 (+ (aref buffer thread-idx-x) z))
+            (set (aref output i) z))))
+      (syncthreads)
+      ;; reduce
+      (when (= thread-idx-x 0)
+        (let ((sum-k 0.0))
+          (do ((i 0 (1+ i)))
+              ((<= block-dim-x i))
+            (set sum-k (+ sum-k (aref buffer i))))
+          (set (aref buffer #.*n-softmax-threads*) sum-k)))
+      (syncthreads)
+      ;; softmax
+      (let ((sum-k (aref buffer #.*n-softmax-threads*)))
+        (do ((i i-start (+ i i-step)))
+            ((<= i-end i))
+          (set (aref output i) (/ (aref output i) sum-k)))))))
 
 (defmacro do-sparse-targets (((group-start target-index target-value)
                               targets group-size)
@@ -2509,8 +2535,8 @@
             (multiple-value-bind (block-dim grid-dim)
                 (choose-1d-block-and-grid n 4)
               (cuda-softmax-xe-derivative
-               group-size dx n dl (nodes target)
-               softmax :grid-dim grid-dim :block-dim block-dim))
+               group-size dx n target softmax
+               :grid-dim grid-dim :block-dim block-dim))
             (lisp-softmax-xe-derivative
              group-size dx n target softmax)))))
 
@@ -2541,7 +2567,7 @@
                                            0.0)))))))))))
 
 (define-cuda-kernel (cuda-softmax-xe-derivative)
-    (void ((group-size int) (xd :mat :io) (n int) (d :mat :input)
+    (void ((group-size int) (xd :mat :io) (n int)
            (target :mat :input) (softmax :mat :input)))
   (let ((stride (* block-dim-x grid-dim-x)))
     (do ((ia (+ (* block-dim-x block-idx-x) thread-idx-x)
@@ -2556,8 +2582,7 @@
           (let* ((ib (+ i b))
                  (target-ib (aref target ib)))
             (when (/= 0.0 target-ib)
-              (set sum (+ sum (* (aref d ib)
-                                 target-ib
+              (set sum (+ sum (* target-ib
                                  (- softmax-ia
                                     (if (= a b)
                                         1.0
