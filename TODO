@@ -65,8 +65,12 @@ CLOSED: [2014-01-20 Mon 13:13]
 - CLOSING NOTE [2014-01-20 Mon 13:13] \\
   removed
 ** DONE normalized-lump: scale should be per stripe
-** TODO implement: http://media.nips.cc/nipsbooks/nipspapers/paper_files/nips26/1409.pdf
-** TODO implement: http://riejohnson.com/rie/stograd_nips.pdf
+** CANCELLED implement: http://media.nips.cc/nipsbooks/nipspapers/paper_files/nips26/1409.pdf
+CLOSED: [2015-01-21 Wed 21:08]
+- CLOSING NOTE [2015-01-21 Wed 21:08]
+** CANCELLED implement: http://riejohnson.com/rie/stograd_nips.pdf
+CLOSED: [2015-01-21 Wed 21:09]
+- CLOSING NOTE [2015-01-21 Wed 21:09]
 Doesn't work well with dropout or rbms. Why?
 - lagging-average-gradients is too imprecise
 - lagging-average-gradients is for the whole network and not the
@@ -120,4 +124,6 @@ CLOSED: [2013-03-05 Tue 16:31]
 ** DONE use cuda
 * examples
 ** DONE movie review example
-** TODO netflix example
+** CANCELLED netflix example
+CLOSED: [2015-01-21 Wed 21:09]
+- CLOSING NOTE [2015-01-21 Wed 21:09]
