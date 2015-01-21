@@ -85,7 +85,9 @@
                  (:fn reset-optimization-monitors :period 3000)))
               (make-instance 'bp-learner
                              :bpn rnn
-                             :monitors (make-bpn-cost-monitors))
+                             :monitors (make-cost-monitors
+                                        rnn :attributes `(:dataset "train"
+                                                          :type "cost")))
               :dataset (make-sampler 30000))))
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -101,53 +103,45 @@
   (when (zerop (n-instances optimizer))
     (describe optimizer)
     (describe (bpn learner)))
-  (log-padded (monitor-bpn-results (make-sampler 1000) (bpn learner)
-                                   (make-bpn-cost-monitors :dataset "pred."))))
-
-;;; Return a list of monitor objects (yes, only one here) that will
-;;; measure the cost and accumulate it in a counter.
-(defun make-bpn-cost-monitors (&key (dataset "train"))
-  (list (make-instance 'monitor
-                       :measurer (lambda (instances bpn)
-                                   (declare (ignore instances))
-                                   (cost bpn))
-                       :counter (make-instance 'basic-counter
-                                               :attributes `(:dataset ,dataset
-                                                             :type "cost")))))
+  (log-padded
+   (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                        (make-cost-monitors (bpn learner)
+                                            :attributes `(:dataset "pred."
+                                                          :type "cost")))))
 
 #|
 
 ;;; Transcript follows:
 (train-sum-sign-rnn)
-.. 2015-01-19 22:27:01: training at n-instances: 0
-.. 2015-01-19 22:27:01: train cost: 0.000e+0 (0)
-.. #<ADAM-OPTIMIZER {101F9578A3}>
+.. 2015-01-21 14:39:42: training at n-instances: 0
+.. 2015-01-21 14:39:42: train cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {1010825793}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
-..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 0.50959>
-..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.48846>
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.84894>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.26455>
 ..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 2.07815>
-..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 2.31284>
+..                       1 1/1 :norm 1.79465>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 1.85332>
 ..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.67760>
-..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.11992>
+..                       1 1/1 :norm 1.24396>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.12703>
 ..                     #<->WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 2.43519>
+..                       3 1/1 :norm 2.04857>
 ..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 1.64322>
+..                       3 1/1 :norm 2.85912>
 ..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.23665>
-..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 1.24288>
-..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.43173>
-..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.03770>
-..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.28466>
-..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.43322>
-..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.11231>
-..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.22344>
-..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.44019>)
-..                    {101F9580F3}>
+..                       1 1/1 :norm 0.94985>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 0.04429>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.06559>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 2.02872>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.39504>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.00406>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 2.27676>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.35271>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.67755>)
+..                    {1010826493}>
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = 0.00000e+0
 ..    MOMENTUM-TYPE = :NORMAL
@@ -163,54 +157,54 @@
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #<RNN {101F915923}>
+..  #<RNN {10107ED8E3}>
 ..   BPN description:
-..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F915F63}>
-..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F938893}>)
+..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {10107EDBB3}>
+..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {1010807733}>)
 ..     N-STRIPES = 1
 ..     MAX-N-STRIPES = 50
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-19 22:27:01: pred. cost: 1.088d+0 (5472.00)
-.. 2015-01-19 22:27:01: training at n-instances: 3000
-.. 2015-01-19 22:27:01: train cost: 4.186d-1 (16481.00)
-.. 2015-01-19 22:27:02: training at n-instances: 6000
-.. 2015-01-19 22:27:02: train cost: 5.619d-2 (16505.00)
-.. 2015-01-19 22:27:02: training at n-instances: 9000
-.. 2015-01-19 22:27:02: train cost: 2.512d-2 (16643.00)
-.. 2015-01-19 22:27:03: training at n-instances: 12000
-.. 2015-01-19 22:27:03: train cost: 1.585d-2 (16946.00)
-.. 2015-01-19 22:27:03: training at n-instances: 15000
-.. 2015-01-19 22:27:03: train cost: 1.135d-2 (16240.00)
-.. 2015-01-19 22:27:04: training at n-instances: 18000
-.. 2015-01-19 22:27:04: train cost: 8.704d-3 (16622.00)
-.. 2015-01-19 22:27:04: training at n-instances: 21000
-.. 2015-01-19 22:27:04: train cost: 6.912d-3 (16690.00)
-.. 2015-01-19 22:27:05: training at n-instances: 24000
-.. 2015-01-19 22:27:05: train cost: 5.627d-3 (16528.00)
-.. 2015-01-19 22:27:05: training at n-instances: 27000
-.. 2015-01-19 22:27:05: train cost: 4.735d-3 (16427.00)
-.. 2015-01-19 22:27:06: training at n-instances: 30000
-.. 2015-01-19 22:27:06: train cost: 4.006d-3 (16453.00)
-.. 2015-01-19 22:27:06: pred. cost: 3.698d-3 (5347.00)
+..   2015-01-21 14:39:43: pred. cost: 2.150d+0 (5668.00)
+.. 2015-01-21 14:39:43: training at n-instances: 3000
+.. 2015-01-21 14:39:43: train cost: 4.892d-1 (16419.00)
+.. 2015-01-21 14:39:44: training at n-instances: 6000
+.. 2015-01-21 14:39:44: train cost: 8.402d-2 (16331.00)
+.. 2015-01-21 14:39:44: training at n-instances: 9000
+.. 2015-01-21 14:39:44: train cost: 4.018d-2 (16680.00)
+.. 2015-01-21 14:39:45: training at n-instances: 12000
+.. 2015-01-21 14:39:45: train cost: 2.576d-2 (16349.00)
+.. 2015-01-21 14:39:45: training at n-instances: 15000
+.. 2015-01-21 14:39:45: train cost: 1.840d-2 (16629.00)
+.. 2015-01-21 14:39:45: training at n-instances: 18000
+.. 2015-01-21 14:39:45: train cost: 1.396d-2 (16476.00)
+.. 2015-01-21 14:39:46: training at n-instances: 21000
+.. 2015-01-21 14:39:46: train cost: 1.106d-2 (16435.00)
+.. 2015-01-21 14:39:46: training at n-instances: 24000
+.. 2015-01-21 14:39:46: train cost: 9.131d-3 (16566.00)
+.. 2015-01-21 14:39:47: training at n-instances: 27000
+.. 2015-01-21 14:39:47: train cost: 7.606d-3 (16394.00)
+.. 2015-01-21 14:39:47: training at n-instances: 30000
+.. 2015-01-21 14:39:47: train cost: 6.466d-3 (16455.00)
+.. 2015-01-21 14:39:47: pred. cost: 5.997d-3 (5530.00)
 ..
-==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 1.57197>
--->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.98579>
--->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.25004>
--->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.06433>
--->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.45586>
--->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.14358>
--->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.68755>
--->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.38377>
--->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 3.22046>
--->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 3.07891>
--->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 5.64394>
--->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.79663>
--->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.42101>
--->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.62612>
--->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 4.56776>
--->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 1.44047>
--->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.70072>)
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.98670>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.73203>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.57356>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 1.74084>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.08929>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.26631>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 19.76594>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.22242>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.57314>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.87375>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 7.38429>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 3.63191>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.04245>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.92401>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.97384>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.60136>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 6.22344>)
 
 |#

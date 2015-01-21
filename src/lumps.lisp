@@ -116,10 +116,6 @@
 
 ;;; Only weights are segments. Nothing to do for other lumps.
 (defmethod map-segments (fn (lump lump)))
-
-;;; Only ->ERROR lumps have an associated cost.
-(defmethod cost ((lump lump))
-  (values 0 0))
 
 
 ;;;; Data lumps

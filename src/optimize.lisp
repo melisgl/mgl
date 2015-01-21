@@ -17,6 +17,7 @@
   gradients) but more can be added with the @MGL-OPT-EXTENSION-API."
   (minimize function)
   (@mgl-opt-iterative-optimizer section)
+  (@mgl-opt-cost section)
   (mgl-gd:@mgl-gd section)
   (mgl-cg:@mgl-cg section)
   (@mgl-opt-extension-api section))
@@ -199,6 +200,47 @@
         (format stream "Describing optimizer:~%")
         (describe optimizer stream)))
     (log-cuda)))
+
+
+(defsection @mgl-opt-cost (:title "Cost Function")
+  "The function being minimized is often called the _cost_ or the
+  _loss_ function."
+  (cost generic-function)
+  (make-cost-monitors function)
+  (make-cost-monitors* generic-function))
+
+(defgeneric cost (model)
+  (:documentation "Return the value of the cost function being
+  minimized. Calling this only makes sense in the context of an
+  ongoing optimization (see MINIMIZE). The cost is that of a batch of
+  instances."))
+
+;;; FIXME/FIXDOC: composite models may produce many monitors (i.e. one
+;;; per less clump in an FNN), or one (such as in an RNN) where the
+;;; time steps make it difficult to go the other way easily.
+(defun make-cost-monitors (model &key operation-mode attributes)
+  "Return a list of MONITOR objects associated with one BASIC-COUNTER
+  each. Implemented in terms of MAKE-COST-MONITORS*."
+  (make-cost-monitors* model operation-mode attributes))
+
+(defgeneric make-cost-monitors* (model operation-mode attributes)
+  (:documentation "Identical to MAKE-COST-MONITORS bar the keywords
+  arguments. Specialize this to add to support for new model types.")
+  (:method (object operation-mode attributes)
+    (when (applies-to-p #'cost object)
+      (list
+       (make-instance
+        'monitor
+        :measurer (lambda (instances result)
+                    (declare (ignore instances result))
+                    (cost object))
+        :counter (make-instance
+                  'basic-counter
+                  :prepend-attributes
+                  (append attributes
+                          (if (uninterned-symbol-p (name object))
+                              ()
+                              `(:component ,(name object)())))))))))
 
 
 (defsection @mgl-opt-extension-api (:title "Extension API")

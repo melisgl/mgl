@@ -36,16 +36,17 @@
         - [7.3.1 Confusion Matrices][1541]
 - [8 Gradient Based Optimization][fe97]
     - [8.1 Iterative Optimizer][f805]
-    - [8.2 Gradient Descent][53a7]
-        - [8.2.1 Batch GD Optimizer][df57]
-        - [8.2.2 Segmented GD Optimizer][25a8]
-        - [8.2.3 Per-weight Optimization][d275]
-        - [8.2.4 Adam Optimizer][332c]
-    - [8.3 Conjugate Gradient][8729]
-    - [8.4 Extension API][2730]
-        - [8.4.1 Implementing Optimizers][794a]
-        - [8.4.2 Implementing Gradient Sources][984f]
-        - [8.4.3 Implementing Gradient Sinks][f18a]
+    - [8.2 Cost Function][89b4]
+    - [8.3 Gradient Descent][53a7]
+        - [8.3.1 Batch GD Optimizer][df57]
+        - [8.3.2 Segmented GD Optimizer][25a8]
+        - [8.3.3 Per-weight Optimization][d275]
+        - [8.3.4 Adam Optimizer][332c]
+    - [8.4 Conjugate Gradient][8729]
+    - [8.5 Extension API][2730]
+        - [8.5.1 Implementing Optimizers][794a]
+        - [8.5.2 Implementing Gradient Sources][984f]
+        - [8.5.3 Implementing Gradient Sinks][f18a]
 - [9 Differentiable Functions][1a5d]
 - [10 Backpropagation Neural Networks][1560]
     - [10.1 Backprop Overview][8b70]
@@ -1630,9 +1631,39 @@ Now let's discuss a few handy utilities.
     implementation logs the description of `GRADIENT-SOURCE` (as in
     `DESCRIBE`) and `OPTIMIZER` and calls `LOG-CUDA`.
 
+<a name='x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29'></a>
+
+### 8.2 Cost Function
+
+The function being minimized is often called the *cost* or the
+*loss* function.
+
+<a name='x-28MGL-COMMON-3ACOST-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **COST** *MODEL*
+
+    Return the value of the cost function being
+    minimized. Calling this only makes sense in the context of an
+    ongoing optimization (see [`MINIMIZE`][bca8]). The cost is that of a batch of
+    instances.
+
+<a name='x-28MGL-OPT-3AMAKE-COST-MONITORS-20FUNCTION-29'></a>
+
+- [function] **MAKE-COST-MONITORS** *MODEL &KEY OPERATION-MODE ATTRIBUTES*
+
+    Return a list of [`MONITOR`][a22b] objects associated with one [`BASIC-COUNTER`][d3e3]
+    each. Implemented in terms of [`MAKE-COST-MONITORS*`][b256].
+
+<a name='x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAKE-COST-MONITORS\*** *MODEL OPERATION-MODE ATTRIBUTES*
+
+    Identical to [`MAKE-COST-MONITORS`][de6d] bar the keywords
+    arguments. Specialize this to add to support for new model types.
+
 <a name='x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29'></a>
 
-### 8.2 Gradient Descent
+### 8.3 Gradient Descent
 
 ###### \[in package MGL-GD\]
 Gradient descent is a first-order optimization algorithm. Relying
@@ -1703,7 +1734,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.2.1 Batch GD Optimizer
+#### 8.3.1 Batch GD Optimizer
 
 <a name='x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -1827,7 +1858,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.2.2 Segmented GD Optimizer
+#### 8.3.2 Segmented GD Optimizer
 
 <a name='x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -1874,7 +1905,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.2.3 Per-weight Optimization
+#### 8.3.3 Per-weight Optimization
 
 <a name='x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29'></a>
 
@@ -1902,7 +1933,7 @@ mini-batch basis:
 
 <a name='x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.2.4 Adam Optimizer
+#### 8.3.4 Adam Optimizer
 
 <a name='x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29'></a>
 
@@ -1951,7 +1982,7 @@ mini-batch basis:
 
 <a name='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a>
 
-### 8.3 Conjugate Gradient
+### 8.4 Conjugate Gradient
 
 ###### \[in package MGL-CG\]
 Conjugate gradient is a first-order optimization algorithm. It's
@@ -2191,11 +2222,11 @@ respect to some of its parameters.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29'></a>
 
-### 8.4 Extension API
+### 8.5 Extension API
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.4.1 Implementing Optimizers
+#### 8.5.1 Implementing Optimizers
 
 The following generic functions must be specialized for new
 optimizer types.
@@ -2291,7 +2322,7 @@ optimizers.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.4.2 Implementing Gradient Sources
+#### 8.5.2 Implementing Gradient Sources
 
 Weights can be stored in a multitude of ways. Optimizers need to
 update weights, so it is assumed that weights are stored in any
@@ -2372,7 +2403,7 @@ new gradient sources except where noted.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29'></a>
 
-#### 8.4.3 Implementing Gradient Sinks
+#### 8.5.3 Implementing Gradient Sinks
 
 Optimizers call [`ACCUMULATE-GRADIENTS*`][4c7c] on gradient sources. One
 parameter of [`ACCUMULATE-GRADIENTS*`][4c7c] is the `SINK`. A gradient sink
@@ -2537,15 +2568,6 @@ FIXDOC: set-input
     df(x1)/dx1` and the first term is what we have in [`DERIVATIVES`][3aa4] of the
     sigmoid so it only needs to calculate the second term.
 
-<a name='x-28MGL-COMMON-3ACOST-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **COST** *CLUMP*
-
-    FIXDOC: Return the sum of costs for all active
-    stripes. The cost of a stripe is the sum of the corresponding nodes
-    in ->ERROR clumps. The second value is the sum of the stripe's
-    `IMPORTANCE` (in the ->ERROR clump) or 1 (if `IMPORTANCE` is `NIL`).
-
 <a name='x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29'></a>
 
 ### 10.3 BPNs
@@ -2702,7 +2724,9 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
               ;; RESET-OPTIMIZATION-MONITORS above.
               (make-instance 'bp-learner
                              :bpn fnn
-                             :monitors (make-bpn-cost-monitors))
+                             :monitors (make-cost-monitors
+                                        fnn :attributes `(:dataset "train"
+                                                          :type "cost")))
               ;; Training stops when the sampler runs out (after 10000
               ;; instances).
               :dataset (make-sampler 10000))))
@@ -2720,57 +2744,51 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
   (when (zerop (n-instances optimizer))
     (describe optimizer)
     (describe (bpn learner)))
-  (log-padded (monitor-bpn-results (make-sampler 1000) (bpn learner)
-                                   (make-bpn-cost-monitors :dataset "pred."))))
-
-;;; Return a list of monitor objects (yes, only one here) that will
-;;; measure the cost and accumulate it in a counter.
-(defun make-bpn-cost-monitors (&key (dataset "train"))
-  (list (make-instance 'monitor
-                       :measurer (lambda (instances bpn)
-                                   (declare (ignore instances))
-                                   (cost bpn))
-                       :counter (make-instance 'basic-counter
-                                               :attributes `(:dataset ,dataset
-                                                             :type "cost")))))
+  (log-padded
+   (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                        (make-cost-monitors
+                         (bpn learner) :attributes `(:dataset "pred."
+                                                     :type "cost")))))
 
 #|
 
 ;;; Transcript follows:
 (train-digit-fnn)
-.. #<SEGMENTED-GD-OPTIMIZER {1010870E03}>
-.. SEGMENTED-GD-OPTIMIZER description:
-..   N-INSTANCES = 0
-..   OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
-..                   #<SEGMENT-SET
-..                     (#<->WEIGHT # :SIZE 15 1/1 :norm 0.02216>
-..                      #<->WEIGHT # :SIZE 3 1/1 :norm 0.01273>
-..                      #<->WEIGHT # :SIZE 50 1/1 :norm 0.07184>
-..                      #<->WEIGHT # :SIZE 5 1/1 :norm 0.01494>)
-..                     {1010889F53}>
-..                   {10107AE833}>)
-..   SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                 15 1/1 :norm 0.02216>
-..               #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                 3 1/1 :norm 0.01273>
-..               #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                 50 1/1 :norm 0.07184>
-..               #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                 5 1/1 :norm 0.01494>)
-..
-.. #<BATCH-GD-OPTIMIZER {10107AE833}>
+.. 2015-01-21 14:40:04: training at n-instances: 0
+.. 2015-01-21 14:40:04: train cost: 0.000e+0 (0)
+.. #<SEGMENTED-GD-OPTIMIZER {10072AD763}>
+..  SEGMENTED-GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
+..                    #<SEGMENT-SET
+..                      (#<->WEIGHT # :SIZE 15 1/1 :norm 0.03800>
+..                       #<->WEIGHT # :SIZE 3 1/1 :norm 0.03002>
+..                       #<->WEIGHT # :SIZE 50 1/1 :norm 0.07295>
+..                       #<->WEIGHT # :SIZE 5 1/1 :norm 0.02703>)
+..                      {10072BFC23}>
+..                    {10072AD683}>)
+..    SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                  15 1/1 :norm 0.03800>
+..                #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                  3 1/1 :norm 0.03002>
+..                #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                  50 1/1 :norm 0.07295>
+..                #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                  5 1/1 :norm 0.02703>)
+..  
+.. #<BATCH-GD-OPTIMIZER {10072AD683}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
 ..                    (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                       15 1/1 :norm 0.02216>
+..                       15 1/1 :norm 0.03800>
 ..                     #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                       3 1/1 :norm 0.01273>
+..                       3 1/1 :norm 0.03002>
 ..                     #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                       50 1/1 :norm 0.07184>
+..                       50 1/1 :norm 0.07295>
 ..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                       5 1/1 :norm 0.01494>)
-..                    {1010889F53}>
+..                       5 1/1 :norm 0.02703>)
+..                    {10072BFC23}>
 ..    LEARNING-RATE = 1.00000e+0
 ..    MOMENTUM = 9.00000e-1
 ..    MOMENTUM-TYPE = :NORMAL
@@ -2781,46 +2799,46 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
 ..  
 ..  BATCH-GD-OPTIMIZER description:
 ..    N-BEFORE-UPATE-HOOK = 0
-..  #<DIGIT-FNN {1010873BB3}>
+..  #<DIGIT-FNN {10072AD813}>
 ..   BPN description:
 ..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :norm 0.00000>
 ..                #<->ACTIVATION
 ..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
-..                  :CLUMPS 4 {10108796B3}>
+..                  :CLUMPS 4 {10072AE683}>
 ..                #<->RECTIFIED HIDDEN :SIZE 5 1/50 :norm 0.00000>
 ..                #<->ACTIVATION
 ..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
-..                  :CLUMPS 4 {101087FAD3}>
+..                  :CLUMPS 4 {10072B92D3}>
 ..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :norm 0.00000>)
 ..     N-STRIPES = 1
 ..     MAX-N-STRIPES = 50
-..   2015-01-19 22:22:41: pred. cost: 1.098d+0 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 1000
-.. 2015-01-19 22:22:41: train cost: 1.091d+0 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 2000
-.. 2015-01-19 22:22:41: train cost: 8.317d-1 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 3000
-.. 2015-01-19 22:22:41: train cost: 1.783d-2 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 4000
-.. 2015-01-19 22:22:41: train cost: 1.591d-6 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 5000
-.. 2015-01-19 22:22:41: train cost: 3.709d-8 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 6000
-.. 2015-01-19 22:22:41: train cost: 1.081d-8 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 7000
-.. 2015-01-19 22:22:41: train cost: 7.388d-9 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 8000
-.. 2015-01-19 22:22:41: train cost: 6.042d-9 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 9000
-.. 2015-01-19 22:22:41: train cost: 5.464d-9 (1000.00)
-.. 2015-01-19 22:22:41: training at n-instances: 10000
-.. 2015-01-19 22:22:41: train cost: 5.878d-9 (1000.00)
-.. 2015-01-19 22:22:41: pred. cost: 5.532d-9 (1000.00)
+..   2015-01-21 14:40:04: pred. cost: 1.097d+0 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 1000
+.. 2015-01-21 14:40:04: train cost: 1.084d+0 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 2000
+.. 2015-01-21 14:40:04: train cost: 6.683d-1 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 3000
+.. 2015-01-21 14:40:04: train cost: 5.555d-3 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 4000
+.. 2015-01-21 14:40:04: train cost: 5.842d-5 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 5000
+.. 2015-01-21 14:40:04: train cost: 5.619d-6 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 6000
+.. 2015-01-21 14:40:04: train cost: 2.207d-6 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 7000
+.. 2015-01-21 14:40:04: train cost: 1.599d-6 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 8000
+.. 2015-01-21 14:40:04: train cost: 1.206d-6 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 9000
+.. 2015-01-21 14:40:04: train cost: 1.322d-6 (1000.00)
+.. 2015-01-21 14:40:04: training at n-instances: 10000
+.. 2015-01-21 14:40:04: train cost: 1.273d-6 (1000.00)
+.. 2015-01-21 14:40:04: pred. cost: 1.316d-6 (1000.00)
 ..
-==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 3.57507>
--->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 12.18883>
--->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 4.42356>
--->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 11.36526>)
+==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 3.13543>
+-->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 10.79765>
+-->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 7.36095>
+-->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 10.39631>)
 
 |#
 ```
@@ -2927,7 +2945,9 @@ the concepts involved. Make sure you are comfortable with
                  (:fn reset-optimization-monitors :period 3000)))
               (make-instance 'bp-learner
                              :bpn rnn
-                             :monitors (make-bpn-cost-monitors))
+                             :monitors (make-cost-monitors
+                                        rnn :attributes `(:dataset "train"
+                                                          :type "cost")))
               :dataset (make-sampler 30000))))
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -2943,53 +2963,45 @@ the concepts involved. Make sure you are comfortable with
   (when (zerop (n-instances optimizer))
     (describe optimizer)
     (describe (bpn learner)))
-  (log-padded (monitor-bpn-results (make-sampler 1000) (bpn learner)
-                                   (make-bpn-cost-monitors :dataset "pred."))))
-
-;;; Return a list of monitor objects (yes, only one here) that will
-;;; measure the cost and accumulate it in a counter.
-(defun make-bpn-cost-monitors (&key (dataset "train"))
-  (list (make-instance 'monitor
-                       :measurer (lambda (instances bpn)
-                                   (declare (ignore instances))
-                                   (cost bpn))
-                       :counter (make-instance 'basic-counter
-                                               :attributes `(:dataset ,dataset
-                                                             :type "cost")))))
+  (log-padded
+   (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                        (make-cost-monitors (bpn learner)
+                                            :attributes `(:dataset "pred."
+                                                          :type "cost")))))
 
 #|
 
 ;;; Transcript follows:
 (train-sum-sign-rnn)
-.. 2015-01-19 22:27:01: training at n-instances: 0
-.. 2015-01-19 22:27:01: train cost: 0.000e+0 (0)
-.. #<ADAM-OPTIMIZER {101F9578A3}>
+.. 2015-01-21 14:39:42: training at n-instances: 0
+.. 2015-01-21 14:39:42: train cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {1010825793}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
-..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 0.50959>
-..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.48846>
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.84894>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.26455>
 ..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 2.07815>
-..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 2.31284>
+..                       1 1/1 :norm 1.79465>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 1.85332>
 ..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.67760>
-..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.11992>
+..                       1 1/1 :norm 1.24396>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.12703>
 ..                     #<->WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 2.43519>
+..                       3 1/1 :norm 2.04857>
 ..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 1.64322>
+..                       3 1/1 :norm 2.85912>
 ..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.23665>
-..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 1.24288>
-..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.43173>
-..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.03770>
-..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.28466>
-..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.43322>
-..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.11231>
-..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.22344>
-..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.44019>)
-..                    {101F9580F3}>
+..                       1 1/1 :norm 0.94985>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 0.04429>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.06559>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 2.02872>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.39504>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 2.00406>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 2.27676>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.35271>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.67755>)
+..                    {1010826493}>
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = 0.00000e+0
 ..    MOMENTUM-TYPE = :NORMAL
@@ -3005,55 +3017,55 @@ the concepts involved. Make sure you are comfortable with
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #<RNN {101F915923}>
+..  #<RNN {10107ED8E3}>
 ..   BPN description:
-..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F915F63}>
-..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {101F938893}>)
+..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {10107EDBB3}>
+..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4 {1010807733}>)
 ..     N-STRIPES = 1
 ..     MAX-N-STRIPES = 50
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-19 22:27:01: pred. cost: 1.088d+0 (5472.00)
-.. 2015-01-19 22:27:01: training at n-instances: 3000
-.. 2015-01-19 22:27:01: train cost: 4.186d-1 (16481.00)
-.. 2015-01-19 22:27:02: training at n-instances: 6000
-.. 2015-01-19 22:27:02: train cost: 5.619d-2 (16505.00)
-.. 2015-01-19 22:27:02: training at n-instances: 9000
-.. 2015-01-19 22:27:02: train cost: 2.512d-2 (16643.00)
-.. 2015-01-19 22:27:03: training at n-instances: 12000
-.. 2015-01-19 22:27:03: train cost: 1.585d-2 (16946.00)
-.. 2015-01-19 22:27:03: training at n-instances: 15000
-.. 2015-01-19 22:27:03: train cost: 1.135d-2 (16240.00)
-.. 2015-01-19 22:27:04: training at n-instances: 18000
-.. 2015-01-19 22:27:04: train cost: 8.704d-3 (16622.00)
-.. 2015-01-19 22:27:04: training at n-instances: 21000
-.. 2015-01-19 22:27:04: train cost: 6.912d-3 (16690.00)
-.. 2015-01-19 22:27:05: training at n-instances: 24000
-.. 2015-01-19 22:27:05: train cost: 5.627d-3 (16528.00)
-.. 2015-01-19 22:27:05: training at n-instances: 27000
-.. 2015-01-19 22:27:05: train cost: 4.735d-3 (16427.00)
-.. 2015-01-19 22:27:06: training at n-instances: 30000
-.. 2015-01-19 22:27:06: train cost: 4.006d-3 (16453.00)
-.. 2015-01-19 22:27:06: pred. cost: 3.698d-3 (5347.00)
+..   2015-01-21 14:39:43: pred. cost: 2.150d+0 (5668.00)
+.. 2015-01-21 14:39:43: training at n-instances: 3000
+.. 2015-01-21 14:39:43: train cost: 4.892d-1 (16419.00)
+.. 2015-01-21 14:39:44: training at n-instances: 6000
+.. 2015-01-21 14:39:44: train cost: 8.402d-2 (16331.00)
+.. 2015-01-21 14:39:44: training at n-instances: 9000
+.. 2015-01-21 14:39:44: train cost: 4.018d-2 (16680.00)
+.. 2015-01-21 14:39:45: training at n-instances: 12000
+.. 2015-01-21 14:39:45: train cost: 2.576d-2 (16349.00)
+.. 2015-01-21 14:39:45: training at n-instances: 15000
+.. 2015-01-21 14:39:45: train cost: 1.840d-2 (16629.00)
+.. 2015-01-21 14:39:45: training at n-instances: 18000
+.. 2015-01-21 14:39:45: train cost: 1.396d-2 (16476.00)
+.. 2015-01-21 14:39:46: training at n-instances: 21000
+.. 2015-01-21 14:39:46: train cost: 1.106d-2 (16435.00)
+.. 2015-01-21 14:39:46: training at n-instances: 24000
+.. 2015-01-21 14:39:46: train cost: 9.131d-3 (16566.00)
+.. 2015-01-21 14:39:47: training at n-instances: 27000
+.. 2015-01-21 14:39:47: train cost: 7.606d-3 (16394.00)
+.. 2015-01-21 14:39:47: training at n-instances: 30000
+.. 2015-01-21 14:39:47: train cost: 6.466d-3 (16455.00)
+.. 2015-01-21 14:39:47: pred. cost: 5.997d-3 (5530.00)
 ..
-==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 1.57197>
--->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.98579>
--->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.25004>
--->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.06433>
--->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.45586>
--->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.14358>
--->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.68755>
--->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.38377>
--->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 3.22046>
--->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 3.07891>
--->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 5.64394>
--->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.79663>
--->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.42101>
--->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.62612>
--->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 4.56776>
--->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 1.44047>
--->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.70072>)
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.98670>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.73203>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.57356>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 1.74084>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.08929>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.26631>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 19.76594>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.22242>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.57314>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.87375>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 7.38429>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 3.63191>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.04245>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.92401>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.97384>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.60136>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 6.22344>)
 
 |#
 ```
@@ -3307,6 +3319,7 @@ grow into a more serious toolset for NLP eventually.
   [8729]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "(MGL-CG:@MGL-CG MGL-PAX:SECTION)"
   [8795]: #x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29 "(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"
   [8966]: #x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-COUNTER-CLASSES MGL-PAX:SECTION)"
+  [89b4]: #x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-COST MGL-PAX:SECTION)"
   [8a3b]: #x-28MGL-CORE-3ACOUNTER-VALUES-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER-VALUES GENERIC-FUNCTION)"
   [8b70]: #x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-OVERVIEW MGL-PAX:SECTION)"
   [8b7f]: #x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL MGL-PAX:SECTION)"
@@ -3337,6 +3350,7 @@ grow into a more serious toolset for NLP eventually.
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
   [b22b]: #x-28MGL-CORE-3AMONITORS-20GENERIC-FUNCTION-29 "(MGL-CORE:MONITORS GENERIC-FUNCTION)"
+  [b256]: #x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:MAKE-COST-MONITORS* GENERIC-FUNCTION)"
   [b6ac]: #x-28MGL-GD-3ASEGMENTER-20-28MGL-PAX-3AREADER-20MGL-GD-3ASEGMENTED-GD-OPTIMIZER-29-29 "(MGL-GD:SEGMENTER (MGL-PAX:READER MGL-GD:SEGMENTED-GD-OPTIMIZER))"
   [b73e]: #x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"
   [b8b6]: #x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29 "(MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION)"
@@ -3360,6 +3374,7 @@ grow into a more serious toolset for NLP eventually.
   [dae0]: #x-28MGL-OPT-3AON-OPTIMIZATION-STARTED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:ON-OPTIMIZATION-STARTED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
   [dc9d]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [dca7]: #x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"
+  [de6d]: #x-28MGL-OPT-3AMAKE-COST-MONITORS-20FUNCTION-29 "(MGL-OPT:MAKE-COST-MONITORS FUNCTION)"
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"
   [e0c8]: #x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"

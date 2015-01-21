@@ -42,6 +42,7 @@
    #:make-sequence-generator
    #:make-random-generator
    #:applies-to-p
+   #:uninterned-symbol-p
    ;; Periodic fn
    #:periodic-fn
    #:call-periodic-fn

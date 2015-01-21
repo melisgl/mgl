@@ -9,6 +9,7 @@
                 :components ((:file "package")
                              (:file "util")
                              (:file "digit-fnn")
+                             (:file "sum-sign-rnn")
                              (:file "mnist")
                              (:file "gaussian-process"))))
   :depends-on (#:mgl))

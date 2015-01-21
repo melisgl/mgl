@@ -205,6 +205,10 @@
 (defun applies-to-p (generic-function &rest args)
   (find nil (compute-applicable-methods generic-function args)
         :key #'swank-mop:method-qualifiers))
+
+(defun uninterned-symbol-p (object)
+  (and (symbolp object)
+       (null (symbol-package object))))
 
 
 ;;;; Periodic functions

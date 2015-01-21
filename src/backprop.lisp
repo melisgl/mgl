@@ -4,11 +4,6 @@
   (@mgl-bp-overview section)
   (@mgl-bp-extension-api section)
   (@mgl-bpn section))
-
-(defun make-cost-monitors (model &key operation-mode attributes)
-  (make-cost-monitors* model operation-mode attributes))
-
-(defgeneric make-cost-monitors* (mode operation-mode attributes))
 
 
 ;;;; Components / Generic backprop
@@ -64,9 +59,7 @@
   (stripedp generic-function)
   (derivatives generic-function)
   (forward generic-function)
-  (backward generic-function)
-  ;; rename to LOSS?
-  (cost generic-function))
+  (backward generic-function))
 
 (defgeneric stripedp (clump)
   (:documentation "For efficiency, forward and backprop phases do
@@ -119,12 +112,6 @@
   (:documentation "Return the MAT object representing the partial
   derivatives of the function CLUMP computes. The returned partial
   derivatives were accumulated by previous BACKWARD calls."))
-
-(defgeneric cost (clump)
-  (:documentation "FIXDOC: Return the sum of costs for all active
-  stripes. The cost of a stripe is the sum of the corresponding nodes
-  in ->ERROR clumps. The second value is the sum of the stripe's
-  IMPORTANCE (in the ->ERROR clump) or 1 (if IMPORTANCE is NIL)."))
 
 
 (defsection @mgl-bpn (:title "BPNs")
@@ -264,9 +251,10 @@
   (let ((sum 0)
         (sum-importances 0))
     (loop for clump across (clumps bpn) do
-      (multiple-value-bind (sum-1 sum-importances-1) (cost clump)
-        (incf sum sum-1)
-        (incf sum-importances sum-importances-1)))
+      (when (applies-to-p #'cost clump)
+        (multiple-value-bind (sum-1 sum-importances-1) (cost clump)
+          (incf sum sum-1)
+          (incf sum-importances sum-importances-1))))
     (values sum sum-importances)))
 
 (defmethod map-segments (fn (bpn bpn))
@@ -353,10 +341,6 @@
            (let* ,bindings
              (declare (ignorable ,@(mapcar #'first bindings)))))
          *bpn-being-built*))))
-
-(defun uninterned-symbol-p (object)
-  (and (symbolp object)
-       (null (symbol-package object))))
 
 (defun maybe-add-name-to-init (init-form symbol)
   (if (and (symbolp (first init-form))
@@ -734,8 +718,3 @@
           nconc (make-cross-entropy-monitors* clump operation-mode
                                               label-index-distribution-fn
                                               attributes))))
-
-(defmethod make-cost-monitors* ((bpn bpn) operation-mode attributes)
-  (let ((attributes `(,@attributes :model "bpn")))
-    (loop for clump across (clumps bpn)
-          nconc (make-cost-monitors* clump operation-mode attributes))))
