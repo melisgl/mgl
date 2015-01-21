@@ -364,9 +364,9 @@
   (do-cuda ()
     (dolist (*default-mat-ctype* '(:float :double))
       (dolist (max-n-stripes '(10 100))
-        (dolist (cg '(t))
-          (log-msg "cuda: ~S max-n-stripes: ~S, cg: ~S~%" (cuda-available-p)
-                   max-n-stripes cg)
+        (dolist (cg '(nil t))
+          (log-msg "cuda: ~S, ~S, max-n-stripes: ~S, cg: ~S~%"
+                   (cuda-available-p) *default-mat-ctype* max-n-stripes cg)
           ;; CG can easily run into single float overflow on these.
           (unless (and cg (eq *default-mat-ctype* :float))
             (assert (> 0.01 (test-simple :cg cg :max-n-stripes max-n-stripes)))
