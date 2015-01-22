@@ -131,10 +131,8 @@
     ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
     indices.")
    (weight-deltas :type mat :accessor weight-deltas)
-   (accumulator
-    :type mat :accessor accumulator
-    :documentation "An FLT vector that is accessed directly by the
-    client and are used to store the sum of the computed gradient.")
+   ;; A MAT into which the gradients are summed.
+   (accumulator :type mat :accessor accumulator)
    (batch-size
     :initform 1
     :initarg :batch-size :accessor batch-size

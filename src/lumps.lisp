@@ -547,7 +547,7 @@
   (assert name () "NAME argument must be supplied for ->ACTIVATION.")
   (when (or add-bias-p inputs peepholes)
     (build-fnn (:name (list name :activation) :class '->activation)
-      ;; To save memory, which is especially critical in an long RNN,
+      ;; To save memory, which is especially critical in a long RNN,
       ;; we make ->MM and ->* below use the NODES and DERIVATIVES of
       ;; this ->+ lump. In the forward pass they add their results to
       ;; the shared nodes (instead of setting it) and in the backward
@@ -2509,7 +2509,6 @@
   ;; only do the backprop for XE.
   (let* ((x (x lump))
          (dx (derivatives x))
-         (dl (derivatives lump))
          (group-size (group-size lump))
          (softmax (nodes lump))
          (target (target lump))
@@ -2655,7 +2654,7 @@
   created, the final one representing to output of the LSTM has NAME.
   The rest of the lumps are named automatically based on NAME. This
   function returns only the output lump (`m`), but all created lumps
-  are added automatically the BPN being built.
+  are added automatically to the BPN being built.
 
   There are many papers and tutorials on LSTMs. This version is well
   described in \"Long Short-Term Memory Recurrent Neural Network
@@ -2685,6 +2684,7 @@
   If CELL-INIT is non-NIL, then it must be a CLUMP of SIZE N-CELLS
   form which stands for the initial state of the value cell (c_{-1}).
   CELL-INIT being NIL is equivalent to the state of all zeros."
+  (check-type n-cells index)
   (let* ((input-gate-name `(,name :input))
          (forget-gate-name `(,name :forget))
          (output-gate-name `(,name :output))
