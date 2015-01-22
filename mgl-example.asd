@@ -10,6 +10,7 @@
                              (:file "util")
                              (:file "digit-fnn")
                              (:file "sum-sign-rnn")
+                             (:file "sgd")
                              (:file "mnist")
                              (:file "gaussian-process"))))
   :depends-on (#:mgl))

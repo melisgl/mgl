@@ -1676,7 +1676,14 @@ completely on first derivatives, it does not even evaluate the
 function to be minimized. Let's see how to minimize a numerical lisp
 function with respect to some of its parameters.
 
-```
+<a name='x-28MGL-GD-3A-3ASGD-2ELISP-20-28MGL-PAX-3AINCLUDE-20-23P-22-2Fhome-2Fmega-2Fown-2Fmgl-2Fexample-2Fsgd-2Elisp-22-20-3AHEADER-NL-20-22-60-60-60commonlisp-22-20-3AFOOTER-NL-20-22-60-60-60-22-29-29'></a>
+
+```commonlisp
+(cl:defpackage :mgl-example-sgd
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-sgd)
+
 ;;; Create an object representing the sine function.
 (defparameter *diff-fn-1*
   (make-instance 'mgl-diffun:diffun
