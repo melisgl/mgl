@@ -3027,7 +3027,7 @@ recurrent one, see <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLA
 <p><a name='x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p>[macro] <strong>BUILD-FNN</strong> <em>(&amp;KEY FNN (CLASS ''FNN) INITARGS (MAX-N-STRIPES 1) NAME) &amp;BODY CLUMPS</em></p>
+<li><p>[macro] <strong>BUILD-FNN</strong> <em>(&amp;KEY FNN (CLASS ''FNN) INITARGS MAX-N-STRIPES NAME) &amp;BODY CLUMPS</em></p>
 
 <p>Syntactic sugar to assemble FNNs from CLUMPs. Like <code>LET*</code>, it is a
 sequence of bindings (of symbols to CLUMPs). The names of the clumps
@@ -3538,7 +3538,7 @@ when creating the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLAS
 <p><a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p>[macro] <strong>BUILD-RNN</strong> <em>(&amp;KEY RNN (CLASS ''RNN) NAME INITARGS (MAX-N-STRIPES 1) (MAX-LAG 1)) &amp;BODY BODY</em></p>
+<li><p>[macro] <strong>BUILD-RNN</strong> <em>(&amp;KEY RNN (CLASS ''RNN) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &amp;BODY BODY</em></p>
 
 <p>Create an <code>RNN</code> with <code>MAX-N-STRIPES</code> and <code>MAX-LAG</code> whose <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> is <code>BODY</code>
 wrapped in a lambda. Bind symbol given as the <code>RNN</code> argument to the

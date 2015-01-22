@@ -37,10 +37,13 @@
 
 (defmethod max-n-stripes ((lump lump))
   (let ((nodes (nodes lump)))
-    (if nodes
-        (/ (mat-max-size nodes)
-           (mat-dimension nodes 1))
-        1)))
+    (cond (nodes
+           (/ (mat-max-size nodes)
+              (mat-dimension nodes 1)))
+          (*bpn-being-built*
+           (max-n-stripes *bpn-being-built*))
+          (t
+           1))))
 
 (defmethod print-object ((lump lump) stream)
   (pprint-logical-block (stream ())
@@ -150,16 +153,22 @@
   (declare (ignore n-stripes)))
 
 (defmethod set-max-n-stripes (max-n-stripes (weight ->weight))
-  (declare (ignore max-n-stripes))
   (assert (null (shared-with-clump weight)))
-  (when (or (null (nodes weight))
-            (not (equal (dimensions weight)
-                        (mat-dimensions (nodes weight)))))
-    (setf (slot-value weight 'nodes)
-          (make-instance 'mat :dimensions (dimensions weight)
+  (cond ((or (null (nodes weight))
+             (/= (mat-max-size (nodes weight))
+                 (reduce #'* (dimensions weight))))
+         (setf (slot-value weight 'nodes)
+               (make-mat (dimensions weight)
                          :initial-element (default-value weight)))
-    (setf (slot-value weight 'derivatives)
-          (make-instance 'mat :dimensions (dimensions weight)))))
+         (setf (slot-value weight 'derivatives)
+               (make-mat (dimensions weight)
+                         :initial-element (default-value weight))))
+        (t
+         (setf (slot-value weight 'nodes)
+               (reshape! (nodes weight) (dimensions weight)))
+         (setf (slot-value weight 'derivatives)
+               (reshape! (derivatives weight) (dimensions weight)))))
+  max-n-stripes)
 
 (defvar *lumps-to-copy* ())
 

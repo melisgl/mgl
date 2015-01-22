@@ -2626,7 +2626,7 @@ get them out of they way before we study a full example.
 
 <a name='x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29'></a>
 
-- [macro] **BUILD-FNN** *(&KEY FNN (CLASS ''FNN) INITARGS (MAX-N-STRIPES 1) NAME) &BODY CLUMPS*
+- [macro] **BUILD-FNN** *(&KEY FNN (CLASS ''FNN) INITARGS MAX-N-STRIPES NAME) &BODY CLUMPS*
 
     Syntactic sugar to assemble FNNs from CLUMPs. Like `LET*`, it is a
     sequence of bindings (of symbols to CLUMPs). The names of the clumps
@@ -3133,7 +3133,7 @@ the concepts involved. Make sure you are comfortable with
 
 <a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a>
 
-- [macro] **BUILD-RNN** *(&KEY RNN (CLASS ''RNN) NAME INITARGS (MAX-N-STRIPES 1) (MAX-LAG 1)) &BODY BODY*
+- [macro] **BUILD-RNN** *(&KEY RNN (CLASS ''RNN) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &BODY BODY*
 
     Create an `RNN` with `MAX-N-STRIPES` and `MAX-LAG` whose [`UNFOLDER`][8b7ff] is `BODY`
     wrapped in a lambda. Bind symbol given as the `RNN` argument to the

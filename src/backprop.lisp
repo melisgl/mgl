@@ -134,12 +134,19 @@
     :initform 1 :type index :initarg :n-stripes
     :reader n-stripes)
    (max-n-stripes
-    :initform 1 :type index :initarg :max-n-stripes
+    :initform nil :type index :initarg :max-n-stripes
     :reader max-n-stripes)))
 
 (defmethod initialize-instance :after ((bpn bpn) &key &allow-other-keys)
-  ;; make sure clumps have the same MAX-N-STRIPES
-  (setf (max-n-stripes bpn) (max-n-stripes bpn)))
+  (setf (max-n-stripes bpn)
+        (cond ((max-n-stripes bpn)
+               ;; We do the SETF just make sure clumps have the same
+               ;; MAX-N-STRIPES.
+               (max-n-stripes bpn))
+              ;; Let's inherit MAX-N-STRIPES from the parent if any.
+              (*bpn-being-built*
+               (max-n-stripes *bpn-being-built*))
+              (t 1))))
 
 (defmethod print-object ((bpn bpn) stream)
   (pprint-logical-block (stream ())
@@ -299,7 +306,7 @@
 (defvar *names-of-nested-bpns-in-rnn* ())
 
 (defmacro build-fnn ((&key fnn (class ''fnn) initargs
-                      (max-n-stripes 1) name) &body clumps)
+                      max-n-stripes name) &body clumps)
   "Syntactic sugar to assemble FNNs from CLUMPs. Like LET*, it is a
   sequence of bindings (of symbols to CLUMPs). The names of the clumps
   created default to the symbol of the binding. In case a clump is not
@@ -554,7 +561,7 @@
                 built or forwarded."))))
 
 (defmacro build-rnn ((&key rnn (class ''rnn) name initargs
-                      (max-n-stripes 1) (max-lag 1)) &body body)
+                      max-n-stripes (max-lag 1)) &body body)
   "Create an RNN with MAX-N-STRIPES and MAX-LAG whose UNFOLDER is BODY
   wrapped in a lambda. Bind symbol given as the RNN argument to the
   RNN object so that BODY can see it."
