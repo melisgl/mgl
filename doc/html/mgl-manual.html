@@ -2082,9 +2082,11 @@ momentum.</p></li>
 <ul>
 <li><p>[reader] <strong>MOMENTUM-TYPE</strong> <em>GD-OPTIMIZER</em> <em>(:MOMENTUM-TYPE = :NORMAL)</em></p>
 
-<p>One of <code>:NORMAL</code> and <code>:NESTEROV</code>. For pure
-optimization Nesterov's momentum may be better, but it also
-increases chances of overfitting.</p></li>
+<p>One of <code>:NORMAL</code>, <code>:NESTEROV</code> or <code>:NONE</code>. For pure
+optimization Nesterov's momentum may be better, but it may also
+increases chances of overfitting. Using <code>:NONE</code> is equivalent to 0
+momentum, but it also uses less memory. Note that with <code>:NONE</code>,
+<a href="#x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>MOMENTUM</code></a> is ignored even it it is non-zero.</p></li>
 </ul>
 
 <p><a name='x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>

@@ -1826,9 +1826,11 @@ mini-batch basis:
 
 - [reader] **MOMENTUM-TYPE** *GD-OPTIMIZER* *(:MOMENTUM-TYPE = :NORMAL)*
 
-    One of `:NORMAL` and `:NESTEROV`. For pure
-    optimization Nesterov's momentum may be better, but it also
-    increases chances of overfitting.
+    One of `:NORMAL`, `:NESTEROV` or `:NONE`. For pure
+    optimization Nesterov's momentum may be better, but it may also
+    increases chances of overfitting. Using `:NONE` is equivalent to 0
+    momentum, but it also uses less memory. Note that with `:NONE`,
+    [`MOMENTUM`][ed3d] is ignored even it it is non-zero.
 
 <a name='x-28MGL-GD-3AWEIGHT-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 

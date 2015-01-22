@@ -108,10 +108,12 @@
     momentum.")
    (momentum-type
     :initform :normal :initarg :momentum-type :reader momentum-type
-    :type '(member :normal :nesterov)
-    :documentation "One of :NORMAL and :NESTEROV. For pure
-    optimization Nesterov's momentum may be better, but it also
-    increases chances of overfitting.")
+    :type '(member :none :normal :nesterov)
+    :documentation "One of :NORMAL, :NESTEROV or :NONE. For pure
+    optimization Nesterov's momentum may be better, but it may also
+    increases chances of overfitting. Using :NONE is equivalent to 0
+    momentum, but it also uses less memory. Note that with :NONE,
+    MOMENTUM is ignored even it it is non-zero.")
    (weight-decay
     :initform 0 :initarg :weight-decay :accessor weight-decay
     :documentation "An L2 penalty. It discourages large weights, much
@@ -165,9 +167,7 @@
         (make-instance 'segment-set :segments weights))
   (let ((n-weights (size (segment-set optimizer))))
     (setf (accumulator optimizer) (make-mat n-weights))
-    ;; ADAM-OPTIMIZER sets this to NIL to prevent it from being
-    ;; created.
-    (when (not (slot-boundp optimizer 'weight-deltas))
+    (unless (eq (momentum-type optimizer) :none)
       (setf (weight-deltas optimizer) (make-mat n-weights)))))
 
 (defmethod segments ((optimizer gd-optimizer))
@@ -234,12 +234,66 @@
   (when (<= (batch-size optimizer)
             (incf (n-instances-in-batch optimizer) n-new-inputs))
     (ecase (momentum-type optimizer)
+      ((:none)
+       (update-all-weights/no-momentum optimizer))
       ((:normal)
        (update-all-weights/normal optimizer))
       ((:nesterov)
        (update-all-weights/nesterov optimizer))))
   (set-n-instances optimizer gradient-source
                    (+ (n-instances optimizer) n-new-inputs)))
+
+(defun update-all-weights/no-momentum (optimizer)
+  (let ((accumulator (accumulator optimizer))
+        (learning-rate (learning-rate optimizer))
+        (n-instances (n-instances-in-batch optimizer))
+        (weight-decay (weight-decay optimizer))
+        (weight-penalty (weight-penalty optimizer)))
+    (scal! (/ n-instances) accumulator)
+    (map nil #'funcall (before-update-hook optimizer))
+    (with-shape-and-displacement (accumulator)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
+        (let ((weights (segment-weights segment)))
+          (reshape-and-displace! accumulator (mat-size weights)
+                                 start-in-segment-set)
+          (unless (zerop weight-penalty)
+            (add-sign! weight-penalty weights 1 accumulator))
+          (unless (zerop weight-decay)
+            (axpy! weight-decay weights accumulator))
+          (axpy! (- learning-rate) accumulator weights))))
+    (fill! 0 accumulator)
+    (setf (n-instances-in-batch optimizer) 0))
+  (map nil #'funcall (after-update-hook optimizer)))
+
+(defun update-all-weights/normal (optimizer)
+  (let ((accumulator (accumulator optimizer))
+        (weight-deltas (weight-deltas optimizer))
+        (learning-rate (learning-rate optimizer))
+        (n-instances (n-instances-in-batch optimizer))
+        (momentum (momentum optimizer))
+        (weight-decay (weight-decay optimizer))
+        (weight-penalty (weight-penalty optimizer)))
+    (assert (and (<= 0 momentum) (< momentum 1)))
+    (scal! momentum weight-deltas)
+    (cond ((before-update-hook optimizer)
+           (scal! (/ n-instances) accumulator)
+           (map nil #'funcall (before-update-hook optimizer))
+           (axpy! 1 accumulator weight-deltas))
+          (t
+           (axpy! (/ n-instances) accumulator weight-deltas)))
+    (with-shape-and-displacement (weight-deltas)
+      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
+        (let ((weights (segment-weights segment)))
+          (reshape-and-displace! weight-deltas (mat-size weights)
+                                 start-in-segment-set)
+          (unless (zerop weight-penalty)
+            (add-sign! weight-penalty weights 1 weight-deltas))
+          (unless (zerop weight-decay)
+            (axpy! weight-decay weights weight-deltas))
+          (axpy! (- learning-rate) weight-deltas weights))))
+    (fill! 0 accumulator)
+    (setf (n-instances-in-batch optimizer) 0))
+  (map nil #'funcall (after-update-hook optimizer)))
 
 (defun update-all-weights/nesterov (optimizer)
   (let ((accumulator (accumulator optimizer))
@@ -273,36 +327,6 @@
             (unless (zerop weight-penalty)
               (add-sign! (* learning-rate weight-penalty) weights 0 accumulator)
               (axpy! 1 accumulator weights))))))
-    (fill! 0 accumulator)
-    (setf (n-instances-in-batch optimizer) 0))
-  (map nil #'funcall (after-update-hook optimizer)))
-
-(defun update-all-weights/normal (optimizer)
-  (let ((accumulator (accumulator optimizer))
-        (weight-deltas (weight-deltas optimizer))
-        (learning-rate (learning-rate optimizer))
-        (n-instances (n-instances-in-batch optimizer))
-        (momentum (momentum optimizer))
-        (weight-decay (weight-decay optimizer))
-        (weight-penalty (weight-penalty optimizer)))
-    (assert (and (<= 0 momentum) (< momentum 1)))
-    (scal! momentum weight-deltas)
-    (cond ((before-update-hook optimizer)
-           (scal! (/ n-instances) accumulator)
-           (map nil #'funcall (before-update-hook optimizer))
-           (axpy! 1 accumulator weight-deltas))
-          (t
-           (axpy! (/ n-instances) accumulator weight-deltas)))
-    (with-shape-and-displacement (weight-deltas)
-      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
-        (let ((weights (segment-weights segment)))
-          (reshape-and-displace! weight-deltas (mat-size weights)
-                                 start-in-segment-set)
-          (unless (zerop weight-penalty)
-            (add-sign! weight-penalty weights 1 weight-deltas))
-          (unless (zerop weight-decay)
-            (axpy! weight-decay weights weight-deltas))
-          (axpy! (- learning-rate) weight-deltas weights))))
     (fill! 0 accumulator)
     (setf (n-instances-in-batch optimizer) 0))
   (map nil #'funcall (after-update-hook optimizer)))
@@ -550,8 +574,7 @@
 ;;; FIXME: this isn't really a BATCH-GD-OPTIMIZER (that should be
 ;;; called SGD, really).
 (defclass adam-optimizer (batch-gd-optimizer)
-  ((weight-deltas :initform nil)
-   (learning-rate
+  ((learning-rate
     :initform 0.0002 :accessor learning-rate
     :documentation "Same thing as [LEARNING-RATE][(ACCESSOR
     GD-OPTIMIZER)] but with the default suggested by the Adam paper.")
@@ -578,7 +601,9 @@
     positive number is added to the denominator.")
    (mean-estimates :accessor mean-estimates)
    (variance-estimates :accessor variance-estimates)
-   (adam-time-step :initform 0 :accessor adam-time-step))
+   (adam-time-step :initform 0 :accessor adam-time-step)
+   ;; no support for momentum
+   (momentum :initform :none))
   (:documentation "Adam is a first-order stochasistic gradient descent
   optimizer. It maintains an internal estimation for the mean and raw
   variance of each derivative as exponential moving averages. The step
@@ -609,7 +634,7 @@
                    (+ (n-instances optimizer) n-new-inputs)))
 
 (defun update-all-weights/adam (optimizer)
-  (assert (zerop (momentum optimizer)) ()
+  (assert (eq (momentum-type optimizer) :none) ()
           "Momentum is not implemented for ADAM-OPTIMIZER.")
   (incf (adam-time-step optimizer))
   (let ((accumulator (accumulator optimizer))
