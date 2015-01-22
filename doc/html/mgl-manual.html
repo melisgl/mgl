@@ -154,10 +154,15 @@ configuration of foreign libraries is still done via <code>LLA</code>. See the
 README in <code>LLA</code> on how to set things up. Note that these days OpenBLAS
 is easier to set up and just as fast as ATLAS.</p>
 
-<p><a href="https://github.com/takagi/cl-cuda" >CL-CUDA</a> is a dependency for
-which the NVIDIA CUDA Toolkit needs to be installed, but MGL is
-fully functional even if there is no cuda capable gpu installed. See
-the <code>MGL-MAT:WITH-CUDA*</code> macro for how to use it.</p>
+<p><a href="https://github.com/takagi/cl-cuda" >CL-CUDA</a> and
+<a href="https://github.com/melisgl/mgl" >MGL-MAT</a> are the two main
+dependencies and also the ones not yet in quicklisp, so just drop
+them into <code>quicklisp/local-projects/</code>. If there is no suitable gpu
+on the system or the cuda sdk is not installed, MGL will simply
+fall back on using BLAS and Lisp code. Wrapping code in
+<code>MGL-MAT:WITH-CUDA*</code> is basically all that's needed to run on the GPU,
+and with <code>MGL-MAT:CUDA-AVAILABLE-P</code> one can check whether the gpu is
+really being used.</p>
 
 <p><a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a></p>
 
