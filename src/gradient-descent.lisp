@@ -614,6 +614,7 @@
     :initform 0.0002 :accessor learning-rate
     :documentation "Same thing as [LEARNING-RATE][(ACCESSOR
     GD-OPTIMIZER)] but with the default suggested by the Adam paper.")
+   (momentum-type :initform :none)
    (mean-update-rate
     :initform 0.1 :initarg :mean-update-rate
     :accessor mean-update-rate
