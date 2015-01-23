@@ -231,7 +231,7 @@
     detectors'.")
    (mask :initform nil :reader mask)))
 
-(defmaker ->dropout)
+(defmaker ->dropout x)
 
 (defmethod default-size ((lump ->dropout))
   (size (x lump)))
@@ -329,7 +329,7 @@
     :initform nil :initarg :variance :reader variance)
    (multipliers :initform nil :reader multipliers)))
 
-(defmaker ->multiply-with-gaussian)
+(defmaker ->multiply-with-gaussian x)
 
 (defmethod default-size ((lump ->multiply-with-gaussian))
   (size (x lump)))
@@ -366,7 +366,7 @@
   ((x :initarg :x :reader x)
    (randoms :initform nil :reader randoms)))
 
-(defmaker ->sample-binary)
+(defmaker ->sample-binary x)
 
 (defmethod default-size ((lump ->sample-binary))
   (size (x lump)))
@@ -400,7 +400,7 @@
   ((x :initarg :x :reader x))
   (:documentation "Sum of all nodes per stripe)."))
 
-(defmaker ->sum)
+(defmaker ->sum x)
 
 (defmethod default-size ((lump ->sum))
   1)
@@ -428,7 +428,7 @@
   whose value is computed as the sum of nodes in the X parameter
   lump."))
 
-(defmaker ->error)
+(defmaker ->error x)
 
 (defmethod default-size ((lump ->error))
   1)
@@ -472,7 +472,7 @@
     vector then its length must be MAX-N-STRIPES which automatically
     maintained.")))
 
-(defmaker ->normalized)
+(defmaker ->normalized x)
 
 (defmethod default-size ((lump ->normalized))
   (size (x lump)))
@@ -554,41 +554,41 @@
 (defclass ->activation (bpn)
   ())
 
-(defun ->activation (&key name size inputs peepholes (add-bias-p t)
+(defun ->activation (inputs &key name size peepholes (add-bias-p t)
                      (bpn *bpn-being-built*))
   (assert name () "NAME argument must be supplied for ->ACTIVATION.")
-  (when (or add-bias-p inputs peepholes)
-    (build-fnn (:name (list name :activation) :class '->activation)
-      ;; To save memory, which is especially critical in a long RNN,
-      ;; we make ->MM and ->* below use the NODES and DERIVATIVES of
-      ;; this ->+ lump. In the forward pass they add their results to
-      ;; the shared nodes (instead of setting it) and in the backward
-      ;; pass all args of ->+ have the same derivative so it works out
-      ;; fine.
-      (shared-with-clump
-       (->+ :name (list :sum name)
-            :size size
-            :args (if add-bias-p
-                      (list (->weight :name (list :bias name) :size size))
-                      ())))
-      (ignored
-       (progn
-         (dolist (input inputs)
-           (let* ((input (->clump bpn input))
-                  (name (list (name input) name))
-                  (w (->weight :name name :size (* size (size input)))))
-             (->mm :name (list name :activation)
-                   :x input :weights w
-                   :shared-with-clump shared-with-clump)))
-         (dolist (peephole peepholes)
-           (let* ((peephole (->clump bpn peephole))
-                  (name (list (name peephole) name :peephole))
-                  (w (->weight :name name :size size)))
-             (->* :name (list name :activation) :x peephole :y w
-                  :shared-with-clump shared-with-clump)
-             (assert (= size (size peephole)) ()
-                     "Size of peephole input lump ~S is not ~S."
-                     peephole size))))))))
+  (let ((inputs (alexandria:ensure-list inputs)))
+    (when (or add-bias-p inputs peepholes)
+      (build-fnn (:name (list name :activation) :class '->activation)
+        ;; To save memory, which is especially critical in a long RNN,
+        ;; we make ->MM and ->* below use the NODES and DERIVATIVES of
+        ;; this ->+ lump. In the forward pass they add their results to
+        ;; the shared nodes (instead of setting it) and in the backward
+        ;; pass all args of ->+ have the same derivative so it works out
+        ;; fine.
+        (shared-with-clump
+         (->+ (if add-bias-p
+                  (list (->weight :name (list :bias name) :size size))
+                  ())
+              :name (list :sum name)
+              :size size))
+        (ignored
+         (progn
+           (dolist (input inputs)
+             (let* ((input (->clump bpn input))
+                    (name (list (name input) name))
+                    (w (->weight :name name :size (* size (size input)))))
+               (->mm input w :name (list name :activation)
+                     :shared-with-clump shared-with-clump)))
+           (dolist (peephole peepholes)
+             (let* ((peephole (->clump bpn peephole))
+                    (name (list (name peephole) name :peephole))
+                    (w (->weight :name name :size size)))
+               (->* peephole w :name (list name :activation)
+                    :shared-with-clump shared-with-clump)
+               (assert (= size (size peephole)) ()
+                       "Size of peephole input lump ~S is not ~S."
+                       peephole size)))))))))
 
 
 ;;;; Vector-matrix multiplication lump (per-stripe)
@@ -604,7 +604,7 @@
   TRANSPOSE-WEIGHTS-P then WEIGHTS is N x M and X*WEIGHTS' is
   computed."))
 
-(defmaker ->mm)
+(defmaker ->mm x weights)
 
 (defmethod initialize-instance :after ((lump ->mm) &key
                                        &allow-other-keys)
@@ -682,7 +682,7 @@
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
 
-(defmaker ->rep)
+(defmaker ->rep x n)
 
 (defmethod default-size ((lump ->rep))
   (* (n lump) (size (x lump))))
@@ -733,7 +733,7 @@
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
 
-(defmaker ->stretch)
+(defmaker ->stretch x n)
 
 (defmethod default-size ((lump ->stretch))
   (* (n lump) (size (x lump))))
@@ -783,7 +783,7 @@
 (defclass-now ->+ (lump)
   ((args :initarg :args :reader args)))
 
-(defmaker ->+)
+(defmaker ->+ args)
 
 (defmethod default-size ((lump ->+))
   (if (slot-boundp lump 'size)
@@ -824,7 +824,7 @@
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
 
-(defmaker ->*)
+(defmaker ->* x y)
 
 (defmethod default-size ((lump ->*))
   (size (x lump)))
@@ -896,7 +896,7 @@
 (defclass-now ->abs (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->abs)
+(defmaker ->abs x)
 
 (defmethod default-size ((lump ->abs))
   (size (x lump)))
@@ -942,7 +942,7 @@
 (defclass-now ->sin (->dropout lump)
   ((dropout :initform nil)))
 
-(defmaker ->sin)
+(defmaker ->sin x)
 
 (defmethod default-size ((lump ->sin))
   (size (x lump)))
@@ -1018,7 +1018,7 @@
 (defclass-now ->sigmoid (->dropout lump)
   ((dropout :initform nil)))
 
-(defmaker ->sigmoid)
+(defmaker ->sigmoid x)
 
 (defmethod default-size ((lump ->sigmoid))
   (size (x lump)))
@@ -1106,7 +1106,7 @@
 (defclass-now ->tanh (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->tanh)
+(defmaker ->tanh x)
 
 (defmethod default-size ((lump ->tanh))
   (size (x lump)))
@@ -1187,7 +1187,7 @@
 (defclass-now ->scaled-tanh (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->scaled-tanh)
+(defmaker ->scaled-tanh x)
 
 (defmethod default-size ((lump ->scaled-tanh))
   (size (x lump)))
@@ -1274,7 +1274,7 @@
   (:documentation "max(0,x) activation function. If NOISYP then add
   normal(0,sigmoid(x)) noise to x."))
 
-(defmaker ->rectified)
+(defmaker ->rectified x)
 
 (defmethod default-size ((lump ->rectified))
   (size (x lump)))
@@ -1351,7 +1351,7 @@
    (derivative-limit :initform nil :initarg :derivative-limit
                      :reader derivative-limit)))
 
-(defmaker ->identity)
+(defmaker ->identity x)
 
 (defmethod default-size ((lump ->identity))
   (size (x lump)))
@@ -1371,7 +1371,7 @@
 (defclass-now ->split-sign (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->split-sign)
+(defmaker ->split-sign x)
 
 (defmethod default-size ((lump ->split-sign))
   (* 2 (size (x lump))))
@@ -1453,7 +1453,7 @@
   ((x :initarg :x :reader x))
   (:documentation "log(1+exp(x))) activation function."))
 
-(defmaker ->softplus)
+(defmaker ->softplus x)
 
 (defmethod default-size ((lump ->softplus))
   (size (x lump)))
@@ -1506,7 +1506,7 @@
 (defclass-now ->exp (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->exp)
+(defmaker ->exp x)
 
 (defmethod default-size ((lump ->exp))
   (size (x lump)))
@@ -1577,7 +1577,7 @@
    (length-scale :initarg :length-scale :reader length-scale)
    (roughness :initarg :roughness :reader roughness)))
 
-(defmaker ->rough-exponential)
+(defmaker ->rough-exponential x)
 
 (defmethod default-size ((lump ->rough-exponential))
   (size (x lump)))
@@ -1669,7 +1669,7 @@
   ((x :initarg :x :reader x)
    (period :initarg :period :reader period)))
 
-(defmaker ->periodic)
+(defmaker ->periodic x)
 
 (defmethod default-size ((lump ->periodic))
   (size (x lump)))
@@ -1845,7 +1845,7 @@
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
 
-(defmaker ->sum-squared-error)
+(defmaker ->sum-squared-error x y)
 
 (defmethod default-size ((lump ->sum-squared-error))
   1)
@@ -1898,7 +1898,7 @@
   ((x :initarg :x :reader x)
    (y :initarg :y :reader y)))
 
-(defmaker ->squared-error)
+(defmaker ->squared-error x y)
 
 (defmethod default-size ((lump ->squared-error))
   (size (x lump)))
@@ -1966,7 +1966,7 @@
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
 
-(defmaker ->max)
+(defmaker ->max x)
 
 (defmethod default-size ((lump ->max))
   (/ (size (x lump)) (group-size lump)))
@@ -2054,7 +2054,7 @@
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
 
-(defmaker ->min)
+(defmaker ->min x)
 
 (defmethod default-size ((lump ->min))
   (/ (size (x lump)) (group-size lump)))
@@ -2142,7 +2142,7 @@
   ((x :initarg :x :reader x :documentation "Input comes from here.")
    (group-size :initarg :group-size :reader group-size)))
 
-(defmaker ->max-channel)
+(defmaker ->max-channel x)
 
 (defmethod default-size ((lump ->max-channel))
   (size (x lump)))
@@ -2263,7 +2263,7 @@
 (defclass-now ->softmax (->normalized)
   ())
 
-(defmaker ->softmax)
+(defmaker ->softmax x)
 
 (defmethod default-size ((lump ->softmax))
   (size (x lump)))
@@ -2393,7 +2393,7 @@
   target_j * (softmax_k - KDELjk)} which is equal to softmax_k -
   target_k if target sums to 1."))
 
-(defmaker ->softmax-xe-loss)
+(defmaker ->softmax-xe-loss x)
 
 (defmethod default-size ((lump ->softmax-xe-loss))
   (size (x lump)))
@@ -2657,7 +2657,7 @@
 
 ;;;; LSTM
 
-(defun ->lstm (&key name inputs cell-init output-init n-cells
+(defun ->lstm (inputs &key name cell-init output-init n-cells
                (gate-fn '->sigmoid) (input-fn '->tanh)
                (output-fn '->tanh)
                (peepholes t))
@@ -2687,17 +2687,18 @@
   diagonal and are represented by just the vector of diagonal values.
   These connections are only added if PEEPHOLES is true.
 
-  A notable difference from the paper is that `x_t` (the input) is
-  actually represented by a list of lumps in INPUTS. Whenever some
-  activation is to be calculated based on `x_t`, it is going to be the
-  sum of individual activations. For example, `W_ix * x_t` is really
-  `sum_j W_ijx * inputs_j`.
+  A notable difference from the paper is that in addition to being a
+  single lump, `x_t` (INPUTS) can also be a list of lumps. Whenever
+  some activation is to be calculated based on `x_t`, it is going to
+  be the sum of individual activations. For example, `W_ix * x_t` is
+  really `sum_j W_ijx * inputs_j`.
 
   If CELL-INIT is non-NIL, then it must be a CLUMP of SIZE N-CELLS
   form which stands for the initial state of the value cell (c_{-1}).
   CELL-INIT being NIL is equivalent to the state of all zeros."
   (check-type n-cells index)
-  (let* ((input-gate-name `(,name :input))
+  (let* ((inputs (alexandria:ensure-list inputs))
+         (input-gate-name `(,name :input))
          (forget-gate-name `(,name :forget))
          (output-gate-name `(,name :output))
          (cell-name `(,name :cell))
@@ -2715,53 +2716,42 @@
       (build-fnn (:name name :class '->lstm)
         ;; i_t = s(W_ix * x_t + W_im * m_{t_1} + W_ic .* c_{t-1} + b_i)
         (input-gate
-         (funcall
-          gate-fn :name input-gate-name
-          :x (->activation :name input-gate-name :size n-cells
-                           :inputs (add (lagged-output) inputs)
-                           :peepholes (when peepholes
-                                        (add (lagged-cell) ())))))
+         (funcall gate-fn (->activation (add (lagged-output) inputs)
+                                        :name input-gate-name :size n-cells
+                                        :peepholes (when peepholes
+                                                     (add (lagged-cell) ())))
+                  :name input-gate-name))
         ;; f_t = s(W_fx * x_t + W_fm * m_{t_1} + W_fc .* c_{t-1} + b_f)
         (forget-gate
-         (funcall
-          gate-fn :name forget-gate-name
-          :x (->activation :name forget-gate-name
-                           :size n-cells
-                           :inputs (add (lagged-output) inputs)
-                           :peepholes (when peepholes
-                                        (add (lagged-cell) ())))))
+         (funcall gate-fn (->activation (add (lagged-output) inputs)
+                                        :name forget-gate-name
+                                        :size n-cells
+                                        :peepholes (when peepholes
+                                                     (add (lagged-cell) ())))
+                  :name forget-gate-name))
         ;; c_t = f_t .* c_{t-1} + i_t .* g(W_cx * x_t + W_cm * m_{t-1} + b_c)
         (cell
          ;; Save memory by sharing.
-         (let ((shared-with-clump
-                 (->+ :name cell-name
-                      :size n-cells
-                      :args ())))
+         (let ((shared-with-clump (->+ () :name cell-name :size n-cells)))
            (when (lagged-cell)
-             (->* :x forget-gate :y (lagged-cell)
+             (->* forget-gate (lagged-cell)
                   :shared-with-clump shared-with-clump))
-           (->* :x input-gate
-                :y (funcall
-                    input-fn
-                    :x (->activation
-                        :name cell-name
-                        :size n-cells
-                        :inputs (add (lagged-output) inputs)))
+           (->* input-gate (funcall input-fn
+                                    (->activation (add (lagged-output) inputs)
+                                                  :name cell-name
+                                                  :size n-cells))
                 :shared-with-clump shared-with-clump)
            shared-with-clump))
         ;; o_t = s(W_ox * x_t + W_om * m_{t-1} + W_oc .* c_t + b_o)
         (output-gate
-         (funcall
-          gate-fn :name output-gate-name
-          :x (->activation :name output-gate-name :size n-cells
-                           :inputs (add (lagged-output) inputs)
-                           :peepholes (when peepholes
-                                        (list cell)))))
+         (funcall gate-fn (->activation (add (lagged-output) inputs)
+                                        :name output-gate-name :size n-cells
+                                        :peepholes (when peepholes
+                                                     (list cell)))
+                  :name output-gate-name ))
         ;; m_t = o_t .* h(c_t)
         (output
-         (->* :name output-name
-              :x output-gate
-              :y (funcall output-fn :x cell)))))))
+         (->* output-gate (funcall output-fn cell) :name output-name))))))
 
 (defclass ->lstm (bpn)
   ())

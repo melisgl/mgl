@@ -42,19 +42,15 @@
                            :initargs '(:clamper clamp-sum-sign))
                  (inputs (->input :size 1))
                  (h (if use-lstm-p
-                        (->lstm :name 'h
-                                :inputs (list inputs) :n-cells n-hiddens
+                        (->lstm inputs :name 'h :n-cells n-hiddens
                                 :input-fn '->identity
                                 :output-fn '->identity)
-                        (->activation
-                         :name 'h
-                         :inputs (if (zerop (time-step))
-                                     (list inputs)
-                                     (list inputs (lag '(h :activation))))
-                         :size n-hiddens)))
+                        (->activation (if (zerop (time-step))
+                                          inputs
+                                          (list inputs (lag '(h :activation))))
+                                      :name 'h :size n-hiddens)))
                  (prediction (->softmax-xe-loss
-                              :x (->activation :name 'prediction
-                                               :size 3 :inputs (list h))))))))
+                              (->activation h :name 'prediction :size 3)))))))
     (setf (max-n-stripes net) max-n-stripes)
     (map-segments (lambda (lump)
                     (let ((name (name lump))
@@ -139,8 +135,3 @@
           (assert (> 0.01
                      (test-sum-sign-rnn :max-n-stripes max-n-stripes
                                         :use-lstm-p use-lstm-p))))))))
-
-;;(repeatably () (test-sum-sign-rnn))
-#+nil
-(let ((*cuda-enabled* nil))
-  (repeatably () (test-sum-sign-rnn :use-lstm-p t :n-hiddens 1)))

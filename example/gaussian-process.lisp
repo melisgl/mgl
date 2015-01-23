@@ -127,36 +127,36 @@
                (distance-field (->input :size n-cov))
                ;;
                (means-bias (->weight :size 1))
-               (means-bias* (->rep :x means-bias :n n-x1))
-               (means (->+ :args (list means-bias*)))
+               (means-bias* (->rep means-bias n-x1))
+               (means (->+ (list means-bias*)))
                ;; parameters of the gaussian kernel
                (signal-variance (->weight :size 1))
                (length-scale (->weight :size 1))
                (roughness (->weight :size 1))
                ;; repped versions
-               (signal-variance* (->rep :x signal-variance :n n-cov))
-               (length-scale* (->rep :x length-scale :n n-cov))
-               (roughness* (->rep :x roughness :n n-cov))
+               (signal-variance* (->rep signal-variance n-cov))
+               (length-scale* (->rep length-scale n-cov))
+               (roughness* (->rep roughness n-cov))
                ;;
                (noise-variance (->weight :size 1))
                (bias-variance (->weight :size 1))
-               (abs-noise-variance (->abs :x noise-variance))
-               (abs-bias-variance (->abs :x bias-variance))
+               (abs-noise-variance (->abs noise-variance))
+               (abs-bias-variance (->abs bias-variance))
                ;;
                (covariances-1 (->rough-exponential
-                               :x distance-field
+                               distance-field
                                :signal-variance signal-variance*
                                :length-scale length-scale*
                                :roughness roughness*))
                (covariances-2 (->ref :index selfp
                                      :into abs-noise-variance
                                      :drop-negative-index-p t))
-               (covariances-3 (->rep :x abs-bias-variance :n n-cov))
-               (covariances (->+ :args (list covariances-1
-                                             covariances-2
-                                             covariances-3)))
+               (covariances-3 (->rep abs-bias-variance n-cov))
+               (covariances (->+ (list covariances-1
+                                       covariances-2
+                                       covariances-3)))
                (gp (->gp :means means :covariances covariances))
-               (error (->error :x gp)))))
+               (error (->error gp)))))
       (setf (max-n-stripes bpn-gp) 10)
       (unless weights-from
         (fill-lump 'means-bias bpn-gp 0)

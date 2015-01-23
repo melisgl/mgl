@@ -19,12 +19,10 @@
 (defun make-digit-fnn (&key (n-hiddens 5))
   (build-fnn (:class 'digit-fnn)
     (input (->input :size *n-inputs*))
-    (hidden-activation (->activation :inputs (list input)
-                                     :size n-hiddens))
-    (hidden (->rectified :x hidden-activation))
-    (output-activation (->activation :inputs (list hidden)
-                                     :size *n-outputs*))
-    (output (->softmax-xe-loss :x output-activation))))
+    (hidden-activation (->activation input :size n-hiddens))
+    (hidden (->rectified hidden-activation))
+    (output-activation (->activation hidden :size *n-outputs*))
+    (output (->softmax-xe-loss output-activation))))
 
 ;;; This method is called with batches of 'instances' (input digits in
 ;;; this case). Its job is to encode the inputs by populating rows of

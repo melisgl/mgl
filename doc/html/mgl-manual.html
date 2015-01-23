@@ -3101,12 +3101,10 @@ read up on <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" ti
 </span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-digit-fnn <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">n-hiddens 5</span>)</span></span>)</span>
   <span class="paren2">(<span class="code">build-fnn <span class="paren3">(<span class="code"><span class="keyword">:class</span> 'digit-fnn</span>)</span>
     <span class="paren3">(<span class="code">input <span class="paren4">(<span class="code">-&gt;input <span class="keyword">:size</span> <span class="special">*n-inputs*</span></span>)</span></span>)</span>
-    <span class="paren3">(<span class="code">hidden-activation <span class="paren4">(<span class="code">-&gt;activation <span class="keyword">:inputs</span> <span class="paren5">(<span class="code">list input</span>)</span>
-                                     <span class="keyword">:size</span> n-hiddens</span>)</span></span>)</span>
-    <span class="paren3">(<span class="code">hidden <span class="paren4">(<span class="code">-&gt;rectified <span class="keyword">:x</span> hidden-activation</span>)</span></span>)</span>
-    <span class="paren3">(<span class="code">output-activation <span class="paren4">(<span class="code">-&gt;activation <span class="keyword">:inputs</span> <span class="paren5">(<span class="code">list hidden</span>)</span>
-                                     <span class="keyword">:size</span> <span class="special">*n-outputs*</span></span>)</span></span>)</span>
-    <span class="paren3">(<span class="code">output <span class="paren4">(<span class="code">-&gt;softmax-xe-loss <span class="keyword">:x</span> output-activation</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">hidden-activation <span class="paren4">(<span class="code">-&gt;activation input <span class="keyword">:size</span> n-hiddens</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">hidden <span class="paren4">(<span class="code">-&gt;rectified hidden-activation</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">output-activation <span class="paren4">(<span class="code">-&gt;activation hidden <span class="keyword">:size</span> <span class="special">*n-outputs*</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">output <span class="paren4">(<span class="code">-&gt;softmax-xe-loss output-activation</span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">;;; This method is called with batches of 'instances' (input digits in
 </span><span class="comment">;;; this case). Its job is to encode the inputs by populating rows of
@@ -3333,11 +3331,9 @@ the concepts involved. Make sure you are comfortable with
   <span class="paren2">(<span class="code">build-rnn <span class="paren3">(<span class="code"></span>)</span>
     <span class="paren3">(<span class="code">build-fnn <span class="paren4">(<span class="code"><span class="keyword">:class</span> 'sum-sign-fnn</span>)</span>
       <span class="paren4">(<span class="code">input <span class="paren5">(<span class="code">-&gt;input <span class="keyword">:size</span> 1</span>)</span></span>)</span>
-      <span class="paren4">(<span class="code">h <span class="paren5">(<span class="code">-&gt;lstm <span class="keyword">:name</span> 'h <span class="keyword">:inputs</span> <span class="paren6">(<span class="code">list input</span>)</span> <span class="keyword">:n-cells</span> n-hiddens</span>)</span></span>)</span>
-      <span class="paren4">(<span class="code">prediction <span class="paren5">(<span class="code">-&gt;softmax-xe-loss
-                   <span class="keyword">:x</span> <span class="paren6">(<span class="code">-&gt;activation <span class="keyword">:name</span> 'prediction
-                                    <span class="keyword">:size</span> <span class="special">*n-outputs*</span>
-                                    <span class="keyword">:inputs</span> <span class="paren1">(<span class="code">list h</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+      <span class="paren4">(<span class="code">h <span class="paren5">(<span class="code">-&gt;lstm input <span class="keyword">:name</span> 'h <span class="keyword">:size</span> n-hiddens</span>)</span></span>)</span>
+      <span class="paren4">(<span class="code">prediction <span class="paren5">(<span class="code">-&gt;softmax-xe-loss <span class="paren6">(<span class="code">-&gt;activation h <span class="keyword">:name</span> 'prediction
+                                                   <span class="keyword">:size</span> <span class="special">*n-outputs*</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">;;; We define this class to be able to specialize how inputs are
 </span><span class="comment">;;; translated by adding a SET-INPUT method later.

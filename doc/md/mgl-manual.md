@@ -2696,12 +2696,10 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
 (defun make-digit-fnn (&key (n-hiddens 5))
   (build-fnn (:class 'digit-fnn)
     (input (->input :size *n-inputs*))
-    (hidden-activation (->activation :inputs (list input)
-                                     :size n-hiddens))
-    (hidden (->rectified :x hidden-activation))
-    (output-activation (->activation :inputs (list hidden)
-                                     :size *n-outputs*))
-    (output (->softmax-xe-loss :x output-activation))))
+    (hidden-activation (->activation input :size n-hiddens))
+    (hidden (->rectified hidden-activation))
+    (output-activation (->activation hidden :size *n-outputs*))
+    (output (->softmax-xe-loss output-activation))))
 
 ;;; This method is called with batches of 'instances' (input digits in
 ;;; this case). Its job is to encode the inputs by populating rows of
@@ -2930,11 +2928,9 @@ the concepts involved. Make sure you are comfortable with
   (build-rnn ()
     (build-fnn (:class 'sum-sign-fnn)
       (input (->input :size 1))
-      (h (->lstm :name 'h :inputs (list input) :n-cells n-hiddens))
-      (prediction (->softmax-xe-loss
-                   :x (->activation :name 'prediction
-                                    :size *n-outputs*
-                                    :inputs (list h)))))))
+      (h (->lstm input :name 'h :size n-hiddens))
+      (prediction (->softmax-xe-loss (->activation h :name 'prediction
+                                                   :size *n-outputs*))))))
 
 ;;; We define this class to be able to specialize how inputs are
 ;;; translated by adding a SET-INPUT method later.

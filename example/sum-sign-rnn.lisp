@@ -36,11 +36,9 @@
   (build-rnn ()
     (build-fnn (:class 'sum-sign-fnn)
       (input (->input :size 1))
-      (h (->lstm :name 'h :inputs (list input) :n-cells n-hiddens))
-      (prediction (->softmax-xe-loss
-                   :x (->activation :name 'prediction
-                                    :size *n-outputs*
-                                    :inputs (list h)))))))
+      (h (->lstm input :name 'h :n-cells n-hiddens))
+      (prediction (->softmax-xe-loss (->activation h :name 'prediction
+                                                   :size *n-outputs*))))))
 
 ;;; We define this class to be able to specialize how inputs are
 ;;; translated by adding a SET-INPUT method later.
