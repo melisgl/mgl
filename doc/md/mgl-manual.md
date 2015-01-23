@@ -1853,6 +1853,17 @@ mini-batch basis:
     it. Putting it on feature biases consitutes a sparsity constraint
     on the features.
 
+<a name='x-28MGL-GD-3AUSE-SEGMENT-DERIVATIVES-P-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
+
+- [reader] **USE-SEGMENT-DERIVATIVES-P** *GD-OPTIMIZER* *(:USE-SEGMENT-DERIVATIVES-P = NIL)*
+
+    Save memory if both the gradient source (the model
+    being optimized) and the optimizer support this feature. It works
+    like this: the accumulator into which the gradient source is asked
+    to place the derivatives of a segment will be [`SEGMENT-DERIVATIVES`][9202]
+    of the segment. This allows the optimizer not to allocate an
+    accumulator matrix into which the derivatives are summed.
+
 <a name='x-28MGL-GD-3AAFTER-UPDATE-HOOK-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a>
 
 - [accessor] **AFTER-UPDATE-HOOK** *GD-OPTIMIZER* *(:AFTER-UPDATE-HOOK = NIL)*
@@ -2377,6 +2388,15 @@ new gradient sources except where noted.
 - [method] **SEGMENT-WEIGHTS** *(MAT MAT)*
 
     When the segment is really a `MAT`, then just return it.
+
+<a name='x-28MGL-OPT-3ASEGMENT-DERIVATIVES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **SEGMENT-DERIVATIVES** *SEGMENT*
+
+    Return the derivatives matrix of `SEGMENT`. A segment
+    doesn't need to be a `MAT` object itself. For example, it may be a
+    `MGL-BM:CHUNK` of a [MGL-BM:BM][CLASS] or a `MGL-BP:LUMP` of a
+    [`MGL-BP:BPN`][0e98] whose DERIVATIVES slot holds the gradient.
 
 <a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a>
 
@@ -3342,6 +3362,7 @@ grow into a more serious toolset for NLP eventually.
   [9112]: #x-28MGL-CORE-3AATTRIBUTES-20-28MGL-PAX-3AACCESSOR-20MGL-CORE-3AATTRIBUTED-29-29 "(MGL-CORE:ATTRIBUTES (MGL-PAX:ACCESSOR MGL-CORE:ATTRIBUTED))"
   [9186]: #x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29 "(MGL-BP:BACKWARD GENERIC-FUNCTION)"
   [918e]: #x-28MGL-OPT-3AMONITOR-OPTIMIZATION-PERIODICALLY-20FUNCTION-29 "(MGL-OPT:MONITOR-OPTIMIZATION-PERIODICALLY FUNCTION)"
+  [9202]: #x-28MGL-OPT-3ASEGMENT-DERIVATIVES-20GENERIC-FUNCTION-29 "(MGL-OPT:SEGMENT-DERIVATIVES GENERIC-FUNCTION)"
   [9233]: #x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29 "(MGL-BP:FORWARD GENERIC-FUNCTION)"
   [93e5]: #x-28MGL-CORE-3ACROSS-ENTROPY-COUNTER-20CLASS-29 "(MGL-CORE:CROSS-ENTROPY-COUNTER CLASS)"
   [94c7]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-BM MGL-PAX:SECTION)"

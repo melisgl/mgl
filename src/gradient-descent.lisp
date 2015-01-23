@@ -34,6 +34,7 @@
   (momentum-type (reader gd-optimizer))
   (weight-decay (accessor gd-optimizer))
   (weight-penalty (accessor gd-optimizer))
+  (use-segment-derivatives-p (reader gd-optimizer))
   (after-update-hook (accessor gd-optimizer))
   (before-update-hook (accessor batch-gd-optimizer)))
 
@@ -84,9 +85,20 @@
     :documentation "The set of segments that are to be trained. The
     ACCUMULATOR, WEIGHT-DELTAS, etc vectors are indexed by SEGMENT-SET
     indices.")
-   (weight-deltas :type mat :accessor weight-deltas)
-   ;; A MAT into which the gradients are summed.
+   ;; A MAT into which the gradients are summed. Not allocated if
+   ;; USE-SEGMENT-DERIVATIVES-P.
    (accumulator :type mat :accessor accumulator)
+   (use-segment-derivatives-p
+    :initform nil
+    :initarg :use-segment-derivatives-p
+    :reader use-segment-derivatives-p
+    :documentation "Save memory if both the gradient source (the model
+    being optimized) and the optimizer support this feature. It works
+    like this: the accumulator into which the gradient source is asked
+    to place the derivatives of a segment will be SEGMENT-DERIVATIVES
+    of the segment. This allows the optimizer not to allocate an
+    accumulator matrix into which the derivatives are summed.")
+   (weight-deltas :type mat :accessor weight-deltas)
    (batch-size
     :initform 1
     :initarg :batch-size :accessor batch-size
@@ -166,7 +178,8 @@
   (setf (slot-value optimizer 'segment-set)
         (make-instance 'segment-set :segments weights))
   (let ((n-weights (size (segment-set optimizer))))
-    (setf (accumulator optimizer) (make-mat n-weights))
+    (unless (use-segment-derivatives-p optimizer)
+      (setf (accumulator optimizer) (make-mat n-weights)))
     (unless (eq (momentum-type optimizer) :none)
       (setf (weight-deltas optimizer) (make-mat n-weights)))))
 
@@ -175,12 +188,16 @@
 
 (defmethod map-gradient-sink (fn (optimizer gd-optimizer))
   (let ((segment-set (segment-set optimizer))
-        (accumulator (accumulator optimizer)))
-    (do-segment-set (segment start) segment-set
-      (with-shape-and-displacement (accumulator (mat-size
-                                                 (segment-weights segment))
-                                    start)
-        (funcall fn segment accumulator)))))
+        (use-segment-derivatives-p (use-segment-derivatives-p optimizer)))
+    (if use-segment-derivatives-p
+        (do-segment-set (segment start) segment-set
+          (declare (ignore start))
+          (funcall fn segment (segment-derivatives segment)))
+        (let ((accumulator (accumulator optimizer)))
+          (do-segment-set (segment start) segment-set
+            (with-shape-and-displacement
+                (accumulator (mat-size (segment-weights segment)) start)
+              (funcall fn segment accumulator)))))))
 
 
 ;;;; BATCH-GD-OPTIMIZER
@@ -244,25 +261,44 @@
                    (+ (n-instances optimizer) n-new-inputs)))
 
 (defun update-all-weights/no-momentum (optimizer)
-  (let ((accumulator (accumulator optimizer))
-        (learning-rate (learning-rate optimizer))
+  (let ((learning-rate (learning-rate optimizer))
         (n-instances (n-instances-in-batch optimizer))
         (weight-decay (weight-decay optimizer))
         (weight-penalty (weight-penalty optimizer)))
-    (scal! (/ n-instances) accumulator)
-    (map nil #'funcall (before-update-hook optimizer))
-    (with-shape-and-displacement (accumulator)
-      (do-segment-set (segment start-in-segment-set) (segment-set optimizer)
-        (let ((weights (segment-weights segment)))
-          (reshape-and-displace! accumulator (mat-size weights)
-                                 start-in-segment-set)
-          (unless (zerop weight-penalty)
-            (add-sign! weight-penalty weights 1 accumulator))
-          (unless (zerop weight-decay)
-            (axpy! weight-decay weights accumulator))
-          (axpy! (- learning-rate) accumulator weights))))
-    (fill! 0 accumulator)
-    (setf (n-instances-in-batch optimizer) 0))
+    (cond ((use-segment-derivatives-p optimizer)
+           (do-segment-set (segment start-in-segment-set)
+                           (segment-set optimizer)
+             (declare (ignore start-in-segment-set))
+             (let ((accumulator (segment-derivatives segment)))
+               (scal! (/ n-instances) accumulator)))
+           (map nil #'funcall (before-update-hook optimizer))
+           (do-segment-set (segment start-in-segment-set)
+                           (segment-set optimizer)
+             (declare (ignore start-in-segment-set))
+             (let ((weights (segment-weights segment))
+                   (accumulator (segment-derivatives segment)))
+               (unless (zerop weight-penalty)
+                 (add-sign! weight-penalty weights 1 accumulator))
+               (unless (zerop weight-decay)
+                 (axpy! weight-decay weights accumulator))
+               (axpy! (- learning-rate) accumulator weights))))
+          (t
+           (let ((accumulator (accumulator optimizer)))
+             (scal! (/ n-instances) accumulator)
+             (map nil #'funcall (before-update-hook optimizer))
+             (with-shape-and-displacement (accumulator)
+               (do-segment-set (segment start-in-segment-set)
+                               (segment-set optimizer)
+                 (let ((weights (segment-weights segment)))
+                   (reshape-and-displace! accumulator (mat-size weights)
+                                          start-in-segment-set)
+                   (unless (zerop weight-penalty)
+                     (add-sign! weight-penalty weights 1 accumulator))
+                   (unless (zerop weight-decay)
+                     (axpy! weight-decay weights accumulator))
+                   (axpy! (- learning-rate) accumulator weights))))
+             (fill! 0 accumulator)))))
+  (setf (n-instances-in-batch optimizer) 0)
   (map nil #'funcall (after-update-hook optimizer)))
 
 (defun update-all-weights/normal (optimizer)

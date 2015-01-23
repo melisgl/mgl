@@ -678,13 +678,19 @@
 ;;;; Gradient based optimization
 
 (defun add-and-forget-derivatives (bpn gradient-sink multiplier)
-  (do-gradient-sink ((clump accumulator) gradient-sink)
-    (axpy! multiplier (derivatives clump) accumulator))
-  ;; All weight derivatives must be zeroed, even the ones not being
-  ;; trained on to avoid overflows.
-  (map-segments (lambda (weights)
-                  (fill! 0 (derivatives weights)))
-                bpn))
+  (let ((clumps-not-to-be-zeroed ()))
+    (do-gradient-sink ((clump accumulator) gradient-sink)
+      (if (eq (derivatives clump) accumulator)
+          ;; The optimizer is using DERIVATIVES directly as its
+          ;; accumulator and will zero it when it sees it.
+          (push clump clumps-not-to-be-zeroed)
+          (axpy! multiplier (derivatives clump) accumulator)))
+    ;; All weight derivatives must be zeroed, even the ones not being
+    ;; trained on to avoid overflows.
+    (map-segments (lambda (weights)
+                    (unless (find weights clumps-not-to-be-zeroed)
+                      (fill! 0 (derivatives weights))))
+                  bpn)))
 
 (defmethod accumulate-gradients* ((learner bp-learner) gradient-sink
                                   batch multiplier valuep)

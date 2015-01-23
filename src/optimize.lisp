@@ -368,6 +368,7 @@
   (map-segment-runs generic-function)
   (segment-weights generic-function)
   (segment-weights (method () (mat)))
+  (segment-derivatives generic-function)
   (list-segments function)
   (initialize-gradient-source* generic-function)
   (initialize-gradient-source* (method () (t t t t)))
@@ -386,6 +387,12 @@
   (:method ((mat mat))
     "When the segment is really a MAT, then just return it."
     mat))
+
+(defgeneric segment-derivatives (segment)
+  (:documentation "Return the derivatives matrix of SEGMENT. A segment
+  doesn't need to be a MAT object itself. For example, it may be a
+  MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
+  [MGL-BP:BPN][CLASS] whose DERIVATIVES slot holds the gradient."))
 
 (defgeneric map-segment-runs (fn segment)
   (:documentation "Call FN with start and end of intervals of

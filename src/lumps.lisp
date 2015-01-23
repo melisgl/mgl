@@ -117,6 +117,9 @@
 (defmethod segment-weights ((lump lump))
   (nodes lump))
 
+(defmethod segment-derivatives ((lump lump))
+  (derivatives lump))
+
 ;;; Only weights are segments. Nothing to do for other lumps.
 (defmethod map-segments (fn (lump lump)))
 
@@ -3007,7 +3010,14 @@
 (defun arrange-for-clipping-gradients (batch-gd-optimizer l2-upper-bound
                                        &key callback)
   (push (lambda ()
-          (clip-gradients (list (mgl-gd::accumulator batch-gd-optimizer))
-                          l2-upper-bound :callback callback))
+          (clip-gradients
+           (if (use-segment-derivatives-p batch-gd-optimizer)
+               (let ((accumulators ()))
+                 (do-gradient-sink ((segment accumulator) batch-gd-optimizer)
+                   (declare (ignore segment))
+                   (push accumulator accumulators))
+                 accumulators)
+               (list (mgl-gd::accumulator batch-gd-optimizer)))
+           l2-upper-bound :callback callback))
         (before-update-hook batch-gd-optimizer))
   batch-gd-optimizer)

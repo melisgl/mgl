@@ -2114,6 +2114,19 @@ it. Putting it on feature biases consitutes a sparsity constraint
 on the features.</p></li>
 </ul>
 
+<p><a name='x-28MGL-GD-3AUSE-SEGMENT-DERIVATIVES-P-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>USE-SEGMENT-DERIVATIVES-P</strong> <em>GD-OPTIMIZER</em> <em>(:USE-SEGMENT-DERIVATIVES-P = NIL)</em></p>
+
+<p>Save memory if both the gradient source (the model
+being optimized) and the optimizer support this feature. It works
+like this: the accumulator into which the gradient source is asked
+to place the derivatives of a segment will be <a href="#x-28MGL-OPT-3ASEGMENT-DERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-OPT:SEGMENT-DERIVATIVES GENERIC-FUNCTION)"><code>SEGMENT-DERIVATIVES</code></a>
+of the segment. This allows the optimizer not to allocate an
+accumulator matrix into which the derivatives are summed.</p></li>
+</ul>
+
 <p><a name='x-28MGL-GD-3AAFTER-UPDATE-HOOK-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29'></a></p>
 
 <ul>
@@ -2728,6 +2741,17 @@ doesn't need to be a <code>MAT</code> object itself. For example, it may be a
 <li><p>[method] <strong>SEGMENT-WEIGHTS</strong> <em>(MAT MAT)</em></p>
 
 <p>When the segment is really a <code>MAT</code>, then just return it.</p></li>
+</ul>
+
+<p><a name='x-28MGL-OPT-3ASEGMENT-DERIVATIVES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>SEGMENT-DERIVATIVES</strong> <em>SEGMENT</em></p>
+
+<p>Return the derivatives matrix of <code>SEGMENT</code>. A segment
+doesn't need to be a <code>MAT</code> object itself. For example, it may be a
+<code>MGL-BM:CHUNK</code> of a [MGL-BM:BM] or a <code>MGL-BP:LUMP</code> of a
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>MGL-BP:BPN</code></a> whose DERIVATIVES slot holds the gradient.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29'></a></p>
