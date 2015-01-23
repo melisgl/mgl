@@ -417,44 +417,65 @@
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defclass ,name ,direct-superclasses ,direct-slots ,@options)))
 
-(defmacro defmaker (name)
+(defmacro defmaker (name &rest unkeyword-args)
   (destructuring-bind (name maker-name)
       (if (listp name) name (list name name))
     (let ((args (make-instance-args (find-class name))))
-      `(defun ,maker-name (&key ,@args)
+      `(defun ,maker-name (,@unkeyword-args
+                           &key ,@(remove-unkeyword-args args unkeyword-args))
          (apply #'make-instance ',name
-                (append ,@(mapcar (lambda (arg)
-                                    (let ((keyword (alexandria:make-keyword
-                                                    (first arg))))
-                                      (if (= (length arg) 3)
-                                          `(if ,(third arg)
-                                               (list ,keyword ,(first arg))
-                                               ())
-                                          `(list ,keyword ,(first arg)))))
-                                  args)))))))
+                (append ,@(mapcan
+                           (lambda (arg)
+                             (destructuring-bind (var initform
+                                                  &optional indicator) arg
+                               (declare (ignore initform))
+                               (let ((keyword (alexandria:make-keyword var)))
+                                 (cond ((find var unkeyword-args)
+                                        `((list ,keyword ,var)))
+                                       (indicator
+                                        `((if ,indicator
+                                              (list ,keyword ,var)
+                                              ())))
+                                       (t
+                                        `((list ,keyword ,var)))))))
+                           args)))))))
+
+(defun remove-unkeyword-args (args unkeyword-args)
+  (assert (every (lambda (unkeyword-arg)
+                   (find unkeyword-arg args :key #'first))
+                 unkeyword-args))
+  (remove-if (lambda (arg)
+               (destructuring-bind (arg initform &optional indicator) arg
+                 (cond ((find arg unkeyword-args)
+                        (assert indicator ()
+                                "Cannot unkeywordify argument ~S because ~
+                                it has an initform: ~S."
+                                arg initform)
+                        t)
+                       (t nil))))
+             args))
 
 ;;; Adapted from SWANK::EXTRA-KEYWORDS/SLOTS, it doesn't collect every
 ;;; initarg like SWANK::EXTRA-KEYWORDS/MAKE-INSTANCE does.
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun make-instance-args (class)
-    (closer-mop:ensure-finalized class)
-    (multiple-value-bind (slots allow-other-keys-p)
-        (if (closer-mop:class-finalized-p class)
-            (values (closer-mop:class-slots class) nil)
-            (values (closer-mop:class-direct-slots class) t))
-      (values
-       (mapcan (lambda (slot)
-                 (mapcar
-                  (lambda (initarg)
-                    (if (swank-mop:slot-definition-initfunction slot)
-                        (list (intern (symbol-name initarg))
-                              (swank-mop:slot-definition-initform slot))
-                        (list (intern (symbol-name initarg))
-                              nil
-                              (gensym (symbol-name initarg)))))
-                  (swank-mop:slot-definition-initargs slot)))
-               slots)
-       allow-other-keys-p))))
+(defun make-instance-args (class)
+  (closer-mop:ensure-finalized class)
+  (multiple-value-bind (slots allow-other-keys-p)
+      (if (closer-mop:class-finalized-p class)
+          (values (closer-mop:class-slots class) nil)
+          (values (closer-mop:class-direct-slots class) t))
+    (values
+     (mapcan (lambda (slot)
+               (mapcar
+                (lambda (initarg)
+                  (if (swank-mop:slot-definition-initfunction slot)
+                      (list (intern (symbol-name initarg))
+                            (swank-mop:slot-definition-initform slot))
+                      (list (intern (symbol-name initarg))
+                            nil
+                            (gensym (symbol-name initarg)))))
+                (swank-mop:slot-definition-initargs slot)))
+             slots)
+     allow-other-keys-p)))
 
 
 ;;;; Printing
