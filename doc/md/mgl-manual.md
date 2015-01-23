@@ -1656,8 +1656,9 @@ The function being minimized is often called the *cost* or the
 
 - [function] **MAKE-COST-MONITORS** *MODEL &KEY OPERATION-MODE ATTRIBUTES*
 
-    Return a list of [`MONITOR`][a22b] objects associated with one [`BASIC-COUNTER`][d3e3]
-    each. Implemented in terms of [`MAKE-COST-MONITORS*`][b256].
+    Return a list of [`MONITOR`][a22b] objects, each associated with one
+    [`BASIC-COUNTER`][d3e3] with attribute `:TYPE` "cost". Implemented in terms of
+    [`MAKE-COST-MONITORS*`][b256].
 
 <a name='x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29'></a>
 
@@ -2757,8 +2758,7 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
               (make-instance 'bp-learner
                              :bpn fnn
                              :monitors (make-cost-monitors
-                                        fnn :attributes `(:dataset "train"
-                                                          :type "cost")))
+                                        fnn :attributes `(:event "train")))
               ;; Training stops when the sampler runs out (after 10000
               ;; instances).
               :dataset (make-sampler 10000))))
@@ -2779,8 +2779,7 @@ read up on [Datasets][72e9], [Gradient Based Optimization][fe97] and come back.
   (log-padded
    (monitor-bpn-results (make-sampler 1000) (bpn learner)
                         (make-cost-monitors
-                         (bpn learner) :attributes `(:dataset "pred."
-                                                     :type "cost")))))
+                         (bpn learner) :attributes `(:event "pred.")))))
 
 #|
 
@@ -2976,8 +2975,7 @@ the concepts involved. Make sure you are comfortable with
               (make-instance 'bp-learner
                              :bpn rnn
                              :monitors (make-cost-monitors
-                                        rnn :attributes `(:dataset "train"
-                                                          :type "cost")))
+                                        rnn :attributes '(:event "train")))
               :dataset (make-sampler 30000))))
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -2996,8 +2994,7 @@ the concepts involved. Make sure you are comfortable with
   (log-padded
    (monitor-bpn-results (make-sampler 1000) (bpn learner)
                         (make-cost-monitors (bpn learner)
-                                            :attributes `(:dataset "pred."
-                                                          :type "cost")))))
+                                            :attributes '(:event "pred.")))))
 
 #|
 

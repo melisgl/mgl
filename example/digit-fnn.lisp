@@ -80,8 +80,7 @@
               (make-instance 'bp-learner
                              :bpn fnn
                              :monitors (make-cost-monitors
-                                        fnn :attributes `(:dataset "train"
-                                                          :type "cost")))
+                                        fnn :attributes `(:event "train")))
               ;; Training stops when the sampler runs out (after 10000
               ;; instances).
               :dataset (make-sampler 10000))))
@@ -102,8 +101,7 @@
   (log-padded
    (monitor-bpn-results (make-sampler 1000) (bpn learner)
                         (make-cost-monitors
-                         (bpn learner) :attributes `(:dataset "pred."
-                                                     :type "cost")))))
+                         (bpn learner) :attributes `(:event "pred.")))))
 
 #|
 

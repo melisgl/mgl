@@ -84,8 +84,7 @@
               (make-instance 'bp-learner
                              :bpn rnn
                              :monitors (make-cost-monitors
-                                        rnn :attributes `(:dataset "train"
-                                                          :type "cost")))
+                                        rnn :attributes '(:event "train")))
               :dataset (make-sampler 30000))))
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -104,8 +103,7 @@
   (log-padded
    (monitor-bpn-results (make-sampler 1000) (bpn learner)
                         (make-cost-monitors (bpn learner)
-                                            :attributes `(:dataset "pred."
-                                                          :type "cost")))))
+                                            :attributes '(:event "pred.")))))
 
 #|
 

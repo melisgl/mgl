@@ -1895,8 +1895,9 @@ instances.</p></li>
 <ul>
 <li><p>[function] <strong>MAKE-COST-MONITORS</strong> <em>MODEL &amp;KEY OPERATION-MODE ATTRIBUTES</em></p>
 
-<p>Return a list of <a href="#x-28MGL-CORE-3AMONITOR-20CLASS-29" title="(MGL-CORE:MONITOR CLASS)"><code>MONITOR</code></a> objects associated with one <a href="#x-28MGL-CORE-3ABASIC-COUNTER-20CLASS-29" title="(MGL-CORE:BASIC-COUNTER CLASS)"><code>BASIC-COUNTER</code></a>
-each. Implemented in terms of <a href="#x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29" title="(MGL-OPT:MAKE-COST-MONITORS* GENERIC-FUNCTION)"><code>MAKE-COST-MONITORS*</code></a>.</p></li>
+<p>Return a list of <a href="#x-28MGL-CORE-3AMONITOR-20CLASS-29" title="(MGL-CORE:MONITOR CLASS)"><code>MONITOR</code></a> objects, each associated with one
+<a href="#x-28MGL-CORE-3ABASIC-COUNTER-20CLASS-29" title="(MGL-CORE:BASIC-COUNTER CLASS)"><code>BASIC-COUNTER</code></a> with attribute <code>:TYPE</code> &quot;cost&quot;. Implemented in terms of
+<a href="#x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29" title="(MGL-OPT:MAKE-COST-MONITORS* GENERIC-FUNCTION)"><code>MAKE-COST-MONITORS*</code></a>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29'></a></p>
@@ -3162,8 +3163,7 @@ read up on <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" ti
 </span>              <span class="paren4">(<span class="code">make-instance 'bp-learner
                              <span class="keyword">:bpn</span> fnn
                              <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-cost-monitors
-                                        fnn <span class="keyword">:attributes</span> `<span class="paren6">(<span class="code"><span class="keyword">:dataset</span> <span class="string">"train"</span>
-                                                          <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span>
+                                        fnn <span class="keyword">:attributes</span> `<span class="paren6">(<span class="code"><span class="keyword">:event</span> <span class="string">"train"</span></span>)</span></span>)</span></span>)</span>
               <span class="comment">;; Training stops when the sampler runs out (after 10000
 </span>              <span class="comment">;; instances).
 </span>              <span class="keyword">:dataset</span> <span class="paren4">(<span class="code">make-sampler 10000</span>)</span></span>)</span></span>)</span></span>)</span>
@@ -3184,8 +3184,7 @@ read up on <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" ti
   <span class="paren2">(<span class="code">log-padded
    <span class="paren3">(<span class="code">monitor-bpn-results <span class="paren4">(<span class="code">make-sampler 1000</span>)</span> <span class="paren4">(<span class="code">bpn learner</span>)</span>
                         <span class="paren4">(<span class="code">make-cost-monitors
-                         <span class="paren5">(<span class="code">bpn learner</span>)</span> <span class="keyword">:attributes</span> `<span class="paren5">(<span class="code"><span class="keyword">:dataset</span> <span class="string">"pred."</span>
-                                                     <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+                         <span class="paren5">(<span class="code">bpn learner</span>)</span> <span class="keyword">:attributes</span> `<span class="paren5">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">#|
 
@@ -3379,8 +3378,7 @@ the concepts involved. Make sure you are comfortable with
               <span class="paren4">(<span class="code">make-instance 'bp-learner
                              <span class="keyword">:bpn</span> rnn
                              <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-cost-monitors
-                                        rnn <span class="keyword">:attributes</span> `<span class="paren6">(<span class="code"><span class="keyword">:dataset</span> <span class="string">"train"</span>
-                                                          <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span>
+                                        rnn <span class="keyword">:attributes</span> '<span class="paren6">(<span class="code"><span class="keyword">:event</span> <span class="string">"train"</span></span>)</span></span>)</span></span>)</span>
               <span class="keyword">:dataset</span> <span class="paren4">(<span class="code">make-sampler 30000</span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -3399,8 +3397,7 @@ the concepts involved. Make sure you are comfortable with
   <span class="paren2">(<span class="code">log-padded
    <span class="paren3">(<span class="code">monitor-bpn-results <span class="paren4">(<span class="code">make-sampler 1000</span>)</span> <span class="paren4">(<span class="code">bpn learner</span>)</span>
                         <span class="paren4">(<span class="code">make-cost-monitors <span class="paren5">(<span class="code">bpn learner</span>)</span>
-                                            <span class="keyword">:attributes</span> `<span class="paren5">(<span class="code"><span class="keyword">:dataset</span> <span class="string">"pred."</span>
-                                                          <span class="keyword">:type</span> <span class="string">"cost"</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+                                            <span class="keyword">:attributes</span> '<span class="paren5">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">#|
 

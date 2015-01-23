@@ -219,8 +219,9 @@
 ;;; per less clump in an FNN), or one (such as in an RNN) where the
 ;;; time steps make it difficult to go the other way easily.
 (defun make-cost-monitors (model &key operation-mode attributes)
-  "Return a list of MONITOR objects associated with one BASIC-COUNTER
-  each. Implemented in terms of MAKE-COST-MONITORS*."
+  "Return a list of MONITOR objects, each associated with one
+  BASIC-COUNTER with attribute :TYPE \"cost\". Implemented in terms of
+  MAKE-COST-MONITORS*."
   (make-cost-monitors* model operation-mode attributes))
 
 (defgeneric make-cost-monitors* (model operation-mode attributes)
@@ -238,6 +239,7 @@
                   'basic-counter
                   :prepend-attributes
                   (append attributes
+                          '(:type "cost")
                           (if (uninterned-symbol-p (name object))
                               ()
                               `(:component ,(name object)())))))))))
