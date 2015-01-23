@@ -1,13 +1,13 @@
 (in-package :mgl-example-gp)
 
-(defclass test-bpn-gp (parameterized-executor-cache-mixin bpn-gp)
+(defclass test-fnn-gp (parameterized-executor-cache-mixin fnn-gp)
   ())
 
-(defmethod make-executor-with-parameters (parameters (bpn-gp test-bpn-gp))
+(defmethod make-executor-with-parameters (parameters (fnn-gp test-fnn-gp))
   (destructuring-bind (n-x1 n-x2) parameters
-    (build-simple-bpn-gp n-x1 n-x2 :weights-from bpn-gp)))
+    (build-simple-fnn-gp n-x1 n-x2 :weights-from fnn-gp)))
 
-(defmethod set-input (samples (bpn test-bpn-gp))
+(defmethod set-input (samples (bpn test-fnn-gp))
   (let ((df (find-clump 'distance-field bpn))
         (selfp (find-clump 'selfp bpn)))
     (with-facets ((df* ((nodes df) 'backing-array :direction :output
@@ -47,7 +47,7 @@
                                  (incf dfi)
                                  (incf selfpi))))))))))))))
 
-(defclass test-bpn-gp-base-optimizer ()
+(defclass test-fnn-gp-base-optimizer ()
   ())
 
 (defun log-training-period (optimizer learner)
@@ -58,7 +58,7 @@
   (declare (ignore optimizer learner))
   100)
 
-(defun make-test-bpn-gp-monitors (&key attributes)
+(defun make-test-fnn-gp-monitors (&key attributes)
   (cons (make-instance
          'monitor
          :measurer (lambda (samples bpn)
@@ -102,7 +102,7 @@
   (log-cuda)
   (log-msg "---------------------------------------------------~%"))
 
-(defclass test-bpn-gp-gd-optimizer (test-bpn-gp-base-optimizer
+(defclass test-fnn-gp-gd-optimizer (test-fnn-gp-base-optimizer
                                     segmented-gd-optimizer)
   ())
 
@@ -110,11 +110,11 @@
   (let ((mat (segment-weights (find-clump name bpn))))
     (fill! value mat)))
 
-(defun build-simple-bpn-gp (n-x1 n-x2 &key weights-from)
+(defun build-simple-fnn-gp (n-x1 n-x2 &key weights-from)
   (with-weights-copied (weights-from)
     (let* ((n-cov (* n-x1 n-x2))
-           (bpn-gp
-             (build-fnn (:class 'test-bpn-gp
+           (fnn-gp
+             (build-fnn (:class 'test-fnn-gp
                          :initargs (list
                                     :mean-lump-name 'means
                                     :covariance-lump-name 'covariances))
@@ -157,15 +157,15 @@
                                        covariances-3)))
                (gp (->gp :means means :covariances covariances))
                (error (->error gp)))))
-      (setf (max-n-stripes bpn-gp) 10)
+      (setf (max-n-stripes fnn-gp) 10)
       (unless weights-from
-        (fill-lump 'means-bias bpn-gp 0)
-        (fill-lump 'signal-variance bpn-gp 0.1)
-        (fill-lump 'length-scale bpn-gp 0.1)
-        (fill-lump 'roughness bpn-gp 2)
-        (fill-lump 'noise-variance bpn-gp 0.01)
-        (fill-lump 'bias-variance bpn-gp 0.01))
-      bpn-gp)))
+        (fill-lump 'means-bias fnn-gp 0)
+        (fill-lump 'signal-variance fnn-gp 0.1)
+        (fill-lump 'length-scale fnn-gp 0.1)
+        (fill-lump 'roughness fnn-gp 2)
+        (fill-lump 'noise-variance fnn-gp 0.01)
+        (fill-lump 'bias-variance fnn-gp 0.01))
+      fnn-gp)))
 
 (defun random-in-test-domain ()
   (random 1d0))
@@ -180,8 +180,8 @@
     (values (array-to-mat inputs :ctype flt-ctype)
             (array-to-mat outputs :ctype flt-ctype))))
 
-(defun test-simple-bpn-gp ()
-  (let* ((bpn-gp (build-simple-bpn-gp 1 1))
+(defun test-simple-fnn-gp ()
+  (let* ((fnn-gp (build-simple-fnn-gp 1 1))
          (sampler (make-instance
                    'function-sampler
                    :max-n-samples 50000
@@ -190,7 +190,7 @@
                                     (make-input-output 5)
                                   (list :x1 inputs :x2 inputs :y1 outputs)))))
          (optimizer (make-instance
-                     'test-bpn-gp-gd-optimizer
+                     'test-fnn-gp-gd-optimizer
                      :segmenter
                      (lambda (lump)
                        (let ((learning-rate
@@ -221,8 +221,8 @@
                   :last-eval 0)))
     (minimize optimizer
               (make-instance 'bp-learner
-                             :bpn bpn-gp
-                             :monitors (make-test-bpn-gp-monitors
+                             :bpn fnn-gp
+                             :monitors (make-test-fnn-gp-monitors
                                         :attributes '(:event "train"
                                                       :dataset "train+")))
               :dataset sampler)))
@@ -232,7 +232,7 @@
 ;;; Train the covariance function with backprop.
 (with-cuda* ()
   (let ((*random-state* (sb-ext:seed-random-state 983274)))
-    (test-simple-bpn-gp)))
+    (test-simple-fnn-gp)))
 
 ;;; Plotting.
 (let* ((prior (make-instance

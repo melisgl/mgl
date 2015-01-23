@@ -401,7 +401,7 @@
    #:posterior-gp
    #:update-gp
    ;; BPN-GP
-   #:bpn-gp
+   #:fnn-gp
    #:mean-lump-name
    #:covariance-lump-name
    #:->gp)
