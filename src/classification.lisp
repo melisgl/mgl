@@ -111,7 +111,7 @@
         :counter (make-instance
                   'classification-accuracy-counter
                   :prepend-attributes `(,@attributes
-                                        `(:component ,(name object)))))))))
+                                        :component ,(name object))))))))
 
 (defgeneric make-cross-entropy-monitors*
     (model operation-mode label-index-distribution-fn attributes)
