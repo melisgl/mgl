@@ -192,7 +192,7 @@
   "Return a function that returns elements of VECTOR in random order
   without end. When there are no more elements, start over with a
   different random order."
-  (let* ((vector (funcall reorder (copy-seq (coerce seq 'vector))))
+  (let* ((vector (copy-seq (coerce seq 'vector)))
          (l (length vector))
          (n 0))
     (lambda ()
