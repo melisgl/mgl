@@ -1795,11 +1795,12 @@
 (defclass-now ->embedding (lump)
   ((weights
     :initarg :weights :reader weights
-    :documentation "A weight lump whose rows indexed by ROWS are
-    copied to the output of this lump.")
-   (rows
-    :initarg :rows :accessor rows
-    :documentation "A sequence of row indices."))
+    :documentation "A weight lump whose rows indexed by
+    INPUT-ROW-INDICES are copied to the output of this lump.")
+   (input-row-indices
+    :initarg :input-row-indices :accessor input-row-indices
+    :documentation "A sequence of batch size length of row indices. To
+    be set in SET-INPUT."))
   (:documentation "If the input is one hot encoded and it's only
   multiplied with a matrix, then it may be more efficient in execution
   and in memory usage to only store the hot index and copy the
@@ -1812,7 +1813,7 @@
 
 (defmethod forward ((lump ->embedding))
   (let* ((weights (nodes (weights lump)))
-         (rows (rows lump))
+         (input-row-indices (input-row-indices lump))
          (nodes (nodes lump)))
     (let ((stripe 0))
       (map nil (lambda (row)
@@ -1824,11 +1825,11 @@
                      (with-shape-and-displacement (nodes)
                        (fill! 0 (reshape-to-row-matrix! nodes stripe))))
                  (incf stripe))
-           rows))))
+           input-row-indices))))
 
 (defmethod backward ((lump ->embedding))
   (let* ((wd (derivatives (weights lump)))
-         (rows (rows lump))
+         (input-row-indices (input-row-indices lump))
          (ld (derivatives lump)))
     (let ((stripe 0))
       (map nil (lambda (row)
@@ -1838,7 +1839,7 @@
                        (axpy! 1 (reshape-to-row-matrix! ld stripe)
                               (reshape-to-row-matrix! wd row)))))
                  (incf stripe))
-           rows))))
+           input-row-indices))))
 
 
 (defclass-now ->sum-squared-error (lump)

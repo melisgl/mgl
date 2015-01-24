@@ -216,6 +216,7 @@
    #:->rough-exponential
    #:->ref
    #:->embedding
+   #:input-row-indices
    #:->periodic
    #:->sum-squared-error
    #:->squared-error
