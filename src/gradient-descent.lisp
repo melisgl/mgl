@@ -22,7 +22,8 @@
   (@mgl-gd-batch-gd-optimizer section)
   (@mgl-gd-segmented-gd-optimizer section)
   (@mgl-gd-per-weight-optimization section)
-  (@mgl-gd-adam-optimizer section))
+  (@mgl-gd-adam-optimizer section)
+  (@mgl-gd-utilities section))
 
 (defsection @mgl-gd-batch-gd-optimizer (:title "Batch GD Optimizer")
   (batch-gd-optimizer class)
@@ -765,3 +766,40 @@
       (set (aref weight-deltas i) (/ (* step-size (aref mean-estimates i))
                                      (+ (sqrt (aref variance-estimates i))
                                         variance-adjustment))))))
+
+
+(defsection @mgl-gd-utilities (:title "Utilities")
+  (clip-gradients function)
+  (arrange-for-clipping-gradients function))
+
+;;; FIXDOC
+(defun clip-gradients (mats l2-upper-bound &key callback)
+  (let ((sum 0))
+    (map nil (lambda (mat)
+               (incf sum (expt (nrm2 mat) 2)))
+         mats)
+    (let ((norm (sqrt sum)))
+      (when (< l2-upper-bound norm)
+        (let ((scale (/ l2-upper-bound norm)))
+          (when callback
+            (funcall callback scale))
+          (map nil (lambda (mat)
+                     (scal! scale mat))
+               mats)
+          scale)))))
+
+;;; FIXDOC
+(defun arrange-for-clipping-gradients (batch-gd-optimizer l2-upper-bound
+                                       &key callback)
+  (push (lambda ()
+          (clip-gradients
+           (if (use-segment-derivatives-p batch-gd-optimizer)
+               (let ((accumulators ()))
+                 (do-gradient-sink ((segment accumulator) batch-gd-optimizer)
+                   (declare (ignore segment))
+                   (push accumulator accumulators))
+                 accumulators)
+               (list (mgl-gd::accumulator batch-gd-optimizer)))
+           l2-upper-bound :callback callback))
+        (before-update-hook batch-gd-optimizer))
+  batch-gd-optimizer)

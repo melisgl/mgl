@@ -3,7 +3,7 @@
   conflicts between other packages.")
   (:use :common-lisp :mgl-pax)
   (:export #:name #:name= #:default-value #:cost #:size #:nodes #:group-size
-           #:target #:fn))
+           #:target #:fn #:weights))
 
 (cl:defpackage #:mgl-util
   (:use #:common-lisp #:mgl-mat #:mgl-common)
@@ -146,103 +146,11 @@
         #:mgl-opt))
 
 (mgl-pax:define-package #:mgl-bp
-    (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
-          #:mgl-common #:mgl-util
-          #:mgl-dataset #:mgl-core
-          #:mgl-opt #:mgl-gd #:mgl-cg)
-  (:export
-   #:lump
-   #:deflump
-   #:name
-   #:size
-   #:default-size
-   #:lump-size
-   #:lump-node-array
-   #:->input
-   #:->weight
-   #:->constant
-   #:default-value
-   #:->normalized
-   #:group-size
-   #:->activation
-   #:->mm
-   #:transpose-weights-p
-   #:->activation
-   #:->error
-   #:importance
-   #:cost
-   #:forward
-   #:backward
-   ;; BPN
-   #:bpn
-   #:nodes
-   #:derivatives
-   #:clump
-   #:find-clump
-   #:add-clump
-   #:remove-clump
-   #:with-weights-copied
-   #:clumps
-   #:fnn
-   #:build-fnn
-   #:forward-bpn
-   #:backward-bpn
-   #:bp-learner
-   #:dropout
-   ;; Node types
-   #:define-node-type
-   #:node
-   #:add-derivative
-   #:->rep
-   #:->stretch
-   #:->+
-   #:->*
-   #:->sum
-   #:->sigmoid
-   #:->tanh
-   #:->scaled-tanh
-   #:->rectified
-   #:->identity
-   #:derivative-limit
-   #:->split-sign
-   #:noisyp
-   #:->dropout
-   #:->multiply-with-gaussian
-   #:->sample-binary
-   #:->softplus
-   #:->exp
-   #:->abs
-   #:->sin
-   #:->rough-exponential
-   #:->ref
-   #:->embedding
-   #:input-row-indices
-   #:->periodic
-   #:->sum-squared-error
-   #:->squared-error
-   #:->max
-   #:->max-channel
-   #:->min
-   #:->softmax
-   #:->softmax-xe-loss
-   #:softmax
-   #:target
-   #:ensure-softmax-target-matrix
-   ;; RNN
-   #:rnn
-   #:lag
-   #:time-step
-   #:build-rnn
-   #:->lstm
-   #:->seq-barrier
-   #:seq-lengths
-   ;; Utilities
-   #:monitor-bpn-results
-   #:renormalize-activations
-   #:arrange-for-renormalizing-activations
-   #:clip-gradients
-   #:arrange-for-clipping-gradients)
-  (:documentation "Backpropagation."))
+  (:documentation "See MGL-BP:@MGL-BP.")
+  (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
+        #:mgl-common #:mgl-util
+        #:mgl-dataset #:mgl-core
+        #:mgl-opt #:mgl-gd #:mgl-cg))
 
 (cl:defpackage #:mgl-bm
   (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
@@ -405,7 +313,12 @@
    #:fnn-gp
    #:mean-lump-name
    #:covariance-lump-name
-   #:->gp)
+   #:->gp
+   #:->ref
+   #:->rep
+   #:->stretch
+   #:->rough-exponential
+   #:->periodic)
   (:export
    #:gp-confidences-as-plot-data
    #:gp-samples-as-plot-data)

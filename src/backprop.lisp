@@ -3,37 +3,57 @@
 (defsection @mgl-bp (:title "Backpropagation Neural Networks")
   (@mgl-bp-overview section)
   (@mgl-bp-extension-api section)
-  (@mgl-bpn section))
+  (@mgl-bpn section)
+  (@mgl-bp-lumps section)
+  (@mgl-bp-utilities section))
 
 
 ;;;; Components / Generic backprop
 
 (defsection @mgl-bp-overview (:title "Backprop Overview")
-  "Backpropagation Neural Networks are just functions with typically
-  lots of parameters called weights. FIXDOC: LOSS FUNCTION, MINIMIZE,
-  LAYERS.
+  "Backpropagation Neural Networks are just functions with lots of
+  parameters called _weights_ and a layered structure when presented
+  as a [computational
+  graph](http://en.wikipedia.org/wiki/Automatic_differentiation). The
+  network is trained to MINIMIZE some kind of _loss function_ whose
+  value the network computes.
 
-  In this implementation, a BPN is assembled from several
-  [LUMP][]s (roughly corresponding to layers). Both feed-forward and
+  In this implementation, a [BPN][class] is assembled from several
+  `LUMP`s (roughly corresponding to layers). Both feed-forward and
   recurrent neural nets are supported (FNN and RNN, respectively).
-  BPNs can contain not only LUMPs but other BPNs, too."
+  `BPN`s can contain not only `LUMP`s but other `BPN`s, too. As we
+  see, networks are composite objects and the abstract base class for
+  composite and simple parts is called CLUMP."
   (clump class)
-  (nodes generic-function)
-  "FIXDOC: set-input")
+  "At this point, you may want to jump ahead to get a feel for how
+  things work by reading the @MGL-FNN-TUTORIAL.")
 
 ;;; Everything is defined with DEFCLASS-NOW because DEFMAKER needs the
 ;;; class to be around at macro expansion time.
 (defclass-now clump ()
   ((name :initform (gensym) :initarg :name :reader name))
-  (:documentation "A CLUMP is a LUMP or BPN. It represents a
-  differentiable function. Arguments come from other clumps wired
-  permenantly together. This wiring of CLUMPs is how one builds
-  feed-forward nets (FNN) or recurrent neural networks (RNN) that are
-  CLUMPs themselves so one can build nets in a hiearchical style if
-  desired. Non-composite CLUMPs are called LUMP (note the loss of `C`
-  that stands for composite). The various LUMP subtypes correspond to
-  different layer types (sigmoid, dropout, rectified linear, tanh,
-  etc)."))
+  (:documentation "A CLUMP is a LUMP or a [BPN][class]. It represents
+  a differentiable function. Arguments of clumps are given during
+  instantiation. Some arguments are clumps themselves so they get
+  permenantly wired together like this:
+
+  ```commonlisp
+  (->v*m (->input :size 10 :name 'input)
+         (->weight :dimensions '(10 20) :name 'weight)
+         :name 'activation)
+  ```
+
+  The above creates three clumps: the vector-matrix multiplication
+  clumps called `ACTIVATION` which has a reference to its operands:
+  INPUT and WEIGHT. Note that the example just defines a function, no
+  actual computation has taken place, yet.
+
+  This wiring of `CLUMP`s is how one builds feed-forward nets (FNN) or
+  recurrent neural networks (RNN) that are `CLUMP`s themselves so one
+  can build nets in a hiearchical style if desired. Non-composite
+  `CLUMP`s are called LUMP (note the loss of `C` that stands for
+  composite). The various LUMP subtypes correspond to different layer
+  types (->SIGMOID, ->DROPOUT, ->RELU, ->TANH, etc)."))
 
 (defvar *bpn-being-built* nil)
 
@@ -45,31 +65,28 @@
       ;; If we aren't building a bpn, let's ensure that the matrices
       ;; are allocated.
       (setf (max-n-stripes clump) (max-n-stripes clump))))
-
-;;;; FIXME: make these work in fnn and rnn so that they can be used as
-;;;; clumps in fnns.
-
-(defgeneric nodes (clump)
-  (:documentation "Return the MAT object representing the state of
-  CLUMP (that is, the result computed by the most recent FORWARD). For
-  ->INPUT lumps, this is where input values are placed. See FIXDOC."))
 
 
-(defsection @mgl-bp-extension-api (:title "Backprop Extension API")
+(defsection @mgl-bp-extension-api (:title "Clump API")
+  "These are mostly for extension purposes. About the only thing
+  needed from here for normal operation is NODES when clamping inputs
+  or extracting predictions."
   (stripedp generic-function)
+  (nodes generic-function)
   (derivatives generic-function)
   (forward generic-function)
-  (backward generic-function))
+  (backward generic-function)
+  "In addition to the above clumps also have to support SIZE,
+  N-STRIPES, MAX-N-STRIPES (and the SETF methods of the latter two).")
 
 (defgeneric stripedp (clump)
   (:documentation "For efficiency, forward and backprop phases do
   their stuff in batch mode: passing a number of instances through the
-  network at the same time. Thus clumps must be able to store values
-  of and gradients for each of these instances. However, some clumps
-  produce the same result for each instance in a batch. These clumps
-  are the weights, the parameters of the network. STRIPEDP returns
-  true iff CLUMP does not represent weights (i.e. it's not a
-  ->WEIGHT).
+  network in batches. Thus clumps must be able to store values of and
+  gradients for each of these instances. However, some clumps produce
+  the same result for each instance in a batch. These clumps are the
+  weights, the parameters of the network. STRIPEDP returns true iff
+  CLUMP does not represent weights (i.e. it's not a ->WEIGHT).
 
   For striped clumps, their NODES and DERIVATIVES are MAT objects with
   a leading dimension (number of rows in the 2d case) equal to the
@@ -77,6 +94,23 @@
   restriction on their shape apart from what their usage dictates.")
   (:method ((clump clump))
     t))
+
+(defgeneric nodes (clump)
+  (:documentation "Return the MAT object representing the state of
+  CLUMP (that is, the result computed by the most recent FORWARD). For
+  ->INPUT lumps, this is where input values shall be placed (see
+  SET-INPUT).
+
+  The first dimension of the returned matrix is equal to the number of
+  stripes. Currently, the matrix is always two dimensional but
+  restriction may go away in the future."))
+
+(defgeneric derivatives (clump)
+  (:documentation "Return the MAT object representing the partial
+  derivatives of the function CLUMP computes. The returned partial
+  derivatives were accumulated by previous BACKWARD calls.
+
+  This matrix is shaped like the matrix returned by NODES."))
 
 (defgeneric forward (clump)
   (:documentation "Compute the values of the function represented by
@@ -107,20 +141,17 @@
   `dL(x2)/dx2` to DERIVATIVES of `X`. Now, `dL(x1)/dx1 = dL(x1)/df *
   df(x1)/dx1` and the first term is what we have in DERIVATIVES of the
   sigmoid so it only needs to calculate the second term."))
-
-(defgeneric derivatives (clump)
-  (:documentation "Return the MAT object representing the partial
-  derivatives of the function CLUMP computes. The returned partial
-  derivatives were accumulated by previous BACKWARD calls."))
 
 
 (defsection @mgl-bpn (:title "BPNs")
   (bpn class)
-  (clumps generic-function)
+  (n-stripes (reader bpn))
+  (max-n-stripes (reader bpn))
+  (clumps (reader bpn))
   (find-clump function)
   (add-clump function)
-  (->clump function)
-  ;; set-input, forward, backward, {read,write}-weights, COST?
+  (@mgl-bp-training section)
+  (@mgl-bp-monitoring section)
   (@mgl-fnn section)
   (@mgl-rnn section))
 
@@ -129,13 +160,26 @@
     :initform (make-array 0 :element-type 'clump :adjustable t :fill-pointer t)
     :initarg :clumps
     :type (array clump (*)) :reader clumps
-    :documentation "Clumps in reverse order")
+    :documentation "A topological sorted adjustable array with a fill
+    pointer that holds the clumps that make up the network. Clumps are
+    added to it by ADD-CLUMP or, more often, automatically when within
+    a BUILD-FNN or BUILD-RNN. Rarely needed, FIND-CLUMP takes care of
+    most uses.")
    (n-stripes
-    :initform 1 :type index :initarg :n-stripes
-    :reader n-stripes)
+    :initform 1 :type index :initarg :n-stripes :reader n-stripes
+    :documentation "The current number of instances the network has.
+    This is automatically set to the number of instances passed to
+    SET-INPUT, so it rarely has to be manipulated directly although it
+    can be set. When set N-STRIPES of all CLUMPS get set to the same
+    value.")
    (max-n-stripes
     :initform nil :type index :initarg :max-n-stripes
-    :reader max-n-stripes)))
+    :reader max-n-stripes
+    :documentation "The maximum number of instances the network can
+    operate on in parallel. Within BUILD-FNN or BUILD-RNN, it defaults
+    to MAX-N-STRIPES of that parent network, else it defaults to 1.
+    When set MAX-N-STRIPES of all CLUMPS get set to the same value."))
+  (:documentation "Abstract base class for FNN and RNN."))
 
 (defmethod initialize-instance :after ((bpn bpn) &key &allow-other-keys)
   (setf (max-n-stripes bpn)
@@ -150,7 +194,7 @@
 
 (defmethod print-object ((bpn bpn) stream)
   (pprint-logical-block (stream ())
-    (print-unreadable-object (bpn stream :type t :identity t)
+    (print-unreadable-object (bpn stream :type t)
       (unless (zerop (length (clumps bpn)))
         (format stream "~@[~S ~]~S ~S/~S ~:_~S ~S"
                 (if (uninterned-symbol-p (name bpn))
@@ -174,6 +218,9 @@
         do (setf (max-n-stripes clump) max-n-stripes)))
 
 (defun find-clump (name bpn &key (errorp t))
+  "Find the clump with NAME among CLUMPS of BPN. As always, names are
+  compared with EQUAL. If not found, then return NIL or signal and
+  error depending on ERRORP."
   (or (find name (clumps bpn) :key #'name :test #'name=)
       (if errorp
           (error "Cannot find clump ~S." name)
@@ -193,23 +240,15 @@
   (call-next-method))
 
 (defun add-clump (clump bpn)
-  "Add CLUMP to BPN. MAX-N-STRIPES of CLUMP gets set to equal that of
-  the previous last, non-weight clump of BPN."
+  "Add CLUMP to BPN. MAX-N-STRIPES of CLUMP gets set to that of BPN.
+  It is an error to add a clump with a name already used by one of the
+  CLUMPS of BPN."
   (when (find-clump (name clump) bpn :errorp nil)
     (error "Cannot add ~S: a clump of same name has already been ~
            added to this network." clump))
   (setf (max-n-stripes clump) (max-n-stripes bpn))
   (vector-push-extend clump (slot-value bpn 'clumps) 1)
   clump)
-
-(defun remove-clump (clump bpn)
-  (setf (slot-value bpn 'clumps) (delete clump (clumps bpn)))
-  clump)
-
-(defun ->clump (bpn clump-spec)
-  (if (typep clump-spec 'clump)
-      clump-spec
-      (find-clump clump-spec bpn)))
 
 (defgeneric forward-bpn (bpn &key from-clump to-clump end-clump)
   (:documentation "Propagate the values from the already clamped
@@ -237,9 +276,7 @@
 
 (defmethod forward-bpn ((bpn bpn) &key from-clump to-clump end-clump)
   (declare (optimize (debug 3)))
-  (let ((from-clump (if from-clump (->clump bpn from-clump) nil))
-        (to-clump (if to-clump (->clump bpn to-clump) nil))
-        (seen-from-clump-p (not from-clump)))
+  (let ((seen-from-clump-p (not from-clump)))
     (loop for clump across (clumps bpn)
           until (eq clump end-clump)
           do (when (eq clump from-clump) (setq seen-from-clump-p t))
@@ -247,8 +284,7 @@
           until (eq clump to-clump))))
 
 (defmethod backward-bpn ((bpn bpn) &key last-clump)
-  (let* ((clumps (clumps bpn))
-         (last-clump (if last-clump (->clump bpn last-clump) nil)))
+  (let ((clumps (clumps bpn)))
     (loop for i downfrom (1- (length clumps)) downto 0
           for clump = (aref clumps i)
           until (and last-clump (eq last-clump clump))
@@ -318,7 +354,7 @@
         (features (->input :size n-features))
         (biases (->weight :size n-features))
         (weights (->weight :size (* n-hiddens n-features)))
-        (activations0 (->mm :weights weights :x (clump 'features)))
+        (activations0 (->v*m :weights weights :x (clump 'features)))
         (activations (->+ :args (list biases activations0)))
         (output (->sigmoid :x activations)))"
   (alexandria:with-gensyms (%clump)
@@ -370,7 +406,7 @@
   "Hopefully this example from `example/sum-sign-fnn.lisp` illustrates
   the concepts involved. Make sure you are comfortable with
   @MGL-FNN-TUTORIAL before reading this."
-  (digit-fnn.lisp
+  (sum-sig-rnn.lisp
    (include #.(asdf:system-relative-pathname :mgl "example/sum-sign-rnn.lisp")
             :header-nl "```commonlisp" :footer-nl "```")))
 
@@ -422,7 +458,7 @@
   length. At each time step, the next unprocessed elements of these
   sequences are set as input until all input sequences in the batch
   run out. To be able to perform backpropagation, all intermediate
-  LUMPs must be kept around, so the recursive connections are
+  `LUMP`s must be kept around, so the recursive connections are
   transformed out by
   [unfolding](http://en.wikipedia.org/wiki/Backpropagation_through_time)
   the network. Just how many lumps this means depends on the length of
@@ -621,12 +657,33 @@
     (values sum sum-importances)))
 
 
-;;;; Train
+(defsection @mgl-bp-training (:title "Training")
+  "`BPN`s are trained to minimize the loss function they compute.
+  Before a BPN is passed to MINIMIZE (as its `GRADIENT-SOURCE`
+  argument), it must be wrapped in a BP-LEARNER object. BP-LEARNER has
+  [MONITORS][(accessor bp-learner)] slot which is used for example by
+  [RESET-OPTIMIZATION-MONITORS][(method () (iterative-optimizer
+  t))].
+
+  Without the bells an whistles, the basic shape of training is this:
+
+  ```commonlisp
+  (minimize optimizer (make-instance 'bp-learner :bpn bpn)
+            :dataset dataset)
+  ```"
+  (bp-learner class)
+  (bpn (reader bp-learner))
+  (monitors (reader bp-learner)))
 
 (defclass bp-learner ()
-  ((bpn :initarg :bpn :reader bpn)
+  ((bpn
+    :initarg :bpn :reader bpn
+    :documentation "The BPN for which this BP-LEARNER provides the
+    gradients.")
    (first-trained-clump :reader first-trained-clump)
-   (monitors :initform () :initarg :monitors :accessor monitors)))
+   (monitors
+    :initform () :initarg :monitors :accessor monitors
+    :documentation "A list of `MONITOR`s.")))
 
 (define-descriptions (learner bp-learner :inheritp t)
   bpn first-trained-clump)
@@ -705,9 +762,19 @@
     cost))
 
 
-;;;; Utilities
+(defsection @mgl-bp-monitoring (:title "Monitoring")
+  (monitor-bpn-results function)
+  #+nil
+  (make-classification-accuracy-monitors* (method () (bpn t t t)))
+  #+nil
+  (make-cross-entropy-monitors* (method () (bpn t t t))))
 
 (defun monitor-bpn-results (dataset bpn monitors)
+  "For every batch (of size MAX-N-STRIPES of BPN) of instances in
+  DATASET, set the batch as the next input with SET-INPUT,perform a
+  FORWARD pass and apply MONITORS to the BPN (with APPLY-MONITORS).
+  Finally, return the counters of MONITORS. This is built on top of
+  MONITOR-MODEL-RESULTS."
   (monitor-model-results (lambda (batch)
                            ;; FIXME: DO-EXECUTORS belongs elsewhere.
                            (do-executors (batch bpn)

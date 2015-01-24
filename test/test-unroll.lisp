@@ -1,20 +1,21 @@
 (in-package :mgl-test)
 
 (defun test-unroll-dbn ()
-  (let ((rbm (make-instance 'rbm
-                            :visible-chunks (list
+  (let* ((rbm (make-instance 'rbm
+                             :visible-chunks (list
+                                              (make-instance 'constant-chunk
+                                                             :name 'constant1)
+                                              (make-instance 'gaussian-chunk
+                                                             :name 'inputs
+                                                             :size 10))
+                             :hidden-chunks (list
                                              (make-instance 'constant-chunk
-                                                            :name 'constant1)
-                                             (make-instance 'gaussian-chunk
-                                                            :name 'inputs
-                                                            :size 10))
-                            :hidden-chunks (list
-                                            (make-instance 'constant-chunk
-                                                           :name 'constant2)
-                                            (make-instance 'sigmoid-chunk
-                                                           :name 'features
-                                                           :size 2)))))
-    (unroll-dbn (make-instance 'dbn :rbms (list rbm)))))
+                                                            :name 'constant2)
+                                             (make-instance 'sigmoid-chunk
+                                                            :name 'features
+                                                            :size 2))))
+         (dbn (make-instance 'dbn :rbms (list rbm))))
+    (multiple-value-call #'create-from-unrolled dbn (unroll-dbn dbn))))
 
 (defun test-unroll-dbm ()
   (let ((dbm (make-instance 'dbm
@@ -34,7 +35,12 @@
                                                           :size 1)
                                            (make-instance 'constant-chunk
                                                           :name 'constant2))))))
-    (unroll-dbm dbm)))
+    (multiple-value-call #'create-from-unrolled dbm (unroll-dbm dbm))))
+
+(defun create-from-unrolled (bm defs inits)
+  (let ((bpn (eval `(build-fnn ()
+                      ,@defs))))
+    (initialize-fnn-from-bm bpn bm inits)))
 
 (defun test-unroll ()
   (do-cuda ()

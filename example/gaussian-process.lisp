@@ -156,7 +156,7 @@
                                        covariances-2
                                        covariances-3)))
                (gp (->gp :means means :covariances covariances))
-               (error (->error gp)))))
+               (error (->loss gp)))))
       (setf (max-n-stripes fnn-gp) 10)
       (unless weights-from
         (fill-lump 'means-bias fnn-gp 0)

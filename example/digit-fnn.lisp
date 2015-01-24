@@ -20,17 +20,20 @@
   (build-fnn (:class 'digit-fnn)
     (input (->input :size *n-inputs*))
     (hidden-activation (->activation input :size n-hiddens))
-    (hidden (->rectified hidden-activation))
+    (hidden (->relu hidden-activation))
     (output-activation (->activation hidden :size *n-outputs*))
     (output (->softmax-xe-loss output-activation))))
 
 ;;; This method is called with batches of 'instances' (input digits in
-;;; this case). Its job is to encode the inputs by populating rows of
-;;; the NODES matrix of the INPUTS clump. Each input is encoded as a
-;;; row of zeros with a single 1 at index determined by the input
-;;; digit. This is called one-hot encoding. The TARGET could be
-;;; encoded the same way, but instead we use the sparse option
-;;; supported by TARGET of ->SOFTMAX-XE-LOSS.
+;;; this case) by MINIMIZE and also by MONITOR-BPN-RESULTS before
+;;; performing a forward pass (i.e. computing the value of the
+;;; function represented by the network). Its job is to encode the
+;;; inputs by populating rows of the NODES matrix of the INPUT clump.
+;;;
+;;; Each input is encoded as a row of zeros with a single 1 at index
+;;; determined by the input digit. This is called one-hot encoding.
+;;; The TARGET could be encoded the same way, but instead we use the
+;;; sparse option supported by TARGET of ->SOFTMAX-XE-LOSS.
 (defmethod set-input (digits (fnn digit-fnn))
   (let* ((input (nodes (find-clump 'input fnn)))
          (output-lump (find-clump 'output fnn)))
@@ -107,41 +110,41 @@
 
 ;;; Transcript follows:
 (train-digit-fnn)
-.. 2015-01-21 14:40:04: training at n-instances: 0
-.. 2015-01-21 14:40:04: train cost: 0.000e+0 (0)
-.. #<SEGMENTED-GD-OPTIMIZER {10072AD763}>
+.. 2015-01-25 21:47:57: training at n-instances: 0
+.. 2015-01-25 21:47:57: train cost: 0.000e+0 (0)
+.. #<SEGMENTED-GD-OPTIMIZER {101AF31013}>
 ..  SEGMENTED-GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
 ..                    #<SEGMENT-SET
-..                      (#<->WEIGHT # :SIZE 15 1/1 :norm 0.03800>
-..                       #<->WEIGHT # :SIZE 3 1/1 :norm 0.03002>
-..                       #<->WEIGHT # :SIZE 50 1/1 :norm 0.07295>
-..                       #<->WEIGHT # :SIZE 5 1/1 :norm 0.02703>)
-..                      {10072BFC23}>
-..                    {10072AD683}>)
+..                      (#<->WEIGHT # :SIZE 15 1/1 :norm 0.04560>
+..                       #<->WEIGHT # :SIZE 3 1/1 :norm 0.00943>
+..                       #<->WEIGHT # :SIZE 50 1/1 :norm 0.07021>
+..                       #<->WEIGHT # :SIZE 5 1/1 :norm 0.01594>)
+..                      {101B2178D3}>
+..                    {101AE7B063}>)
 ..    SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                  15 1/1 :norm 0.03800>
+..                  15 1/1 :norm 0.04560>
 ..                #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                  3 1/1 :norm 0.03002>
+..                  3 1/1 :norm 0.00943>
 ..                #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                  50 1/1 :norm 0.07295>
+..                  50 1/1 :norm 0.07021>
 ..                #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                  5 1/1 :norm 0.02703>)
+..                  5 1/1 :norm 0.01594>)
 ..  
-.. #<BATCH-GD-OPTIMIZER {10072AD683}>
+.. #<BATCH-GD-OPTIMIZER {101AE7B063}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
 ..                    (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                       15 1/1 :norm 0.03800>
+..                       15 1/1 :norm 0.04560>
 ..                     #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                       3 1/1 :norm 0.03002>
+..                       3 1/1 :norm 0.00943>
 ..                     #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                       50 1/1 :norm 0.07295>
+..                       50 1/1 :norm 0.07021>
 ..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                       5 1/1 :norm 0.02703>)
-..                    {10072BFC23}>
+..                       5 1/1 :norm 0.01594>)
+..                    {101B2178D3}>
 ..    LEARNING-RATE = 1.00000e+0
 ..    MOMENTUM = 9.00000e-1
 ..    MOMENTUM-TYPE = :NORMAL
@@ -152,45 +155,45 @@
 ..  
 ..  BATCH-GD-OPTIMIZER description:
 ..    N-BEFORE-UPATE-HOOK = 0
-..  #<DIGIT-FNN {10072AD813}>
+..  #<DIGIT-FNN {101AF33DC3}>
 ..   BPN description:
 ..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :norm 0.00000>
 ..                #<->ACTIVATION
 ..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
-..                  :CLUMPS 4 {10072AE683}>
-..                #<->RECTIFIED HIDDEN :SIZE 5 1/50 :norm 0.00000>
+..                  :CLUMPS 4>
+..                #<->RELU HIDDEN :SIZE 5 1/50 :norm 0.00000>
 ..                #<->ACTIVATION
 ..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
-..                  :CLUMPS 4 {10072B92D3}>
+..                  :CLUMPS 4>
 ..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :norm 0.00000>)
 ..     N-STRIPES = 1
 ..     MAX-N-STRIPES = 50
-..   2015-01-21 14:40:04: pred. cost: 1.097d+0 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 1000
-.. 2015-01-21 14:40:04: train cost: 1.084d+0 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 2000
-.. 2015-01-21 14:40:04: train cost: 6.683d-1 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 3000
-.. 2015-01-21 14:40:04: train cost: 5.555d-3 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 4000
-.. 2015-01-21 14:40:04: train cost: 5.842d-5 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 5000
-.. 2015-01-21 14:40:04: train cost: 5.619d-6 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 6000
-.. 2015-01-21 14:40:04: train cost: 2.207d-6 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 7000
-.. 2015-01-21 14:40:04: train cost: 1.599d-6 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 8000
-.. 2015-01-21 14:40:04: train cost: 1.206d-6 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 9000
-.. 2015-01-21 14:40:04: train cost: 1.322d-6 (1000.00)
-.. 2015-01-21 14:40:04: training at n-instances: 10000
-.. 2015-01-21 14:40:04: train cost: 1.273d-6 (1000.00)
-.. 2015-01-21 14:40:04: pred. cost: 1.316d-6 (1000.00)
+..   2015-01-25 21:47:57: pred. cost: 1.098d+0 (1000.00)
+.. 2015-01-25 21:47:57: training at n-instances: 1000
+.. 2015-01-25 21:47:57: train cost: 1.093d+0 (1000.00)
+.. 2015-01-25 21:47:57: training at n-instances: 2000
+.. 2015-01-25 21:47:57: train cost: 5.491d-1 (1000.00)
+.. 2015-01-25 21:47:57: training at n-instances: 3000
+.. 2015-01-25 21:47:57: train cost: 4.281d-3 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 4000
+.. 2015-01-25 21:47:58: train cost: 2.767d-4 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 5000
+.. 2015-01-25 21:47:58: train cost: 1.029d-4 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 6000
+.. 2015-01-25 21:47:58: train cost: 5.664d-5 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 7000
+.. 2015-01-25 21:47:58: train cost: 4.567d-5 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 8000
+.. 2015-01-25 21:47:58: train cost: 3.989d-5 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 9000
+.. 2015-01-25 21:47:58: train cost: 3.374d-5 (1000.00)
+.. 2015-01-25 21:47:58: training at n-instances: 10000
+.. 2015-01-25 21:47:58: train cost: 3.220d-5 (1000.00)
+.. 2015-01-25 21:47:58: pred. cost: 3.382d-5 (1000.00)
 ..
-==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 3.13543>
--->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 10.79765>
--->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 7.36095>
--->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 10.39631>)
+==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 2.56299>
+-->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 11.03941>
+-->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 8.04568>
+-->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 10.49271>)
 
 |#

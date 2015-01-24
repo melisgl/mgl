@@ -43,8 +43,8 @@
                  (inputs (->input :size 1))
                  (h (if use-lstm-p
                         (->lstm inputs :name 'h :size n-hiddens
-                                :input-fn '->identity
-                                :output-fn '->identity)
+                                :input-fn 'identity
+                                :output-fn 'identity)
                         (->activation (if (zerop (time-step))
                                           inputs
                                           (list inputs (lag '(h :activation))))

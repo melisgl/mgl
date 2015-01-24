@@ -7,7 +7,8 @@
   (nodes generic-function)
   (default-value generic-function)
   (group-size generic-function)
-  (batch-size generic-function))
+  (batch-size generic-function)
+  (weights generic-function))
 
 (defgeneric name (object))
 (setf (fdefinition 'name=) #'equal)
@@ -16,3 +17,4 @@
 (defgeneric default-value (object))
 (defgeneric group-size (object))
 (defgeneric batch-size (object))
+(defgeneric weights (object))

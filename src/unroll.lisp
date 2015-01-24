@@ -54,19 +54,18 @@
   Only called for non-conditioning chunks. Second value is a list of
   clamp inits, the third is a list of inits.")
   (:method ((chunk sigmoid-chunk) sym name size activation-symbol)
-    `((,sym (->sigmoid :name ',name :x ,activation-symbol))))
+    `((,sym (->sigmoid ,activation-symbol :name ',name))))
   (:method ((chunk gaussian-chunk) sym name size activation-symbol)
     ;; this is identity
-    `((,sym (->+ :name ',name :args (list ,activation-symbol)))))
+    `((,sym (->+ (list ,activation-symbol) :name ',name))))
   (:method ((chunk relu-chunk) sym name size activation-symbol)
-    `((,sym (->rectified :name ',name :x ,activation-symbol))))
+    `((,sym (->relu ,activation-symbol :name ',name))))
   (:method ((chunk exp-normalized-group-chunk) sym name size activation-symbol)
     (let ((exp-symbol (gensym)))
       (values
-       `((,exp-symbol (->exp :x ,activation-symbol))
-         (,sym (->normalized :name ',name
-                :scale ,(scale chunk) :group-size ,(group-size chunk)
-                :x ,exp-symbol)))
+       `((,exp-symbol (->exp ,activation-symbol))
+         (,sym (->normalized ,exp-symbol :name ',name
+                :scale ,(scale chunk) :group-size ,(group-size chunk))))
        `((:from-lump ,name :to-lump ,exp-symbol))))))
 
 (defun lumpy-name (lumpy)
@@ -106,11 +105,10 @@
                 :name ',weight-name
                 :size ,n-weights))
               (,linear-symbol
-               (->mm
+               (->v*m
+                ,(lumpy-symbol from-lumpy) ,weight-symbol
                 :name ',linear-name
                 :size ,size
-                :weights ,weight-symbol
-                :x ,(lumpy-symbol from-lumpy)
                 :transpose-weights-p ,transposep)))
             `((:from-lump ,(if transposep
                                (lumpy-name to-lumpy)
@@ -143,21 +141,22 @@
               (,weight-a-symbol (->weight
                                  :name ',weight-a-name
                                  :size ,(mat-size (weights cloud-a))))
-              (,shared-symbol (->mm
+              (,shared-symbol (->v*m
+                               ,(lumpy-symbol from-lumpy)
+                               ,(if transposep
+                                    weight-a-symbol
+                                    weight-b-symbol)
                                :name ',shared-name
                                :size ,(rank cloud)
-                               :weights ,(if transposep
-                                             weight-a-symbol
-                                             weight-b-symbol)
-                               :x ,(lumpy-symbol from-lumpy)
                                :transpose-weights-p ,transposep))
-              (,linear-symbol (->mm
+              (,linear-symbol (->v*m
+                               ,shared-symbol
+                               ,(if transposep
+                                    weight-b-symbol
+                                    weight-a-symbol)
                                :name ',linear-name
                                :size ,(size (lumpy-chunk to-lumpy))
-                               :weights ,(if transposep
-                                             weight-b-symbol
-                                             weight-a-symbol)
-                               :x ,shared-symbol
+                               
                                :transpose-weights-p ,transposep)))
             ;; cloud inits
             `((:cloud-name ,(name cloud)
@@ -210,8 +209,7 @@
                  (push-all cloud-clamps clamps)
                  (push-all cloud-inits inits)
                  (push `(,activation-symbol
-                         (->+ :name ',activation-name
-                              :args (list ,@linear-symbols)))
+                         (->+ (list ,@linear-symbols) :name ',activation-name))
                        defs)
                  (push `(:from-lump ,name :to-lump ,activation-name)
                        clamps))
@@ -388,6 +386,19 @@
           (initialize-from-cloud fnn cloud unknown))))))
 
 
+(defclass-now ->constant (lump)
+  ((default-value :initform 1)))
+
+(defmaker ->constant)
+
+(defmethod default-size ((lump ->constant))
+  1)
+
+(defmethod forward ((lump ->constant)))
+
+(defmethod backward ((lump ->constant)))
+
+
 ;;;; FNN setup
 
 (defun set-dropout-and-rescale-activation-weights (lump dropout fnn)
@@ -407,7 +418,7 @@
 
 (defun find-mm-lumps-from (lump bpn)
   (loop for clump across (clumps bpn)
-        nconc (cond ((and (typep clump '->mm)
+        nconc (cond ((and (typep clump '->v*m)
                           (eq lump (mgl-bp::x clump))
                           (typep (mgl-bp::weights clump) '->weight))
                      (list clump))

@@ -113,11 +113,11 @@
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
-(defmethod graph-node-fields append (x (lump ->mm))
+(defmethod graph-node-fields append (x (lump ->v*m))
   (when (transpose-weights-p lump)
     (list (format nil "TRANSPOSE: ~S" (transpose-weights-p lump)))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->mm))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->v*m))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))
@@ -146,11 +146,6 @@
                        :object (mgl-bp::y lump)
                        :attributes '(:dir :back))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->identity))
-  (list (make-instance 'cl-dot:attributed
-                       :object (mgl-bp::x lump)
-                       :attributes '(:dir :back))))
-
 (defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->sigmoid))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
@@ -161,7 +156,7 @@
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))))
 
-(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->sum-squared-error))
+(defmethod cl-dot:graph-object-points-to ((bpn bpn) (lump ->squared-difference))
   (list (make-instance 'cl-dot:attributed
                        :object (mgl-bp::x lump)
                        :attributes '(:dir :back))

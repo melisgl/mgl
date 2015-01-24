@@ -459,9 +459,9 @@
     (setf (gethash (cons target prediction) (counts matrix)) count)))
 
 (defgeneric map-confusion-matrix (fn matrix)
-  (:documentation "Call FN with TARGET, PREDICTION, COUNT paramaters
-  for each cell in the confusion matrix. Cells with a zero count may
-  be ommitted.")
+  (:documentation "Call FN with [`TARGET`][dislocated], PREDICTION,
+  COUNT paramaters for each cell in the confusion matrix. Cells with a
+  zero count may be ommitted.")
   (:method (fn (matrix confusion-matrix))
     (maphash (lambda (key value)
                (funcall fn (car key) (cdr key) value))

@@ -206,10 +206,10 @@
     (do-executors (samples fnn)
       (let ((gp-lump (find-gp-lump fnn)))
         (set-input samples fnn)
-        (forward-bpn fnn
-                     ;; Skip the heavy duty part that's only necessary
-                     ;; for training anyway.
-                     :end-clump gp-lump)
+        (mgl-bp::forward-bpn fnn
+                             ;; Skip the heavy duty part that's only necessary
+                             ;; for training anyway.
+                             :end-clump gp-lump)
         (return-from gp-means-and-covariances*
           (values (extract-means (means gp-lump) 0)
                   (extract-covariances (covariances gp-lump) 0
@@ -360,3 +360,357 @@
                                  (as-column-vector
                                   (clnu:diagonal-vector
                                    (mat-to-array covariances)))))))))
+
+
+(defclass-now ->ref (lump)
+  ((index :initarg :index :reader index)
+   (into :initarg :into :reader into)
+   (drop-negative-index-p
+    :initform nil
+    :initarg :drop-negative-index-p
+    :reader drop-negative-index-p)))
+
+(defmaker ->ref)
+
+(defmethod default-size ((lump ->ref))
+  (size (index lump)))
+
+(defmethod forward ((lump ->ref))
+  (let* ((index (index lump))
+         (into (into lump))
+         (n (size into))
+         (drop-negative-index-p (drop-negative-index-p lump)))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (index* ((nodes index) 'backing-array :direction :input
+                           :type flt-vector))
+                  (into* ((nodes into) 'backing-array :direction :input
+                          :type flt-vector)))
+      (assert (= (size lump) (size index)))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe index index-s index-e)
+                       (stripe into into-s))
+          (loop for li upfrom ls below le
+                for index-i upfrom index-s below index-e
+                do (let ((into-i (round (aref index* index-i))))
+                     (assert (and (or drop-negative-index-p (<= 0 into-i))
+                                  (< into-i n)))
+                     (when (<= 0 into-i)
+                       (setf (aref l* li)
+                             (aref into* (+ into-s into-i)))))))))))
+
+(defmethod backward ((lump ->ref))
+  (let ((index (index lump))
+        (into (into lump)))
+    (assert (= (size lump) (size index)))
+    (assert (typep index '->input))
+    (with-facets ((d* ((derivatives lump) 'backing-array :direction :input
+                       :type flt-vector))
+                  (index* ((nodes index) 'backing-array :direction :input
+                           :type flt-vector))
+                  (intod* ((derivatives into) 'backing-array :direction :io
+                           :type flt-vector)))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe index index-s index-e)
+                       (stripe into into-s))
+          (loop for li upfrom ls below le
+                for index-i upfrom index-s below index-e
+                do (let ((into-i (round (aref index* index-i))))
+                     (when (<= 0 into-i)
+                       (incf (aref intod* (+ into-s into-i))
+                             (aref d* li))))))))))
+
+
+(defclass-now ->rep (lump)
+  ((x :initarg :x :reader x)
+   (n :initarg :n :reader n)))
+
+(defmaker ->rep x n)
+
+(defmethod default-size ((lump ->rep))
+  (* (n lump) (size (x lump))))
+
+(defmethod forward ((lump ->rep))
+  (let ((x (x lump)))
+    ;; (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump))
+          (xn (size x)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type index n xn))
+      (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                         :type flt-vector))
+                    (to* ((nodes lump) 'backing-array :direction :output
+                          :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes lump) do
+          (with-stripes ((stripe x xs)
+                         (stripe lump ls))
+            (dotimes (i xn)
+              (let ((v (aref x* (the! index (+ xs i)))))
+                (loop for li of-type index upfrom (+ ls i) by xn
+                      repeat n
+                      do (setf (aref to* li) v))))))))))
+
+(defmethod backward ((lump ->rep))
+  (let ((x (x lump)))
+    ;; (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump))
+          (xn (size x)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type index n xn))
+      (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                          :type flt-vector))
+                    (d* ((derivatives lump) 'backing-array :direction :input
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes lump) do
+          (with-stripes ((stripe x xs)
+                         (stripe lump ls))
+            (dotimes (i xn)
+              (let ((sum (flt 0)))
+                (loop for li of-type index upfrom (+ ls i) by xn
+                      repeat n
+                      do (incf sum (aref d* li)))
+                (incf (aref xd* (+ xs i)) sum)))))))))
+
+
+(defclass-now ->stretch (lump)
+  ((x :initarg :x :reader x)
+   (n :initarg :n :reader n)))
+
+(defmaker ->stretch x n)
+
+(defmethod default-size ((lump ->stretch))
+  (* (n lump) (size (x lump))))
+
+(defmethod forward ((lump ->stretch))
+  (let ((x (x lump)))
+    (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type index n))
+      (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                         :type flt-vector))
+                    (l* ((nodes lump) 'backing-array :direction :output
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls))
+            (let ((li ls))
+              (loop for xi upfrom xs below xe
+                    do (let ((v (aref x* xi)))
+                         (loop repeat n
+                               do (setf (aref l* li) v)
+                                  (incf li)))))))))))
+
+(defmethod backward ((lump ->stretch))
+  (let ((x (x lump)))
+    (assert (= (n-stripes lump) (n-stripes x)))
+    (let ((n (n lump)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*)
+               (type index n))
+      (with-facets ((xd* ((derivatives x) 'backing-array :direction :io
+                          :type flt-vector))
+                    (d* ((derivatives lump) 'backing-array :direction :input
+                         :type flt-vector)))
+        (loop for stripe of-type index below (n-stripes lump) do
+          (with-stripes ((stripe x xs xe)
+                         (stripe lump ls))
+            (let ((li ls))
+              (loop for xi upfrom xs below xe
+                    do (let ((sum (flt 0)))
+                         (loop repeat n
+                               do (incf sum (aref d* li))
+                                  (incf li))
+                         (incf (aref xd* xi) sum))))))))))
+
+
+(declaim (inline rough-exponential))
+(defun rough-exponential (x &key signal-variance length-scale (roughness 2))
+  (+ (* (abs signal-variance)
+        (exp (* #.(flt -0.5)
+                (if (zerop x)
+                    #.(flt 0)
+                    (expt (abs (/ x length-scale))
+                          roughness)))))))
+
+(declaim (inline derive-rough-exponential))
+(defun derive-rough-exponential (x &key signal-variance length-scale
+                                     (roughness 2))
+  ;; d/dx(s^2*exp(-0.5*abs(x/l)^r)+b^2)
+  (let* ((a0 (abs (/ x length-scale)))
+         (a1 (if (zerop x) (flt 0) (expt a0 roughness)))
+         (a2 (exp (* -0.5 a1)))
+         (a3 (* #.(flt 0.5) roughness (abs signal-variance) a2)))
+    (values
+     ;; d/dx
+     (if (zerop x)
+         (flt 0)
+         (- (/ (* a3 a1) x)))
+     ;; d/dv
+     (* (sign signal-variance) a2)
+     ;; d/dl
+     (/ (* a3 a1) length-scale)
+     ;; d/r
+     (if (zerop x)
+         (flt 0)
+         (* #.(flt -0.25) (abs signal-variance) a2 a1 (* 2 (log a0)))))))
+
+(defclass-now ->rough-exponential (lump)
+  ((x :initarg :x :reader x)
+   (signal-variance :initarg :signal-variance :reader signal-variance)
+   (length-scale :initarg :length-scale :reader length-scale)
+   (roughness :initarg :roughness :reader roughness)))
+
+(defmaker ->rough-exponential x)
+
+(defmethod default-size ((lump ->rough-exponential))
+  (size (x lump)))
+
+(defmethod forward ((lump ->rough-exponential))
+  (let ((x (x lump))
+        (sv (signal-variance lump))
+        (lsc (length-scale lump))
+        (r (roughness lump)))
+    (assert (= (size lump) (size x)))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (sv* ((nodes sv) 'backing-array :direction :input
+                        :type flt-vector))
+                  (lsc* ((nodes lsc) 'backing-array :direction :input
+                         :type flt-vector))
+                  (r* ((nodes r) 'backing-array :direction :input
+                       :type flt-vector)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe)
+                       (stripe sv svs sve)
+                       (stripe lsc lscs lsce)
+                       (stripe r rs re))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                for svi upfrom svs below sve
+                for lsci upfrom lscs below lsce
+                for ri upfrom rs below re
+                do (setf (aref l* li)
+                         (rough-exponential (aref x* xi)
+                                            :signal-variance (aref sv* svi)
+                                            :length-scale (aref lsc* lsci)
+                                            :roughness (aref r* ri)))))))))
+
+(defmethod backward ((lump ->rough-exponential))
+  (let ((x (x lump))
+        (sv (signal-variance lump))
+        (lsc (length-scale lump))
+        (r (roughness lump)))
+    (assert (= (size lump) (size x)))
+    (with-facets ((x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (sv* ((nodes sv) 'backing-array :direction :input
+                        :type flt-vector))
+                  (lsc* ((nodes lsc) 'backing-array :direction :input
+                         :type flt-vector))
+                  (r* ((nodes r) 'backing-array :direction :input
+                       :type flt-vector))
+                  (ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (svd* ((derivatives sv) 'backing-array :direction :io
+                         :type flt-vector))
+                  (lscd* ((derivatives lsc) 'backing-array :direction :io
+                          :type flt-vector))
+                  (rd* ((derivatives r) 'backing-array :direction :io
+                        :type flt-vector)))
+      (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe)
+                       (stripe sv svs sve)
+                       (stripe lsc lscs lsce)
+                       (stripe r rs re))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                for svi upfrom svs below sve
+                for lsci upfrom lscs below lsce
+                for ri upfrom rs below re
+                do (let ((d (aref ld* li)))
+                     (multiple-value-bind (dx dsv dlsc dr)
+                         (derive-rough-exponential
+                          (aref x* xi)
+                          :signal-variance (aref sv* svi)
+                          :length-scale (aref lsc* lsci)
+                          :roughness (aref r* ri))
+                       (incf (aref xd* xi) (* d dx))
+                       (incf (aref svd* svi) (* d dsv))
+                       (incf (aref lscd* lsci) (* d dlsc))
+                       (incf (aref rd* ri) (* d dr))))))))))
+
+
+(defclass-now ->periodic (lump)
+  ((x :initarg :x :reader x)
+   (period :initarg :period :reader period)))
+
+(defmaker ->periodic x)
+
+(defmethod default-size ((lump ->periodic))
+  (size (x lump)))
+
+(defmethod forward ((lump ->periodic))
+  (let ((x (x lump))
+        (pe (period lump)))
+    (assert (= (size lump) (size x)))
+    (with-facets ((l* ((nodes lump) 'backing-array :direction :output
+                       :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (pe* ((nodes pe) 'backing-array :direction :input
+                        :type flt-vector)))
+      ;; (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe)
+                       (stripe pe pes pee))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                for pei upfrom pes below pee
+                do (setf (aref l* li)
+                         (sin (* #.(flt pi) (/ (aref x* xi)
+                                               (aref pe* pei)))))))))))
+
+(defmethod backward ((lump ->periodic))
+  (let ((x (x lump))
+        (pe (period lump)))
+    (assert (= (size lump) (size x)))
+    (with-facets ((ld* ((derivatives lump) 'backing-array :direction :input
+                        :type flt-vector))
+                  (x* ((nodes x) 'backing-array :direction :input
+                       :type flt-vector))
+                  (xd* ((derivatives x) 'backing-array :direction :io
+                        :type flt-vector))
+                  (pe* ((nodes pe) 'backing-array :direction :input
+                        :type flt-vector))
+                  (ped* ((derivatives pe) 'backing-array :direction :io
+                         :type flt-vector)))
+      ;; (declare (optimize (speed 3) #.*no-array-bounds-check*))
+      (loop for stripe of-type index below (n-stripes lump) do
+        (with-stripes ((stripe lump ls le)
+                       (stripe x xs xe)
+                       (stripe pe pes pee))
+          (loop for li upfrom ls below le
+                for xi upfrom xs below xe
+                for pei upfrom pes below pee
+                do (let* ((xv (aref x* xi))
+                          (pev (aref pe* pei))
+                          (d (aref ld* li))
+                          (a (cos (/ (* #.(flt pi) xv)
+                                     pev))))
+                     (incf (aref xd* xi)
+                           (* d (/ (* #.(flt pi) a)
+                                   pev)))
+                     (incf (aref ped* pei)
+                           (* d (- (/ (* #.(flt pi) xv a)
+                                      (expt pev 2))))))))))))

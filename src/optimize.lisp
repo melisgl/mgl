@@ -178,7 +178,8 @@
 
 (defmethod reset-optimization-monitors ((optimizer iterative-optimizer)
                                         gradient-source)
-  "Log the counters of the monitors and reset them."
+  "Log the counters of the monitors of OPTIMIZER and GRADIENT-SOURCE
+  and reset them."
   (log-msg "training at n-instances: ~S~%"  (n-instances optimizer))
   (let ((counters (remove nil (mapcar #'counter
                                       (append (monitors optimizer)
