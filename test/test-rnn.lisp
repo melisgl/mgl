@@ -42,7 +42,7 @@
                            :initargs '(:clamper clamp-sum-sign))
                  (inputs (->input :size 1))
                  (h (if use-lstm-p
-                        (->lstm inputs :name 'h :n-cells n-hiddens
+                        (->lstm inputs :name 'h :size n-hiddens
                                 :input-fn '->identity
                                 :output-fn '->identity)
                         (->activation (if (zerop (time-step))

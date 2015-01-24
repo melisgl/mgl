@@ -36,7 +36,7 @@
   (build-rnn ()
     (build-fnn (:class 'sum-sign-fnn)
       (input (->input :size 1))
-      (h (->lstm input :name 'h :n-cells n-hiddens))
+      (h (->lstm input :name 'h :size n-hiddens))
       (prediction (->softmax-xe-loss (->activation h :name 'prediction
                                                    :size *n-outputs*))))))
 
