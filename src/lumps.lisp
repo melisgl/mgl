@@ -16,6 +16,7 @@
   (lump class)
   (size (reader lump))
   (default-value (reader lump))
+  (default-size generic-function)
   (nodes (reader lump))
   (derivatives (reader lump)))
 
@@ -23,7 +24,10 @@
   (:method (lump)
     (or (slot-boundp lump 'size)
         (error "Can't compute size for ~S." lump)))
-  (:documentation ""))
+  (:documentation "Return a default for the [SIZE][(reader lump)] of
+  LUMP if one is not supplied at instantiation. The value is often
+  computed based on the sizes of the inputs. This function is for
+  implementing new lump types."))
 
 (defun check-size-and-default-size (lump size)
   (when (and size (/= size (default-size lump)))

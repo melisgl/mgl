@@ -2991,17 +2991,17 @@ restriction on their shape apart from what their usage dictates.</p></li>
 <p><a name='x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[generic-function] <strong>NODES</strong> <em>CLUMP</em></p>
+<li><p>[generic-function] <strong>NODES</strong> <em>OBJECT</em></p>
 
-<p>Return the <code>MAT</code> object representing the state of
-<code>CLUMP</code> (that is, the result computed by the most recent <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a>). For
-<a href="#x-28MGL-BP-3A--3EINPUT-20CLASS-29" title="(MGL-BP:-&gt;INPUT CLASS)"><code>-&gt;INPUT</code></a> lumps, this is where input values shall be placed (see
-<a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a>).</p>
-
-<p>The first dimension of the returned matrix is equal to the number of
-stripes. Currently, the matrix is always two dimensional but
-restriction may go away in the future.</p></li>
+<p>Returns a <code>MAT</code> object representing the state or
+result of OBJECT. The first dimension of the returned matrix is
+equal to the number of stripes.</p></li>
 </ul>
+
+<p><a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a>s' <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> holds the result computed by the most recent
+<a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a>. For <a href="#x-28MGL-BP-3A--3EINPUT-20CLASS-29" title="(MGL-BP:-&gt;INPUT CLASS)"><code>-&gt;INPUT</code></a> lumps, this is where input values shall be
+placed (see <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a>). Currently, the matrix is always two
+dimensional but this restriction may go away in the future.</p>
 
 <p><a name='x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29'></a></p>
 
@@ -3057,8 +3057,10 @@ df(x1)/dx1</code> and the first term is what we have in <a href="#x-28MGL-BP-3AD
 sigmoid so it only needs to calculate the second term.</p></li>
 </ul>
 
-<p>In addition to the above clumps also have to support <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"><code>1</code></a>),
-<a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"><code>N-STRIPES</code></a>, <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> (and the <code>SETF</code> methods of the latter two).</p>
+<p>In addition to the above, clumps also have to support <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"><code>1</code></a>),
+<a href="#x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"><code>N-STRIPES</code></a>, <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> (and the <code>SETF</code> methods of the latter two)
+which can be accomplished just by inheriting from <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>, <a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a>, <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>, or
+a <a href="#x-28MGL-BP-3ALUMP-20CLASS-29" title="(MGL-BP:LUMP CLASS)"><code>LUMP</code></a>.</p>
 
 <p><a name='x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29'></a></p>
 
@@ -3817,6 +3819,17 @@ handled automagically behind the scenes.</p></li>
 
 <p>Upon creation or resize the lump's nodes get
 filled with this value.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ADEFAULT-SIZE-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>DEFAULT-SIZE</strong> <em>LUMP</em></p>
+
+<p>Return a default for the <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>SIZE</code></a> of
+<code>LUMP</code> if one is not supplied at instantiation. The value is often
+computed based on the sizes of the inputs. This function is for
+implementing new lump types.</p></li>
 </ul>
 
 <p><a name='x-28MGL-COMMON-3ANODES-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29'></a></p>

@@ -73,11 +73,17 @@
   or extracting predictions."
   (stripedp generic-function)
   (nodes generic-function)
+  "`CLUMP`s' `NODES` holds the result computed by the most recent
+  FORWARD. For ->INPUT lumps, this is where input values shall be
+  placed (see SET-INPUT). Currently, the matrix is always two
+  dimensional but this restriction may go away in the future."
   (derivatives generic-function)
   (forward generic-function)
   (backward generic-function)
-  "In addition to the above clumps also have to support SIZE,
-  N-STRIPES, MAX-N-STRIPES (and the SETF methods of the latter two).")
+  "In addition to the above, clumps also have to support SIZE,
+  N-STRIPES, MAX-N-STRIPES (and the SETF methods of the latter two)
+  which can be accomplished just by inheriting from BPN, FNN, RNN, or
+  a LUMP.")
 
 (defgeneric stripedp (clump)
   (:documentation "For efficiency, forward and backprop phases do
@@ -94,16 +100,6 @@
   restriction on their shape apart from what their usage dictates.")
   (:method ((clump clump))
     t))
-
-(defgeneric nodes (clump)
-  (:documentation "Return the MAT object representing the state of
-  CLUMP (that is, the result computed by the most recent FORWARD). For
-  ->INPUT lumps, this is where input values shall be placed (see
-  SET-INPUT).
-
-  The first dimension of the returned matrix is equal to the number of
-  stripes. Currently, the matrix is always two dimensional but
-  restriction may go away in the future."))
 
 (defgeneric derivatives (clump)
   (:documentation "Return the MAT object representing the partial

@@ -2603,16 +2603,16 @@ or extracting predictions.
 
 <a name='x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29'></a>
 
-- [generic-function] **NODES** *CLUMP*
+- [generic-function] **NODES** *OBJECT*
 
-    Return the `MAT` object representing the state of
-    `CLUMP` (that is, the result computed by the most recent [`FORWARD`][9233]). For
-    [`->INPUT`][80c4] lumps, this is where input values shall be placed (see
-    [`SET-INPUT`][8795]).
-    
-    The first dimension of the returned matrix is equal to the number of
-    stripes. Currently, the matrix is always two dimensional but
-    restriction may go away in the future.
+    Returns a `MAT` object representing the state or
+    result of OBJECT. The first dimension of the returned matrix is
+    equal to the number of stripes.
+
+[`CLUMP`][0e4a]s' [`NODES`][136a] holds the result computed by the most recent
+[`FORWARD`][9233]. For [`->INPUT`][80c4] lumps, this is where input values shall be
+placed (see [`SET-INPUT`][8795]). Currently, the matrix is always two
+dimensional but this restriction may go away in the future.
 
 <a name='x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29'></a>
 
@@ -2660,8 +2660,10 @@ or extracting predictions.
     df(x1)/dx1` and the first term is what we have in [`DERIVATIVES`][3aa4] of the
     sigmoid so it only needs to calculate the second term.
 
-In addition to the above clumps also have to support `SIZE`([`0`][c401] [`1`][6db7]),
-[`N-STRIPES`][dca7], [`MAX-N-STRIPES`][9598] (and the `SETF` methods of the latter two).
+In addition to the above, clumps also have to support `SIZE`([`0`][c401] [`1`][6db7]),
+[`N-STRIPES`][dca7], [`MAX-N-STRIPES`][9598] (and the `SETF` methods of the latter two)
+which can be accomplished just by inheriting from [`BPN`][0e98], [`FNN`][622d], [`RNN`][b9d7], or
+a [`LUMP`][9cf1].
 
 <a name='x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29'></a>
 
@@ -3382,6 +3384,15 @@ the concepts involved. Make sure you are comfortable with
 
     Upon creation or resize the lump's nodes get
     filled with this value.
+
+<a name='x-28MGL-BP-3ADEFAULT-SIZE-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **DEFAULT-SIZE** *LUMP*
+
+    Return a default for the [`SIZE`][c401] of
+    `LUMP` if one is not supplied at instantiation. The value is often
+    computed based on the sizes of the inputs. This function is for
+    implementing new lump types.
 
 <a name='x-28MGL-COMMON-3ANODES-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29'></a>
 
