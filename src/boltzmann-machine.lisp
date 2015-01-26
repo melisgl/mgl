@@ -1691,13 +1691,18 @@
                                    :direction :input :type flt-vector))
                           (old-nodes* ((old-nodes chunk) 'backing-array
                                        :direction :input :type flt-vector)))
-              (declare (optimize (speed 3)))
-              (do-stripes (chunk)
-                (do-chunk (i chunk)
-                  (let ((x (aref nodes* i))
-                        (y (aref old-nodes* i)))
-                    (incf sum (abs (- x y)))
-                    (incf n))))))))
+              ;; INCF on SUM directly would net a compiler note,
+              ;; because the body of WITH-FACETS is a lambda.
+              (let ((inner-sum (flt 0)))
+                (declare (type flt inner-sum))
+                (do-stripes (chunk)
+                  (declare (optimize (speed 3)))
+                  (do-chunk (i chunk)
+                    (let ((x (aref nodes* i))
+                          (y (aref old-nodes* i)))
+                      (incf inner-sum (abs (- x y)))
+                      (incf n))))
+                (incf sum inner-sum))))))
     (values (/ sum n) n)))
 
 ;;; With cublas device pointer mode:
@@ -2459,13 +2464,16 @@ called with the same parameters."
                                    :direction :input :type flt-vector))
                           (old-nodes* ((old-nodes chunk) 'backing-array
                                        :direction :input :type flt-vector)))
-              (declare (optimize (speed 3)))
-              (do-stripes (chunk)
-                (do-chunk (i chunk)
-                  (let ((x (aref nodes* i))
-                        (y (aref old-nodes* i)))
-                    (incf sum (expt (- x y) 2))
-                    (incf n))))))))
+              (let ((inner-sum (flt 0)))
+                (declare (type flt inner-sum))
+                (do-stripes (chunk)
+                  (declare (optimize (speed 3)))
+                  (do-chunk (i chunk)
+                    (let ((x (aref nodes* i))
+                          (y (aref old-nodes* i)))
+                      (incf inner-sum (expt (- x y) 2))
+                      (incf n))))
+                (incf sum inner-sum))))))
     (values sum n)))
 
 ;;; With cublas device pointer mode:
