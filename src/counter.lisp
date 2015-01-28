@@ -19,7 +19,11 @@
   of COUNTER. See specialized methods for type specific
   documentation."))
 
-(defgeneric counter-raw-values (counter))
+(defgeneric counter-raw-values (counter)
+  (:documentation "Return any number of values representing the state
+  of COUNTER in such a way that passing the returned values as
+  arguments ADD-TO-COUNTER on a fresh instance of the same type
+  recreates the original state."))
 
 (defgeneric reset-counter (counter)
   (:documentation "Restore state of COUNTER to what it was just after
@@ -166,7 +170,9 @@
   "In addition to the really basic ones here, also see
   @MGL-CLASSIFICATION-COUNTER."
   (basic-counter class)
-  (rmse-counter class))
+  (rmse-counter class)
+  (concat-counter class)
+  (concatenation-type (reader concat-counter)))
 
 (defclass basic-counter (attributed)
   ((numerator :initform 0 :reader numerator*)
@@ -237,3 +243,37 @@
 (defmethod counter-values ((counter rmse-counter))
   (multiple-value-bind (e n) (call-next-method)
     (values (sqrt e) n)))
+
+
+(defclass concat-counter (attributed)
+  ((concatenation :initform () :initarg :concatenation :accessor concatenation)
+   (concatenation-type
+    :initform 'list :initarg :concatenation-type :reader concatenation-type
+    :documentation "A type designator suitable as the RESULT-TYPE
+    argument to CONCATENATE."))
+  (:documentation "A counter that simply concatenates
+  sequences.
+
+  ```cl-transcript
+  (let ((counter (make-instance 'concat-counter)))
+    (add-to-counter counter '(1 2 3) #(4 5))
+    (add-to-counter counter '(6 7))
+    (counter-values counter))
+  => (1 2 3 4 5 6 7)
+  ````"))
+
+(defmethod add-to-counter ((counter concat-counter) &rest args)
+  (dolist (seq args)
+    (setf (concatenation counter)
+          (concatenate (concatenation-type counter)
+                       (concatenation counter)
+                       seq))))
+
+(defmethod counter-values ((counter concat-counter))
+  (concatenation counter))
+
+(defmethod counter-raw-values ((counter concat-counter))
+  (concatenation counter))
+
+(defmethod reset-counter ((counter concat-counter))
+  (setf (concatenation counter) ()))

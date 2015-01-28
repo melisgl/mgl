@@ -1177,6 +1177,28 @@ In addition to the really basic ones here, also see
         => #<RMSE-COUNTER rmse: 3.53553e+0 (2)>
 
 
+<a name='x-28MGL-CORE-3ACONCAT-COUNTER-20CLASS-29'></a>
+
+- [class] **CONCAT-COUNTER** *ATTRIBUTED*
+
+    A counter that simply concatenates
+    sequences.
+    
+    \`\`\`cl-transcript
+    (let ((counter (make-instance 'concat-counter)))
+      (add-to-counter counter '(1 2 3) #(4 5))
+      (add-to-counter counter '(6 7))
+      (counter-values counter))
+    => (1 2 3 4 5 6 7)
+    \`\`\`\`
+
+<a name='x-28MGL-CORE-3ACONCATENATION-TYPE-20-28MGL-PAX-3AREADER-20MGL-CORE-3ACONCAT-COUNTER-29-29'></a>
+
+- [reader] **CONCATENATION-TYPE** *CONCAT-COUNTER* *(:CONCATENATION-TYPE = 'LIST)*
+
+    A type designator suitable as the RESULT-TYPE
+    argument to `CONCATENATE`.
+
 <a name='x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29'></a>
 
 ## 7 Classification

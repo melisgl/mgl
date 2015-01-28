@@ -1337,6 +1337,32 @@ the square of some statistics. It has the attribute <code>:TYPE</code> &quot;rms
 </code></pre></li>
 </ul>
 
+<p><a name='x-28MGL-CORE-3ACONCAT-COUNTER-20CLASS-29'></a></p>
+
+<ul>
+<li><p>[class] <strong>CONCAT-COUNTER</strong> <em>ATTRIBUTED</em></p>
+
+<p>A counter that simply concatenates
+sequences.</p>
+
+<p>```cl-transcript
+(let ((counter (make-instance 'concat-counter)))
+  (add-to-counter counter '(1 2 3) #(4 5))
+  (add-to-counter counter '(6 7))
+  (counter-values counter))
+=&gt; (1 2 3 4 5 6 7)
+````</p></li>
+</ul>
+
+<p><a name='x-28MGL-CORE-3ACONCATENATION-TYPE-20-28MGL-PAX-3AREADER-20MGL-CORE-3ACONCAT-COUNTER-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>CONCATENATION-TYPE</strong> <em>CONCAT-COUNTER</em> <em>(:CONCATENATION-TYPE = 'LIST)</em></p>
+
+<p>A type designator suitable as the RESULT-TYPE
+argument to <code>CONCATENATE</code>.</p></li>
+</ul>
+
 <p><a name='x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29'></a></p>
 
 <h2><span class="navigation"> <a href="#x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-COUNTER-CLASSES MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="(MGL:@MGL-MANUAL MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-CLASSIFICATION-MONITOR MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29" title="(MGL-CORE:@MGL-CLASSIFICATION MGL-PAX:SECTION)">&#8634;</a></span>7 Classification</h2>
