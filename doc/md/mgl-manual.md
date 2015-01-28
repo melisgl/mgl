@@ -1044,6 +1044,15 @@ For a list of measurer functions see [Classification Measurers][505e].
     of `COUNTER`. See specialized methods for type specific
     documentation.
 
+<a name='x-28MGL-CORE-3ACOUNTER-RAW-VALUES-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **COUNTER-RAW-VALUES** *COUNTER*
+
+    Return any number of values representing the state
+    of `COUNTER` in such a way that passing the returned values as
+    arguments [`ADD-TO-COUNTER`][1f57] on a fresh instance of the same type
+    recreates the original state.
+
 <a name='x-28MGL-CORE-3ARESET-COUNTER-20GENERIC-FUNCTION-29'></a>
 
 - [generic-function] **RESET-COUNTER** *COUNTER*
@@ -2606,7 +2615,7 @@ or extracting predictions.
 - [generic-function] **NODES** *OBJECT*
 
     Returns a `MAT` object representing the state or
-    result of OBJECT. The first dimension of the returned matrix is
+    result of `OBJECT`. The first dimension of the returned matrix is
     equal to the number of stripes.
 
 [`CLUMP`][0e4a]s' [`NODES`][136a] holds the result computed by the most recent
@@ -2764,10 +2773,42 @@ Without the bells an whistles, the basic shape of training is this:
 - [function] **MONITOR-BPN-RESULTS** *DATASET BPN MONITORS*
 
     For every batch (of size [`MAX-N-STRIPES`][9598] of `BPN`) of instances in
-    `DATASET`, set the batch as the next input with SET-INPUT,perform a
+    `DATASET`, set the batch as the next input with [`SET-INPUT`][8795], perform a
     [`FORWARD`][9233] pass and apply `MONITORS` to the `BPN` (with [`APPLY-MONITORS`][68b6]).
     Finally, return the counters of `MONITORS`. This is built on top of
     [`MONITOR-MODEL-RESULTS`][3ca8].
+
+<a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITORS-20FUNCTION-29'></a>
+
+- [function] **MAKE-WARP-MONITOR-MONITORS** *RNN &KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-WARP-MONITOR-MONITOR-COUNTER)*
+
+    Return a list of monitors, one for every monitor in [`WARP-MONITORS`][fc8f]
+    of `RNN`. These monitors extract the results from their warp
+    counterpairs with `COUNTER-VALUES-FN` and add them to their own
+    counter that's created by `MAKE-COUNTER`. Wow. Ew. The idea is that
+    one does something like this do monitor warped prediction:
+    
+    ```commonlisp
+    (let ((*warp-time* t))
+      (setf (warp-monitors rnn)
+            (make-cost-monitors rnn :attributes '(:event "warped pred.")))
+      (monitor-bpn-results dataset rnn
+                           ;; Just collect and reset the warp
+                           ;; monitors after each batch of
+                           ;; instances.
+                           (make-warp-monitor-monitors rnn)))
+    ```
+
+
+<a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **MAKE-WARP-MONITOR-MONITOR-COUNTER** *WARP-COUNTER*
+
+    In an [`RNN`][b9d7], `WARP-COUNTER` aggregates results of all
+    the time steps during the processing of instances in the current
+    batch. Return a new counter into which results from `WARP-COUNTER` can
+    be accumulated when the processing of the batch is finished. The
+    default implementation creates a copy of `WARP-COUNTER`.
 
 <a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a>
 
@@ -3043,7 +3084,7 @@ the concepts involved. Make sure you are comfortable with
 (defparameter *n-outputs* 3)
 
 ;;; Generate a training example that's a sequence of random length
-;;; between 1 and 11. Elements of the sequence are lists of two
+;;; between 1 and LENGTH. Elements of the sequence are lists of two
 ;;; elements:
 ;;;
 ;;; 1. The input for the network (a single random number).
@@ -3051,8 +3092,8 @@ the concepts involved. Make sure you are comfortable with
 ;;; 2. The sign of the sum of inputs so far encoded as 0, 1, 2 (for
 ;;;    negative, zero and positive values). To add a twist, the sum is
 ;;;    reset whenever a negative input is seen.
-(defun make-sum-sign-instance ()
-  (let ((length (1+ (random 10)))
+(defun make-sum-sign-instance (&key (length 10))
+  (let ((length (max 1 (random length)))
         (sum 0))
     (loop for i below length
           collect (let ((x (1- (* 2 (random 2)))))
@@ -3122,9 +3163,10 @@ the concepts involved. Make sure you are comfortable with
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
 ;;; random inputs.
-(defun make-sampler (max-n-samples)
+(defun make-sampler (max-n-samples &key (length 10))
   (make-instance 'function-sampler :max-n-samples max-n-samples
-                 :generator #'make-sum-sign-instance))
+                 :generator (lambda ()
+                              (make-sum-sign-instance :length length))))
 
 ;;; Log the test error. Also, describe the optimizer and the bpn at
 ;;; the beginning of training. Called periodically during training
@@ -3133,44 +3175,59 @@ the concepts involved. Make sure you are comfortable with
   (when (zerop (n-instances optimizer))
     (describe optimizer)
     (describe (bpn learner)))
-  (log-padded
-   (monitor-bpn-results (make-sampler 1000) (bpn learner)
-                        (make-cost-monitors (bpn learner)
-                                            :attributes '(:event "pred.")))))
+  (let ((rnn (bpn learner)))
+    (log-padded
+     (append
+      (monitor-bpn-results (make-sampler 1000) rnn
+                           (make-cost-monitors rnn
+                                               :attributes '(:event "pred.")))
+      ;; Same result in a different way: monitor predictions for
+      ;; sequences up to length 20, but don't unfold the RNN
+      ;; unnecessarily to save memory.
+      (let ((*warp-time* t))
+        (setf (warp-monitors rnn)
+              (make-cost-monitors rnn :attributes '(:event "warped pred.")))
+        (monitor-bpn-results (make-sampler 1000 :length 20) rnn
+                             ;; Just collect and reset the warp
+                             ;; monitors after each batch of
+                             ;; instances.
+                             (make-warp-monitor-monitors rnn)))))
+    ;; Verify that no further unfoldings took place.
+    (assert (<= (length (clumps rnn)) 10))))
 
 #|
 
 ;;; Transcript follows:
 (train-sum-sign-rnn)
-.. 2015-01-25 21:48:29: training at n-instances: 0
-.. 2015-01-25 21:48:29: train cost: 0.000e+0 (0)
-.. #<ADAM-OPTIMIZER {101CA883E3}>
+.. 2015-01-28 14:12:54: training at n-instances: 0
+.. 2015-01-28 14:12:54: train cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {101F2B4143}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
-..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.95885>
-..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.45434>
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 2.00342>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.75262>
 ..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 2.19780>
-..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.73944>
+..                       1 1/1 :norm 0.92961>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.20846>
 ..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.73860>
-..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.36793>
+..                       1 1/1 :norm 0.73093>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.78671>
 ..                     #<->WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 1.78097>
+..                       3 1/1 :norm 1.45207>
 ..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 1.91622>
+..                       3 1/1 :norm 3.23801>
 ..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.27922>
-..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.19857>
-..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.16990>
-..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 0.80131>
-..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 2.00847>
-..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 0.77625>
-..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.72224>
-..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.38520>
-..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 0.82449>)
-..                    {101CA8B413}>
+..                       1 1/1 :norm 1.01936>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.36555>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.29635>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.32443>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.30479>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.89177>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.50471>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.97235>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.77381>)
+..                    {101F2B4AD3}>
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = NONE
 ..    MOMENTUM-TYPE = :NONE
@@ -3186,7 +3243,7 @@ the concepts involved. Make sure you are comfortable with
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #<RNN {101C8B0D13}>
+..  #<RNN {101F278433}>
 ..   BPN description:
 ..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>
 ..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>)
@@ -3195,46 +3252,48 @@ the concepts involved. Make sure you are comfortable with
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-25 21:48:29: pred. cost: 1.308d+0 (5281.00)
-.. 2015-01-25 21:48:29: training at n-instances: 3000
-.. 2015-01-25 21:48:29: train cost: 7.724d-1 (16668.00)
-.. 2015-01-25 21:48:30: training at n-instances: 6000
-.. 2015-01-25 21:48:30: train cost: 2.675d-1 (16378.00)
-.. 2015-01-25 21:48:30: training at n-instances: 9000
-.. 2015-01-25 21:48:30: train cost: 6.781d-2 (16367.00)
-.. 2015-01-25 21:48:31: training at n-instances: 12000
-.. 2015-01-25 21:48:31: train cost: 3.717d-2 (16246.00)
-.. 2015-01-25 21:48:31: training at n-instances: 15000
-.. 2015-01-25 21:48:31: train cost: 2.560d-2 (16519.00)
-.. 2015-01-25 21:48:32: training at n-instances: 18000
-.. 2015-01-25 21:48:32: train cost: 1.893d-2 (16464.00)
-.. 2015-01-25 21:48:32: training at n-instances: 21000
-.. 2015-01-25 21:48:32: train cost: 1.498d-2 (16658.00)
-.. 2015-01-25 21:48:33: training at n-instances: 24000
-.. 2015-01-25 21:48:33: train cost: 1.218d-2 (16609.00)
-.. 2015-01-25 21:48:33: training at n-instances: 27000
-.. 2015-01-25 21:48:33: train cost: 1.005d-2 (16398.00)
-.. 2015-01-25 21:48:34: training at n-instances: 30000
-.. 2015-01-25 21:48:34: train cost: 8.576d-3 (16727.00)
-.. 2015-01-25 21:48:34: pred. cost: 7.993d-3 (5469.00)
+..   2015-01-28 14:12:55: pred.        cost: 2.133d+0 (4647.00)
+.. 2015-01-28 14:12:55: warped pred. cost: 2.028d+0 (9516.00)
+.. 2015-01-28 14:12:55: training at n-instances: 3000
+.. 2015-01-28 14:12:55: train cost: 1.155d+0 (13643.00)
+.. 2015-01-28 14:12:56: training at n-instances: 6000
+.. 2015-01-28 14:12:56: train cost: 4.123d-1 (13765.00)
+.. 2015-01-28 14:12:57: training at n-instances: 9000
+.. 2015-01-28 14:12:57: train cost: 8.208d-2 (13654.00)
+.. 2015-01-28 14:12:57: training at n-instances: 12000
+.. 2015-01-28 14:12:57: train cost: 2.889d-2 (13752.00)
+.. 2015-01-28 14:12:58: training at n-instances: 15000
+.. 2015-01-28 14:12:58: train cost: 1.781d-2 (13935.00)
+.. 2015-01-28 14:12:58: training at n-instances: 18000
+.. 2015-01-28 14:12:58: train cost: 1.271d-2 (13911.00)
+.. 2015-01-28 14:12:59: training at n-instances: 21000
+.. 2015-01-28 14:12:59: train cost: 9.828d-3 (13833.00)
+.. 2015-01-28 14:13:00: training at n-instances: 24000
+.. 2015-01-28 14:13:00: train cost: 7.782d-3 (13482.00)
+.. 2015-01-28 14:13:00: training at n-instances: 27000
+.. 2015-01-28 14:13:00: train cost: 6.457d-3 (14243.00)
+.. 2015-01-28 14:13:01: training at n-instances: 30000
+.. 2015-01-28 14:13:01: train cost: 5.451d-3 (13834.00)
+.. 2015-01-28 14:13:01: pred.        cost: 5.024d-3 (4556.00)
+.. 2015-01-28 14:13:01: warped pred. cost: 4.932d-3 (9569.00)
 ..
-==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 4.93354>
--->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 3.38129>
--->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 2.56604>
--->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.70181>
--->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.98004>
--->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 1.33021>
--->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 18.01556>
--->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.88117>
--->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.10010>
--->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.59461>
--->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.88272>
--->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 3.99679>
--->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.52597>
--->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 5.98569>
--->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 3.07546>
--->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.32019>
--->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 7.88496>)
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 3.25778>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 2.64093>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.24070>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.09629>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.29833>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.12919>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.61549>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.45618>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.77321>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 1.74186>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.51236>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.18734>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 1.02118>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 4.29466>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 6.57931>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 6.37012>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 3.06961>)
 
 |#
 ```
@@ -3300,20 +3359,20 @@ the concepts involved. Make sure you are comfortable with
 
     In `RNN` or if it's `NIL` the `RNN` being extended with another
     [`BPN`][0e98] (called *unfolding*), look up the [`CLUMP`][0e4a] with `NAME` in the [`BPN`][0e98]
-    that's `LAG` number of time steps before the [`BPN`][0e98] being added. This
-    function can only be called from [`UNFOLDER`][8b7ff] of an `RNN` which is what
-    happens behind the scene in the body of [`BUILD-RNN`][7832].
+    that's `LAG` number of time steps before the [`BPN`][0e98] being added. If this
+    function is called from [`UNFOLDER`][8b7ff] of an `RNN` (which is what happens
+    behind the scene in the body of [`BUILD-RNN`][7832]), then it returns an
+    opaque object representing a lagged connection to a clump, else it
+    returns the [`CLUMP`][0e4a] itself.
     
     FIXDOC: `PATH`
 
 <a name='x-28MGL-BP-3ATIME-STEP-20FUNCTION-29'></a>
 
-- [function] **TIME-STEP** 
+- [function] **TIME-STEP** *&KEY (RNN \*RNN\*)*
 
-    Return the time step corresponding to the [`BPN`][0e98] with which an [`RNN`][b9d7] is
-    being extended. This is 0 when the [`RNN`][b9d7] is being unfolded for the
-    first time. This function can only be called from [`UNFOLDER`][8b7ff] of an [`RNN`][b9d7]
-    which is what happens behind the scene in the body of [`BUILD-RNN`][7832].
+    Return the time step `RNN` is currently executing or being unfolded for.
+    It is 0 when the `RNN` is being unfolded for the first time.
 
 <a name='x-28MGL-CORE-3ASET-INPUT-20-28METHOD-20NIL-20-28T-20MGL-BP-3ARNN-29-29-29'></a>
 
@@ -3331,6 +3390,98 @@ the concepts involved. Make sure you are comfortable with
     `RNN`, [`SET-INPUT`][8795] must set the [`IMPORTANCE`][132c] of the ->ERROR lumps to 0
     else training would operate on the noise left there by previous
     invocations.
+
+<a name='x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29'></a>
+
+##### Time Warp
+
+The unbounded memory usage of [`RNN`][b9d7]s with one [`BPN`][0e98] allocated per
+time step can become a problem. For training, where the gradients
+often have to be backpropagated from the last time step to the very
+beginning, this is hard to solve (but it's being worked on). For
+prediction on the other hand, one doesn't need to keep old steps
+around indefinitely: they can be discarded when future time steps
+will never reference them again.
+
+<a name='x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29'></a>
+
+- [variable] **\*WARP-TIME\*** *NIL*
+
+    Controls whether warping is enabled (see @MGL-RNN-WARPING). Don't
+    enable it for training, as it would make backprop impossible.
+
+<a name='x-28MGL-BP-3AWARPED-TIME-20FUNCTION-29'></a>
+
+- [function] **WARPED-TIME** *&KEY (RNN \*RNN\*) (TIME (TIME-STEP :RNN RNN)) (LAG 0)*
+
+    Return the index of the [`BPN`][0e98] in [`CLUMPS`][76e4] of `RNN` whose task it is to
+    execute computation at `(- (TIME-STEP RNN) LAG)`. This is normally
+    the same as [`TIME-STEP`][9b9d] (disregarding `LAG`). That is, [`CLUMPS`][76e4] can be
+    indexed by [`TIME-STEP`][9b9d] to get the [`BPN`][0e98]. However, when [`*WARP-TIME*`][812b] is
+    true, execution proceeds in a cycle as the structure of the network
+    allows.
+    
+    Suppose we have a typical `RNN` that only ever references the previous
+    time step so its [`MAX-LAG`][0302] is 1. Its [`UNFOLDER`][8b7ff] returns [`BPN`][0e98]s of
+    identical structure bar a shift in their time lagged connections
+    except for the very first, so [`WARP-START`][d0f6] and [`WARP-LENGTH`][788a] are both 1.
+    If [`*WARP-TIME*`][812b] is `NIL`, then the mapping from [`TIME-STEP`][9b9d] to the [`BPN`][0e98] in
+    [`CLUMPS`][76e4] is straightforward:
+    
+        time:   |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        warped: |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        bpn:    | b0 | b1 | b2 | b3 | b4 | b5
+    
+    When [`*WARP-TIME*`][812b] is true, we reuse the `B1` - `B2` bpns in a loop:
+    
+        time:   |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        warped: |  0 |  1 |  2 |  1 |  2 |  1
+        --------+----+----+----+----+----+----
+        bpn:    | b0 | b1 | b2 | b1*| b2 | b1*
+    
+    `B1*` is the same [`BPN`][0e98] as `B1`, but its connections created by `LAG` go
+    through warped time and end up referencing `B2`. This way, memory
+    consumption is independent of the number time steps needed to
+    process a sequence or make predictions.
+    
+    To be able to pull this trick off [`WARP-START`][d0f6] and [`WARP-LENGTH`][788a] must be
+    specified when the `RNN` is instantiated. In general, with
+    [`*WARP-TIME*`][812b] `(+ WARP-START (MAX 2 WARP-LENGTH))` bpns are needed.
+    The 2 comes from the fact that with cycle length 1 a bpn would need
+    to takes its input from itself which is problematic because it has
+    [`NODES`][136a] for only one set of values.
+
+<a name='x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
+
+- [reader] **WARP-START** *RNN* *(:WARP-START = 1)*
+
+    The [`TIME-STEP`][9b9d] from which [`UNFOLDER`][8b7ff] will create
+    [`BPN`][0e98]s that essentially repeat every [`WARP-LENGTH`][788a] steps.
+
+<a name='x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
+
+- [reader] **WARP-LENGTH** *RNN* *(:WARP-LENGTH = 1)*
+
+    An integer such that the [`BPN`][0e98] [`UNFOLDER`][8b7ff] creates at
+    time step `I` (where `(<= WARP-START I)`) is identical to the [`BPN`][0e98]
+    created at time step `(+ WARP-START (MOD (- I WARP-START)
+    WARP-LENGTH))` except for a shift in its time lagged
+    connections.
+
+<a name='x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a>
+
+- [accessor] **WARP-MONITORS** *RNN* *(:WARP-MONITORS = NIL)*
+
+    When making predictions with [`*WARP-TIME*`][812b] true,
+    previous states are discarded so the forward the bpn and apply
+    monitors modus operandi of [`MONITOR-BPN-RESULTS`][532b] doesn't work.
+    
+    Instead, add monitors objects to this slot and they will be
+    automatically applied to the [`RNN`][b9d7] after each step, if [`*WARP-TIME*`][812b]
+    is true.
 
 <a name='x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4282,6 +4433,7 @@ grow into a more serious toolset for NLP eventually.
 
   [026c]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-GP MGL-PAX:SECTION)"
   [02de]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION)"
+  [0302]: #x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
   [089c]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION)"
@@ -4344,6 +4496,7 @@ grow into a more serious toolset for NLP eventually.
   [505e]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MEASURER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MEASURER MGL-PAX:SECTION)"
   [51ad]: #x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"
   [51ee]: #x-28MGL-GD-3A-40MGL-GD-UTILITIES-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-UTILITIES MGL-PAX:SECTION)"
+  [532b]: #x-28MGL-BP-3AMONITOR-BPN-RESULTS-20FUNCTION-29 "(MGL-BP:MONITOR-BPN-RESULTS FUNCTION)"
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
   [5478]: #x-28MGL-BP-3A--3EV-2AM-20CLASS-29 "(MGL-BP:->V*M CLASS)"
   [5683]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->SOFTMAX-XE-LOSS))"
@@ -4370,11 +4523,13 @@ grow into a more serious toolset for NLP eventually.
   [76b8]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"
   [76e4]: #x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"
   [7832]: #x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29 "(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"
+  [788a]: #x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-OPTIMIZER MGL-PAX:SECTION)"
   [7ae7]: #x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"
   [7f6b]: #x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:CG-ARGS (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [7fed]: #x-28MGL-BP-3A-40MGL-BP-TRAINING-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-TRAINING MGL-PAX:SECTION)"
   [80c4]: #x-28MGL-BP-3A--3EINPUT-20CLASS-29 "(MGL-BP:->INPUT CLASS)"
+  [812b]: #x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29 "(MGL-BP:*WARP-TIME* VARIABLE)"
   [8202]: #x-28MGL-OPT-3AMAP-SEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:MAP-SEGMENTS GENERIC-FUNCTION)"
   [8375]: #x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29 "(MGL-RESAMPLE:CROSS-VALIDATE FUNCTION)"
   [83bf]: #x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29 "(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)"
@@ -4454,6 +4609,7 @@ grow into a more serious toolset for NLP eventually.
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)"
   [cc50]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MONITOR MGL-PAX:SECTION)"
   [d011]: #x-28MGL-CORE-3A-40MGL-ATTRIBUTES-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-ATTRIBUTES MGL-PAX:SECTION)"
+  [d0f6]: #x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"
   [d275]: #x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-PER-WEIGHT-OPTIMIZATION MGL-PAX:SECTION)"
   [d3e3]: #x-28MGL-CORE-3ABASIC-COUNTER-20CLASS-29 "(MGL-CORE:BASIC-COUNTER CLASS)"
   [d3fa]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EMAX-29-29 "(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->MAX))"
@@ -4487,6 +4643,7 @@ grow into a more serious toolset for NLP eventually.
   [f95f]: #x-28MGL-CORE-3AAPPLY-MONITOR-20GENERIC-FUNCTION-29 "(MGL-CORE:APPLY-MONITOR GENERIC-FUNCTION)"
   [f995]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)"
   [f9f7]: #x-28MGL-CG-3ACG-20FUNCTION-29 "(MGL-CG:CG FUNCTION)"
+  [fc8f]: #x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [fd45]: #x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [fdf3]: #x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29 "(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"
   [fe97]: #x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)"

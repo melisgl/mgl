@@ -1185,6 +1185,17 @@ of <code>COUNTER</code>. See specialized methods for type specific
 documentation.</p></li>
 </ul>
 
+<p><a name='x-28MGL-CORE-3ACOUNTER-RAW-VALUES-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>COUNTER-RAW-VALUES</strong> <em>COUNTER</em></p>
+
+<p>Return any number of values representing the state
+of <code>COUNTER</code> in such a way that passing the returned values as
+arguments <a href="#x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29" title="(MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION)"><code>ADD-TO-COUNTER</code></a> on a fresh instance of the same type
+recreates the original state.</p></li>
+</ul>
+
 <p><a name='x-28MGL-CORE-3ARESET-COUNTER-20GENERIC-FUNCTION-29'></a></p>
 
 <ul>
@@ -2994,7 +3005,7 @@ restriction on their shape apart from what their usage dictates.</p></li>
 <li><p>[generic-function] <strong>NODES</strong> <em>OBJECT</em></p>
 
 <p>Returns a <code>MAT</code> object representing the state or
-result of OBJECT. The first dimension of the returned matrix is
+result of <code>OBJECT</code>. The first dimension of the returned matrix is
 equal to the number of stripes.</p></li>
 </ul>
 
@@ -3177,10 +3188,43 @@ gradients.</p></li>
 <li><p>[function] <strong>MONITOR-BPN-RESULTS</strong> <em>DATASET BPN MONITORS</em></p>
 
 <p>For every batch (of size <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a> of <code>BPN</code>) of instances in
-<code>DATASET</code>, set the batch as the next input with SET-INPUT,perform a
+<code>DATASET</code>, set the batch as the next input with <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a>, perform a
 <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a> pass and apply <code>MONITORS</code> to the <code>BPN</code> (with <a href="#x-28MGL-CORE-3AAPPLY-MONITORS-20FUNCTION-29" title="(MGL-CORE:APPLY-MONITORS FUNCTION)"><code>APPLY-MONITORS</code></a>).
 Finally, return the counters of <code>MONITORS</code>. This is built on top of
 <a href="#x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29" title="(MGL-CORE:MONITOR-MODEL-RESULTS FUNCTION)"><code>MONITOR-MODEL-RESULTS</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITORS-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>MAKE-WARP-MONITOR-MONITORS</strong> <em>RNN &amp;KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-WARP-MONITOR-MONITOR-COUNTER)</em></p>
+
+<p>Return a list of monitors, one for every monitor in <a href="#x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>WARP-MONITORS</code></a>
+of <code>RNN</code>. These monitors extract the results from their warp
+counterpairs with <code>COUNTER-VALUES-FN</code> and add them to their own
+counter that's created by <code>MAKE-COUNTER</code>. Wow. Ew. The idea is that
+one does something like this do monitor warped prediction:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="special">*warp-time*</span> t</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">setf <span class="paren3">(<span class="code">warp-monitors rnn</span>)</span>
+        <span class="paren3">(<span class="code">make-cost-monitors rnn <span class="keyword">:attributes</span> '<span class="paren4">(<span class="code"><span class="keyword">:event</span> <span class="string">"warped pred."</span></span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">monitor-bpn-results dataset rnn
+                       <span class="comment">;; Just collect and reset the warp
+</span>                       <span class="comment">;; monitors after each batch of
+</span>                       <span class="comment">;; instances.
+</span>                       <span class="paren3">(<span class="code">make-warp-monitor-monitors rnn</span>)</span></span>)</span></span>)</span></span></code></pre></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[generic-function] <strong>MAKE-WARP-MONITOR-MONITOR-COUNTER</strong> <em>WARP-COUNTER</em></p>
+
+<p>In an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>, <code>WARP-COUNTER</code> aggregates results of all
+the time steps during the processing of instances in the current
+batch. Return a new counter into which results from <code>WARP-COUNTER</code> can
+be accumulated when the processing of the batch is finished. The
+default implementation creates a copy of <code>WARP-COUNTER</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a></p>
@@ -3438,7 +3482,7 @@ read up on <a href="#x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29" ti
 
 <p><a name='x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h5><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMPS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8634;</a></span>RNN Tutorial</h5>
+<h5><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8634;</a></span>RNN Tutorial</h5>
 
 <p>Hopefully this example from <code>example/sum-sign-fnn.lisp</code> illustrates
 the concepts involved. Make sure you are comfortable with
@@ -3458,7 +3502,7 @@ the concepts involved. Make sure you are comfortable with
 </span><span class="paren1">(<span class="code"><i><span class="symbol">defparameter</span></i> <span class="special">*n-outputs*</span> 3</span>)</span>
 
 <span class="comment">;;; Generate a training example that's a sequence of random length
-</span><span class="comment">;;; between 1 and 11. Elements of the sequence are lists of two
+</span><span class="comment">;;; between 1 and LENGTH. Elements of the sequence are lists of two
 </span><span class="comment">;;; elements:
 </span><span class="comment">;;;
 </span><span class="comment">;;; 1. The input for the network (a single random number).
@@ -3466,8 +3510,8 @@ the concepts involved. Make sure you are comfortable with
 </span><span class="comment">;;; 2. The sign of the sum of inputs so far encoded as 0, 1, 2 (for
 </span><span class="comment">;;;    negative, zero and positive values). To add a twist, the sum is
 </span><span class="comment">;;;    reset whenever a negative input is seen.
-</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sum-sign-instance <span class="paren2">(<span class="code"></span>)</span>
-  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">length <span class="paren5">(<span class="code">1+ <span class="paren6">(<span class="code">random 10</span>)</span></span>)</span></span>)</span>
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sum-sign-instance <span class="paren2">(<span class="code">&amp;key <span class="paren3">(<span class="code">length 10</span>)</span></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">length <span class="paren5">(<span class="code">max 1 <span class="paren6">(<span class="code">random length</span>)</span></span>)</span></span>)</span>
         <span class="paren4">(<span class="code">sum 0</span>)</span></span>)</span>
     <span class="paren3">(<span class="code"><i><span class="symbol">loop</span></i> for i below length
           collect <span class="paren4">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren5">(<span class="code"><span class="paren6">(<span class="code">x <span class="paren1">(<span class="code">1- <span class="paren2">(<span class="code">* 2 <span class="paren3">(<span class="code">random 2</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
@@ -3537,9 +3581,10 @@ the concepts involved. Make sure you are comfortable with
 
 <span class="comment">;;; Return a sampler object that produces MAX-N-SAMPLES number of
 </span><span class="comment">;;; random inputs.
-</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sampler <span class="paren2">(<span class="code">max-n-samples</span>)</span>
+</span><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> make-sampler <span class="paren2">(<span class="code">max-n-samples &amp;key <span class="paren3">(<span class="code">length 10</span>)</span></span>)</span>
   <span class="paren2">(<span class="code">make-instance 'function-sampler <span class="keyword">:max-n-samples</span> max-n-samples
-                 <span class="keyword">:generator</span> #'make-sum-sign-instance</span>)</span></span>)</span>
+                 <span class="keyword">:generator</span> <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code"></span>)</span>
+                              <span class="paren4">(<span class="code">make-sum-sign-instance <span class="keyword">:length</span> length</span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">;;; Log the test error. Also, describe the optimizer and the bpn at
 </span><span class="comment">;;; the beginning of training. Called periodically during training
@@ -3548,44 +3593,59 @@ the concepts involved. Make sure you are comfortable with
   <span class="paren2">(<span class="code">when <span class="paren3">(<span class="code">zerop <span class="paren4">(<span class="code">n-instances optimizer</span>)</span></span>)</span>
     <span class="paren3">(<span class="code">describe optimizer</span>)</span>
     <span class="paren3">(<span class="code">describe <span class="paren4">(<span class="code">bpn learner</span>)</span></span>)</span></span>)</span>
-  <span class="paren2">(<span class="code">log-padded
-   <span class="paren3">(<span class="code">monitor-bpn-results <span class="paren4">(<span class="code">make-sampler 1000</span>)</span> <span class="paren4">(<span class="code">bpn learner</span>)</span>
-                        <span class="paren4">(<span class="code">make-cost-monitors <span class="paren5">(<span class="code">bpn learner</span>)</span>
-                                            <span class="keyword">:attributes</span> '<span class="paren5">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">rnn <span class="paren5">(<span class="code">bpn learner</span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">log-padded
+     <span class="paren4">(<span class="code">append
+      <span class="paren5">(<span class="code">monitor-bpn-results <span class="paren6">(<span class="code">make-sampler 1000</span>)</span> rnn
+                           <span class="paren6">(<span class="code">make-cost-monitors rnn
+                                               <span class="keyword">:attributes</span> '<span class="paren1">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span>
+      <span class="comment">;; Same result in a different way: monitor predictions for
+</span>      <span class="comment">;; sequences up to length 20, but don't unfold the RNN
+</span>      <span class="comment">;; unnecessarily to save memory.
+</span>      <span class="paren5">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren6">(<span class="code"><span class="paren1">(<span class="code"><span class="special">*warp-time*</span> t</span>)</span></span>)</span>
+        <span class="paren6">(<span class="code">setf <span class="paren1">(<span class="code">warp-monitors rnn</span>)</span>
+              <span class="paren1">(<span class="code">make-cost-monitors rnn <span class="keyword">:attributes</span> '<span class="paren2">(<span class="code"><span class="keyword">:event</span> <span class="string">"warped pred."</span></span>)</span></span>)</span></span>)</span>
+        <span class="paren6">(<span class="code">monitor-bpn-results <span class="paren1">(<span class="code">make-sampler 1000 <span class="keyword">:length</span> 20</span>)</span> rnn
+                             <span class="comment">;; Just collect and reset the warp
+</span>                             <span class="comment">;; monitors after each batch of
+</span>                             <span class="comment">;; instances.
+</span>                             <span class="paren1">(<span class="code">make-warp-monitor-monitors rnn</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="comment">;; Verify that no further unfoldings took place.
+</span>    <span class="paren3">(<span class="code">assert <span class="paren4">(<span class="code">&lt;= <span class="paren5">(<span class="code">length <span class="paren6">(<span class="code">clumps rnn</span>)</span></span>)</span> 10</span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">#|
 
 ;;; Transcript follows:
 (train-sum-sign-rnn)
-.. 2015-01-25 21:48:29: training at n-instances: 0
-.. 2015-01-25 21:48:29: train cost: 0.000e+0 (0)
-.. #&lt;ADAM-OPTIMIZER {101CA883E3}&gt;
+.. 2015-01-28 14:12:54: training at n-instances: 0
+.. 2015-01-28 14:12:54: train cost: 0.000e+0 (0)
+.. #&lt;ADAM-OPTIMIZER {101F2B4143}&gt;
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #&lt;SEGMENT-SET
-..                    (#&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.95885&gt;
-..                     #&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.45434&gt;
+..                    (#&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 2.00342&gt;
+..                     #&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.75262&gt;
 ..                     #&lt;-&gt;WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 2.19780&gt;
-..                     #&lt;-&gt;WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.73944&gt;
+..                       1 1/1 :norm 0.92961&gt;
+..                     #&lt;-&gt;WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.20846&gt;
 ..                     #&lt;-&gt;WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.73860&gt;
-..                     #&lt;-&gt;WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.36793&gt;
+..                       1 1/1 :norm 0.73093&gt;
+..                     #&lt;-&gt;WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.78671&gt;
 ..                     #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 1.78097&gt;
+..                       3 1/1 :norm 1.45207&gt;
 ..                     #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 1.91622&gt;
+..                       3 1/1 :norm 3.23801&gt;
 ..                     #&lt;-&gt;WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.27922&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.19857&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.16990&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 0.80131&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 2.00847&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 0.77625&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.72224&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.38520&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 0.82449&gt;)
-..                    {101CA8B413}&gt;
+..                       1 1/1 :norm 1.01936&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.36555&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.29635&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.32443&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.30479&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.89177&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.50471&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.97235&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.77381&gt;)
+..                    {101F2B4AD3}&gt;
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = NONE
 ..    MOMENTUM-TYPE = :NONE
@@ -3601,7 +3661,7 @@ the concepts involved. Make sure you are comfortable with
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #&lt;RNN {101C8B0D13}&gt;
+..  #&lt;RNN {101F278433}&gt;
 ..   BPN description:
 ..     CLUMPS = #(#&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4&gt;
 ..                #&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4&gt;)
@@ -3610,46 +3670,48 @@ the concepts involved. Make sure you are comfortable with
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-25 21:48:29: pred. cost: 1.308d+0 (5281.00)
-.. 2015-01-25 21:48:29: training at n-instances: 3000
-.. 2015-01-25 21:48:29: train cost: 7.724d-1 (16668.00)
-.. 2015-01-25 21:48:30: training at n-instances: 6000
-.. 2015-01-25 21:48:30: train cost: 2.675d-1 (16378.00)
-.. 2015-01-25 21:48:30: training at n-instances: 9000
-.. 2015-01-25 21:48:30: train cost: 6.781d-2 (16367.00)
-.. 2015-01-25 21:48:31: training at n-instances: 12000
-.. 2015-01-25 21:48:31: train cost: 3.717d-2 (16246.00)
-.. 2015-01-25 21:48:31: training at n-instances: 15000
-.. 2015-01-25 21:48:31: train cost: 2.560d-2 (16519.00)
-.. 2015-01-25 21:48:32: training at n-instances: 18000
-.. 2015-01-25 21:48:32: train cost: 1.893d-2 (16464.00)
-.. 2015-01-25 21:48:32: training at n-instances: 21000
-.. 2015-01-25 21:48:32: train cost: 1.498d-2 (16658.00)
-.. 2015-01-25 21:48:33: training at n-instances: 24000
-.. 2015-01-25 21:48:33: train cost: 1.218d-2 (16609.00)
-.. 2015-01-25 21:48:33: training at n-instances: 27000
-.. 2015-01-25 21:48:33: train cost: 1.005d-2 (16398.00)
-.. 2015-01-25 21:48:34: training at n-instances: 30000
-.. 2015-01-25 21:48:34: train cost: 8.576d-3 (16727.00)
-.. 2015-01-25 21:48:34: pred. cost: 7.993d-3 (5469.00)
+..   2015-01-28 14:12:55: pred.        cost: 2.133d+0 (4647.00)
+.. 2015-01-28 14:12:55: warped pred. cost: 2.028d+0 (9516.00)
+.. 2015-01-28 14:12:55: training at n-instances: 3000
+.. 2015-01-28 14:12:55: train cost: 1.155d+0 (13643.00)
+.. 2015-01-28 14:12:56: training at n-instances: 6000
+.. 2015-01-28 14:12:56: train cost: 4.123d-1 (13765.00)
+.. 2015-01-28 14:12:57: training at n-instances: 9000
+.. 2015-01-28 14:12:57: train cost: 8.208d-2 (13654.00)
+.. 2015-01-28 14:12:57: training at n-instances: 12000
+.. 2015-01-28 14:12:57: train cost: 2.889d-2 (13752.00)
+.. 2015-01-28 14:12:58: training at n-instances: 15000
+.. 2015-01-28 14:12:58: train cost: 1.781d-2 (13935.00)
+.. 2015-01-28 14:12:58: training at n-instances: 18000
+.. 2015-01-28 14:12:58: train cost: 1.271d-2 (13911.00)
+.. 2015-01-28 14:12:59: training at n-instances: 21000
+.. 2015-01-28 14:12:59: train cost: 9.828d-3 (13833.00)
+.. 2015-01-28 14:13:00: training at n-instances: 24000
+.. 2015-01-28 14:13:00: train cost: 7.782d-3 (13482.00)
+.. 2015-01-28 14:13:00: training at n-instances: 27000
+.. 2015-01-28 14:13:00: train cost: 6.457d-3 (14243.00)
+.. 2015-01-28 14:13:01: training at n-instances: 30000
+.. 2015-01-28 14:13:01: train cost: 5.451d-3 (13834.00)
+.. 2015-01-28 14:13:01: pred.        cost: 5.024d-3 (4556.00)
+.. 2015-01-28 14:13:01: warped pred. cost: 4.932d-3 (9569.00)
 ..
-==&gt; (#&lt;-&gt;WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 4.93354&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 3.38129&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 2.56604&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.70181&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.98004&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 1.33021&gt;
---&gt;  #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 18.01556&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.88117&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.10010&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.59461&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.88272&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 3.99679&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.52597&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 5.98569&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 3.07546&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.32019&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 7.88496&gt;)
+==&gt; (#&lt;-&gt;WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 3.25778&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 2.64093&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.24070&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.09629&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.29833&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.12919&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.61549&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.45618&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.77321&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 1.74186&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.51236&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.18734&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 1.02118&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 4.29466&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 6.57931&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 6.37012&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 3.06961&gt;)
 
 |#</span></span></code></pre>
 
@@ -3723,9 +3785,11 @@ wrapped in a lambda. Bind symbol given as the <code>RNN</code> argument to the
 
 <p>In <code>RNN</code> or if it's <code>NIL</code> the <code>RNN</code> being extended with another
 <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> (called <em>unfolding</em>), look up the <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> with <code>NAME</code> in the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>
-that's <code>LAG</code> number of time steps before the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> being added. This
-function can only be called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <code>RNN</code> which is what
-happens behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>.</p>
+that's <code>LAG</code> number of time steps before the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> being added. If this
+function is called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <code>RNN</code> (which is what happens
+behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>), then it returns an
+opaque object representing a lagged connection to a clump, else it
+returns the <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> itself.</p>
 
 <p>FIXDOC: <code>PATH</code></p></li>
 </ul>
@@ -3733,12 +3797,10 @@ happens behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-P
 <p><a name='x-28MGL-BP-3ATIME-STEP-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[function] <strong>TIME-STEP</strong> </p>
+<li><p>[function] <strong>TIME-STEP</strong> <em>&amp;KEY (RNN *RNN*)</em></p>
 
-<p>Return the time step corresponding to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> with which an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is
-being extended. This is 0 when the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> is being unfolded for the
-first time. This function can only be called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>
-which is what happens behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>.</p></li>
+<p>Return the time step <code>RNN</code> is currently executing or being unfolded for.
+It is 0 when the <code>RNN</code> is being unfolded for the first time.</p></li>
 </ul>
 
 <p><a name='x-28MGL-CORE-3ASET-INPUT-20-28METHOD-20NIL-20-28T-20MGL-BP-3ARNN-29-29-29'></a></p>
@@ -3760,9 +3822,113 @@ else training would operate on the noise left there by previous
 invocations.</p></li>
 </ul>
 
+<p><a name='x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29'></a></p>
+
+<h5><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMPS MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)">&#8634;</a></span>Time Warp</h5>
+
+<p>The unbounded memory usage of <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>s with one <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> allocated per
+time step can become a problem. For training, where the gradients
+often have to be backpropagated from the last time step to the very
+beginning, this is hard to solve (but it's being worked on). For
+prediction on the other hand, one doesn't need to keep old steps
+around indefinitely: they can be discarded when future time steps
+will never reference them again.</p>
+
+<p><a name='x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29'></a></p>
+
+<ul>
+<li><p>[variable] <strong>*WARP-TIME*</strong> <em>NIL</em></p>
+
+<p>Controls whether warping is enabled (see @MGL-RNN-WARPING). Don't
+enable it for training, as it would make backprop impossible.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AWARPED-TIME-20FUNCTION-29'></a></p>
+
+<ul>
+<li><p>[function] <strong>WARPED-TIME</strong> <em>&amp;KEY (RNN *RNN*) (TIME (TIME-STEP :RNN RNN)) (LAG 0)</em></p>
+
+<p>Return the index of the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> in <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> of <code>RNN</code> whose task it is to
+execute computation at <code>(- (TIME-STEP RNN) LAG)</code>. This is normally
+the same as <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> (disregarding <code>LAG</code>). That is, <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> can be
+indexed by <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to get the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>. However, when <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is
+true, execution proceeds in a cycle as the structure of the network
+allows.</p>
+
+<p>Suppose we have a typical <code>RNN</code> that only ever references the previous
+time step so its <a href="#x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"><code>MAX-LAG</code></a> is 1. Its <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> returns <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>s of
+identical structure bar a shift in their time lagged connections
+except for the very first, so <a href="#x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-START</code></a> and <a href="#x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-LENGTH</code></a> are both 1.
+If <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is <code>NIL</code>, then the mapping from <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> in
+<a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> is straightforward:</p>
+
+<pre><code>time:   |  0 |  1 |  2 |  3 |  4 |  5
+--------+----+----+----+----+----+----
+warped: |  0 |  1 |  2 |  3 |  4 |  5
+--------+----+----+----+----+----+----
+bpn:    | b0 | b1 | b2 | b3 | b4 | b5
+</code></pre>
+
+<p>When <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is true, we reuse the <code>B1</code> - <code>B2</code> bpns in a loop:</p>
+
+<pre><code>time:   |  0 |  1 |  2 |  3 |  4 |  5
+--------+----+----+----+----+----+----
+warped: |  0 |  1 |  2 |  1 |  2 |  1
+--------+----+----+----+----+----+----
+bpn:    | b0 | b1 | b2 | b1*| b2 | b1*
+</code></pre>
+
+<p><code>B1*</code> is the same <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> as <code>B1</code>, but its connections created by <code>LAG</code> go
+through warped time and end up referencing <code>B2</code>. This way, memory
+consumption is independent of the number time steps needed to
+process a sequence or make predictions.</p>
+
+<p>To be able to pull this trick off <a href="#x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-START</code></a> and <a href="#x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-LENGTH</code></a> must be
+specified when the <code>RNN</code> is instantiated. In general, with
+<a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> <code>(+ WARP-START (MAX 2 WARP-LENGTH))</code> bpns are needed.
+The 2 comes from the fact that with cycle length 1 a bpn would need
+to takes its input from itself which is problematic because it has
+<a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> for only one set of values.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>WARP-START</strong> <em>RNN</em> <em>(:WARP-START = 1)</em></p>
+
+<p>The <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> from which <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> will create
+<a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>s that essentially repeat every <a href="#x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-LENGTH</code></a> steps.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[reader] <strong>WARP-LENGTH</strong> <em>RNN</em> <em>(:WARP-LENGTH = 1)</em></p>
+
+<p>An integer such that the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> creates at
+time step <code>I</code> (where <code>(&lt;= WARP-START I)</code>) is identical to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>
+created at time step <code>(+ WARP-START (MOD (- I WARP-START)
+WARP-LENGTH))</code> except for a shift in its time lagged
+connections.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>WARP-MONITORS</strong> <em>RNN</em> <em>(:WARP-MONITORS = NIL)</em></p>
+
+<p>When making predictions with <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> true,
+previous states are discarded so the forward the bpn and apply
+monitors modus operandi of <a href="#x-28MGL-BP-3AMONITOR-BPN-RESULTS-20FUNCTION-29" title="(MGL-BP:MONITOR-BPN-RESULTS FUNCTION)"><code>MONITOR-BPN-RESULTS</code></a> doesn't work.</p>
+
+<p>Instead, add monitors objects to this slot and they will be
+automatically applied to the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> after each step, if <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a>
+is true.</p></li>
+</ul>
+
 <p><a name='x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29'></a></p>
 
-<h3><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMPS MGL-PAX:SECTION)">&#8634;</a></span>10.4 Lumps</h3>
+<h3><span class="navigation"> <a href="#x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)">&#8592;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP MGL-PAX:SECTION)">&#8593;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMP MGL-PAX:SECTION)">&#8594;</a> <a href="#x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-BP-LUMPS MGL-PAX:SECTION)">&#8634;</a></span>10.4 Lumps</h3>
 
 <p><a name='x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29'></a></p>
 

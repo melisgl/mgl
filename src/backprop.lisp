@@ -396,7 +396,8 @@
   (build-rnn macro)
   (lag function)
   (time-step function)
-  (set-input (method () (t rnn))))
+  (set-input (method () (t rnn)))
+  (@mgl-rnn-time-warp section))
 
 (defsection @mgl-rnn-tutorial (:title "RNN Tutorial")
   "Hopefully this example from `example/sum-sign-fnn.lisp` illustrates
@@ -405,13 +406,6 @@
   (sum-sig-rnn.lisp
    (include #.(asdf:system-relative-pathname :mgl "example/sum-sign-rnn.lisp")
             :header-nl "```commonlisp" :footer-nl "```")))
-
-;;;; FIXME: don't keep excessively many clumps around?
-
-;;;; FIXME: in forward only operation (i.e. predicting) remove old
-;;;; time steps never to be referenced again. For predicting,
-;;;; max-time-lag + 1 clumps are enough. The problem is that they are
-;;;; not necessarily of the same shape (think IF (= time 0) ...).
 
 ;;;; FIXME: MAKE-CLASSIFICATION-ACCURACY-MONITORS* and co don't work
 ;;;; because they rely on an unimplementable LUMPS.
@@ -445,7 +439,27 @@
    (input-seqs :accessor input-seqs)
    (current-time :initform 0 :accessor current-time)
    (max-time :initform 0 :accessor max-time)
-   (weight-lumps :initform () :accessor weight-lumps))
+   (weight-lumps :initform () :accessor weight-lumps)
+   (warp-start
+    :initform 1 :initarg :warp-start :reader warp-start
+    :documentation "The TIME-STEP from which UNFOLDER will create
+    `BPN`s that essentially repeat every WARP-LENGTH steps.")
+   (warp-length
+    :initform 1 :initarg :warp-length :reader warp-length
+    :documentation "An integer such that the BPN UNFOLDER creates at
+    time step `I` (where `(<= WARP-START I)`) is identical to the BPN
+    created at time step `(+ WARP-START (MOD (- I WARP-START)
+    WARP-LENGTH))` except for a shift in its time lagged
+    connections.")
+   (warp-monitors
+    :initform () :initarg :warp-monitors :accessor warp-monitors
+    :documentation "When making predictions with *WARP-TIME* true,
+    previous states are discarded so the forward the bpn and apply
+    monitors modus operandi of MONITOR-BPN-RESULTS doesn't work.
+
+    Instead, add monitors objects to this slot and they will be
+    automatically applied to the RNN after each step, if *WARP-TIME*
+    is true."))
   (:documentation "A recurrent neural net (as opposed to a
   feed-forward one. It is typically built with BUILD-RNN that's no
   more than a shallow convenience macro.
@@ -505,19 +519,90 @@
   (setf (input-seqs rnn) instances))
 
 ;;; Bound by ENSURE-RNN-BPN whenever it calls UNFOLDER in order to let
-;;; LAG work anywhere in its dynamic extent.
+;;; LAG and TIME-STEP work anywhere in its dynamic extent.
 (defvar *rnn*)
+
+(defun time-step (&key (rnn *rnn*))
+  "Return the time step RNN is currently executing or being unfolded for.
+  It is 0 when the RNN is being unfolded for the first time."
+  (current-time rnn))
+
+(defsection @mgl-rnn-time-warp (:title "Time Warp")
+  "The unbounded memory usage of `RNN`s with one BPN allocated per
+  time step can become a problem. For training, where the gradients
+  often have to be backpropagated from the last time step to the very
+  beginning, this is hard to solve (but it's being worked on). For
+  prediction on the other hand, one doesn't need to keep old steps
+  around indefinitely: they can be discarded when future time steps
+  will never reference them again."
+  (*warp-time* variable)
+  (warped-time function)
+  (warp-start (reader rnn))
+  (warp-length (reader rnn))
+  (warp-monitors (accessor rnn)))
+
+(defvar *warp-time* nil
+  "Controls whether warping is enabled (see @MGL-RNN-WARPING). Don't
+  enable it for training, as it would make backprop impossible.")
+
+(defun warped-time (&key (rnn *rnn*) (time (time-step :rnn rnn)) (lag 0))
+  "Return the index of the BPN in CLUMPS of RNN whose task it is to
+  execute computation at `(- (TIME-STEP RNN) LAG)`. This is normally
+  the same as TIME-STEP (disregarding LAG). That is, CLUMPS can be
+  indexed by TIME-STEP to get the BPN. However, when *WARP-TIME* is
+  true, execution proceeds in a cycle as the structure of the network
+  allows.
+
+  Suppose we have a typical RNN that only ever references the previous
+  time step so its MAX-LAG is 1. Its UNFOLDER returns `BPN`s of
+  identical structure bar a shift in their time lagged connections
+  except for the very first, so WARP-START and WARP-LENGTH are both 1.
+  If *WARP-TIME* is NIL, then the mapping from TIME-STEP to the BPN in
+  CLUMPS is straightforward:
+
+      time:   |  0 |  1 |  2 |  3 |  4 |  5
+      --------+----+----+----+----+----+----
+      warped: |  0 |  1 |  2 |  3 |  4 |  5
+      --------+----+----+----+----+----+----
+      bpn:    | b0 | b1 | b2 | b3 | b4 | b5
+
+  When *WARP-TIME* is true, we reuse the `B1` - `B2` bpns in a loop:
+
+      time:   |  0 |  1 |  2 |  3 |  4 |  5
+      --------+----+----+----+----+----+----
+      warped: |  0 |  1 |  2 |  1 |  2 |  1
+      --------+----+----+----+----+----+----
+      bpn:    | b0 | b1 | b2 | b1*| b2 | b1*
+
+  `B1*` is the same BPN as `B1`, but its connections created by LAG go
+  through warped time and end up referencing `B2`. This way, memory
+  consumption is independent of the number time steps needed to
+  process a sequence or make predictions.
+
+  To be able to pull this trick off WARP-START and WARP-LENGTH must be
+  specified when the RNN is instantiated. In general, with
+  *WARP-TIME* `(+ WARP-START (MAX 2 WARP-LENGTH))` bpns are needed.
+  The 2 comes from the fact that with cycle length 1 a bpn would need
+  to takes its input from itself which is problematic because it has
+  NODES for only one set of values."
+  (let ((step (- time lag))
+        (warp-length (max 2 (warp-length rnn)))
+        (warp-start (warp-start rnn)))
+    (if (or (not *warp-time*)
+            (< step (+ warp-start warp-length)))
+        step
+        (+ warp-start (mod (- step warp-start) warp-length)))))
 
 ;;; Return the bpn in CLUMPS at index CURRENT-TIME. If necessary
 ;;; create a new bpn on top of the previous one by calling UNFOLDER.
 ;;; The previous bpn must already exist.
 (defun ensure-rnn-bpn (rnn)
   (let ((clumps (clumps rnn))
-        (time (current-time rnn)))
-    (assert (<= time (length clumps)) ()
+        (step (warped-time :rnn rnn)))
+    (assert (<= step (length clumps)) ()
             "Can't create bpn because the previous one doesn't exist.")
-    (if (< time (length clumps))
-        (aref clumps time)
+    (if (< step (length clumps))
+        (aref clumps step)
         (let ((bpn (let ((*rnn* rnn)
                          (*bpn-being-built* rnn))
                      ;; FIXME: Does it work without hiearchical names?
@@ -527,7 +612,7 @@
           ;; The set of weights of the RNN is the union of weights of
           ;; its clumps. Remember them to be able to implement
           ;; MAP-SEGMENTS on the RNN.
-          (if (< (max-lag rnn) time)
+          (if (< (max-lag rnn) (current-time rnn))
               (check-weights-not-new rnn bpn)
               (map-segments (lambda (weights)
                               (pushnew weights (weight-lumps rnn)))
@@ -552,9 +637,11 @@
 (defun lag (name &key (lag 1) rnn path)
   "In RNN or if it's NIL the RNN being extended with another
   BPN (called _unfolding_), look up the CLUMP with NAME in the BPN
-  that's LAG number of time steps before the BPN being added. This
-  function can only be called from UNFOLDER of an RNN which is what
-  happens behind the scene in the body of BUILD-RNN.
+  that's LAG number of time steps before the BPN being added. If this
+  function is called from UNFOLDER of an RNN (which is what happens
+  behind the scene in the body of BUILD-RNN), then it returns an
+  opaque object representing a lagged connection to a clump, else it
+  returns the CLUMP itself.
 
   FIXDOC: PATH"
   (check-rnn 'lag)
@@ -571,7 +658,34 @@
             "Lag ~S is greater than the value of MAX-LAG (~S)." lag max-lag)
     (assert (<= lag time) ()
             "Lag ~S is greater than the current time (~S)." lag time)
-    (find-clump name (find-nested-bpn (aref (clumps rnn) (- time lag)) path))))
+    (let ((ref (make-lagged-clump :path path :name name :lag lag)))
+      (cond (*bpn-being-built*
+             (resolve-clump rnn ref)
+             ref)
+            (t
+             (resolve-clump rnn ref))))))
+
+(defstruct lagged-clump
+  path
+  name
+  lag)
+
+(defgeneric resolve-clump (rnn ref)
+  (:method (rnn (clump clump))
+    clump)
+  (:method (rnn (lagged lagged-clump))
+    (let* ((path (lagged-clump-path lagged))
+           (name (lagged-clump-name lagged))
+           (lag (lagged-clump-lag lagged))
+           (step (warped-time :rnn rnn :lag lag)))
+      (find-clump name (find-nested-bpn (aref (clumps rnn) step) path)))))
+
+(defun resolve-clumps (object)
+  (if (not (boundp '*rnn*))
+      object
+      (if (listp object)
+          (loop for e in object collect (resolve-clump *rnn* e))
+          (resolve-clump *rnn* object))))
 
 (defun find-nested-bpn (bpn path)
   (if (endp path)
@@ -580,17 +694,6 @@
              (nested (find name (clumps bpn) :key #'name :test #'name=)))
         (assert nested () "Can't find nested BPN ~S in ~S." name bpn)
         (find-nested-bpn nested (rest path)))))
-
-(defun time-step ()
-  "Return the time step corresponding to the BPN with which an RNN is
-  being extended. This is 0 when the RNN is being unfolded for the
-  first time. This function can only be called from UNFOLDER of an RNN
-  which is what happens behind the scene in the body of BUILD-RNN."
-  (cond ((boundp '*rnn*)
-         (current-time *rnn*))
-        (t
-         (error "TIME-STEP can only be called when an RNN is being
-                built or forwarded."))))
 
 (defmacro build-rnn ((&key rnn (class ''rnn) name initargs
                       max-n-stripes (max-lag 1)) &body body)
@@ -622,7 +725,8 @@
                     (let ((instances (remove-trailing-nils instances))
                           (bpn (ensure-rnn-bpn rnn)))
                       (set-input instances bpn)
-                      (forward-bpn bpn))
+                      (forward-bpn bpn)
+                      (apply-monitors (warp-monitors rnn) instances rnn))
                     (incf (current-time rnn)))
                   (input-seqs rnn) :impute nil)
     ;; Remember how many clumps were used so that BACKWARD-BPN and
@@ -638,19 +742,27 @@
 
 (defmethod backward-bpn ((rnn rnn) &key last-clump)
   (assert (null last-clump))
-  (let ((clumps (clumps rnn)))
+  (let ((*rnn* rnn)
+        (clumps (clumps rnn)))
     (loop for time downfrom (1- (max-time rnn)) downto 0
-          do (backward-bpn (aref clumps time)))))
+          do (setf (current-time rnn) time)
+             (backward-bpn (aref clumps time)))))
 
 (defmethod cost ((rnn rnn))
-  (let ((sum 0)
-        (sum-importances 0))
-    (loop for bpn across (clumps rnn)
-          for i below (max-time rnn)
-          do (multiple-value-bind (sum-1 sum-importances-1) (cost bpn)
-               (incf sum sum-1)
-               (incf sum-importances sum-importances-1)))
-    (values sum sum-importances)))
+  (if *warp-time*
+      (cost (aref (clumps rnn) (warped-time :rnn rnn)))
+      (let ((sum 0)
+            (sum-importances 0))
+        (loop for bpn across (clumps rnn)
+              for i below (max-time rnn)
+              do (multiple-value-bind (sum-1 sum-importances-1) (cost bpn)
+                   #+nil
+                   (unless mgl-bp::*in-training-p*
+                     (format t "GETTING cost of step ~S ~S~%" i
+                             (multiple-value-list (cost bpn))))
+                   (incf sum sum-1)
+                   (incf sum-importances sum-importances-1)))
+        (values sum sum-importances))))
 
 
 (defsection @mgl-bp-training (:title "Training")
@@ -763,11 +875,13 @@
   #+nil
   (make-classification-accuracy-monitors* (method () (bpn t t t)))
   #+nil
-  (make-cross-entropy-monitors* (method () (bpn t t t))))
+  (make-cross-entropy-monitors* (method () (bpn t t t)))
+  (make-warp-monitor-monitors function)
+  (make-warp-monitor-monitor-counter generic-function))
 
 (defun monitor-bpn-results (dataset bpn monitors)
   "For every batch (of size MAX-N-STRIPES of BPN) of instances in
-  DATASET, set the batch as the next input with SET-INPUT,perform a
+  DATASET, set the batch as the next input with SET-INPUT, perform a
   FORWARD pass and apply MONITORS to the BPN (with APPLY-MONITORS).
   Finally, return the counters of MONITORS. This is built on top of
   MONITOR-MODEL-RESULTS."
@@ -794,3 +908,43 @@
           nconc (make-cross-entropy-monitors* clump operation-mode
                                               label-index-distribution-fn
                                               attributes))))
+
+(defun make-warp-monitor-monitors
+    (rnn &key (counter-values-fn #'counter-raw-values)
+     (make-counter #'make-warp-monitor-monitor-counter))
+  "Return a list of monitors, one for every monitor in WARP-MONITORS
+  of RNN. These monitors extract the results from their warp
+  counterpairs with COUNTER-VALUES-FN and add them to their own
+  counter that's created by MAKE-COUNTER. Wow. Ew. The idea is that
+  one does something like this do monitor warped prediction:
+
+  ```commonlisp
+  (let ((*warp-time* t))
+    (setf (warp-monitors rnn)
+          (make-cost-monitors rnn :attributes '(:event \"warped pred.\")))
+    (monitor-bpn-results dataset rnn
+                         ;; Just collect and reset the warp
+                         ;; monitors after each batch of
+                         ;; instances.
+                         (make-warp-monitor-monitors rnn)))
+  ```"
+  (mapcar (lambda (warp-monitor)
+            (make-instance
+             'monitor
+             :measurer (lambda (instances result)
+                         (declare (ignore instances result))
+                         (let ((counter (counter warp-monitor)))
+                           (multiple-value-prog1
+                               (funcall counter-values-fn counter)
+                             (reset-counter counter))))
+             :counter (funcall make-counter (counter warp-monitor))))
+          (warp-monitors rnn)))
+
+(defgeneric make-warp-monitor-monitor-counter (warp-counter)
+  (:documentation "In an RNN, WARP-COUNTER aggregates results of all
+  the time steps during the processing of instances in the current
+  batch. Return a new counter into which results from WARP-COUNTER can
+  be accumulated when the processing of the batch is finished. The
+  default implementation creates a copy of WARP-COUNTER.")
+  (:method (warp-counter)
+    (copy 'make-warp-monitor-monitor-counter warp-counter)))

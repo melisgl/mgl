@@ -288,6 +288,24 @@
   (read-mat (nodes lump) stream))
 
 
+;;;; Resolve references to lagged clumps behind the scenes.
+
+(defmethod x :around (object)
+  (resolve-clumps (call-next-method)))
+
+(defmethod y :around (object)
+  (resolve-clumps (call-next-method)))
+
+(defmethod args :around (object)
+  (resolve-clumps (call-next-method)))
+
+(defmethod name ((ref lagged-clump))
+  (name (resolve-clump *rnn* ref)))
+
+(defmethod size ((ref lagged-clump))
+  (size (resolve-clump *rnn* ref)))
+
+
 ;;;; Define dropout before ->INPUT that inherits from it.
 
 (defsection @mgl-bp-dropout-lump (:title "Dropout Lump")
@@ -2600,7 +2618,15 @@
        (let* ((seq-index (pop seq-indices))
               (end-clump (funcall seq-elt-fn seq-index))
               (end-nodes (nodes end-clump)))
-         (assert (< stripe (n-stripes end-clump)))
+         ;; KLUDGE: With *WARP-TIME* the state this barrier looks up
+         ;; is destroyed if an input sequence ends but a sequence in
+         ;; at a higher numbered stripe does not. The workaround there
+         ;; is to sort inputs by their length. In this situation, the
+         ;; assertion would fail because at later time steps N-STRIPES
+         ;; is set to exclude the already ended sequences _at the
+         ;; highest stripes_.
+         (unless *warp-time*
+           (assert (< stripe (n-stripes end-clump))))
          (with-shape-and-displacement (end-nodes size (mat-displacement nodes))
            (copy! end-nodes nodes)))
        (incf stripe))

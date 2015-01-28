@@ -3,6 +3,7 @@
 (defsection @mgl-counter (:title "Counters")
   (add-to-counter generic-function)
   (counter-values generic-function)
+  (counter-raw-values generic-function)
   (reset-counter generic-function)
   (@mgl-attributes section)
   (@mgl-counter-classes section))
@@ -17,6 +18,8 @@
   (:documentation "Return any number of values representing the state
   of COUNTER. See specialized methods for type specific
   documentation."))
+
+(defgeneric counter-raw-values (counter))
 
 (defgeneric reset-counter (counter)
   (:documentation "Restore state of COUNTER to what it was just after
@@ -208,6 +211,10 @@
                 0
                 (/ numerator denominator))
             denominator)))
+
+(defmethod counter-raw-values ((counter basic-counter))
+  (with-slots (numerator denominator) counter
+    (values numerator denominator)))
 
 (defmethod reset-counter ((counter basic-counter))
   (with-slots (numerator denominator) counter
