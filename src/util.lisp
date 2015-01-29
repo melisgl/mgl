@@ -123,8 +123,10 @@
 
 (defun group (seq n)
   (let ((l (length seq)))
-    (loop for i below l by n
-          collect (subseq seq i (min l (+ i n))))))
+    (if (zerop l)
+        seq
+        (loop for i below l by n
+              collect (subseq seq i (min l (+ i n)))))))
 
 (defun subseq* (sequence start &optional end)
   (setq start (max 0 start))
