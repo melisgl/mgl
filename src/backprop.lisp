@@ -542,7 +542,7 @@
   (warp-monitors (accessor rnn)))
 
 (defvar *warp-time* nil
-  "Controls whether warping is enabled (see @MGL-RNN-WARPING). Don't
+  "Controls whether warping is enabled (see @MGL-RNN-TIME-WARP). Don't
   enable it for training, as it would make backprop impossible.")
 
 (defun warped-time (&key (rnn *rnn*) (time (time-step :rnn rnn)) (lag 0))

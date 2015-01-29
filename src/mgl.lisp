@@ -26,7 +26,11 @@
   In general, the focus is on power and performance not on ease of
   use. Perhaps one day there will be a cookie cutter interface with
   restricted functionality if a reasonable compromise is found between
-  power and utility."
+  power and utility.
+
+  Here is the [official repository](https://github.com/melisgl/mgl)
+  and [HTML
+  documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)."
   (@mgl-dependencies section)
   (@mgl-code-organization section)
   (@mgl-glossary section))

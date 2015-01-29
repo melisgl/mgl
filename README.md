@@ -40,6 +40,10 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
+Here is the [official repository](https://github.com/melisgl/mgl)
+and [HTML
+documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html).
+
 <a name='x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29'></a>
 
 ### 2.1 Dependencies

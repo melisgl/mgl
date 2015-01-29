@@ -25,6 +25,10 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
+Here is the [official repository](https://github.com/melisgl/mgl)
+and [HTML
+documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html).
+
 ### Dependencies
 
 MGL used to rely on [LLA](https://github.com/tpapp/lla) to

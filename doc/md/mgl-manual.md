@@ -101,6 +101,10 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
+Here is the [official repository](https://github.com/melisgl/mgl)
+and [HTML
+documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html).
+
 <a name='x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29'></a>
 
 ### 2.1 Dependencies
@@ -3429,7 +3433,7 @@ will never reference them again.
 
 - [variable] **\*WARP-TIME\*** *NIL*
 
-    Controls whether warping is enabled (see @MGL-RNN-WARPING). Don't
+    Controls whether warping is enabled (see [Time Warp][aec4]). Don't
     enable it for training, as it would make backprop impossible.
 
 <a name='x-28MGL-BP-3AWARPED-TIME-20FUNCTION-29'></a>
@@ -4602,6 +4606,7 @@ grow into a more serious toolset for NLP eventually.
   [a5c2]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20-28METHOD-20NIL-20-28MGL-OPT-3AITERATIVE-OPTIMIZER-20T-29-29-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS (METHOD NIL (MGL-OPT:ITERATIVE-OPTIMIZER T)))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [ab6b]: #x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:->EMBEDDING))"
+  [aec4]: #x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
   [b1b1]: #x-28MGL-BP-3A-40MGL-BP-STOCHASTICITY-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-STOCHASTICITY MGL-PAX:SECTION)"
   [b22b]: #x-28MGL-CORE-3AMONITORS-20GENERIC-FUNCTION-29 "(MGL-CORE:MONITORS GENERIC-FUNCTION)"
