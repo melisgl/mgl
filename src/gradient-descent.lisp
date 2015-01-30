@@ -732,7 +732,7 @@
     (assert (= (mat-size mean-estimates)
                (mat-size variance-estimates)
                (mat-size weight-deltas)))
-    (if (use-cuda-p)
+    (if (use-cuda-p mean-estimates variance-estimates weight-deltas)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-adam-update step-size mean-estimates variance-estimates
                             variance-adjustment weight-deltas n

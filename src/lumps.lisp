@@ -368,7 +368,7 @@
   (declare (type real dropout-probability)
            (type index n))
   (uniform-random! mask)
-  (if (use-cuda-p)
+  (if (use-cuda-p x mask)
       (cuda-dropout-xorwow x n mask dropout-probability
                            :grid-dim (list (ceiling n 256) 1 1)
                            :block-dim (list 256 1 1))
@@ -644,7 +644,7 @@
 (defun sigmoid! (x y)
   (let ((n (mat-size x)))
     (assert (= n (mat-size y)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-sigmoid! x n y :grid-dim grid-dim :block-dim block-dim))
         (lisp-sigmoid! x (mat-displacement x) n y (mat-displacement y)))))
@@ -676,7 +676,7 @@
   (let ((n (mat-size l)))
     (assert (= n (mat-size ld)))
     (assert (= n (mat-size xd)))
-    (if (use-cuda-p)
+    (if (use-cuda-p l ld xd)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-sigmoid-derivative! l n ld xd :grid-dim grid-dim
                                     :block-dim block-dim))
@@ -736,7 +736,7 @@
 (defun tanh! (x y)
   (let ((n (mat-size x)))
     (assert (= n (mat-size y)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x y)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-tanh! x n y :grid-dim grid-dim :block-dim block-dim))
         (lisp-tanh! x (mat-displacement x) n y (mat-displacement y)))))
@@ -767,13 +767,13 @@
   (let ((n (mat-size x)))
     (assert (= n (mat-size ld)))
     (assert (= n (mat-size xd)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x ld xd)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-tanh-derivative! x n ld xd :grid-dim grid-dim
-                                    :block-dim block-dim))
+                                 :block-dim block-dim))
         (lisp-tanh-derivative! x (mat-displacement x) n
-                                  ld (mat-displacement ld)
-                                  xd (mat-displacement xd)))))
+                               ld (mat-displacement ld)
+                               xd (mat-displacement xd)))))
 
 (define-lisp-kernel (lisp-tanh-derivative!)
     ((x :mat :input) (start-l index) (n index)
@@ -830,7 +830,7 @@
 (defun scaled-tanh! (x y)
   (let ((n (mat-size x)))
     (assert (= n (mat-size y)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x y)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-scaled-tanh! x n y :grid-dim grid-dim :block-dim block-dim))
         (lisp-scaled-tanh! x (mat-displacement x) n y (mat-displacement y)))))
@@ -861,13 +861,13 @@
   (let ((n (mat-size x)))
     (assert (= n (mat-size ld)))
     (assert (= n (mat-size xd)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x ld xd)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-scaled-tanh-derivative! x n ld xd :grid-dim grid-dim
-                                    :block-dim block-dim))
+                                        :block-dim block-dim))
         (lisp-scaled-tanh-derivative! x (mat-displacement x) n
-                                  ld (mat-displacement ld)
-                                  xd (mat-displacement xd)))))
+                                      ld (mat-displacement ld)
+                                      xd (mat-displacement xd)))))
 
 (define-cuda-kernel (cuda-scaled-tanh-derivative!)
     (void ((x :mat :input) (n int) (ld :mat :input) (xd :mat :io)))
@@ -927,7 +927,7 @@
   (assert (eq (mat-ctype x) (mat-ctype y)))
   (assert (<= n (mat-size x)))
   (assert (<= n (mat-size y)))
-  (if (use-cuda-p)
+  (if (use-cuda-p x y)
       (cuda-rectify x y n
                     :grid-dim (list (ceiling n 256) 1 1)
                     :block-dim (list 256 1 1))
@@ -958,7 +958,7 @@
          (ld (derivatives lump))
          (n (mat-size (nodes lump))))
     (assert (= (size lump) (size x)))
-    (if (use-cuda-p)
+    (if (use-cuda-p xd ln ld)
         (cuda-rectify-derivative xd ln ld n
                                  :grid-dim (list (ceiling n 256) 1 1)
                                  :block-dim (list 256 1 1))
@@ -1021,12 +1021,14 @@
 (defmethod forward ((lump ->max))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (n (mat-size (nodes lump))))
-    (if (use-cuda-p)
-        (cuda-max group-size (nodes x) n (nodes lump)
+         (n (mat-size (nodes lump)))
+         (nx (nodes x))
+         (nl (nodes lump)))
+    (if (use-cuda-p nx nl)
+        (cuda-max group-size nx n nl
                   :grid-dim (list (ceiling n 256) 1 1)
                   :block-dim (list 256 1 1))
-        (lisp-max group-size (nodes x) n (nodes lump)))))
+        (lisp-max group-size nx n nl))))
 
 (define-lisp-kernel (lisp-max)
     ((group-size index) (x :mat :input) (n index) (y :mat :output))
@@ -1057,14 +1059,16 @@
 (defmethod backward ((lump ->max))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (n (mat-size (nodes lump))))
-    (if (use-cuda-p)
-        (cuda-max-derivative group-size (nodes x) n (nodes lump)
-                             (derivatives lump) (derivatives x)
+         (n (mat-size (nodes lump)))
+         (nx (nodes x))
+         (nl (nodes lump))
+         (dx (derivatives x))
+         (dl (derivatives lump)))
+    (if (use-cuda-p nx nl dl dx)
+        (cuda-max-derivative group-size nx n nl dl dx
                              :grid-dim (list (ceiling n 256) 1 1)
                              :block-dim (list 256 1 1))
-        (lisp-max-derivative group-size (nodes x) n (nodes lump)
-                             (derivatives lump) (derivatives x)))))
+        (lisp-max-derivative group-size nx n nl dl dx))))
 
 (define-lisp-kernel (lisp-max-derivative)
     ((group-size index) (x :mat :input) (n index) (l :mat :input)
@@ -1118,12 +1122,14 @@
 (defmethod forward ((lump ->min))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (n (mat-size (nodes lump))))
-    (if (use-cuda-p)
-        (cuda-min group-size (nodes x) n (nodes lump)
+         (n (mat-size (nodes lump)))
+         (nx (nodes x))
+         (nl (nodes lump)))
+    (if (use-cuda-p nx nl)
+        (cuda-min group-size nx n nl
                   :grid-dim (list (ceiling n 256) 1 1)
                   :block-dim (list 256 1 1))
-        (lisp-min group-size (nodes x) n (nodes lump)))))
+        (lisp-min group-size nx n nl))))
 
 (define-lisp-kernel (lisp-min)
     ((group-size index) (x :mat :input) (n index) (y :mat :output))
@@ -1154,14 +1160,16 @@
 (defmethod backward ((lump ->min))
   (let* ((x (x lump))
          (group-size (group-size lump))
-         (n (mat-size (nodes lump))))
-    (if (use-cuda-p)
-        (cuda-min-derivative group-size (nodes x) n (nodes lump)
-                             (derivatives lump) (derivatives x)
+         (n (mat-size (nodes lump)))
+         (nx (nodes x))
+         (nl (nodes lump))
+         (dx (derivatives x))
+         (dl (derivatives lump)))
+    (if (use-cuda-p nx nl dx dl)
+        (cuda-min-derivative group-size nl n nl dl dx
                              :grid-dim (list (ceiling n 256) 1 1)
                              :block-dim (list 256 1 1))
-        (lisp-min-derivative group-size (nodes x) n (nodes lump)
-                             (derivatives lump) (derivatives x)))))
+        (lisp-min-derivative group-size nx n nl dl dx))))
 
 (define-lisp-kernel (lisp-min-derivative)
     ((group-size index) (x :mat :input) (n index) (l :mat :input)
@@ -1221,16 +1229,18 @@
 
 (defmethod forward ((lump ->max-channel))
   (let* ((x (x lump))
-         (group-size (group-size lump)))
+         (group-size (group-size lump))
+         (nx (nodes x))
+         (nl (nodes lump)))
     (declare (type index group-size))
-    (if (use-cuda-p)
-        (let ((n (/ (mat-size (nodes lump)) group-size)))
-          (cuda-max-channel group-size (nodes x) n (nodes lump)
+    (if (use-cuda-p nx nl)
+        (let ((n (/ (mat-size nl) group-size)))
+          (cuda-max-channel group-size nx n nl
                             :grid-dim (list (ceiling n 256) 1 1)
                             :block-dim (list 256 1 1)))
         (lisp-max-channel
-         group-size (nodes x) (mat-displacement (nodes x)) (mat-size (nodes x))
-         (nodes lump) (mat-displacement (nodes lump))))))
+         group-size nx (mat-displacement nx) (mat-size nx)
+         nl (mat-displacement nl)))))
 
 (define-lisp-kernel (lisp-max-channel)
     ((group-size index)
@@ -1272,18 +1282,19 @@
 
 (defmethod backward ((lump ->max-channel))
   (let* ((x (x lump))
-         (group-size (group-size lump)))
+         (group-size (group-size lump))
+         (nx (nodes x))
+         (dx (derivatives x))
+         (dl (derivatives lump)))
     (declare (type index group-size))
-    (if (use-cuda-p)
+    (if (use-cuda-p nx dx dl)
         (let ((n (/ (mat-size (nodes lump)) group-size)))
-          (cuda-max-channel-derivative group-size (nodes x) n
-                                       (derivatives lump) (derivatives x)
+          (cuda-max-channel-derivative group-size nx n dl dx
                                        :grid-dim (list (ceiling n 256) 1 1)
                                        :block-dim (list 256 1 1)))
         (lisp-max-channel-derivative
-         group-size (nodes x) (mat-displacement (nodes x)) (mat-size (nodes x))
-         (derivatives lump) (mat-displacement (derivatives lump))
-         (derivatives x) (mat-displacement (derivatives x))))))
+         group-size nx (mat-displacement nx) (mat-size nx)
+         dl (mat-displacement dl) dx (mat-displacement dx)))))
 
 (define-lisp-kernel (lisp-max-channel-derivative)
     ((group-size index)
@@ -1603,15 +1614,15 @@
   (defparameter *n-softmax-threads* 128))
 
 (defmethod forward ((lump ->softmax-xe-loss))
-  (let* ((x (nodes (x lump)))
+  (let* ((nx (nodes (x lump)))
          (group-size (group-size lump))
          (softmax (nodes lump))
          (n (* (n-stripes lump) (size lump))))
-    (if (use-cuda-p)
-        (cuda-softmax-xe group-size x n softmax
+    (if (use-cuda-p nx softmax)
+        (cuda-softmax-xe group-size nx n softmax
                          :grid-dim (list (/ n group-size) 1 1)
                          :block-dim (list *n-softmax-threads* 1 1))
-        (lisp-softmax-xe group-size x n softmax))))
+        (lisp-softmax-xe group-size nx n softmax))))
 
 (define-lisp-kernel (lisp-softmax-xe)
     ((group-size index) (x :mat :input) (n index) (softmax :mat :output))
@@ -1717,7 +1728,7 @@
     (if (typep target 'sequence)
         (do-sparse-targets ((group-start target-index target-value)
                             target group-size)
-          (if (use-cuda-p)
+          (if (use-cuda-p dx softmax)
               (multiple-value-bind (block-dim grid-dim)
                   (choose-1d-block-and-grid group-size 4)
                 (cuda-softmax-xe-derivative/sparse
@@ -1727,7 +1738,7 @@
               (lisp-softmax-xe-derivative/sparse
                group-start group-size dx softmax
                (+ group-start target-index) target-value)))
-        (if (use-cuda-p)
+        (if (use-cuda-p dx softmax)
             (multiple-value-bind (block-dim grid-dim)
                 (choose-1d-block-and-grid n 4)
               (cuda-softmax-xe-derivative
@@ -2272,7 +2283,7 @@
 (defun sin! (x y)
   (let ((n (mat-size x)))
     (assert (= n (mat-size y)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x y)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-sin! x n y :grid-dim grid-dim :block-dim block-dim))
         (lisp-sin! x (mat-displacement x) n y (mat-displacement y)))))
@@ -2305,7 +2316,7 @@
   (let ((n (mat-size x)))
     (assert (= n (mat-size ld)))
     (assert (= n (mat-size xd)))
-    (if (use-cuda-p)
+    (if (use-cuda-p x ld xd)
         (multiple-value-bind (block-dim grid-dim) (choose-1d-block-and-grid n 4)
           (cuda-sin-derivative! x n ld xd :grid-dim grid-dim
                                 :block-dim block-dim))
@@ -2748,7 +2759,7 @@
         (n-columns (mat-dimension mat 1)))
     (declare (type fixnum n-rows n-columns))
     (assert (= n-rows (mat-size norms)))
-    (if (use-cuda-p)
+    (if (use-cuda-p mat)
         (let ((n n-rows))
           (cuda-maybe-renormalize-rows
            mat n-rows n-columns l2-upper-bound norms
@@ -2792,7 +2803,7 @@
         (n-columns (mat-dimension mat 1)))
     (declare (type fixnum n-rows n-columns))
     (assert (= n-columns (mat-size norms)))
-    (if (use-cuda-p)
+    (if (use-cuda-p mat)
         (let ((n n-columns))
           (cuda-maybe-renormalize-columns
            mat n-rows n-columns l2-upper-bound norms
