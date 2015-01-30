@@ -386,6 +386,32 @@
   stat)
 
 
+;;;; Permutations
+
+(defun permute (seq permutation)
+  (let ((vector (coerce seq 'vector)))
+    (map (if (listp seq) 'list 'vector)
+         (lambda (index)
+           (aref vector index))
+         permutation)))
+
+(defun invert-permutation (permutation)
+  (let* ((n (length permutation))
+         (p (make-array n :element-type 'fixnum)))
+    (dotimes (i n)
+      (setf (aref p (aref permutation i)) i))
+    p))
+
+;;; Return a vector of indices. (ELT SEQ (AREF PERMUTATION I)) is
+;;; sorted by PRED.
+(defun sorting-permutation (seq pred &key (key #'identity))
+  (sort (coerce (alexandria:iota (length seq))
+                'vector)
+        (lambda (a b)
+          (funcall pred (funcall key (elt seq a))
+                   (funcall key (elt seq b))))))
+
+
 ;;;; Array utilities
 
 (defun as-column-vector (a)

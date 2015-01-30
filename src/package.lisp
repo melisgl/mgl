@@ -66,6 +66,10 @@
    #:add-to-running-stat
    #:running-stat-variance
    #:running-stat-mean
+   ;; Permutations
+   #:permute
+   #:invert-permutation
+   #:sorting-permutation
    ;; Array utilities
    #:as-column-vector
    #:rows-to-arrays
