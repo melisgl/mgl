@@ -327,7 +327,7 @@
 
 (mgl-pax:define-package #:mgl-nlp
   (:documentation "See MGL-NLP:@MGL-NLP.")
-  (:use #:common-lisp #:mgl-pax))
+  (:use #:common-lisp #:mgl-pax #:mgl-util))
 
 (mgl-pax:define-package #:mgl
   (:documentation "See MGL:@MGL-MANUAL. This package reexports

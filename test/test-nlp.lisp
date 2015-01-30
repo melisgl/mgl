@@ -12,6 +12,8 @@
 (defun test-blue ()
   (assert (equal (multiple-value-list (mgl:bleu '(((1 2 3 4) (1 2 3 4))
                                                   ((a b) (1 2)))
+                                                '(((1 2 3 4) (1 2 3 4))
+                                                  ((a b) (1 2)))
                                                 :candidate-key #'first
                                                 :reference-key #'second))
                  '(0.8408964 1.0 (2/3 3/4 1 1)))))

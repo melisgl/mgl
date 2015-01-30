@@ -26,15 +26,14 @@
       (when (= n (length previous-values))
         (funcall function (reverse previous-values))))))
 
-(defun bleu (corpus &key candidate-key reference-key (n 4))
+(defun bleu (candidates references &key candidate-key reference-key (n 4))
   "Compute the [BLEU score](http://en.wikipedia.org/wiki/BLEU) for
   bilingual CORPUS. BLEU measures how good a translation is compared
   to human reference translations.
 
-  CORPUS must be a sequence. CANDIDATE-KEY is function called with
-  elements of CORPUS and returns a sequence of words (i.e. a tokenized
-  translation). REFERENCE-KEY is similar but it returns the reference
-  translation. Words are compared with EQUAL, and may be any kind of
+  CANDIDATES (keyed by CANDIDATE-KEY) and REFERENCES (keyed by
+  REFERENCE-KEY) are sequences of sentences. A sentence is a sequence
+  of words. Words are compared with EQUAL, and may be any kind of
   object (not necessarily strings).
 
   Currently there is no support for multiple reference translations. N
@@ -49,10 +48,8 @@
   [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
 
   ```cl-transcript
-  (bleu '(((1 2 3 4) (1 2 3 4))
-          ((a b) (1 2)))
-        :candidate-key #'first
-        :reference-key #'second)
+  (bleu '((1 2 3 4) (a b))
+        '((1 2 3 4) (1 2)))
   => 0.8408964
   => 1.0
   => (;; 1-gram precision: 4/6
@@ -90,9 +87,9 @@
           (sum-unclipped (make-array n :initial-element 0))
           (sum-length-candidate 0)
           (sum-length-reference 0))
-      (map nil (lambda (sentence)
-                 (let ((candidate (funcall candidate-key sentence))
-                       (reference (funcall reference-key sentence)))
+      (map nil (lambda (candidate reference)
+                 (let ((candidate (apply-key candidate-key candidate))
+                       (reference (apply-key reference-key reference)))
                    (incf sum-length-candidate (length candidate))
                    (incf sum-length-reference (length reference))
                    (loop for i upfrom 1 upto n
@@ -105,7 +102,7 @@
                                                  reference-n-gram-counts))
                               (incf (aref sum-unclipped (1- i))
                                     (sum-unclipped candidate-n-gram-counts))))))
-           corpus)
+           candidates references)
       (let ((brevity-penalty
               (if (zerop sum-length-candidate)
                   0
