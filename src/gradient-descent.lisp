@@ -608,8 +608,11 @@
   (variance-update-rate (accessor adam-optimizer))
   (variance-adjustment (accessor adam-optimizer)))
 
-;;; FIXME: this isn't really a BATCH-GD-OPTIMIZER (that should be
+;;; FIXME: This isn't really a BATCH-GD-OPTIMIZER (that should be
 ;;; called SGD, really).
+;;;
+;;; FIXEXT: Don't allocate variance and mean estimator matrices if the
+;;; corresponding rate is known to be constant 1.
 (defclass adam-optimizer (batch-gd-optimizer)
   ((learning-rate
     :initform 0.0002 :accessor learning-rate

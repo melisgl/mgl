@@ -756,10 +756,6 @@
         (loop for bpn across (clumps rnn)
               for i below (max-time rnn)
               do (multiple-value-bind (sum-1 sum-importances-1) (cost bpn)
-                   #+nil
-                   (unless mgl-bp::*in-training-p*
-                     (format t "GETTING cost of step ~S ~S~%" i
-                             (multiple-value-list (cost bpn))))
                    (incf sum sum-1)
                    (incf sum-importances sum-importances-1)))
         (values sum sum-importances))))
