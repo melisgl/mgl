@@ -118,12 +118,17 @@ is easier to set up and just as fast as ATLAS.
 [CL-CUDA](https://github.com/takagi/cl-cuda) and
 [MGL-MAT](https://github.com/melisgl/mgl) are the two main
 dependencies and also the ones not yet in quicklisp, so just drop
-them into `quicklisp/local-projects/`. If there is no suitable gpu
-on the system or the cuda sdk is not installed, MGL will simply
+them into `quicklisp/local-projects/`. If there is no suitable GPU
+on the system or the CUDA SDK is not installed, MGL will simply
 fall back on using BLAS and Lisp code. Wrapping code in
 `MGL-MAT:WITH-CUDA*` is basically all that's needed to run on the GPU,
-and with `MGL-MAT:CUDA-AVAILABLE-P` one can check whether the gpu is
+and with `MGL-MAT:CUDA-AVAILABLE-P` one can check whether the GPU is
 really being used.
+
+Prettier-than-markdown HTML documentation cross-linked with other
+libraries is
+[available](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
+as part of [PAX World](http://melisgl.github.io/mgl-pax-world/).
 
 <a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a>
 
@@ -135,7 +140,8 @@ For example, package `MGL-RESAMPLE` is about [Resampling][8fc3] and
 packages makes it easier to cleanly separate API and implementation
 and also to explore into a specific task. At other times, they can
 be a hassle, so the [`MGL`][e0d7] package itself reexports every external
-symbol found in all the other packages that make up MGL.
+symbol found in all the other packages that make up MGL and
+MGL-MAT (see `MGL-MAT:@MAT-MANUAL`) on which it heavily relies.
 
 One exception to this rule is the bundled, but independent
 `MGL-GNUPLOT` library.
@@ -1685,7 +1691,7 @@ Now let's discuss a few handy utilities.
     A utility that's often called at the start of
     optimization (from [`ON-OPTIMIZATION-STARTED`][dae0]). The default
     implementation logs the description of `GRADIENT-SOURCE` (as in
-    `DESCRIBE`) and `OPTIMIZER` and calls `LOG-CUDA`.
+    `DESCRIBE`) and `OPTIMIZER` and calls `LOG-MAT-ROOM`.
 
 <a name='x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29'></a>
 
@@ -2804,11 +2810,11 @@ Without the bells an whistles, the basic shape of training is this:
     Finally, return the counters of `MONITORS`. This is built on top of
     [`MONITOR-MODEL-RESULTS`][3ca8].
 
-<a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITORS-20FUNCTION-29'></a>
+<a name='x-28MGL-BP-3AMAKE-STEP-MONITOR-MONITORS-20FUNCTION-29'></a>
 
-- [function] **MAKE-WARP-MONITOR-MONITORS** *RNN &KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-WARP-MONITOR-MONITOR-COUNTER)*
+- [function] **MAKE-STEP-MONITOR-MONITORS** *RNN &KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-STEP-MONITOR-MONITOR-COUNTER)*
 
-    Return a list of monitors, one for every monitor in [`WARP-MONITORS`][fc8f]
+    Return a list of monitors, one for every monitor in [`STEP-MONITORS`][aa2d]
     of `RNN`. These monitors extract the results from their warp
     counterpairs with `COUNTER-VALUES-FN` and add them to their own
     counter that's created by `MAKE-COUNTER`. Wow. Ew. The idea is that
@@ -2816,25 +2822,25 @@ Without the bells an whistles, the basic shape of training is this:
     
     ```commonlisp
     (let ((*warp-time* t))
-      (setf (warp-monitors rnn)
+      (setf (step-monitors rnn)
             (make-cost-monitors rnn :attributes '(:event "warped pred.")))
       (monitor-bpn-results dataset rnn
                            ;; Just collect and reset the warp
                            ;; monitors after each batch of
                            ;; instances.
-                           (make-warp-monitor-monitors rnn)))
+                           (make-step-monitor-monitors rnn)))
     ```
 
 
-<a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a>
+<a name='x-28MGL-BP-3AMAKE-STEP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a>
 
-- [generic-function] **MAKE-WARP-MONITOR-MONITOR-COUNTER** *WARP-COUNTER*
+- [generic-function] **MAKE-STEP-MONITOR-MONITOR-COUNTER** *STEP-COUNTER*
 
-    In an [`RNN`][b9d7], `WARP-COUNTER` aggregates results of all
+    In an [`RNN`][b9d7], `STEP-COUNTER` aggregates results of all
     the time steps during the processing of instances in the current
-    batch. Return a new counter into which results from `WARP-COUNTER` can
+    batch. Return a new counter into which results from `STEP-COUNTER` can
     be accumulated when the processing of the batch is finished. The
-    default implementation creates a copy of `WARP-COUNTER`.
+    default implementation creates a copy of `STEP-COUNTER`.
 
 <a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a>
 
@@ -3183,8 +3189,7 @@ the concepts involved. Make sure you are comfortable with
                  (:fn reset-optimization-monitors :period 3000)))
               (make-instance 'bp-learner
                              :bpn rnn
-                             :monitors (make-cost-monitors
-                                        rnn :attributes '(:event "train")))
+                             :monitors (make-cost-monitors rnn))
               :dataset (make-sampler 30000))))
 
 ;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -3205,55 +3210,66 @@ the concepts involved. Make sure you are comfortable with
     (log-padded
      (append
       (monitor-bpn-results (make-sampler 1000) rnn
-                           (make-cost-monitors rnn
-                                               :attributes '(:event "pred.")))
+                           (make-cost-monitors
+                            rnn :attributes '(:event "pred.")))
       ;; Same result in a different way: monitor predictions for
       ;; sequences up to length 20, but don't unfold the RNN
       ;; unnecessarily to save memory.
       (let ((*warp-time* t))
-        (setf (warp-monitors rnn)
-              (make-cost-monitors rnn :attributes '(:event "warped pred.")))
         (monitor-bpn-results (make-sampler 1000 :length 20) rnn
                              ;; Just collect and reset the warp
                              ;; monitors after each batch of
                              ;; instances.
-                             (make-warp-monitor-monitors rnn)))))
+                             (make-cost-monitors
+                              rnn :attributes '(:event "warped pred."))))))
     ;; Verify that no further unfoldings took place.
-    (assert (<= (length (clumps rnn)) 10))))
+    (assert (<= (length (clumps rnn)) 10)))
+  (log-mat-room))
 
 #|
 
 ;;; Transcript follows:
-(train-sum-sign-rnn)
-.. 2015-01-28 14:12:54: training at n-instances: 0
-.. 2015-01-28 14:12:54: train cost: 0.000e+0 (0)
-.. #<ADAM-OPTIMIZER {101F2B4143}>
+(let (;; Backprop nets do not need double float. Using single floats
+      ;; is faster and needs less memory.
+      (*default-mat-ctype* :float)
+      ;; Enable moving data in and out of GPU memory so that the RNN
+      ;; can work with sequences so long that the unfolded network
+      ;; wouldn't otherwise fit in the GPU.
+      (*cuda-window-start-time* 1))
+  ;; Seed the random number generators.
+  (repeatably ()
+    ;; Enable CUDA if available.
+    (with-cuda* ()
+      (train-sum-sign-rnn))))
+.. 2015-02-08 12:09:14: training at n-instances: 0
+.. 2015-02-08 12:09:14: cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {103192AEF3}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
-..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 2.00342>
-..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.75262>
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :norm 1.73685>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :norm 0.31893>
 ..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.92961>
-..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.20846>
+..                       1 1/1 :norm 1.81610>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.21965>
 ..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.73093>
-..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.78671>
+..                       1 1/1 :norm 1.74939>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.40377>
 ..                     #<->WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 1.45207>
+..                       3 1/1 :norm 2.15898>
 ..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 3.23801>
+..                       3 1/1 :norm 2.94470>
 ..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.01936>
-..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.36555>
-..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.29635>
-..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.32443>
-..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.30479>
-..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.89177>
-..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.50471>
-..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.97235>
-..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.77381>)
-..                    {101F2B4AD3}>
+..                       1 1/1 :norm 0.97601>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 0.65261>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.37653>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 0.92334>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.01609>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.09995>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.41244>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.40475>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.75358>)
+..                    {10319D3653}>
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = NONE
 ..    MOMENTUM-TYPE = :NONE
@@ -3269,7 +3285,7 @@ the concepts involved. Make sure you are comfortable with
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #<RNN {101F278433}>
+..  #<RNN {10318C6C53}>
 ..   BPN description:
 ..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>
 ..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>)
@@ -3278,48 +3294,60 @@ the concepts involved. Make sure you are comfortable with
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-28 14:12:55: pred.        cost: 2.133d+0 (4647.00)
-.. 2015-01-28 14:12:55: warped pred. cost: 2.028d+0 (9516.00)
-.. 2015-01-28 14:12:55: training at n-instances: 3000
-.. 2015-01-28 14:12:55: train cost: 1.155d+0 (13643.00)
-.. 2015-01-28 14:12:56: training at n-instances: 6000
-.. 2015-01-28 14:12:56: train cost: 4.123d-1 (13765.00)
-.. 2015-01-28 14:12:57: training at n-instances: 9000
-.. 2015-01-28 14:12:57: train cost: 8.208d-2 (13654.00)
-.. 2015-01-28 14:12:57: training at n-instances: 12000
-.. 2015-01-28 14:12:57: train cost: 2.889d-2 (13752.00)
-.. 2015-01-28 14:12:58: training at n-instances: 15000
-.. 2015-01-28 14:12:58: train cost: 1.781d-2 (13935.00)
-.. 2015-01-28 14:12:58: training at n-instances: 18000
-.. 2015-01-28 14:12:58: train cost: 1.271d-2 (13911.00)
-.. 2015-01-28 14:12:59: training at n-instances: 21000
-.. 2015-01-28 14:12:59: train cost: 9.828d-3 (13833.00)
-.. 2015-01-28 14:13:00: training at n-instances: 24000
-.. 2015-01-28 14:13:00: train cost: 7.782d-3 (13482.00)
-.. 2015-01-28 14:13:00: training at n-instances: 27000
-.. 2015-01-28 14:13:00: train cost: 6.457d-3 (14243.00)
-.. 2015-01-28 14:13:01: training at n-instances: 30000
-.. 2015-01-28 14:13:01: train cost: 5.451d-3 (13834.00)
-.. 2015-01-28 14:13:01: pred.        cost: 5.024d-3 (4556.00)
-.. 2015-01-28 14:13:01: warped pred. cost: 4.932d-3 (9569.00)
+..   2015-02-08 12:09:15: pred.        cost: 1.223e+0 (4455.00)
+.. 2015-02-08 12:09:15: warped pred. cost: 1.228e+0 (9476.00)
+.. 2015-02-08 12:09:15: Foreign memory usage:
+.. foreign arrays: 166 (used bytes: 40,400)
+.. CUDA memory usage:
+.. device arrays: 114 (used bytes: 220,892, pooled bytes: 19,200)
+.. host arrays: 162 (used bytes: 39,600)
+.. host->device copies: 6,164, device->host copies: 4,490
+.. 2015-02-08 12:09:17: training at n-instances: 3000
+.. 2015-02-08 12:09:17: cost: 4.986e-1 (13726.00)
+.. 2015-02-08 12:09:19: training at n-instances: 6000
+.. 2015-02-08 12:09:19: cost: 5.769e-2 (13890.00)
+.. 2015-02-08 12:09:20: training at n-instances: 9000
+.. 2015-02-08 12:09:20: cost: 2.168e-2 (13872.00)
+.. 2015-02-08 12:09:22: training at n-instances: 12000
+.. 2015-02-08 12:09:22: cost: 1.348e-2 (13953.00)
+.. 2015-02-08 12:09:24: training at n-instances: 15000
+.. 2015-02-08 12:09:24: cost: 9.696e-3 (13948.00)
+.. 2015-02-08 12:09:26: training at n-instances: 18000
+.. 2015-02-08 12:09:26: cost: 7.382e-3 (13849.00)
+.. 2015-02-08 12:09:28: training at n-instances: 21000
+.. 2015-02-08 12:09:28: cost: 5.861e-3 (13758.00)
+.. 2015-02-08 12:09:30: training at n-instances: 24000
+.. 2015-02-08 12:09:30: cost: 4.849e-3 (13908.00)
+.. 2015-02-08 12:09:32: training at n-instances: 27000
+.. 2015-02-08 12:09:32: cost: 4.013e-3 (13570.00)
+.. 2015-02-08 12:09:34: training at n-instances: 30000
+.. 2015-02-08 12:09:34: cost: 3.459e-3 (13721.00)
+.. 2015-02-08 12:09:34: pred.        cost: 3.284e-3 (4593.00)
+.. 2015-02-08 12:09:34: warped pred. cost: 3.285e-3 (9717.00)
+.. 2015-02-08 12:09:34: Foreign memory usage:
+.. foreign arrays: 220 (used bytes: 53,600)
+.. CUDA memory usage:
+.. device arrays: 148 (used bytes: 224,428, pooled bytes: 19,200)
+.. host arrays: 216 (used bytes: 52,800)
+.. host->device copies: 465,818, device->host copies: 371,990
 ..
-==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 3.25778>
--->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 2.64093>
--->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.24070>
--->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.09629>
--->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.29833>
--->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.12919>
--->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.61549>
--->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.45618>
--->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.77321>
--->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 1.74186>
--->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.51236>
--->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.18734>
--->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 1.02118>
--->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 4.29466>
--->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 6.57931>
--->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 6.37012>
--->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 3.06961>)
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.75226>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.04934>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.14970>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.67698>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.40400>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.33328>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.41458>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.97210>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.65959>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.77142>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 6.28021>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.96948>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.33460>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.11331>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.13583>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.15849>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.95984>)
 
 |#
 ```
@@ -3370,6 +3398,38 @@ the concepts involved. Make sure you are comfortable with
     hence the default of 1. But it is possible to have connections to
     arbitrary time steps. The maximum connection lag must be specified
     when creating the [`RNN`][b9d7].
+
+<a name='x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a>
+
+- [accessor] **CUDA-WINDOW-START-TIME** *RNN* *(:CUDA-WINDOW-START-TIME = \*CUDA-WINDOW-START-TIME\*)*
+
+    Due to unfolding, the memory footprint of an [`RNN`][b9d7]
+    is almost linear in the number of time steps (i.e. the max
+    sequence length). For prediction, this is addressed by
+    [Time Warp][aec4]. For training, we cannot discard results of
+    previous time steps because they are needed for backpropagation,
+    but we can at least move them out of GPU memory if they are not
+    going to be used for a while and copy them back before they are
+    needed. Obviously, this is only relevant if CUDA is being used.
+    
+    If `CUDA-WINDOW-START-TIME` is `NIL`, then this feature is turned off.
+    Else, during training, at `CUDA-WINDOW-START-TIME` or later time
+    steps, matrices belonging to non-weight lumps may be forced out of
+    GPU memory and later brought back as neeeded.
+    
+    This feature is implemented in terms of
+    `MGL-MAT:WITH-SYNCING-CUDA-FACETS` that uses CUDA host memory (also
+    known as *page-locked* or *pinned memory*) to do asynchronous
+    copies concurrently with normal computation. The consequence of
+    this is that it is now main memory usage that's unbounded which
+    toghether with page-locking makes it a potent weapon to bring a
+    machine to a halt. You were warned.
+
+<a name='x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20VARIABLE-29'></a>
+
+- [variable] **\*CUDA-WINDOW-START-TIME\*** *NIL*
+
+    The default for [`CUDA-WINDOW-START-TIME`][de4f].
 
 <a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a>
 
@@ -3424,8 +3484,10 @@ the concepts involved. Make sure you are comfortable with
 The unbounded memory usage of [`RNN`][b9d7]s with one [`BPN`][0e98] allocated per
 time step can become a problem. For training, where the gradients
 often have to be backpropagated from the last time step to the very
-beginning, this is hard to solve (but it's being worked on). For
-prediction on the other hand, one doesn't need to keep old steps
+beginning, this is hard to solve but with [`CUDA-WINDOW-START-TIME`][de4f] the
+limit is no longer GPU memory.
+
+For prediction on the other hand, one doesn't need to keep old steps
 around indefinitely: they can be discarded when future time steps
 will never reference them again.
 
@@ -3497,17 +3559,24 @@ will never reference them again.
     WARP-LENGTH))` except for a shift in its time lagged
     connections.
 
-<a name='x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a>
+<a name='x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a>
 
-- [accessor] **WARP-MONITORS** *RNN* *(:WARP-MONITORS = NIL)*
+- [accessor] **STEP-MONITORS** *RNN* *(:STEP-MONITORS = NIL)*
 
-    When making predictions with [`*WARP-TIME*`][812b] true,
-    previous states are discarded so the forward the bpn and apply
-    monitors modus operandi of [`MONITOR-BPN-RESULTS`][532b] doesn't work.
+    During training, unfolded [`BPN`][0e98]s corresponding to
+    previous time steps may be expensive to get at because they are no
+    longer in GPU memory. This consideration also applies to making
+    prediction with the additional caveat that with [`*WARP-TIME*`][812b] true,
+    previous states are discarded so it's not possible to gather
+    statistics after [`FORWARD`][9233] finished.
     
-    Instead, add monitors objects to this slot and they will be
-    automatically applied to the [`RNN`][b9d7] after each step, if [`*WARP-TIME*`][812b]
-    is true.
+    Add monitor objects to this slot and they will be automatically
+    applied to the [`RNN`][b9d7] after each step when [`FORWARD`][9233]ing the [`RNN`][b9d7]
+    during training or prediction. To be able to easily switch between
+    sets of monitors, in addition to a list of monitors this can be a
+    symbol or a function, too. If it's a symbol, then its a designator
+    for its `SYMBOL-VALUE`. If it's a function, then it must have no
+    arguments and it's a designator for its return value.
 
 <a name='x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4415,16 +4484,15 @@ grow into a more serious toolset for NLP eventually.
 
 <a name='x-28MGL-NLP-3ABLEU-20FUNCTION-29'></a>
 
-- [function] **BLEU** *CORPUS &KEY CANDIDATE-KEY REFERENCE-KEY (N 4)*
+- [function] **BLEU** *CANDIDATES REFERENCES &KEY CANDIDATE-KEY REFERENCE-KEY (N 4)*
 
     Compute the [BLEU score](http://en.wikipedia.org/wiki/BLEU) for
-    bilingual `CORPUS`. [`BLEU`][edb3] measures how good a translation is compared
+    bilingual CORPUS. [`BLEU`][edb3] measures how good a translation is compared
     to human reference translations.
     
-    `CORPUS` must be a sequence. `CANDIDATE-KEY` is function called with
-    elements of `CORPUS` and returns a sequence of words (i.e. a tokenized
-    translation). `REFERENCE-KEY` is similar but it returns the reference
-    translation. Words are compared with `EQUAL`, and may be any kind of
+    `CANDIDATES` (keyed by `CANDIDATE-KEY`) and `REFERENCES` (keyed by
+    `REFERENCE-KEY`) are sequences of sentences. A sentence is a sequence
+    of words. Words are compared with `EQUAL`, and may be any kind of
     object (not necessarily strings).
     
     Currently there is no support for multiple reference translations. `N`
@@ -4439,10 +4507,8 @@ grow into a more serious toolset for NLP eventually.
     [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
     
     ```cl-transcript
-    (bleu '(((1 2 3 4) (1 2 3 4))
-            ((a b) (1 2)))
-          :candidate-key #'first
-          :reference-key #'second)
+    (bleu '((1 2 3 4) (a b))
+          '((1 2 3 4) (1 2)))
     => 0.8408964
     => 1.0
     => (;; 1-gram precision: 4/6
@@ -4522,7 +4588,6 @@ grow into a more serious toolset for NLP eventually.
   [505e]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MEASURER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MEASURER MGL-PAX:SECTION)"
   [51ad]: #x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"
   [51ee]: #x-28MGL-GD-3A-40MGL-GD-UTILITIES-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-UTILITIES MGL-PAX:SECTION)"
-  [532b]: #x-28MGL-BP-3AMONITOR-BPN-RESULTS-20FUNCTION-29 "(MGL-BP:MONITOR-BPN-RESULTS FUNCTION)"
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD MGL-PAX:SECTION)"
   [5478]: #x-28MGL-BP-3A--3EV-2AM-20CLASS-29 "(MGL-BP:->V*M CLASS)"
   [5683]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->SOFTMAX-XE-LOSS))"
@@ -4604,6 +4669,7 @@ grow into a more serious toolset for NLP eventually.
   [a3fa]: #x-28MGL-BP-3A--3ESQUARED-DIFFERENCE-20CLASS-29 "(MGL-BP:->SQUARED-DIFFERENCE CLASS)"
   [a519]: #x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29 "(MGL-DATASET:MAP-DATASETS FUNCTION)"
   [a5c2]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20-28METHOD-20NIL-20-28MGL-OPT-3AITERATIVE-OPTIMIZER-20T-29-29-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS (METHOD NIL (MGL-OPT:ITERATIVE-OPTIMIZER T)))"
+  [aa2d]: #x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:STEP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [ab6b]: #x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:->EMBEDDING))"
   [aec4]: #x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)"
@@ -4646,6 +4712,7 @@ grow into a more serious toolset for NLP eventually.
   [dae0]: #x-28MGL-OPT-3AON-OPTIMIZATION-STARTED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:ON-OPTIMIZATION-STARTED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"
   [dc9d]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [dca7]: #x-28MGL-CORE-3AN-STRIPES-20GENERIC-FUNCTION-29 "(MGL-CORE:N-STRIPES GENERIC-FUNCTION)"
+  [de4f]: #x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:CUDA-WINDOW-START-TIME (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [de6d]: #x-28MGL-OPT-3AMAKE-COST-MONITORS-20FUNCTION-29 "(MGL-OPT:MAKE-COST-MONITORS FUNCTION)"
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"
   [e0c8]: #x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"
@@ -4670,7 +4737,6 @@ grow into a more serious toolset for NLP eventually.
   [f95f]: #x-28MGL-CORE-3AAPPLY-MONITOR-20GENERIC-FUNCTION-29 "(MGL-CORE:APPLY-MONITOR GENERIC-FUNCTION)"
   [f995]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-OVERVIEW MGL-PAX:SECTION)"
   [f9f7]: #x-28MGL-CG-3ACG-20FUNCTION-29 "(MGL-CG:CG FUNCTION)"
-  [fc8f]: #x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [fd45]: #x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-DATASET:N-SAMPLES (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [fdf3]: #x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29 "(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"
   [fe97]: #x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT MGL-PAX:SECTION)"

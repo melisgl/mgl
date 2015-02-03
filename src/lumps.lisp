@@ -2142,6 +2142,8 @@
                   (scal! output-scale to)
                   (axpy! y (nodes x) to))
                  (t
+                  ;; KLUDGE: reshaping due to
+                  ;; REMOVE-TRAILING-NIL-INSTANCES.
                   (with-shape-and-displacement ((nodes x) (mat-dimensions to))
                     (with-shape-and-displacement ((nodes y) (mat-dimensions to))
                       (geem! 1 (nodes x) (nodes y) output-scale to))))))
@@ -2163,6 +2165,8 @@
                   (axpy! y (derivatives lump) (derivatives x)))
                  (t
                   (let ((dl (derivatives lump)))
+                    ;; KLUDGE: reshaping due to
+                    ;; REMOVE-TRAILING-NIL-INSTANCES.
                     (with-shape-and-displacement ((nodes x)
                                                   (mat-dimensions dl))
                       (with-shape-and-displacement ((nodes y)

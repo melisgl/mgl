@@ -112,6 +112,15 @@
   (:documentation "Compute the values of the function represented by
   CLUMP for all stripes and place the results into NODES of CLUMP."))
 
+(declaim (special *in-training-p*))
+
+(defmethod forward :after (clump)
+  ;; Prepare for backward pass by zeroing non-weight derivatives.
+  (when (and *in-training-p*
+             (stripedp clump)
+             (derivatives clump))
+    (fill! 0 (derivatives clump))))
+
 (defgeneric backward (clump)
   (:documentation "Compute the partial derivatives of the function
   represented by CLUMP and add them to DERIVATIVES of the
@@ -137,6 +146,10 @@
   `dL(x2)/dx2` to DERIVATIVES of `X`. Now, `dL(x1)/dx1 = dL(x1)/df *
   df(x1)/dx1` and the first term is what we have in DERIVATIVES of the
   sigmoid so it only needs to calculate the second term."))
+
+(defgeneric map-clumps (fn clump)
+  (:method (fn clump)
+    (funcall fn clump)))
 
 
 (defsection @mgl-bpn (:title "BPNs")
@@ -174,7 +187,9 @@
     :documentation "The maximum number of instances the network can
     operate on in parallel. Within BUILD-FNN or BUILD-RNN, it defaults
     to MAX-N-STRIPES of that parent network, else it defaults to 1.
-    When set MAX-N-STRIPES of all CLUMPS get set to the same value."))
+    When set MAX-N-STRIPES of all CLUMPS get set to the same value.")
+   ;; The cost calculated by the most recent FORWARD.
+   (last-cost :initform (list 0 0) :accessor last-cost))
   (:documentation "Abstract base class for FNN and RNN."))
 
 (defmethod initialize-instance :after ((bpn bpn) &key &allow-other-keys)
@@ -213,6 +228,12 @@
   (loop for clump across (clumps bpn)
         do (setf (max-n-stripes clump) max-n-stripes)))
 
+(defmethod map-clumps (fn (bpn bpn))
+  (call-next-method)
+  (map nil (lambda (clump)
+             (map-clumps fn clump))
+       (clumps bpn)))
+
 (defun find-clump (name bpn &key (errorp t))
   "Find the clump with NAME among CLUMPS of BPN. As always, names are
   compared with EQUAL. If not found, then return NIL or signal and
@@ -248,7 +269,9 @@
 
 (defgeneric forward-bpn (bpn &key from-clump to-clump end-clump)
   (:documentation "Propagate the values from the already clamped
-  inputs."))
+  inputs and return total cost of all inputs (i.e. all stripes) and
+  the sum of importances. These values are also returned by COST until
+  the next forward pass on BPN."))
 
 (defgeneric backward-bpn (bpn &key last-clump)
   (:documentation "Accumulate derivatives of weights."))
@@ -256,13 +279,6 @@
 ;;; Derivatives of weights are left alone to let them accumulate which
 ;;; is useful in batches such as when training with conjugate
 ;;; gradient.
-(defgeneric zero-non-weight-derivatives (clump)
-  (:method ((bpn bpn))
-    (map nil #'zero-non-weight-derivatives (clumps bpn)))
-  (:method ((clump clump))
-    (when (and (stripedp clump)
-               (derivatives clump))
-      (fill! 0 (derivatives clump)))))
 
 (defmethod forward ((bpn bpn))
   (forward-bpn bpn))
@@ -272,12 +288,22 @@
 
 (defmethod forward-bpn ((bpn bpn) &key from-clump to-clump end-clump)
   (declare (optimize (debug 3)))
-  (let ((seen-from-clump-p (not from-clump)))
+  (let ((seen-from-clump-p (not from-clump))
+        (sum-cost 0)
+        (sum-importances 0))
     (loop for clump across (clumps bpn)
           until (eq clump end-clump)
           do (when (eq clump from-clump) (setq seen-from-clump-p t))
-          do (when seen-from-clump-p (forward clump))
-          until (eq clump to-clump))))
+          do (when seen-from-clump-p
+               (forward clump)
+               (when (applies-to-p #'cost clump)
+                 (multiple-value-bind (sum-cost-1 sum-importances-1)
+                     (cost clump)
+                   (incf sum-cost sum-cost-1)
+                   (incf sum-importances sum-importances-1))))
+          until (eq clump to-clump))
+    (setf (last-cost bpn) (list sum-cost sum-importances))
+    (values sum-cost sum-importances)))
 
 (defmethod backward-bpn ((bpn bpn) &key last-clump)
   (let ((clumps (clumps bpn)))
@@ -287,14 +313,7 @@
           do (backward clump))))
 
 (defmethod cost ((bpn bpn))
-  (let ((sum 0)
-        (sum-importances 0))
-    (loop for clump across (clumps bpn) do
-      (when (applies-to-p #'cost clump)
-        (multiple-value-bind (sum-1 sum-importances-1) (cost clump)
-          (incf sum sum-1)
-          (incf sum-importances sum-importances-1))))
-    (values sum sum-importances)))
+  (values-list (last-cost bpn)))
 
 (defmethod map-segments (fn (bpn bpn))
   (map nil (lambda (clump)
@@ -393,6 +412,8 @@
   (rnn class)
   (unfolder (reader rnn))
   (max-lag (reader rnn))
+  (cuda-window-start-time (accessor rnn))
+  (*cuda-window-start-time* variable)
   (build-rnn macro)
   (lag function)
   (time-step function)
@@ -406,6 +427,9 @@
   (sum-sig-rnn.lisp
    (include #.(asdf:system-relative-pathname :mgl "example/sum-sign-rnn.lisp")
             :header-nl "```commonlisp" :footer-nl "```")))
+
+(defvar *cuda-window-start-time* nil
+  "The default for CUDA-WINDOW-START-TIME.")
 
 ;;;; FIXME: MAKE-CLASSIFICATION-ACCURACY-MONITORS* and co don't work
 ;;;; because they rely on an unimplementable LUMPS.
@@ -451,15 +475,57 @@
     created at time step `(+ WARP-START (MOD (- I WARP-START)
     WARP-LENGTH))` except for a shift in its time lagged
     connections.")
-   (warp-monitors
-    :initform () :initarg :warp-monitors :accessor warp-monitors
-    :documentation "When making predictions with *WARP-TIME* true,
-    previous states are discarded so the forward the bpn and apply
-    monitors modus operandi of MONITOR-BPN-RESULTS doesn't work.
+   (cuda-window-start-time
+    :initform *cuda-window-start-time*
+    :initarg :cuda-window-start-time
+    :accessor cuda-window-start-time
+    :documentation "Due to unfolding, the memory footprint of an RNN
+    is almost linear in the number of time steps (i.e. the max
+    sequence length). For prediction, this is addressed by
+    @MGL-RNN-TIME-WARP. For training, we cannot discard results of
+    previous time steps because they are needed for backpropagation,
+    but we can at least move them out of GPU memory if they are not
+    going to be used for a while and copy them back before they are
+    needed. Obviously, this is only relevant if CUDA is being used.
 
-    Instead, add monitors objects to this slot and they will be
-    automatically applied to the RNN after each step, if *WARP-TIME*
-    is true."))
+    If CUDA-WINDOW-START-TIME is NIL, then this feature is turned off.
+    Else, during training, at CUDA-WINDOW-START-TIME or later time
+    steps, matrices belonging to non-weight lumps may be forced out of
+    GPU memory and later brought back as neeeded.
+
+    This feature is implemented in terms of
+    MGL-MAT:WITH-SYNCING-CUDA-FACETS that uses CUDA host memory (also
+    known as _page-locked_ or _pinned memory_) to do asynchronous
+    copies concurrently with normal computation. The consequence of
+    this is that it is now main memory usage that's unbounded which
+    toghether with page-locking makes it a potent weapon to bring a
+    machine to a halt. You were warned.")
+   (step-monitors
+    :initform () :initarg :step-monitors :accessor step-monitors
+    :documentation "During training, unfolded `BPN`s corresponding to
+    previous time steps may be expensive to get at because they are no
+    longer in GPU memory. This consideration also applies to making
+    prediction with the additional caveat that with *WARP-TIME* true,
+    previous states are discarded so it's not possible to gather
+    statistics after FORWARD finished.
+
+    Add monitor objects to this slot and they will be automatically
+    applied to the RNN after each step when `FORWARD`ing the RNN
+    during training or prediction. To be able to easily switch between
+    sets of monitors, in addition to a list of monitors this can be a
+    symbol or a function, too. If it's a symbol, then its a designator
+    for its SYMBOL-VALUE. If it's a function, then it must have no
+    arguments and it's a designator for its return value.")
+   ;; KLUDGE: If true, then as a performance hack, at each time step
+   ;; drop the instances that belong to input sequences that have run
+   ;; out. This results in the number of stripes being different from
+   ;; step to step which is a pain so only ->* supports it as of now
+   ;; which is enough for LSTMs, but this is hackish enough that it
+   ;; will probably never be exported.
+   (remove-trailing-nil-instances
+    :initform nil
+    :initarg :remove-trailing-nil-instances
+    :accessor remove-trailing-nil-instances))
   (:documentation "A recurrent neural net (as opposed to a
   feed-forward one. It is typically built with BUILD-RNN that's no
   more than a shallow convenience macro.
@@ -531,15 +597,17 @@
   "The unbounded memory usage of `RNN`s with one BPN allocated per
   time step can become a problem. For training, where the gradients
   often have to be backpropagated from the last time step to the very
-  beginning, this is hard to solve (but it's being worked on). For
-  prediction on the other hand, one doesn't need to keep old steps
+  beginning, this is hard to solve but with CUDA-WINDOW-START-TIME the
+  limit is no longer GPU memory.
+
+  For prediction on the other hand, one doesn't need to keep old steps
   around indefinitely: they can be discarded when future time steps
   will never reference them again."
   (*warp-time* variable)
   (warped-time function)
   (warp-start (reader rnn))
   (warp-length (reader rnn))
-  (warp-monitors (accessor rnn)))
+  (step-monitors (accessor rnn)))
 
 (defvar *warp-time* nil
   "Controls whether warping is enabled (see @MGL-RNN-TIME-WARP). Don't
@@ -713,25 +781,47 @@
                           ,initargs)))
          ,rnn))))
 
+(defun resolve-step-monitors (step-monitors)
+  (cond ((symbolp step-monitors)
+         (symbol-value step-monitors))
+        ((functionp step-monitors)
+         (funcall step-monitors))
+        (t step-monitors)))
+
 (defmethod forward-bpn ((rnn rnn) &key from-clump to-clump end-clump)
   (assert (null from-clump))
   (assert (null to-clump))
   (assert (null end-clump))
-  (let ((*rnn* rnn))
+  (let ((*rnn* rnn)
+        (sum-cost 0)
+        (sum-importances 0)
+        (step-monitors (resolve-step-monitors (step-monitors rnn))))
+    ;; MAX-TIME is not known and NIL also means that we are
+    ;; forwarding.
+    (setf (max-time rnn) nil)
     (setf (current-time rnn) 0)
     (map-datasets (lambda (instances)
-                    ;; FIXME: only REMOVE-TRAILING-NILS if allowed by
-                    ;; some RNN flag
-                    (let ((instances (remove-trailing-nils instances))
-                          (bpn (ensure-rnn-bpn rnn)))
-                      (set-input instances bpn)
-                      (forward-bpn bpn)
-                      (apply-monitors (warp-monitors rnn) instances rnn))
+                    (multiple-value-bind (to-cuda to-host)
+                        (rnn-forward-cuda-syncs rnn)
+                      (with-syncing-cuda-facets (to-cuda to-host)
+                        (let ((instances
+                                (if (remove-trailing-nil-instances rnn)
+                                    (remove-trailing-nils instances)
+                                    instances))
+                              (bpn (ensure-rnn-bpn rnn)))
+                          (set-input instances bpn)
+                          (multiple-value-bind (sum-cost-1 sum-importances-1)
+                              (forward-bpn bpn)
+                            (incf sum-cost sum-cost-1)
+                            (incf sum-importances sum-importances-1))
+                          (apply-monitors step-monitors instances rnn))))
                     (incf (current-time rnn)))
                   (input-seqs rnn) :impute nil)
     ;; Remember how many clumps were used so that BACKWARD-BPN and
     ;; COST know where to start.
-    (setf (max-time rnn) (current-time rnn))))
+    (setf (max-time rnn) (current-time rnn))
+    (setf (last-cost rnn) (list sum-cost sum-importances))
+    (values sum-cost sum-importances)))
 
 (defun remove-trailing-nils (seq)
   (let ((last-non-nil-position
@@ -746,19 +836,69 @@
         (clumps (clumps rnn)))
     (loop for time downfrom (1- (max-time rnn)) downto 0
           do (setf (current-time rnn) time)
-             (backward-bpn (aref clumps time)))))
+             (multiple-value-bind (to-cuda to-host)
+                 (rnn-backward-cuda-syncs rnn)
+               (with-syncing-cuda-facets (to-cuda to-host)
+                 (backward-bpn (aref clumps time)))))))
+
+;;; Return the MATs needed in the next step, and the MATs that aren't
+;;; going to be accessed in the forward pass anymore (those earlier
+;;; than TIME - MAX-LAG).
+(defun rnn-forward-cuda-syncs (rnn)
+  (when (and (cuda-window-start-time rnn)
+             (not *warp-time*)
+             (use-cuda-p))
+    (let ((clumps (clumps rnn))
+          (time (time-step :rnn rnn))
+          (destroy-start-index (cuda-window-start-time rnn)))
+      (values (let ((time (1+ time)))
+                (if (< time (length clumps))
+                    (collect-non-weight-mats-for-cuda-sync (aref clumps time))
+                    ()))
+              (let ((time (- time (1+ (max-lag rnn)))))
+                (if (<= destroy-start-index time)
+                    (collect-non-weight-mats-for-cuda-sync (aref clumps time))
+                    ()))))))
+
+;;; Return the MATs needed in the next backprop step, and the MATs
+;;; that aren't going to be accessed in the backward pass anymore
+;;; (simply TIME + 1).
+(defun rnn-backward-cuda-syncs (rnn)
+  (when (and (cuda-window-start-time rnn)
+             (not *warp-time*)
+             (use-cuda-p))
+    (let ((clumps (clumps rnn))
+          (time (time-step :rnn rnn))
+          (destroy-start-index (cuda-window-start-time rnn)))
+      (values (let ((time (- time 2)))
+                (if (<= 0 time)
+                    (collect-non-weight-mats-for-cuda-sync (aref clumps time))
+                    ()))
+              (let ((time (1+ time)))
+                (if (and (< time (length clumps))
+                         (<= destroy-start-index time))
+                    (collect-non-weight-mats-for-cuda-sync (aref clumps time))
+                    ()))))))
+
+(defun collect-non-weight-mats-for-cuda-sync (bpn)
+  (let ((mats ()))
+    (flet ((maybe-collect (mat)
+             (when (and mat (cuda-enabled mat))
+               (push mat mats))))
+      (map-clumps (lambda (clump)
+                    (when (and (typep clump 'lump)
+                               (not (typep clump '->weight)))
+                      (maybe-collect (nodes clump))
+                      (maybe-collect (derivatives clump))))
+                  bpn))
+    mats))
 
 (defmethod cost ((rnn rnn))
-  (if *warp-time*
+  (if (null (max-time rnn))
+      ;; RNN is being forwarded, so just return the cost of the
+      ;; current time step.
       (cost (aref (clumps rnn) (warped-time :rnn rnn)))
-      (let ((sum 0)
-            (sum-importances 0))
-        (loop for bpn across (clumps rnn)
-              for i below (max-time rnn)
-              do (multiple-value-bind (sum-1 sum-importances-1) (cost bpn)
-                   (incf sum sum-1)
-                   (incf sum-importances sum-importances-1)))
-        (values sum sum-importances))))
+      (values-list (last-cost rnn))))
 
 
 (defsection @mgl-bp-training (:title "Training")
@@ -827,9 +967,7 @@
     (do-executors (samples bpn)
       (let ((*in-training-p* t))
         (set-input samples bpn)
-        (forward bpn)
-        (incf cost (cost bpn))
-        (zero-non-weight-derivatives bpn)
+        (incf cost (forward-bpn bpn))
         (backward-bpn bpn :last-clump (first-trained-weight-clump
                                        optimizer learner))
         (apply-monitors (monitors learner) samples bpn)))
@@ -872,8 +1010,8 @@
   (make-classification-accuracy-monitors* (method () (bpn t t t)))
   #+nil
   (make-cross-entropy-monitors* (method () (bpn t t t)))
-  (make-warp-monitor-monitors function)
-  (make-warp-monitor-monitor-counter generic-function))
+  (make-step-monitor-monitors function)
+  (make-step-monitor-monitor-counter generic-function))
 
 (defun monitor-bpn-results (dataset bpn monitors)
   "For every batch (of size MAX-N-STRIPES of BPN) of instances in
@@ -905,10 +1043,10 @@
                                               label-index-distribution-fn
                                               attributes))))
 
-(defun make-warp-monitor-monitors
+(defun make-step-monitor-monitors
     (rnn &key (counter-values-fn #'counter-raw-values)
-     (make-counter #'make-warp-monitor-monitor-counter))
-  "Return a list of monitors, one for every monitor in WARP-MONITORS
+     (make-counter #'make-step-monitor-monitor-counter))
+  "Return a list of monitors, one for every monitor in STEP-MONITORS
   of RNN. These monitors extract the results from their warp
   counterpairs with COUNTER-VALUES-FN and add them to their own
   counter that's created by MAKE-COUNTER. Wow. Ew. The idea is that
@@ -916,31 +1054,31 @@
 
   ```commonlisp
   (let ((*warp-time* t))
-    (setf (warp-monitors rnn)
+    (setf (step-monitors rnn)
           (make-cost-monitors rnn :attributes '(:event \"warped pred.\")))
     (monitor-bpn-results dataset rnn
                          ;; Just collect and reset the warp
                          ;; monitors after each batch of
                          ;; instances.
-                         (make-warp-monitor-monitors rnn)))
+                         (make-step-monitor-monitors rnn)))
   ```"
-  (mapcar (lambda (warp-monitor)
+  (mapcar (lambda (step-monitor)
             (make-instance
              'monitor
              :measurer (lambda (instances result)
                          (declare (ignore instances result))
-                         (let ((counter (counter warp-monitor)))
+                         (let ((counter (counter step-monitor)))
                            (multiple-value-prog1
                                (funcall counter-values-fn counter)
                              (reset-counter counter))))
-             :counter (funcall make-counter (counter warp-monitor))))
-          (warp-monitors rnn)))
+             :counter (funcall make-counter (counter step-monitor))))
+          (resolve-step-monitors (step-monitors rnn))))
 
-(defgeneric make-warp-monitor-monitor-counter (warp-counter)
-  (:documentation "In an RNN, WARP-COUNTER aggregates results of all
+(defgeneric make-step-monitor-monitor-counter (step-counter)
+  (:documentation "In an RNN, STEP-COUNTER aggregates results of all
   the time steps during the processing of instances in the current
-  batch. Return a new counter into which results from WARP-COUNTER can
+  batch. Return a new counter into which results from STEP-COUNTER can
   be accumulated when the processing of the batch is finished. The
-  default implementation creates a copy of WARP-COUNTER.")
-  (:method (warp-counter)
-    (copy 'make-warp-monitor-monitor-counter warp-counter)))
+  default implementation creates a copy of STEP-COUNTER.")
+  (:method (step-counter)
+    (copy 'make-step-monitor-monitor-counter step-counter)))

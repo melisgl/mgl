@@ -35,8 +35,10 @@
 
 (defun log-cuda ()
   (when (mgl-mat:use-cuda-p)
-    (log-msg "cuda mats: ~S, copies: h->d: ~S, d->h: ~S~%"
+    (log-msg "cuda mats: ~S, registered: ~S, copies: h->d: ~S, d->h: ~S~%"
              (mgl-cube:count-barred-facets 'mgl-mat:cuda-array
+                                           :type 'mgl-mat:mat)
+             (mgl-cube:count-barred-facets 'mgl-mat:cuda-host-array
                                            :type 'mgl-mat:mat)
              mgl-mat:*n-memcpy-host-to-device*
              mgl-mat:*n-memcpy-device-to-host*)))

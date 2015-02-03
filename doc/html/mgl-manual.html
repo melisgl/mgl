@@ -178,12 +178,17 @@ is easier to set up and just as fast as ATLAS.</p>
 <p><a href="https://github.com/takagi/cl-cuda" >CL-CUDA</a> and
 <a href="https://github.com/melisgl/mgl" >MGL-MAT</a> are the two main
 dependencies and also the ones not yet in quicklisp, so just drop
-them into <code>quicklisp/local-projects/</code>. If there is no suitable gpu
-on the system or the cuda sdk is not installed, MGL will simply
+them into <code>quicklisp/local-projects/</code>. If there is no suitable GPU
+on the system or the CUDA SDK is not installed, MGL will simply
 fall back on using BLAS and Lisp code. Wrapping code in
 <code>MGL-MAT:WITH-CUDA*</code> is basically all that's needed to run on the GPU,
-and with <code>MGL-MAT:CUDA-AVAILABLE-P</code> one can check whether the gpu is
+and with <code>MGL-MAT:CUDA-AVAILABLE-P</code> one can check whether the GPU is
 really being used.</p>
+
+<p>Prettier-than-markdown HTML documentation cross-linked with other
+libraries is
+<a href="http://melisgl.github.io/mgl-pax-world/mgl-manual.html" >available</a>
+as part of <a href="http://melisgl.github.io/mgl-pax-world/" >PAX World</a>.</p>
 
 <p><a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a></p>
 
@@ -195,7 +200,8 @@ For example, package <code>MGL-RESAMPLE</code> is about <a href="#x-28MGL-RESAMP
 packages makes it easier to cleanly separate API and implementation
 and also to explore into a specific task. At other times, they can
 be a hassle, so the <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)"><code>MGL</code></a> package itself reexports every external
-symbol found in all the other packages that make up MGL.</p>
+symbol found in all the other packages that make up MGL and
+MGL-MAT (see <code>MGL-MAT:@MAT-MANUAL</code>) on which it heavily relies.</p>
 
 <p>One exception to this rule is the bundled, but independent
 <code>MGL-GNUPLOT</code> library.</p>
@@ -1929,7 +1935,7 @@ and reset them.</p></li>
 <p>A utility that's often called at the start of
 optimization (from <a href="#x-28MGL-OPT-3AON-OPTIMIZATION-STARTED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29" title="(MGL-OPT:ON-OPTIMIZATION-STARTED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER))"><code>ON-OPTIMIZATION-STARTED</code></a>). The default
 implementation logs the description of <code>GRADIENT-SOURCE</code> (as in
-<code>DESCRIBE</code>) and <code>OPTIMIZER</code> and calls <code>LOG-CUDA</code>.</p></li>
+<code>DESCRIBE</code>) and <code>OPTIMIZER</code> and calls <code>LOG-MAT-ROOM</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29'></a></p>
@@ -3224,37 +3230,37 @@ Finally, return the counters of <code>MONITORS</code>. This is built on top of
 <a href="#x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29" title="(MGL-CORE:MONITOR-MODEL-RESULTS FUNCTION)"><code>MONITOR-MODEL-RESULTS</code></a>.</p></li>
 </ul>
 
-<p><a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITORS-20FUNCTION-29'></a></p>
+<p><a name='x-28MGL-BP-3AMAKE-STEP-MONITOR-MONITORS-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[function] <strong>MAKE-WARP-MONITOR-MONITORS</strong> <em>RNN &amp;KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-WARP-MONITOR-MONITOR-COUNTER)</em></p>
+<li><p>[function] <strong>MAKE-STEP-MONITOR-MONITORS</strong> <em>RNN &amp;KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-STEP-MONITOR-MONITOR-COUNTER)</em></p>
 
-<p>Return a list of monitors, one for every monitor in <a href="#x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>WARP-MONITORS</code></a>
+<p>Return a list of monitors, one for every monitor in <a href="#x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:STEP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>STEP-MONITORS</code></a>
 of <code>RNN</code>. These monitors extract the results from their warp
 counterpairs with <code>COUNTER-VALUES-FN</code> and add them to their own
 counter that's created by <code>MAKE-COUNTER</code>. Wow. Ew. The idea is that
 one does something like this do monitor warped prediction:</p>
 
 <pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="special">*warp-time*</span> t</span>)</span></span>)</span>
-  <span class="paren2">(<span class="code">setf <span class="paren3">(<span class="code">warp-monitors rnn</span>)</span>
+  <span class="paren2">(<span class="code">setf <span class="paren3">(<span class="code">step-monitors rnn</span>)</span>
         <span class="paren3">(<span class="code">make-cost-monitors rnn <span class="keyword">:attributes</span> '<span class="paren4">(<span class="code"><span class="keyword">:event</span> <span class="string">"warped pred."</span></span>)</span></span>)</span></span>)</span>
   <span class="paren2">(<span class="code">monitor-bpn-results dataset rnn
                        <span class="comment">;; Just collect and reset the warp
 </span>                       <span class="comment">;; monitors after each batch of
 </span>                       <span class="comment">;; instances.
-</span>                       <span class="paren3">(<span class="code">make-warp-monitor-monitors rnn</span>)</span></span>)</span></span>)</span></span></code></pre></li>
+</span>                       <span class="paren3">(<span class="code">make-step-monitor-monitors rnn</span>)</span></span>)</span></span>)</span></span></code></pre></li>
 </ul>
 
-<p><a name='x-28MGL-BP-3AMAKE-WARP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a></p>
+<p><a name='x-28MGL-BP-3AMAKE-STEP-MONITOR-MONITOR-COUNTER-20GENERIC-FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[generic-function] <strong>MAKE-WARP-MONITOR-MONITOR-COUNTER</strong> <em>WARP-COUNTER</em></p>
+<li><p>[generic-function] <strong>MAKE-STEP-MONITOR-MONITOR-COUNTER</strong> <em>STEP-COUNTER</em></p>
 
-<p>In an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>, <code>WARP-COUNTER</code> aggregates results of all
+<p>In an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>, <code>STEP-COUNTER</code> aggregates results of all
 the time steps during the processing of instances in the current
-batch. Return a new counter into which results from <code>WARP-COUNTER</code> can
+batch. Return a new counter into which results from <code>STEP-COUNTER</code> can
 be accumulated when the processing of the batch is finished. The
-default implementation creates a copy of <code>WARP-COUNTER</code>.</p></li>
+default implementation creates a copy of <code>STEP-COUNTER</code>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29'></a></p>
@@ -3605,8 +3611,7 @@ the concepts involved. Make sure you are comfortable with
                  <span class="paren6">(<span class="code"><span class="keyword">:fn</span> reset-optimization-monitors <span class="keyword">:period</span> 3000</span>)</span></span>)</span></span>)</span>
               <span class="paren4">(<span class="code">make-instance 'bp-learner
                              <span class="keyword">:bpn</span> rnn
-                             <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-cost-monitors
-                                        rnn <span class="keyword">:attributes</span> '<span class="paren6">(<span class="code"><span class="keyword">:event</span> <span class="string">"train"</span></span>)</span></span>)</span></span>)</span>
+                             <span class="keyword">:monitors</span> <span class="paren5">(<span class="code">make-cost-monitors rnn</span>)</span></span>)</span>
               <span class="keyword">:dataset</span> <span class="paren4">(<span class="code">make-sampler 30000</span>)</span></span>)</span></span>)</span></span>)</span>
 
 <span class="comment">;;; Return a sampler object that produces MAX-N-SAMPLES number of
@@ -3627,55 +3632,66 @@ the concepts involved. Make sure you are comfortable with
     <span class="paren3">(<span class="code">log-padded
      <span class="paren4">(<span class="code">append
       <span class="paren5">(<span class="code">monitor-bpn-results <span class="paren6">(<span class="code">make-sampler 1000</span>)</span> rnn
-                           <span class="paren6">(<span class="code">make-cost-monitors rnn
-                                               <span class="keyword">:attributes</span> '<span class="paren1">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span>
+                           <span class="paren6">(<span class="code">make-cost-monitors
+                            rnn <span class="keyword">:attributes</span> '<span class="paren1">(<span class="code"><span class="keyword">:event</span> <span class="string">"pred."</span></span>)</span></span>)</span></span>)</span>
       <span class="comment">;; Same result in a different way: monitor predictions for
 </span>      <span class="comment">;; sequences up to length 20, but don't unfold the RNN
 </span>      <span class="comment">;; unnecessarily to save memory.
 </span>      <span class="paren5">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren6">(<span class="code"><span class="paren1">(<span class="code"><span class="special">*warp-time*</span> t</span>)</span></span>)</span>
-        <span class="paren6">(<span class="code">setf <span class="paren1">(<span class="code">warp-monitors rnn</span>)</span>
-              <span class="paren1">(<span class="code">make-cost-monitors rnn <span class="keyword">:attributes</span> '<span class="paren2">(<span class="code"><span class="keyword">:event</span> <span class="string">"warped pred."</span></span>)</span></span>)</span></span>)</span>
         <span class="paren6">(<span class="code">monitor-bpn-results <span class="paren1">(<span class="code">make-sampler 1000 <span class="keyword">:length</span> 20</span>)</span> rnn
                              <span class="comment">;; Just collect and reset the warp
 </span>                             <span class="comment">;; monitors after each batch of
 </span>                             <span class="comment">;; instances.
-</span>                             <span class="paren1">(<span class="code">make-warp-monitor-monitors rnn</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+</span>                             <span class="paren1">(<span class="code">make-cost-monitors
+                              rnn <span class="keyword">:attributes</span> '<span class="paren2">(<span class="code"><span class="keyword">:event</span> <span class="string">"warped pred."</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
     <span class="comment">;; Verify that no further unfoldings took place.
-</span>    <span class="paren3">(<span class="code">assert <span class="paren4">(<span class="code">&lt;= <span class="paren5">(<span class="code">length <span class="paren6">(<span class="code">clumps rnn</span>)</span></span>)</span> 10</span>)</span></span>)</span></span>)</span></span>)</span>
+</span>    <span class="paren3">(<span class="code">assert <span class="paren4">(<span class="code">&lt;= <span class="paren5">(<span class="code">length <span class="paren6">(<span class="code">clumps rnn</span>)</span></span>)</span> 10</span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">log-mat-room</span>)</span></span>)</span>
 
 <span class="comment">#|
 
 ;;; Transcript follows:
-(train-sum-sign-rnn)
-.. 2015-01-28 14:12:54: training at n-instances: 0
-.. 2015-01-28 14:12:54: train cost: 0.000e+0 (0)
-.. #&lt;ADAM-OPTIMIZER {101F2B4143}&gt;
+(let (;; Backprop nets do not need double float. Using single floats
+      ;; is faster and needs less memory.
+      (*default-mat-ctype* :float)
+      ;; Enable moving data in and out of GPU memory so that the RNN
+      ;; can work with sequences so long that the unfolded network
+      ;; wouldn't otherwise fit in the GPU.
+      (*cuda-window-start-time* 1))
+  ;; Seed the random number generators.
+  (repeatably ()
+    ;; Enable CUDA if available.
+    (with-cuda* ()
+      (train-sum-sign-rnn))))
+.. 2015-02-08 12:09:14: training at n-instances: 0
+.. 2015-02-08 12:09:14: cost: 0.000e+0 (0)
+.. #&lt;ADAM-OPTIMIZER {103192AEF3}&gt;
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #&lt;SEGMENT-SET
-..                    (#&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 2.00342&gt;
-..                     #&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.75262&gt;
+..                    (#&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 1.73685&gt;
+..                     #&lt;-&gt;WEIGHT (H #) :SIZE 1 1/1 :norm 0.31893&gt;
 ..                     #&lt;-&gt;WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.92961&gt;
-..                     #&lt;-&gt;WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.20846&gt;
+..                       1 1/1 :norm 1.81610&gt;
+..                     #&lt;-&gt;WEIGHT (H #2#) :SIZE 1 1/1 :norm 0.21965&gt;
 ..                     #&lt;-&gt;WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 0.73093&gt;
-..                     #&lt;-&gt;WEIGHT (H #3#) :SIZE 1 1/1 :norm 1.78671&gt;
+..                       1 1/1 :norm 1.74939&gt;
+..                     #&lt;-&gt;WEIGHT (H #3#) :SIZE 1 1/1 :norm 0.40377&gt;
 ..                     #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE
-..                       3 1/1 :norm 1.45207&gt;
+..                       3 1/1 :norm 2.15898&gt;
 ..                     #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE
-..                       3 1/1 :norm 3.23801&gt;
+..                       3 1/1 :norm 2.94470&gt;
 ..                     #&lt;-&gt;WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
-..                       1 1/1 :norm 1.01936&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 2.36555&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 2.29635&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 1.32443&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 1.30479&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.89177&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.50471&gt;
-..                     #&lt;-&gt;WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 1.97235&gt;
-..                     #&lt;-&gt;WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.77381&gt;)
-..                    {101F2B4AD3}&gt;
+..                       1 1/1 :norm 0.97601&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #4#) :SIZE 1 1/1 :norm 0.65261&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #4#) :SIZE 1 1/1 :norm 0.37653&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #1#) :SIZE 1 1/1 :norm 0.92334&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #1#) :SIZE 1 1/1 :norm 0.01609&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #5=#) :SIZE 1 1/1 :norm 1.09995&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.41244&gt;
+..                     #&lt;-&gt;WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.40475&gt;
+..                     #&lt;-&gt;WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.75358&gt;)
+..                    {10319D3653}&gt;
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = NONE
 ..    MOMENTUM-TYPE = :NONE
@@ -3691,7 +3707,7 @@ the concepts involved. Make sure you are comfortable with
 ..    MEAN-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-UPDATE-RATE = 1.00000e-3
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #&lt;RNN {101F278433}&gt;
+..  #&lt;RNN {10318C6C53}&gt;
 ..   BPN description:
 ..     CLUMPS = #(#&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4&gt;
 ..                #&lt;SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4&gt;)
@@ -3700,48 +3716,60 @@ the concepts involved. Make sure you are comfortable with
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-01-28 14:12:55: pred.        cost: 2.133d+0 (4647.00)
-.. 2015-01-28 14:12:55: warped pred. cost: 2.028d+0 (9516.00)
-.. 2015-01-28 14:12:55: training at n-instances: 3000
-.. 2015-01-28 14:12:55: train cost: 1.155d+0 (13643.00)
-.. 2015-01-28 14:12:56: training at n-instances: 6000
-.. 2015-01-28 14:12:56: train cost: 4.123d-1 (13765.00)
-.. 2015-01-28 14:12:57: training at n-instances: 9000
-.. 2015-01-28 14:12:57: train cost: 8.208d-2 (13654.00)
-.. 2015-01-28 14:12:57: training at n-instances: 12000
-.. 2015-01-28 14:12:57: train cost: 2.889d-2 (13752.00)
-.. 2015-01-28 14:12:58: training at n-instances: 15000
-.. 2015-01-28 14:12:58: train cost: 1.781d-2 (13935.00)
-.. 2015-01-28 14:12:58: training at n-instances: 18000
-.. 2015-01-28 14:12:58: train cost: 1.271d-2 (13911.00)
-.. 2015-01-28 14:12:59: training at n-instances: 21000
-.. 2015-01-28 14:12:59: train cost: 9.828d-3 (13833.00)
-.. 2015-01-28 14:13:00: training at n-instances: 24000
-.. 2015-01-28 14:13:00: train cost: 7.782d-3 (13482.00)
-.. 2015-01-28 14:13:00: training at n-instances: 27000
-.. 2015-01-28 14:13:00: train cost: 6.457d-3 (14243.00)
-.. 2015-01-28 14:13:01: training at n-instances: 30000
-.. 2015-01-28 14:13:01: train cost: 5.451d-3 (13834.00)
-.. 2015-01-28 14:13:01: pred.        cost: 5.024d-3 (4556.00)
-.. 2015-01-28 14:13:01: warped pred. cost: 4.932d-3 (9569.00)
+..   2015-02-08 12:09:15: pred.        cost: 1.223e+0 (4455.00)
+.. 2015-02-08 12:09:15: warped pred. cost: 1.228e+0 (9476.00)
+.. 2015-02-08 12:09:15: Foreign memory usage:
+.. foreign arrays: 166 (used bytes: 40,400)
+.. CUDA memory usage:
+.. device arrays: 114 (used bytes: 220,892, pooled bytes: 19,200)
+.. host arrays: 162 (used bytes: 39,600)
+.. host-&gt;device copies: 6,164, device-&gt;host copies: 4,490
+.. 2015-02-08 12:09:17: training at n-instances: 3000
+.. 2015-02-08 12:09:17: cost: 4.986e-1 (13726.00)
+.. 2015-02-08 12:09:19: training at n-instances: 6000
+.. 2015-02-08 12:09:19: cost: 5.769e-2 (13890.00)
+.. 2015-02-08 12:09:20: training at n-instances: 9000
+.. 2015-02-08 12:09:20: cost: 2.168e-2 (13872.00)
+.. 2015-02-08 12:09:22: training at n-instances: 12000
+.. 2015-02-08 12:09:22: cost: 1.348e-2 (13953.00)
+.. 2015-02-08 12:09:24: training at n-instances: 15000
+.. 2015-02-08 12:09:24: cost: 9.696e-3 (13948.00)
+.. 2015-02-08 12:09:26: training at n-instances: 18000
+.. 2015-02-08 12:09:26: cost: 7.382e-3 (13849.00)
+.. 2015-02-08 12:09:28: training at n-instances: 21000
+.. 2015-02-08 12:09:28: cost: 5.861e-3 (13758.00)
+.. 2015-02-08 12:09:30: training at n-instances: 24000
+.. 2015-02-08 12:09:30: cost: 4.849e-3 (13908.00)
+.. 2015-02-08 12:09:32: training at n-instances: 27000
+.. 2015-02-08 12:09:32: cost: 4.013e-3 (13570.00)
+.. 2015-02-08 12:09:34: training at n-instances: 30000
+.. 2015-02-08 12:09:34: cost: 3.459e-3 (13721.00)
+.. 2015-02-08 12:09:34: pred.        cost: 3.284e-3 (4593.00)
+.. 2015-02-08 12:09:34: warped pred. cost: 3.285e-3 (9717.00)
+.. 2015-02-08 12:09:34: Foreign memory usage:
+.. foreign arrays: 220 (used bytes: 53,600)
+.. CUDA memory usage:
+.. device arrays: 148 (used bytes: 224,428, pooled bytes: 19,200)
+.. host arrays: 216 (used bytes: 52,800)
+.. host-&gt;device copies: 465,818, device-&gt;host copies: 371,990
 ..
-==&gt; (#&lt;-&gt;WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 3.25778&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 2.64093&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.24070&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 5.09629&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 4.29833&gt;
---&gt;  #&lt;-&gt;WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 3.12919&gt;
---&gt;  #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.61549&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.45618&gt;
---&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.77321&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 1.74186&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 8.51236&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.18734&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 1.02118&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 4.29466&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 6.57931&gt;
---&gt;  #&lt;-&gt;WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 6.37012&gt;
---&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 3.06961&gt;)
+==&gt; (#&lt;-&gt;WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.75226&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.04934&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.14970&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.67698&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.40400&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.33328&gt;
+--&gt;  #&lt;-&gt;WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.41458&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.97210&gt;
+--&gt;  #&lt;-&gt;WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.65959&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.77142&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 6.28021&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.96948&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.33460&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.11331&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.13583&gt;
+--&gt;  #&lt;-&gt;WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.15849&gt;
+--&gt;  #&lt;-&gt;WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.95984&gt;)
 
 |#</span></span></code></pre>
 
@@ -3796,6 +3824,42 @@ state of lumps at the previous time step (with the function <a href="#x-28MGL-BP
 hence the default of 1. But it is possible to have connections to
 arbitrary time steps. The maximum connection lag must be specified
 when creating the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a></p>
+
+<ul>
+<li><p>[accessor] <strong>CUDA-WINDOW-START-TIME</strong> <em>RNN</em> <em>(:CUDA-WINDOW-START-TIME = *CUDA-WINDOW-START-TIME*)</em></p>
+
+<p>Due to unfolding, the memory footprint of an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>
+is almost linear in the number of time steps (i.e. the max
+sequence length). For prediction, this is addressed by
+<a href="#x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29" title="(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)">Time Warp</a>. For training, we cannot discard results of
+previous time steps because they are needed for backpropagation,
+but we can at least move them out of GPU memory if they are not
+going to be used for a while and copy them back before they are
+needed. Obviously, this is only relevant if CUDA is being used.</p>
+
+<p>If <code>CUDA-WINDOW-START-TIME</code> is <code>NIL</code>, then this feature is turned off.
+Else, during training, at <code>CUDA-WINDOW-START-TIME</code> or later time
+steps, matrices belonging to non-weight lumps may be forced out of
+GPU memory and later brought back as neeeded.</p>
+
+<p>This feature is implemented in terms of
+<code>MGL-MAT:WITH-SYNCING-CUDA-FACETS</code> that uses CUDA host memory (also
+known as <em>page-locked</em> or <em>pinned memory</em>) to do asynchronous
+copies concurrently with normal computation. The consequence of
+this is that it is now main memory usage that's unbounded which
+toghether with page-locking makes it a potent weapon to bring a
+machine to a halt. You were warned.</p></li>
+</ul>
+
+<p><a name='x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20VARIABLE-29'></a></p>
+
+<ul>
+<li><p>[variable] <strong>*CUDA-WINDOW-START-TIME*</strong> <em>NIL</em></p>
+
+<p>The default for <a href="#x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:CUDA-WINDOW-START-TIME (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>CUDA-WINDOW-START-TIME</code></a>.</p></li>
 </ul>
 
 <p><a name='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a></p>
@@ -3859,8 +3923,10 @@ invocations.</p></li>
 <p>The unbounded memory usage of <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>s with one <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> allocated per
 time step can become a problem. For training, where the gradients
 often have to be backpropagated from the last time step to the very
-beginning, this is hard to solve (but it's being worked on). For
-prediction on the other hand, one doesn't need to keep old steps
+beginning, this is hard to solve but with <a href="#x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:CUDA-WINDOW-START-TIME (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>CUDA-WINDOW-START-TIME</code></a> the
+limit is no longer GPU memory.</p>
+
+<p>For prediction on the other hand, one doesn't need to keep old steps
 around indefinitely: they can be discarded when future time steps
 will never reference them again.</p>
 
@@ -3942,18 +4008,25 @@ WARP-LENGTH))</code> except for a shift in its time lagged
 connections.</p></li>
 </ul>
 
-<p><a name='x-28MGL-BP-3AWARP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a></p>
+<p><a name='x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a></p>
 
 <ul>
-<li><p>[accessor] <strong>WARP-MONITORS</strong> <em>RNN</em> <em>(:WARP-MONITORS = NIL)</em></p>
+<li><p>[accessor] <strong>STEP-MONITORS</strong> <em>RNN</em> <em>(:STEP-MONITORS = NIL)</em></p>
 
-<p>When making predictions with <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> true,
-previous states are discarded so the forward the bpn and apply
-monitors modus operandi of <a href="#x-28MGL-BP-3AMONITOR-BPN-RESULTS-20FUNCTION-29" title="(MGL-BP:MONITOR-BPN-RESULTS FUNCTION)"><code>MONITOR-BPN-RESULTS</code></a> doesn't work.</p>
+<p>During training, unfolded <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>s corresponding to
+previous time steps may be expensive to get at because they are no
+longer in GPU memory. This consideration also applies to making
+prediction with the additional caveat that with <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> true,
+previous states are discarded so it's not possible to gather
+statistics after <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a> finished.</p>
 
-<p>Instead, add monitors objects to this slot and they will be
-automatically applied to the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> after each step, if <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a>
-is true.</p></li>
+<p>Add monitor objects to this slot and they will be automatically
+applied to the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a> after each step when <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a>ing the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>
+during training or prediction. To be able to easily switch between
+sets of monitors, in addition to a list of monitors this can be a
+symbol or a function, too. If it's a symbol, then its a designator
+for its <code>SYMBOL-VALUE</code>. If it's a function, then it must have no
+arguments and it's a designator for its return value.</p></li>
 </ul>
 
 <p><a name='x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29'></a></p>
@@ -4952,16 +5025,15 @@ function argument to a mapper function. It calls <code>FUNCTION</code> with ever
 <p><a name='x-28MGL-NLP-3ABLEU-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p>[function] <strong>BLEU</strong> <em>CORPUS &amp;KEY CANDIDATE-KEY REFERENCE-KEY (N 4)</em></p>
+<li><p>[function] <strong>BLEU</strong> <em>CANDIDATES REFERENCES &amp;KEY CANDIDATE-KEY REFERENCE-KEY (N 4)</em></p>
 
 <p>Compute the <a href="http://en.wikipedia.org/wiki/BLEU" >BLEU score</a> for
-bilingual <code>CORPUS</code>. <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> measures how good a translation is compared
+bilingual CORPUS. <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> measures how good a translation is compared
 to human reference translations.</p>
 
-<p><code>CORPUS</code> must be a sequence. <code>CANDIDATE-KEY</code> is function called with
-elements of <code>CORPUS</code> and returns a sequence of words (i.e. a tokenized
-translation). <code>REFERENCE-KEY</code> is similar but it returns the reference
-translation. Words are compared with <code>EQUAL</code>, and may be any kind of
+<p><code>CANDIDATES</code> (keyed by <code>CANDIDATE-KEY</code>) and <code>REFERENCES</code> (keyed by
+<code>REFERENCE-KEY</code>) are sequences of sentences. A sentence is a sequence
+of words. Words are compared with <code>EQUAL</code>, and may be any kind of
 object (not necessarily strings).</p>
 
 <p>Currently there is no support for multiple reference translations. <code>N</code>
@@ -4975,10 +5047,8 @@ each element in [1..N][].</p>
 <p>This is basically a reimplementation of
 <a href="https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl" >multi-bleu.perl</a>.</p>
 
-<pre><code>(bleu '(((1 2 3 4) (1 2 3 4))
-        ((a b) (1 2)))
-      :candidate-key #'first
-      :reference-key #'second)
+<pre><code>(bleu '((1 2 3 4) (a b))
+      '((1 2 3 4) (1 2)))
 => 0.8408964
 => 1.0
 => (;; 1-gram precision: 4/6

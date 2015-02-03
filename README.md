@@ -57,12 +57,17 @@ is easier to set up and just as fast as ATLAS.
 [CL-CUDA](https://github.com/takagi/cl-cuda) and
 [MGL-MAT](https://github.com/melisgl/mgl) are the two main
 dependencies and also the ones not yet in quicklisp, so just drop
-them into `quicklisp/local-projects/`. If there is no suitable gpu
-on the system or the cuda sdk is not installed, MGL will simply
+them into `quicklisp/local-projects/`. If there is no suitable GPU
+on the system or the CUDA SDK is not installed, MGL will simply
 fall back on using BLAS and Lisp code. Wrapping code in
 `MGL-MAT:WITH-CUDA*` is basically all that's needed to run on the GPU,
-and with `MGL-MAT:CUDA-AVAILABLE-P` one can check whether the gpu is
+and with `MGL-MAT:CUDA-AVAILABLE-P` one can check whether the GPU is
 really being used.
+
+Prettier-than-markdown HTML documentation cross-linked with other
+libraries is
+[available](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
+as part of [PAX World](http://melisgl.github.io/mgl-pax-world/).
 
 <a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a>
 
@@ -74,7 +79,8 @@ For example, package `MGL-RESAMPLE` is about `@MGL-RESAMPLE` and
 packages makes it easier to cleanly separate API and implementation
 and also to explore into a specific task. At other times, they can
 be a hassle, so the [`MGL`][e0d7] package itself reexports every external
-symbol found in all the other packages that make up MGL.
+symbol found in all the other packages that make up MGL and
+MGL-MAT (see `MGL-MAT:@MAT-MANUAL`) on which it heavily relies.
 
 One exception to this rule is the bundled, but independent
 `MGL-GNUPLOT` library.
