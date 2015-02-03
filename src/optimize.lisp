@@ -243,7 +243,7 @@
                           '(:type "cost")
                           (if (uninterned-symbol-p (name object))
                               ()
-                              `(:component ,(name object)())))))))))
+                              `(:component ,(name object))))))))))
 
 
 (defsection @mgl-opt-extension-api (:title "Extension API")
