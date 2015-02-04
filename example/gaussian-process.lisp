@@ -99,7 +99,7 @@
                           (y* (mat-as-scalar (gp-means gp (scalar-as-mat x)))))
                      (add-to-counter counter (expt (- y y*) 2) 1))))))
     (log-msg "~A~%" counter))
-  (log-cuda)
+  (log-mat-room)
   (log-msg "---------------------------------------------------~%"))
 
 (defclass test-fnn-gp-gd-optimizer (test-fnn-gp-base-optimizer

@@ -191,7 +191,7 @@
   (:documentation "A utility that's often called at the start of
   optimization (from ON-OPTIMIZATION-STARTED). The default
   implementation logs the description of GRADIENT-SOURCE (as in
-  DESCRIBE) and OPTIMIZER and calls LOG-CUDA.")
+  DESCRIBE) and OPTIMIZER and calls LOG-MAT-ROOM.")
   (:method (optimizer gradient-source)
     (let ((*print-level* nil))
       (with-logging-entry (stream)
@@ -200,7 +200,7 @@
       (with-logging-entry (stream)
         (format stream "Describing optimizer:~%")
         (describe optimizer stream)))
-    (log-cuda)))
+    (log-mat-room)))
 
 
 (defsection @mgl-opt-cost (:title "Cost Function")

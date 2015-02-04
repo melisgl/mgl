@@ -313,7 +313,7 @@
       (monitor-rbm-cesc-accuracy rbm (make-sampler (test optimizer)
                                                    :discard-label-p t)
                                  '(:event "pred." :dataset "test"))))
-    (log-cuda)
+    (log-mat-room)
     (log-msg "---------------------------------------------------~%")))
 
 (defun monitor-rbm-cesc-accuracy (rbm sampler attributes)
@@ -461,7 +461,7 @@
      (monitor-bpn-results (make-sampler (test optimizer)) bpn
                           (make-mnist-label-monitors
                            bpn :attributes '(:event "pred." :dataset "test")))))
-  (log-cuda)
+  (log-mat-room)
   (log-msg "---------------------------------------------------~%"))
 
 (defun init-bpn-lump-weights (lump stddev)
@@ -663,7 +663,7 @@
       (monitor-dbm-cesc-accuracy dbm (make-sampler (test optimizer)
                                                    :discard-label-p t)
                                  '(:event "pred." :dataset "test")))))
-  (log-cuda)
+  (log-mat-room)
   (log-msg "---------------------------------------------------~%"))
 
 (defun monitor-dbm-cesc-accuracy (dbm sampler attributes)

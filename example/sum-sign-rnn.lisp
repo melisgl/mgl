@@ -117,7 +117,8 @@
                              (make-cost-monitors
                               rnn :attributes '(:event "warped pred."))))))
     ;; Verify that no further unfoldings took place.
-    (assert (<= (length (clumps rnn)) 10))))
+    (assert (<= (length (clumps rnn)) 10)))
+  (log-mat-room))
 
 #|
 

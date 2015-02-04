@@ -5,7 +5,7 @@
   (log-msg function)
   (with-logging-entry macro)
   (*log-file* variable)
-  (log-cuda function))
+  (log-mat-room function))
 
 (defun time->string (&optional (time (get-universal-time)))
   (destructuring-bind (second minute hour date month year)
@@ -33,12 +33,6 @@
     (with-output-to-string (,stream)
       ,@body)))
 
-(defun log-cuda ()
-  (when (mgl-mat:use-cuda-p)
-    (log-msg "cuda mats: ~S, registered: ~S, copies: h->d: ~S, d->h: ~S~%"
-             (mgl-cube:count-barred-facets 'mgl-mat:cuda-array
-                                           :type 'mgl-mat:mat)
-             (mgl-cube:count-barred-facets 'mgl-mat:cuda-host-array
-                                           :type 'mgl-mat:mat)
-             mgl-mat:*n-memcpy-host-to-device*
-             mgl-mat:*n-memcpy-device-to-host*)))
+(defun log-mat-room (&key (verbose t))
+  (with-logging-entry (stream)
+    (mgl-mat:mat-room :stream stream :verbose verbose)))
