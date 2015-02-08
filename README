@@ -3,7 +3,7 @@
 ###### \[in package MGL\]
 ## mgl ASDF System Details
 
-- Version: 0.0.9
+- Version: 0.1.0
 - Description: MGL is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.
 - Licence: MIT, see COPYING.

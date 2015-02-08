@@ -3,7 +3,7 @@
 ;;; See MGL:@MGL-MANUAL for the user guide.
 (asdf:defsystem #:mgl
   :licence "MIT, see COPYING."
-  :version "0.0.9"
+  :version "0.1.0"
   :name "MGL, the machine learning library"
   :author "Gábor Melis"
   :mailto "mega@retes.hu"
