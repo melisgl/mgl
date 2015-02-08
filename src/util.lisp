@@ -616,12 +616,18 @@
 (defvar *experiment-random-seed* 1234)
 
 (defun call-repeatably (fn &key (seed *experiment-random-seed*))
-  (with-cuda* (:random-seed seed)
-    (let ((*random-state*
-            #+sbcl (sb-ext:seed-random-state seed)
-            #+allegro (make-random-state t seed)
-            #-(or sbcl allegro) *random-state))
-      (funcall fn))))
+  (flet ((foo ()
+           (let ((*random-state*
+                   #+sbcl (sb-ext:seed-random-state seed)
+                   #+allegro (make-random-state t seed)
+                   #-(or sbcl allegro) *random-state)
+                 (*cuda-default-random-seed* seed))
+             (funcall fn))))
+    (if (use-cuda-p)
+        (with-curand-state ((mgl-mat::make-xorwow-state/simple
+                             seed *cuda-default-n-random-states*))
+          (foo))
+        (foo))))
 
 (defmacro repeatably ((&key (seed *experiment-random-seed*)) &body body)
   `(call-repeatably (lambda () ,@body) :seed ,seed))
