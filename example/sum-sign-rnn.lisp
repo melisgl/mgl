@@ -78,6 +78,9 @@
     (minimize (monitor-optimization-periodically
                (make-instance 'adam-optimizer
                               :learning-rate 0.2
+                              ;; This is RMSPROP effectively.
+                              :mean-update-rate 1.0
+                              :variance-update-rate 0.1
                               :batch-size 100)
                '((:fn log-test-error :period 30000)
                  (:fn reset-optimization-monitors :period 3000)))
@@ -135,9 +138,9 @@
     ;; Enable CUDA if available.
     (with-cuda* ()
       (train-sum-sign-rnn))))
-.. 2015-02-08 12:09:14: training at n-instances: 0
-.. 2015-02-08 12:09:14: cost: 0.000e+0 (0)
-.. #<ADAM-OPTIMIZER {103192AEF3}>
+.. 2015-02-09 23:48:45: training at n-instances: 0
+.. 2015-02-09 23:48:45: cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {101FE5FBE3}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
@@ -163,7 +166,7 @@
 ..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :norm 1.41244>
 ..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :norm 0.40475>
 ..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :norm 1.75358>)
-..                    {10319D3653}>
+..                    {10206976F3}>
 ..    LEARNING-RATE = 2.00000e-1
 ..    MOMENTUM = NONE
 ..    MOMENTUM-TYPE = :NONE
@@ -176,10 +179,10 @@
 ..    N-BEFORE-UPATE-HOOK = 0
 ..  
 ..  ADAM-OPTIMIZER description:
-..    MEAN-UPDATE-RATE = 1.00000e-1
-..    VARIANCE-UPDATE-RATE = 1.00000e-3
+..    MEAN-UPDATE-RATE = 1.00000e+0
+..    VARIANCE-UPDATE-RATE = 1.00000e-1
 ..    VARIANCE-ADJUSTMENT = 1.00000e-8
-..  #<RNN {10318C6C53}>
+..  #<RNN {101D20D1C3}>
 ..   BPN description:
 ..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>
 ..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>)
@@ -188,59 +191,59 @@
 ..   
 ..   RNN description:
 ..     MAX-LAG = 1
-..   2015-02-08 12:09:15: pred.        cost: 1.223e+0 (4455.00)
-.. 2015-02-08 12:09:15: warped pred. cost: 1.228e+0 (9476.00)
-.. 2015-02-08 12:09:15: Foreign memory usage:
-.. foreign arrays: 166 (used bytes: 40,400)
+..   2015-02-09 23:48:45: pred.        cost: 1.223e+0 (4455.00)
+.. 2015-02-09 23:48:45: warped pred. cost: 1.228e+0 (9476.00)
+.. 2015-02-09 23:48:45: Foreign memory usage:
+.. foreign arrays: 162 (used bytes: 39,600)
 .. CUDA memory usage:
 .. device arrays: 114 (used bytes: 220,892, pooled bytes: 19,200)
 .. host arrays: 162 (used bytes: 39,600)
 .. host->device copies: 6,164, device->host copies: 4,490
-.. 2015-02-08 12:09:17: training at n-instances: 3000
-.. 2015-02-08 12:09:17: cost: 4.986e-1 (13726.00)
-.. 2015-02-08 12:09:19: training at n-instances: 6000
-.. 2015-02-08 12:09:19: cost: 5.769e-2 (13890.00)
-.. 2015-02-08 12:09:20: training at n-instances: 9000
-.. 2015-02-08 12:09:20: cost: 2.168e-2 (13872.00)
-.. 2015-02-08 12:09:22: training at n-instances: 12000
-.. 2015-02-08 12:09:22: cost: 1.348e-2 (13953.00)
-.. 2015-02-08 12:09:24: training at n-instances: 15000
-.. 2015-02-08 12:09:24: cost: 9.696e-3 (13948.00)
-.. 2015-02-08 12:09:26: training at n-instances: 18000
-.. 2015-02-08 12:09:26: cost: 7.382e-3 (13849.00)
-.. 2015-02-08 12:09:28: training at n-instances: 21000
-.. 2015-02-08 12:09:28: cost: 5.861e-3 (13758.00)
-.. 2015-02-08 12:09:30: training at n-instances: 24000
-.. 2015-02-08 12:09:30: cost: 4.849e-3 (13908.00)
-.. 2015-02-08 12:09:32: training at n-instances: 27000
-.. 2015-02-08 12:09:32: cost: 4.013e-3 (13570.00)
-.. 2015-02-08 12:09:34: training at n-instances: 30000
-.. 2015-02-08 12:09:34: cost: 3.459e-3 (13721.00)
-.. 2015-02-08 12:09:34: pred.        cost: 3.284e-3 (4593.00)
-.. 2015-02-08 12:09:34: warped pred. cost: 3.285e-3 (9717.00)
-.. 2015-02-08 12:09:34: Foreign memory usage:
-.. foreign arrays: 220 (used bytes: 53,600)
+.. 2015-02-09 23:48:47: training at n-instances: 3000
+.. 2015-02-09 23:48:47: cost: 4.407e-1 (13726.00)
+.. 2015-02-09 23:48:49: training at n-instances: 6000
+.. 2015-02-09 23:48:49: cost: 6.981e-2 (13890.00)
+.. 2015-02-09 23:48:51: training at n-instances: 9000
+.. 2015-02-09 23:48:51: cost: 1.756e-2 (13872.00)
+.. 2015-02-09 23:48:53: training at n-instances: 12000
+.. 2015-02-09 23:48:53: cost: 5.181e-3 (13953.00)
+.. 2015-02-09 23:48:55: training at n-instances: 15000
+.. 2015-02-09 23:48:55: cost: 1.586e-3 (13948.00)
+.. 2015-02-09 23:48:57: training at n-instances: 18000
+.. 2015-02-09 23:48:57: cost: 4.898e-4 (13849.00)
+.. 2015-02-09 23:48:59: training at n-instances: 21000
+.. 2015-02-09 23:48:59: cost: 1.523e-4 (13758.00)
+.. 2015-02-09 23:49:01: training at n-instances: 24000
+.. 2015-02-09 23:49:01: cost: 4.728e-5 (13908.00)
+.. 2015-02-09 23:49:03: training at n-instances: 27000
+.. 2015-02-09 23:49:03: cost: 1.450e-5 (13570.00)
+.. 2015-02-09 23:49:05: training at n-instances: 30000
+.. 2015-02-09 23:49:05: cost: 4.574e-6 (13721.00)
+.. 2015-02-09 23:49:06: pred.        cost: 2.421e-6 (4593.00)
+.. 2015-02-09 23:49:06: warped pred. cost: 2.396e-6 (9717.00)
+.. 2015-02-09 23:49:06: Foreign memory usage:
+.. foreign arrays: 216 (used bytes: 52,800)
 .. CUDA memory usage:
-.. device arrays: 148 (used bytes: 224,428, pooled bytes: 19,200)
+.. device arrays: 147 (used bytes: 224,344, pooled bytes: 19,200)
 .. host arrays: 216 (used bytes: 52,800)
 .. host->device copies: 465,818, device->host copies: 371,990
 ..
-==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.75226>
--->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.04934>
--->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.14970>
--->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.67698>
--->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.40400>
--->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.33328>
--->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 21.41458>
--->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 4.97210>
--->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 0.65959>
--->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 0.77142>
--->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 6.28021>
--->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 4.96948>
--->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.33460>
--->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 3.11331>
--->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.13583>
--->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.15849>
--->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 4.95984>)
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :norm 0.09300>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :norm 0.82579>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :norm 0.41850>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :norm 0.89080>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.19945>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :norm 0.97036>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :norm 48.09914>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :norm 10.64913>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :norm 1.09559>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :norm 1.07507>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :norm 10.57380>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :norm 6.49820>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :norm 0.10683>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :norm 4.59939>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :norm 1.53984>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :norm 0.36710>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :norm 8.68094>)
 
 |#
