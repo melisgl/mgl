@@ -535,50 +535,51 @@
 
 (defun train-mnist/1 (&key training test load-dbn-p quick-run-p dropoutp
                       dbn-var bpn-var dbn-filename bpn-filename)
-  (with-example-log ()
-    (log-msg "TRAIN-MNIST/1 :DROPOUTP ~S~%" dropoutp)
-    (let ((dbn nil)
-          (bpn nil))
-      (cond (load-dbn-p
-             (repeatably ()
-               (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
-               (load-weights dbn-filename dbn)
-               (log-msg "Loaded DBN~%")
-               (log-padded
-                (monitor-dbn-mean-field-reconstructions
-                 (make-sampler test) dbn
-                 (make-reconstruction-monitors dbn)
-                 :set-visible-p t))))
-            (t
-             (repeatably ()
-               (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
-               (init-mnist-dbn dbn :stddev 0.1)
-               (train-mnist-dbn dbn training test
-                                :n-epochs (if quick-run-p 2 50) :n-gibbs 1
-                                :start-level 0 :learning-rate 0.1
-                                :decay 0.0002 :visible-sampling nil)
-               (unless quick-run-p
-                 (save-weights dbn-filename dbn)))))
-      (repeatably ()
-        (setq* (bpn bpn-var) (unroll-mnist-dbn/1 dbn))
-        (cond (dropoutp
-               (train-mnist-bpn-gd bpn training test
-                                   :n-softmax-epochs (if quick-run-p 1 10)
-                                   :n-epochs (if quick-run-p 2 1000)
-                                   :learning-rate 1
-                                   :learning-rate-decay 0.998
-                                   :l2-upper-bound nil
-                                   :set-dropout-p t
-                                   :rescale-on-dropout-p t)
-               (unless quick-run-p
-                 (save-weights bpn-filename bpn)))
+  (with-cuda* ()
+    (with-example-log ()
+      (log-msg "TRAIN-MNIST/1 :DROPOUTP ~S~%" dropoutp)
+      (let ((dbn nil)
+            (bpn nil))
+        (cond (load-dbn-p
+               (repeatably ()
+                 (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
+                 (load-weights dbn-filename dbn)
+                 (log-msg "Loaded DBN~%")
+                 (log-padded
+                  (monitor-dbn-mean-field-reconstructions
+                   (make-sampler test) dbn
+                   (make-reconstruction-monitors dbn)
+                   :set-visible-p t))))
               (t
-               (train-mnist-bpn-cg bpn training test
-                                   :n-softmax-epochs (if quick-run-p 1 5)
-                                   :n-epochs (if quick-run-p 2 37))
-               (unless quick-run-p
-                 (save-weights bpn-filename bpn)))))
-      (values bpn dbn))))
+               (repeatably ()
+                 (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
+                 (init-mnist-dbn dbn :stddev 0.1)
+                 (train-mnist-dbn dbn training test
+                                  :n-epochs (if quick-run-p 2 50) :n-gibbs 1
+                                  :start-level 0 :learning-rate 0.1
+                                  :decay 0.0002 :visible-sampling nil)
+                 (unless quick-run-p
+                   (save-weights dbn-filename dbn)))))
+        (repeatably ()
+          (setq* (bpn bpn-var) (unroll-mnist-dbn/1 dbn))
+          (cond (dropoutp
+                 (train-mnist-bpn-gd bpn training test
+                                     :n-softmax-epochs (if quick-run-p 1 10)
+                                     :n-epochs (if quick-run-p 2 1000)
+                                     :learning-rate 1
+                                     :learning-rate-decay 0.998
+                                     :l2-upper-bound nil
+                                     :set-dropout-p t
+                                     :rescale-on-dropout-p t)
+                 (unless quick-run-p
+                   (save-weights bpn-filename bpn)))
+                (t
+                 (train-mnist-bpn-cg bpn training test
+                                     :n-softmax-epochs (if quick-run-p 1 5)
+                                     :n-epochs (if quick-run-p 2 37))
+                 (unless quick-run-p
+                   (save-weights bpn-filename bpn)))))
+        (values bpn dbn)))))
 
 
 ;;;; Code for the DBN to DBM to BPN approach (paper [2]) and also for
@@ -779,101 +780,102 @@
 (defun train-mnist/2 (&key training test load-dbn-p load-dbm-p dropoutp
                       quick-run-p dbn-var dbm-var bpn-var
                       dbn-filename dbm-filename bpn-filename)
-  (with-example-log ()
-    (log-msg "TRAIN-MNIST/2 :DROPOUTP ~S~%" dropoutp)
-    (let ((dbn nil)
-          (dbm nil)
-          (bpn nil))
-      (flet ((train-dbn ()
-               (repeatably ()
-                 (init-mnist-dbn dbn :stddev '(0.001 0.01) :start-level 0)
-                 (train-mnist-dbn
-                  dbn training test
-                  :start-level 0
-                  :n-epochs (if quick-run-p 2 100)
-                  :n-gibbs (list 1
-                                 (lambda (optimizer)
-                                   (ceiling (1+ (n-instances optimizer))
-                                            (* 20 (length training)))))
-                  :learning-rate (list 0.05
-                                       (lambda (optimizer)
-                                         (/ 0.05
-                                            (ceiling
-                                             (1+ (n-instances optimizer))
-                                             (* 20 (length training))))))
-                  :decay 0.001
-                  :visible-sampling t))
-               (unless quick-run-p
-                 (save-weights dbn-filename dbn)))
-             (train-dbm ()
-               (repeatably ()
-                 (train-mnist-dbm dbm training test
-                                  :n-epochs (if quick-run-p 1 500)))
-               (unless quick-run-p
-                 (save-weights dbm-filename dbm)))
-             (make-dbm ()
-               (repeatably ()
-                 (setq* (dbm dbm-var) (make-mnist-dbm))))
-             (make-dbn ()
-               (repeatably ()
-                 (setq* (dbn dbn-var) (make-mnist-dbn/2 dbm)))))
-        (cond (load-dbm-p
-               (make-dbm)
-               (load-weights dbm-filename dbm))
-              (load-dbn-p
-               (make-dbm)
-               (make-dbn)
-               (load-weights dbn-filename dbn)
-               (log-msg "Loaded DBN~%")
-               (train-dbm))
-              (t
-               (make-dbm)
-               (make-dbn)
-               (train-dbn)
-               (train-dbm)))
-        (repeatably ()
-          (setq* (bpn bpn-var)
-                 (unroll-mnist-dbm
-                  dbm
-                  :use-label-weights t
-                  :initargs
-                  ;; We are playing games with wrapping training examples
-                  ;; in lists when sampling, so let the map cache know
-                  ;; what's the key in the cache and what to pass to the
-                  ;; dbm. We carefully omit labels.
-                  (list :populate-key #'first
-                        :populate-convert-to-dbm-sample-fn
-                        (lambda (sample)
-                          (list (first sample)
-                                :sample-visible-p nil
-                                :discard-label-p t))
-                        :populate-map-cache-lazily-from-dbm dbm
-                        :populate-periodic-fn
-                        (make-instance
-                         'periodic-fn :period 1000
-                         :fn (lambda (n)
-                               (log-msg "populated: ~S~%" n))))))
-          (unless (populate-map-cache-lazily-from-dbm bpn)
-            (log-msg "Populating MAP cache~%")
-            (populate-map-cache bpn dbm (concatenate 'vector training test)
-                                :if-exists :error))
-          (cond (dropoutp
-                 (train-mnist-bpn-gd bpn training test
-                                     :n-softmax-epochs 0
-                                     :n-epochs (if quick-run-p 2 1000)
-                                     :learning-rate 1
-                                     :learning-rate-decay 0.998
-                                     :l2-upper-bound nil
-                                     :set-dropout-p t
-                                     :rescale-on-dropout-p t)
+  (with-cuda* ()
+    (with-example-log ()
+      (log-msg "TRAIN-MNIST/2 :DROPOUTP ~S~%" dropoutp)
+      (let ((dbn nil)
+            (dbm nil)
+            (bpn nil))
+        (flet ((train-dbn ()
+                 (repeatably ()
+                   (init-mnist-dbn dbn :stddev '(0.001 0.01) :start-level 0)
+                   (train-mnist-dbn
+                    dbn training test
+                    :start-level 0
+                    :n-epochs (if quick-run-p 2 100)
+                    :n-gibbs (list 1
+                                   (lambda (optimizer)
+                                     (ceiling (1+ (n-instances optimizer))
+                                              (* 20 (length training)))))
+                    :learning-rate (list 0.05
+                                         (lambda (optimizer)
+                                           (/ 0.05
+                                              (ceiling
+                                               (1+ (n-instances optimizer))
+                                               (* 20 (length training))))))
+                    :decay 0.001
+                    :visible-sampling t))
                  (unless quick-run-p
-                   (save-weights bpn-filename bpn)))
+                   (save-weights dbn-filename dbn)))
+               (train-dbm ()
+                 (repeatably ()
+                   (train-mnist-dbm dbm training test
+                                    :n-epochs (if quick-run-p 1 500)))
+                 (unless quick-run-p
+                   (save-weights dbm-filename dbm)))
+               (make-dbm ()
+                 (repeatably ()
+                   (setq* (dbm dbm-var) (make-mnist-dbm))))
+               (make-dbn ()
+                 (repeatably ()
+                   (setq* (dbn dbn-var) (make-mnist-dbn/2 dbm)))))
+          (cond (load-dbm-p
+                 (make-dbm)
+                 (load-weights dbm-filename dbm))
+                (load-dbn-p
+                 (make-dbm)
+                 (make-dbn)
+                 (load-weights dbn-filename dbn)
+                 (log-msg "Loaded DBN~%")
+                 (train-dbm))
                 (t
-                 (train-mnist-bpn-cg bpn training test :batch-size 10000
-                                     :n-softmax-epochs (if quick-run-p 1 5)
-                                     :n-epochs (if quick-run-p 1 100))
-                 (unless quick-run-p
-                   (save-weights bpn-filename bpn)))))))))
+                 (make-dbm)
+                 (make-dbn)
+                 (train-dbn)
+                 (train-dbm)))
+          (repeatably ()
+            (setq* (bpn bpn-var)
+                   (unroll-mnist-dbm
+                    dbm
+                    :use-label-weights t
+                    :initargs
+                    ;; We are playing games with wrapping training examples
+                    ;; in lists when sampling, so let the map cache know
+                    ;; what's the key in the cache and what to pass to the
+                    ;; dbm. We carefully omit labels.
+                    (list :populate-key #'first
+                          :populate-convert-to-dbm-sample-fn
+                          (lambda (sample)
+                            (list (first sample)
+                                  :sample-visible-p nil
+                                  :discard-label-p t))
+                          :populate-map-cache-lazily-from-dbm dbm
+                          :populate-periodic-fn
+                          (make-instance
+                           'periodic-fn :period 1000
+                           :fn (lambda (n)
+                                 (log-msg "populated: ~S~%" n))))))
+            (unless (populate-map-cache-lazily-from-dbm bpn)
+              (log-msg "Populating MAP cache~%")
+              (populate-map-cache bpn dbm (concatenate 'vector training test)
+                                  :if-exists :error))
+            (cond (dropoutp
+                   (train-mnist-bpn-gd bpn training test
+                                       :n-softmax-epochs 0
+                                       :n-epochs (if quick-run-p 2 1000)
+                                       :learning-rate 1
+                                       :learning-rate-decay 0.998
+                                       :l2-upper-bound nil
+                                       :set-dropout-p t
+                                       :rescale-on-dropout-p t)
+                   (unless quick-run-p
+                     (save-weights bpn-filename bpn)))
+                  (t
+                   (train-mnist-bpn-cg bpn training test :batch-size 10000
+                                       :n-softmax-epochs (if quick-run-p 1 5)
+                                       :n-epochs (if quick-run-p 1 100))
+                   (unless quick-run-p
+                     (save-weights bpn-filename bpn))))))))))
 
 (defmethod negative-phase (batch (learner bm-pcd-learner)
                            (optimizer mnist-dbm-optimizer) multiplier)
@@ -1093,22 +1095,23 @@
                 bpn))
 
 (defun train-mnist/3 (&key training test quick-run-p bpn-var bpn-filename)
-  (with-example-log ()
-    (repeatably ()
-      (log-msg "TRAIN-MNIST/3~%")
-      (let ((bpn nil))
-        (setq* (bpn bpn-var) (build-rectified-mnist-bpn))
-        (init-bpn-weights bpn :stddev 0.01)
-        (train-mnist-bpn-gd bpn training test
-                            :n-softmax-epochs 0
-                            :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate 1
-                            :learning-rate-decay 0.998
-                            :l2-upper-bound (sqrt 15)
-                            :input-weight-penalty 0.000001
-                            :batch-size 96)
-        (when (and bpn-filename (not quick-run-p))
-          (save-weights bpn-filename bpn))))))
+  (with-cuda* ()
+    (with-example-log ()
+      (repeatably ()
+        (log-msg "TRAIN-MNIST/3~%")
+        (let ((bpn nil))
+          (setq* (bpn bpn-var) (build-rectified-mnist-bpn))
+          (init-bpn-weights bpn :stddev 0.01)
+          (train-mnist-bpn-gd bpn training test
+                              :n-softmax-epochs 0
+                              :n-epochs (if quick-run-p 2 3000)
+                              :learning-rate 1
+                              :learning-rate-decay 0.998
+                              :l2-upper-bound (sqrt 15)
+                              :input-weight-penalty 0.000001
+                              :batch-size 96)
+          (when (and bpn-filename (not quick-run-p))
+            (save-weights bpn-filename bpn)))))))
 
 
 ;;;; Maxout
@@ -1126,22 +1129,23 @@
     (prediction (make-softmax f2))))
 
 (defun train-mnist/4 (&key training test quick-run-p bpn-var bpn-filename)
-  (with-example-log ()
-    (repeatably ()
-      (log-msg "TRAIN-MNIST/4~%")
-      (let ((bpn nil))
-        (setq* (bpn bpn-var) (build-maxout-mnist-bpn))
-        (init-bpn-weights bpn :stddev 0.01)
-        (train-mnist-bpn-gd bpn training test
-                            :n-softmax-epochs 0
-                            :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate 1
-                            :learning-rate-decay 0.998
-                            :l2-upper-bound (sqrt 3.75)
-                            :input-weight-penalty 0.000001
-                            :batch-size 96)
-        (when (and bpn-filename (not quick-run-p))
-          (save-weights bpn-filename bpn))))))
+  (with-cuda* ()
+    (with-example-log ()
+      (repeatably ()
+        (log-msg "TRAIN-MNIST/4~%")
+        (let ((bpn nil))
+          (setq* (bpn bpn-var) (build-maxout-mnist-bpn))
+          (init-bpn-weights bpn :stddev 0.01)
+          (train-mnist-bpn-gd bpn training test
+                              :n-softmax-epochs 0
+                              :n-epochs (if quick-run-p 2 3000)
+                              :learning-rate 1
+                              :learning-rate-decay 0.998
+                              :l2-upper-bound (sqrt 3.75)
+                              :input-weight-penalty 0.000001
+                              :batch-size 96)
+          (when (and bpn-filename (not quick-run-p))
+            (save-weights bpn-filename bpn)))))))
 
 
 ;;;; Max-channel
@@ -1162,22 +1166,23 @@
     (prediction (make-softmax f3))))
 
 (defun train-mnist/5 (&key training test quick-run-p bpn-var bpn-filename)
-  (with-example-log ()
-    (repeatably ()
-      (log-msg "TRAIN-MNIST/5~%")
-      (let ((bpn nil))
-        (setq* (bpn bpn-var) (build-max-channel-mnist-bpn))
-        (init-bpn-weights bpn :stddev 0.01)
-        (train-mnist-bpn-gd bpn training test
-                            :n-softmax-epochs 0
-                            :n-epochs (if quick-run-p 2 3000)
-                            :learning-rate 1
-                            :learning-rate-decay 0.998
-                            :l2-upper-bound (sqrt 3.75)
-                            :input-weight-penalty 0.000001
-                            :batch-size 96)
-        (when (and bpn-filename (not quick-run-p))
-          (save-weights bpn-filename bpn))))))
+  (with-cuda* ()
+    (with-example-log ()
+      (repeatably ()
+        (log-msg "TRAIN-MNIST/5~%")
+        (let ((bpn nil))
+          (setq* (bpn bpn-var) (build-max-channel-mnist-bpn))
+          (init-bpn-weights bpn :stddev 0.01)
+          (train-mnist-bpn-gd bpn training test
+                              :n-softmax-epochs 0
+                              :n-epochs (if quick-run-p 2 3000)
+                              :learning-rate 1
+                              :learning-rate-decay 0.998
+                              :l2-upper-bound (sqrt 3.75)
+                              :input-weight-penalty 0.000001
+                              :batch-size 96)
+          (when (and bpn-filename (not quick-run-p))
+            (save-weights bpn-filename bpn)))))))
 
 
 ;;;; Globals for tracking progress of training and filenames
