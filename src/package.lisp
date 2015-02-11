@@ -53,6 +53,10 @@
    #:sech
    #:sigmoid
    #:scaled-tanh
+   #:half-life-to-decay
+   #:half-life-to-decay-rate
+   #:decay-to-half-life
+   #:decay-rate-to-half-life
    #:try-chance
    #:binarize-randomly
    #:gaussian-random-1

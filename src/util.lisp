@@ -262,6 +262,19 @@
   (declare (type flt x))
   (* #.(flt 1.7159) (tanh (* #.(flt 2/3) x))))
 
+(defun half-life-to-decay (half-life)
+  "b^h=0.5, b=0.5^(1/h)"
+  (expt 0.5d0 (/ half-life)))
+
+(defun half-life-to-decay-rate (half-life)
+  (- 1 (expt 0.5d0 (/ half-life))))
+
+(defun decay-to-half-life (decay)
+  (log 0.5 decay))
+
+(defun decay-rate-to-half-life (decay-rate)
+  (log 0.5 (- 1 decay-rate)))
+
 (declaim (inline try-chance))
 (defun try-chance (chance)
   (< (random #.(flt 1)) (flt chance)))
