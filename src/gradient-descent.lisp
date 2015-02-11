@@ -604,8 +604,9 @@
 (defsection @mgl-gd-adam-optimizer (:title "Adam Optimizer")
   (adam-optimizer class)
   (learning-rate (accessor adam-optimizer))
-  (mean-update-rate (accessor adam-optimizer))
-  (variance-update-rate (accessor adam-optimizer))
+  (mean-decay-rate (accessor adam-optimizer))
+  (mean-decay-rate-decay (accessor adam-optimizer))
+  (variance-decay-rate (accessor adam-optimizer))
   (variance-adjustment (accessor adam-optimizer)))
 
 ;;; FIXME: This isn't really a BATCH-GD-OPTIMIZER (that should be
@@ -619,43 +620,54 @@
     :documentation "Same thing as [LEARNING-RATE][(ACCESSOR
     GD-OPTIMIZER)] but with the default suggested by the Adam paper.")
    (momentum-type :initform :none)
-   (mean-update-rate
-    :initform 0.1 :initarg :mean-update-rate
-    :accessor mean-update-rate
+   (mean-decay-rate
+    :initform 0.1 :initarg :mean-decay-rate
+    :accessor mean-decay-rate
     :documentation "A number between 0 and 1 that determines how fast
     the estimated mean of derivatives is updated. 1 basically gives
-    you RMSPROP (if VARIANCE-UPDATE-RATE is not too small) or
-    AdaGrad (if VARIANCE-UPDATE-RATE is infinitesimal and the learning
-    rate is annealed.")
-   (variance-update-rate
-    :initform 0.001 :initarg :variance-update-rate
-    :accessor variance-update-rate
+    you RMSPROP (if VARIANCE-DECAY-RATE is not too small) or
+    AdaGrad (if VARIANCE-DECAY-RATE is infinitesimal and the learning
+    rate is annealed. This is `B_1` in the paper.")
+   (mean-decay-rate-decay
+    :initform (- 1 10d-8) :initarg :mean-decay-rate-decay
+    :accessor mean-decay-rate-decay
+    :documentation "A value that should be close to 1. The gap between
+    1 and MEAN-DECAY-RATE is multiplied by this value after each
+    update. This is `lambda` in the paper." )
+   (variance-decay-rate
+    :initform 0.001 :initarg :variance-decay-rate
+    :accessor variance-decay-rate
     :documentation "A number between 0 and 1 that determines how fast
-    the estimated variance of derivatives is updated.")
+    the estimated variance of derivatives is updated. This is `B_2` in
+    the paper.")
    (variance-adjustment
-    :initform 1e-8 :initarg :variance-adjustment
+    :initform 10d-8 :initarg :variance-adjustment
     :accessor variance-adjustment
     :documentation "Within the bowels of adam, the estimated mean is
     divided by the square root of the estimated variance (per weight)
     which can lead to numerical problems if the denominator is near
-    zero. To avoid this, VARIANCE-ADJUSTMENT which should be a small
-    positive number is added to the denominator.")
+    zero. To avoid this, VARIANCE-ADJUSTMENT, which should be a small
+    positive number, is added to the denominator. This is `epsilon` in
+    the paper.")
    (mean-estimates :accessor mean-estimates)
    (variance-estimates :accessor variance-estimates)
    (adam-time-step :initform 0 :accessor adam-time-step)
-   ;; no support for momentum
    (momentum :initform :none))
   (:documentation "Adam is a first-order stochasistic gradient descent
   optimizer. It maintains an internal estimation for the mean and raw
   variance of each derivative as exponential moving averages. The step
-  is takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
+  it takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
   mean, `V` is the estimated variance, and `E` is a small adjustment
-  factor to prevent the gradient from blowing up. See the
-  [paper](http://arxiv.org/abs/1412.6980) for more."))
+  factor to prevent the gradient from blowing up. See version 2 of the
+  [paper](http://arxiv.org/abs/1412.6980) for more.
+
+  Note that using momentum is not supported with Adam. In fact, an
+  error is signalled if it's not :NONE."))
 
 (define-descriptions (optimizer adam-optimizer :inheritp t)
-  (mean-update-rate (mean-update-rate optimizer) "~,5E")
-  (variance-update-rate (variance-update-rate optimizer) "~,5E")
+  (mean-decay-rate (mean-decay-rate optimizer) "~,5E")
+  (mean-decay-rate-decay (mean-decay-rate-decay optimizer) "~,5E")
+  (variance-decay-rate (variance-decay-rate optimizer) "~,5E")
   (variance-adjustment (variance-adjustment optimizer) "~,5E"))
 
 (defmethod initialize-optimizer* ((optimizer adam-optimizer) source weights
@@ -678,18 +690,24 @@
   (assert (eq (momentum-type optimizer) :none) ()
           "Momentum is not implemented for ADAM-OPTIMIZER.")
   (incf (adam-time-step optimizer))
-  (let* ((mean-update-rate (mean-update-rate optimizer))
-         (rmsprop (= 1 mean-update-rate))
+  (let* ((mean-decay-rate (mean-decay-rate optimizer))
+         (mean-decay-rate* (- 1 (* (- 1 mean-decay-rate)
+                                   (expt (mean-decay-rate-decay optimizer)
+                                         (1- (adam-time-step optimizer))))))
+         (rmsprop (= 1 mean-decay-rate))
          (accumulator (accumulator optimizer))
          (mean-estimates (if rmsprop accumulator (mean-estimates optimizer)))
          (variance-estimates (variance-estimates optimizer))
-         (variance-update-rate (variance-update-rate optimizer))
+         (variance-decay-rate (variance-decay-rate optimizer))
          (variance-adjustment (variance-adjustment optimizer))
          (learning-rate (learning-rate optimizer))
          (n-instances (n-instances-in-batch optimizer))
          (weight-decay (weight-decay optimizer))
          (weight-penalty (weight-penalty optimizer))
          (step (adam-time-step optimizer)))
+    (assert (< (expt (- 1 mean-decay-rate) 2)
+               (sqrt (- 1 variance-decay-rate)))
+            () "Convergence constraint not satisfied.")
     (scal! (/ n-instances) accumulator)
     (map nil #'funcall (before-update-hook optimizer))
     ;; add weight decay and penalty gradients
@@ -705,13 +723,13 @@
             (unless (zerop weight-decay)
               (axpy! weight-decay weights accumulator))))))
     (unless rmsprop
-      (scal! (- 1 mean-update-rate) mean-estimates)
-      (axpy! mean-update-rate accumulator mean-estimates))
-    (geem! variance-update-rate accumulator accumulator
-           (- 1 variance-update-rate) variance-estimates)
+      (scal! (- 1 mean-decay-rate*) mean-estimates)
+      (axpy! mean-decay-rate* accumulator mean-estimates))
+    (geem! variance-decay-rate accumulator accumulator
+           (- 1 variance-decay-rate) variance-estimates)
     (adam-update (* learning-rate
-                    (/ (- 1 (expt (- 1 mean-update-rate) step)))
-                    (sqrt (- 1 (expt (- 1 variance-update-rate) step))))
+                    (/ (- 1 (expt (- 1 mean-decay-rate) step)))
+                    (sqrt (- 1 (expt (- 1 variance-decay-rate) step))))
                  mean-estimates variance-estimates variance-adjustment
                  accumulator)
     (with-shape-and-displacement (accumulator)

@@ -78,9 +78,9 @@
     (minimize (monitor-optimization-periodically
                (make-instance 'adam-optimizer
                               :learning-rate 0.2
-                              ;; This is RMSPROP effectively.
-                              :mean-update-rate 1.0
-                              :variance-update-rate 0.1
+                              :mean-decay-rate 0.1
+                              :mean-decay-rate-decay 0.9
+                              :variance-decay-rate 0.1
                               :batch-size 100)
                '((:fn log-test-error :period 30000)
                  (:fn reset-optimization-monitors :period 3000)))

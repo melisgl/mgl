@@ -557,7 +557,7 @@ contains it.
     collect the results. Since [`CROSS-VALIDATE`][8375] collects the return values
     of `FN`, the return value of this function is a list of lists of `FN`
     results. If `N` is `NIL`, don't collect anything just keep doing
-    repeated CVs until `FN` performs an non-local exit.
+    repeated CVs until `FN` performs a non-local exit.
     
     The following example simply collects the test and training sets for
     2-fold CV repeated 3 times with shuffled data:
@@ -2025,10 +2025,13 @@ mini-batch basis:
     Adam is a first-order stochasistic gradient descent
     optimizer. It maintains an internal estimation for the mean and raw
     variance of each derivative as exponential moving averages. The step
-    is takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
+    it takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
     mean, `V` is the estimated variance, and `E` is a small adjustment
-    factor to prevent the gradient from blowing up. See the
+    factor to prevent the gradient from blowing up. See version 2 of the
     [paper](http://arxiv.org/abs/1412.6980) for more.
+    
+    Note that using momentum is not supported with Adam. In fact, an
+    error is signalled if it's not `:NONE`.
 
 <a name='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
@@ -2036,32 +2039,42 @@ mini-batch basis:
 
     Same thing as [`LEARNING-RATE`][4ffe] but with the default suggested by the Adam paper.
 
-<a name='x-28MGL-GD-3AMEAN-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-GD-3AMEAN-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **MEAN-UPDATE-RATE** *ADAM-OPTIMIZER* *(:MEAN-UPDATE-RATE = 0.1)*
+- [accessor] **MEAN-DECAY-RATE** *ADAM-OPTIMIZER* *(:MEAN-DECAY-RATE = 0.1)*
 
     A number between 0 and 1 that determines how fast
     the estimated mean of derivatives is updated. 1 basically gives
-    you `RMSPROP` (if [`VARIANCE-UPDATE-RATE`][ef56] is not too small) or
-    AdaGrad (if [`VARIANCE-UPDATE-RATE`][ef56] is infinitesimal and the learning
-    rate is annealed.
+    you RMSPROP (if [`VARIANCE-DECAY-RATE`][ab6d] is not too small) or
+    AdaGrad (if [`VARIANCE-DECAY-RATE`][ab6d] is infinitesimal and the learning
+    rate is annealed. This is `B_1` in the paper.
 
-<a name='x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+<a name='x-28MGL-GD-3AMEAN-DECAY-RATE-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **VARIANCE-UPDATE-RATE** *ADAM-OPTIMIZER* *(:VARIANCE-UPDATE-RATE = 0.001)*
+- [accessor] **MEAN-DECAY-RATE-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY-RATE-DECAY = (- 1 1.d-7))*
+
+    A value that should be close to 1. The gap between
+    1 and [`MEAN-DECAY-RATE`][cac7] is multiplied by this value after each
+    update. This is `lambda` in the paper.
+
+<a name='x-28MGL-GD-3AVARIANCE-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **VARIANCE-DECAY-RATE** *ADAM-OPTIMIZER* *(:VARIANCE-DECAY-RATE = 0.001)*
 
     A number between 0 and 1 that determines how fast
-    the estimated variance of derivatives is updated.
+    the estimated variance of derivatives is updated. This is `B_2` in
+    the paper.
 
 <a name='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **VARIANCE-ADJUSTMENT** *ADAM-OPTIMIZER* *(:VARIANCE-ADJUSTMENT = 1.e-8)*
+- [accessor] **VARIANCE-ADJUSTMENT** *ADAM-OPTIMIZER* *(:VARIANCE-ADJUSTMENT = 1.d-7)*
 
     Within the bowels of adam, the estimated mean is
     divided by the square root of the estimated variance (per weight)
     which can lead to numerical problems if the denominator is near
-    zero. To avoid this, `VARIANCE-ADJUSTMENT` which should be a small
-    positive number is added to the denominator.
+    zero. To avoid this, `VARIANCE-ADJUSTMENT`, which should be a small
+    positive number, is added to the denominator. This is `epsilon` in
+    the paper.
 
 <a name='x-28MGL-GD-3A-40MGL-GD-UTILITIES-20MGL-PAX-3ASECTION-29'></a>
 
@@ -3184,9 +3197,9 @@ the concepts involved. Make sure you are comfortable with
     (minimize (monitor-optimization-periodically
                (make-instance 'adam-optimizer
                               :learning-rate 0.2
-                              ;; This is RMSPROP effectively.
-                              :mean-update-rate 1.0
-                              :variance-update-rate 0.1
+                              :mean-decay-rate 0.1
+                              :mean-decay-rate-decay 0.9
+                              :variance-decay-rate 0.1
                               :batch-size 100)
                '((:fn log-test-error :period 30000)
                  (:fn reset-optimization-monitors :period 3000)))
@@ -4675,6 +4688,7 @@ grow into a more serious toolset for NLP eventually.
   [aa2d]: #x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:STEP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [ab6b]: #x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:->EMBEDDING))"
+  [ab6d]: #x-28MGL-GD-3AVARIANCE-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-DECAY-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [aec4]: #x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-RNN-TIME-WARP MGL-PAX:SECTION)"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-SAMPLER MGL-PAX:SECTION)"
   [b1b1]: #x-28MGL-BP-3A-40MGL-BP-STOCHASTICITY-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-STOCHASTICITY MGL-PAX:SECTION)"
@@ -4702,6 +4716,7 @@ grow into a more serious toolset for NLP eventually.
   [c54c]: #x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-GRADIENT-SOURCE* GENERIC-FUNCTION)"
   [c83f]: #x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-RNN-TUTORIAL MGL-PAX:SECTION)"
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-CV-BAGGING MGL-PAX:SECTION)"
+  [cac7]: #x-28MGL-GD-3AMEAN-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:MEAN-DECAY-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [cc50]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-MONITOR MGL-PAX:SECTION)"
   [d011]: #x-28MGL-CORE-3A-40MGL-ATTRIBUTES-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-ATTRIBUTES MGL-PAX:SECTION)"
   [d0f6]: #x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"
@@ -4728,7 +4743,6 @@ grow into a more serious toolset for NLP eventually.
   [ed3d]: #x-28MGL-GD-3AMOMENTUM-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
   [edb3]: #x-28MGL-NLP-3ABLEU-20FUNCTION-29 "(MGL-NLP:BLEU FUNCTION)"
   [edd9]: #x-28MGL-RESAMPLE-3ASPLIT-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SPLIT-STRATIFIED FUNCTION)"
-  [ef56]: #x-28MGL-GD-3AVARIANCE-UPDATE-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-UPDATE-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [f18a]: #x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29 "(MGL-OPT:@MGL-OPT-GRADIENT-SINK MGL-PAX:SECTION)"
   [f1be]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS* GENERIC-FUNCTION)"
   [f1cd]: #x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29 "(MGL-OPT:SEGMENTS GENERIC-FUNCTION)"
