@@ -436,7 +436,7 @@
   collect the results. Since CROSS-VALIDATE collects the return values
   of FN, the return value of this function is a list of lists of FN
   results. If N is NIL, don't collect anything just keep doing
-  repeated CVs until FN performs an non-local exit.
+  repeated CVs until FN performs a non-local exit.
 
   The following example simply collects the test and training sets for
   2-fold CV repeated 3 times with shuffled data:
