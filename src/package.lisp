@@ -57,6 +57,8 @@
    #:half-life-to-decay-rate
    #:decay-to-half-life
    #:decay-rate-to-half-life
+   #:log-prob-to-perplexity
+   #:perplexity-to-log-prop
    #:try-chance
    #:binarize-randomly
    #:gaussian-random-1
