@@ -891,7 +891,7 @@
       (let ((size1 (size (chunk1 cloud)))
             (size2 (size (chunk2 cloud))))
         (gemm! multiplier (if importances
-                              (scale-rows! importances v1 v1-scratch)
+                              (scale-rows! importances v1 :result v1-scratch)
                               v1)
                v2 (flt 1) accumulator
                :transpose-a? t :lda size1 :ldb size2 :ldc size2
