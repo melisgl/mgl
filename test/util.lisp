@@ -1,6 +1,6 @@
 (in-package :mgl-test)
 
-(defun ~= (x y &optional (tolerance 0.00001))
+(defun ~= (x y &optional (tolerance 0.001))
   (< (abs (- y x)) tolerance))
 
 (defun vector= (v1 v2)

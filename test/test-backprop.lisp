@@ -1,5 +1,63 @@
 (in-package :mgl-test)
 
+(defun test-derivatives (lump inputs &key (delta 0.0000001))
+  (let ((base-value 10)
+        (mgl-bp::*in-training-p* t)
+        (incoming-derivatives
+          (gaussian-random! (make-mat (mat-dimensions (nodes lump))))))
+    (dolist (input inputs)
+      (fill! base-value (derivatives input))
+      (gaussian-random! (nodes input)))
+    (forward lump)
+    (copy! incoming-derivatives (mgl-bp::derivatives lump))
+    (backward lump)
+    (let* ((results (nodes lump))
+           (n-results (mat-size results))
+           (original-results (copy-mat results)))
+      (dolist (input inputs)
+        (let* ((nodes (nodes input))
+               (n (mat-size nodes))
+               (derivatives (mgl-bp::derivatives input)))
+          (dotimes (i n)
+            (let ((original-value (row-major-mref nodes i)))
+              (setf (row-major-mref nodes i)
+                    (+ (row-major-mref nodes i) delta))
+              (forward lump)
+              (assert (plusp (nrm2 nodes)))
+              (let ((derivative 0))
+                (dotimes (j n-results)
+                  (incf derivative
+                        (* (row-major-mref incoming-derivatives j)
+                           (/ (- (row-major-mref results j)
+                                 (row-major-mref original-results j))
+                              delta))))
+                #+nil
+                (format t "~S ~S ~S ~S~%" (name input) i
+                        (- (row-major-mref derivatives i) 10) derivative)
+                (assert (~= (- (row-major-mref derivatives i) 10) derivative)))
+              (setf (row-major-mref nodes i) original-value))))))))
+
+(defun test-lump-derivatives ()
+  ;; :FLOAT is too imprecise for this to be a good test
+  (dolist (*default-mat-ctype* '(:double))
+    (dolist (*cuda-enabled* '(nil t))
+      (with-cuda* ()
+        (let* ((inputs (list (->input :size 10)))
+               (lump (apply #'->sigmoid inputs)))
+          (dolist (lump (cons lump inputs))
+            (setf (max-n-stripes lump) 7)
+            (setf (n-stripes lump) 7))
+          (test-derivatives lump inputs))
+        (let* ((inputs (list (->input :size 5)
+                             (->weight :name 'scale :size 5)
+                             (->weight :name 'shift :size 5)))
+               (lump (apply #'->batch-normalized inputs)))
+          (dolist (lump (cons lump inputs))
+            (setf (max-n-stripes lump) 7)
+            (setf (n-stripes lump) 7))
+          (test-derivatives lump inputs))))))
+
+
 (defclass test-bp-optimizer (segmented-gd-optimizer)
   ())
 
@@ -359,6 +417,7 @@
 
 (defun test-bp ()
   (declare (optimize (debug 3)))
+  (test-lump-derivatives)
   (do-cuda ()
     (dolist (*default-mat-ctype* '(:float :double))
       (dolist (max-n-stripes '(10 100))

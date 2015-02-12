@@ -2470,6 +2470,192 @@
                                                    sum-square)))))))))))))))
 
 
+(defsection @mgl-bp-batch-normalized-lump (:title "Batch-Normalized Lump")
+  (->batch-normalized class)
+  (variance-adjustment (accessor ->batch-normalized))
+  (population-stats-decay (accessor ->batch-normalized)))
+
+(defclass-now ->batch-normalized (lump)
+  ((x :initarg :x :reader x)
+   (scale :initarg :scale :reader scale)
+   (shift :initarg :shift :reader shift)
+   (batch-mean :initform nil :accessor batch-mean)
+   (batch-stddev :initform nil :accessor batch-stddev)
+   (population-mean :initform nil :accessor population-mean)
+   (population-stddev :initform nil :accessor population-stddev)
+   (population-stats-decay :initform 0.99 :accessor population-stats-decay)
+   (variance-adjustment :initform 1e-8 :accessor variance-adjustment))
+  (:documentation "This is an implementation of v1 of the [Batch
+  Normalization paper](http://arxiv.org/abs/1502.03167). The output of
+  ->BATCH-NORMALIZED is its input normalized so that for all elements
+  the mean across stripes is zero and the variance is 1. That is, the
+  mean of batch is subtracted from the inputs and they are rescaled by
+  their sample stddev. Actually, after the normalization step the
+  values are resaled and shifted in order to keep the representational
+  power of the model the same. The primary purpose of this lump is to
+  speed up learning, but it also acts as a regularizer. See the paper
+  for the details.
+
+  In addition to what's to be normalized, ->BATCH-NORMALIZED takes
+  weight lumps of the same size as the primary input. These represent
+  the learnt scaling and shift factors.
+
+  ```
+  (->batch-normalized (->input :size 10)
+                      (->weight :name 'scale :size 10)
+                      (->weight :name 'shift :size 10))
+  ```
+
+  The primary input of ->BATCH-NORMALIZED is often an ->ACTIVATION and
+  its output is fed into an activation function (see
+  @MGL-BP-ACTIVATION-FUNCTIONS)."))
+
+(defmethod initialize-instance :after ((lump ->batch-normalized)
+                                       &key size &allow-other-keys)
+  (check-size-and-default-size lump size))
+
+(defmaker ->batch-normalized x scale shift)
+
+(defmethod default-size ((lump ->batch-normalized))
+  (size (x lump)))
+
+(defun ensure-batch-mean (lump)
+  (let ((x (x lump)))
+    (setf (slot-value lump 'batch-mean)
+          (if (batch-mean lump)
+              (adjust! (batch-mean lump) (list 1 (size x)) 0)
+              (make-mat (list 1 (size x))))))
+  (batch-mean lump))
+
+(defun ensure-batch-stddev (lump)
+  (let ((x (x lump)))
+    (setf (slot-value lump 'batch-stddev)
+          (if (batch-stddev lump)
+              (adjust! (batch-stddev lump) (list 1 (size x)) 0)
+              (make-mat (list 1 (size x))))))
+  (batch-stddev lump))
+
+(defun ensure-population-mean (lump)
+  (let ((x (x lump)))
+    (setf (slot-value lump 'population-mean)
+          (if (population-mean lump)
+              (adjust! (population-mean lump) (list 1 (size x)) 0)
+              (make-mat (list 1 (size x))))))
+  (population-mean lump))
+
+(defun ensure-population-stddev (lump)
+  (let ((x (x lump)))
+    (setf (slot-value lump 'population-stddev)
+          (if (population-stddev lump)
+              (adjust! (population-stddev lump) (list 1 (size x)) 0)
+              (make-mat (list 1 (size x))))))
+  (population-stddev lump))
+
+(defmethod forward ((lump ->batch-normalized))
+  (let* ((x (x lump))
+         (batch-mean (if *in-training-p*
+                         (ensure-batch-mean lump)
+                         (ensure-population-mean lump)))
+         (batch-stddev (if *in-training-p*
+                           (ensure-batch-stddev lump)
+                           (ensure-population-stddev lump)))
+         (n-stripes (n-stripes x))
+         (nx (nodes x))
+         (nl (nodes lump)))
+    (assert (= (size lump) (size x)))
+    (with-ones (ones (list n-stripes 1))
+      (sum! (nodes x) batch-mean :axis 0)
+      (scal! (/ n-stripes) batch-mean)
+      (with-thread-cached-mat (diffs (mat-dimensions nx) :place 'bn1)
+        ;; Subtract BATCH-MEAN from each row of X and place the result
+        ;; in DIFFS.
+        (copy! nx diffs)
+        (gemm! -1 ones batch-mean 1 diffs)
+        (.square! diffs)
+        (sum! diffs batch-stddev :axis 0)
+        (scal! (/ n-stripes) batch-stddev)
+        (.+! (variance-adjustment lump) batch-stddev)
+        (.sqrt! batch-stddev))
+      ;; FIXOPT: this has been done above
+      (copy! nx nl)
+      (gemm! -1 ones batch-mean 1 nl)
+      (with-thread-cached-mat (stddevs (mat-dimensions (nodes x))
+                                       :place 'bn2)
+        (gemm! 1 ones batch-stddev 0 stddevs)
+        (.inv! stddevs)
+        (.*! stddevs nl))
+      (scale-columns! (nodes (scale lump)) nl)
+      (gemm! 1 ones (nodes (shift lump)) 1 nl))
+    (when *in-training-p*
+      (let ((population-mean (ensure-population-mean lump))
+            (population-stddev (ensure-population-stddev lump))
+            (decay (population-stats-decay lump)))
+        (scal! decay population-mean)
+        (axpy! (- 1 decay) batch-mean population-mean)
+        (scal! decay population-stddev)
+        (axpy! (- 1 decay) batch-stddev population-stddev)))))
+
+(defmethod backward ((lump ->batch-normalized))
+  (let* ((n-stripes (n-stripes lump))
+         (x (x lump))
+         (nx (nodes x))
+         (dl/dy (derivatives lump))
+         (dl/dx (derivatives x))
+         (gamma (nodes (scale lump)))
+         (dl/dgamma (derivatives (scale lump)))
+         (dl/dbeta (derivatives (shift lump)))
+         (dimensions (mat-dimensions nx))
+         (row-dimensions (mat-dimensions (batch-mean lump))))
+    (assert (= (size lump) (size x)))
+    (with-ones (ones (list n-stripes 1))
+      (with-thread-cached-mats ((x-mu* dimensions :place 'bn1)
+                                (1/stddev* dimensions :place 'bn2)
+                                (dl/dx^.*1/stddev dimensions :place 'bn3)
+                                (dl/dmu row-dimensions :place 'bn4)
+                                (dl/dvar row-dimensions :place 'bn5))
+        ;; x-mu* = x - mu*
+        (copy! nx x-mu*)
+        (gemm! -1 ones (batch-mean lump) 1 x-mu*)
+        ;; 1/stddev* = 1 ./ stddev
+        (gemm! 1 ones (batch-stddev lump) 0 1/stddev*)
+        (.inv! 1/stddev*)
+        ;; dl/dx^.*1/stddev = dl/dy .* gamma* .* 1/stddev*
+        (geem! 1 dl/dy 1/stddev* 0 dl/dx^.*1/stddev)
+        (geerv! 1 dl/dx^.*1/stddev gamma 0 dl/dx^.*1/stddev)
+        ;; dl/dmu = -sum(dl/dx^ .* 1/stddev*) (not complete, see
+        ;; below)
+        (sum! dl/dx^.*1/stddev dl/dmu :axis 0 :alpha -1)
+        ;; dl/dx += dl/dx^ .* 1/stddev*
+        (axpy! 1 dl/dx^.*1/stddev dl/dx)
+        ;; dl/dgamma = sum(dl/dy .* x^)
+        (with-thread-cached-mat (dl/dy.*x^ dimensions)
+          (geem! 1 x-mu* 1/stddev* 0 dl/dy.*x^)
+          (geem! 1 dl/dy dl/dy.*x^ 0 dl/dy.*x^)
+          (sum! dl/dy.*x^ dl/dgamma :axis 0 :beta 1))
+        (sum! dl/dy dl/dbeta :axis 0 :beta 1)
+        ;; we are done with 1/stddev*, it can be destroyed
+        (.expt! 1/stddev* 3)
+        ;; make 1/stddev* hold (x - mu*) .* (1/stddev*)^3
+        (.*! x-mu* 1/stddev*)
+        ;; make 1/stddev* hold dl/dy .* (x - mu*) .* (1/stddev*)^3
+        (.*! dl/dy 1/stddev*)
+        ;; dl/dvar = sum(-1/2 * gamma* .* dl/dy .* (x - mu*) .* (1/stddev*)^3)
+        (sum! 1/stddev* dl/dvar :axis 0 :alpha -0.5)
+        (.*! gamma dl/dvar)
+        ;; now that dl/dvar is computed, let's add the parts that
+        ;; depend on it to dl/dmu and dl/dx
+        ;;
+        ;; dl/dmu += -2/m * dl/dvar .* sum(x - mu*) (continued
+        ;; from above)
+        (with-thread-cached-mat (sum-x-mu* row-dimensions :place 'bn6)
+          (sum! x-mu* sum-x-mu* :axis 0)
+          (geem! (/ -2 n-stripes) dl/dvar sum-x-mu* 1 dl/dmu))
+        ;; dl/dx += dl/dvar .* 2(x-mu*)/m
+        (geerv! (/ 2 n-stripes) x-mu* dl/dvar 1 dl/dx)
+        ;; dl/dx += dl/dmu* * 1/m
+        (gemm! (/ n-stripes) ones dl/dmu 1 dl/dx)))))
+
+
 (defsection @mgl-bp-rnn-operations (:title "Operations for RNNs")
   (@mgl-bp-lstm-subnet section)
   (@mgl-bp-seq-barrier-lump section))
