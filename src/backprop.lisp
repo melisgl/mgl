@@ -945,31 +945,17 @@
     (call-next-method))
   (setf (slot-value learner 'first-trained-clump) nil))
 
-(defun first-trained-weight-clump (optimizer learner)
-  "Much time can be wasted computing derivatives of non-trained weight
-  clumps. Return the first one that OPTIMIZER trains."
-  ;; FIXME: An RNN has several BPNs that share many of the weights so
-  ;; stopping backprop at the first trained weight in a bpn is
-  ;; unlikely to work unless it's the very first bpn of the RNN.
-  (if (typep (bpn learner) 'rnn)
-      nil
-      (or (slot-value learner 'first-trained-clump)
-          (setf (slot-value learner 'first-trained-clump)
-                (find-if (lambda (clump)
-                           (member clump (segments optimizer)))
-                         (clumps (bpn learner)))))))
-
 (defvar *in-training-p* nil)
 
 (defun compute-derivatives (samples optimizer learner)
+  (declare (ignore optimizer))
   (let ((bpn (bpn learner))
         (cost 0))
     (do-executors (samples bpn)
       (let ((*in-training-p* t))
         (set-input samples bpn)
         (incf cost (forward-bpn bpn))
-        (backward-bpn bpn :last-clump (first-trained-weight-clump
-                                       optimizer learner))
+        (backward-bpn bpn)
         (apply-monitors (monitors learner) samples bpn)))
     cost))
 
