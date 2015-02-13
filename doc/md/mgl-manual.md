@@ -63,7 +63,7 @@
         - [10.4.1 Lump Base Class][745c]
         - [10.4.2 Inputs][1f98]
         - [10.4.3 Weight Lump][94c9]
-        - [10.4.4 Activation Subnet][59db]
+        - [10.4.4 Activations][6b29]
         - [10.4.5 Activation Functions][3d84]
         - [10.4.6 Losses][e833]
         - [10.4.7 Stochasticity][b1b1]
@@ -2051,7 +2051,7 @@ mini-batch basis:
 
     A number between 0 and 1 that determines how fast
     the estimated mean of derivatives is updated. 1 basically gives
-    you RMSPROP (if [`VARIANCE-DECAY-RATE`][ab6d] is not too small) or
+    you `RMSPROP` (if [`VARIANCE-DECAY-RATE`][ab6d] is not too small) or
     AdaGrad (if [`VARIANCE-DECAY-RATE`][ab6d] is infinitesimal and the learning
     rate is annealed. This is `B_1` in the paper.
 
@@ -3794,9 +3794,13 @@ in the name of efficiency.
     name exists in `FROM-BPN` and return that, or else create a weight
     lump normally. If `FROM-BPN` is `NIL`, then no weights are copied.
 
+<a name='x-28MGL-BP-3A-40MGL-BP-ACTIVATIONS-20MGL-PAX-3ASECTION-29'></a>
+
+#### 10.4.4 Activations
+
 <a name='x-28MGL-BP-3A-40MGL-BP-ACTIVATION-SUBNET-20MGL-PAX-3ASECTION-29'></a>
 
-#### 10.4.4 Activation Subnet
+##### Activation Subnet
 
 So we have some inputs. Usually the next step is to multiply the
 input vector with a weight matrix and add biases. This can be done
@@ -3843,6 +3847,70 @@ use activation subnets to reduce the clutter.
     INPUT) ,NAME)`, while peepholes weight lumps are named `(,(NAME
     INPUT) ,NAME :PEEPHOLE)`. This is useful to know if, for example,
     they are to be initialized differently.
+
+<a name='x-28MGL-BP-3A-40MGL-BP-BATCH-NORMALIZED-LUMP-20MGL-PAX-3ASECTION-29'></a>
+
+##### Batch-Normalized Lump
+
+<a name='x-28MGL-BP-3A--3EBATCH-NORMALIZED-20CLASS-29'></a>
+
+- [class] **-\>BATCH-NORMALIZED** *LUMP*
+
+    This is an implementation of v1 of the [Batch
+    Normalization paper](http://arxiv.org/abs/1502.03167). The output of
+    `->BATCH-NORMALIZED` is its input normalized so that for all elements
+    the mean across stripes is zero and the variance is 1. That is, the
+    mean of the batch is subtracted from the inputs and they are
+    rescaled by their sample stddev. Actually, after the normalization
+    step the values are rescaled and shifted (but this time with learnt
+    parameters) in order to keep the representational power of the model
+    the same. The primary purpose of this lump is to speed up learning,
+    but it also acts as a regularizer. See the paper for the details.
+    
+    In addition to what is to be normalized, `->BATCH-NORMALIZED` takes
+    weight lumps of the same size as the primary input. These represent
+    the learnt scaling and shift factors (they are *gamma* and *beta* in
+    the paper).
+    
+    The primary input of `->BATCH-NORMALIZED` is often an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) and
+    its output is fed into an activation function (see
+    [Activation Functions][3d84]).
+
+<a name='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29'></a>
+
+- [accessor] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZED* *(= 1.e-8)*
+
+    A small positive real number that's added to the
+    sample stddev. It's *epsilon* in the paper.
+
+<a name='x-28MGL-BP-3APOPULATION-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29'></a>
+
+- [accessor] **POPULATION-DECAY** *-\>BATCH-NORMALIZED* *(:POPULATION-DECAY = 0.99)*
+
+    While training, an exponential moving average of
+    batch means and standard deviances (termed *population
+    statistics*) is updated. When making predictions, normalization is
+    performed using these statistics. These population statistics are
+    persisted by [`SAVE-WEIGHTS`][060d].
+
+<a name='x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29'></a>
+
+- [function] **-\>BATCH-NORMALIZED-ACTIVATION** *INPUTS &KEY (NAME (GENSYM)) SIZE PEEPHOLES BATCH-SIZE*
+
+    Wraps an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) in [`->BATCH-NORMALIZED`][2ca6] and creates the two
+    weight lumps for the scale and shift
+    parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
+    10)` is equivalent to:
+    
+    ```commonlisp
+    (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
+                        (->weight :name '(h1 :scale) :size 10)
+                        (->weight :name '(h1 :shift) :size 10)
+                        :name '(h1 :batch-normalized-activation))
+    ```
+    
+    Note how biases are turned off since normalization will cancel them
+    anyway (but a shift is added which amounts to the same effect).
 
 <a name='x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4550,6 +4618,7 @@ grow into a more serious toolset for NLP eventually.
   [0302]: #x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"
   [0359]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:DO-BATCHES-FOR-MODEL (MGL-PAX:MACRO))"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-STRIPE MGL-PAX:SECTION)"
+  [060d]: #x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29 "(MGL-CORE:SAVE-WEIGHTS FUNCTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "(MGL-RESAMPLE:@MGL-RESAMPLE-BAGGING MGL-PAX:SECTION)"
   [089c]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION)"
   [08c9]: #x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29 "(MGL-CORE:CONFUSION-MATRIX CLASS)"
@@ -4581,6 +4650,7 @@ grow into a more serious toolset for NLP eventually.
   [29a1]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-20FUNCTION-29 "(MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS FUNCTION)"
   [2abf]: #x-28MGL-BP-3A--3EWEIGHT-20CLASS-29 "(MGL-BP:->WEIGHT CLASS)"
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
+  [2ca6]: #x-28MGL-BP-3A--3EBATCH-NORMALIZED-20CLASS-29 "(MGL-BP:->BATCH-NORMALIZED CLASS)"
   [3169]: #x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-INTRODUCTION MGL-PAX:SECTION)"
   [326c]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20GENERIC-FUNCTION-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS GENERIC-FUNCTION)"
   [32b3]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-COUNTER MGL-PAX:SECTION)"
@@ -4604,6 +4674,7 @@ grow into a more serious toolset for NLP eventually.
   [4a7b]: #x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29 "(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
   [4c7c]: #x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:ACCUMULATE-GRADIENTS* GENERIC-FUNCTION)"
+  [4d7a]: #x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29 "(MGL-BP:->ACTIVATION FUNCTION)"
   [4e21]: #x-28MGL-CORE-3ACOUNTER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "(MGL-CORE:COUNTER (MGL-PAX:READER MGL-CORE:MONITOR))"
   [4f63]: #x-28MGL-CORE-3AN-STRIPES-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "(MGL-CORE:N-STRIPES (MGL-PAX:READER MGL-BP:BPN))"
   [4ffe]: #x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:LEARNING-RATE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"
@@ -4615,7 +4686,6 @@ grow into a more serious toolset for NLP eventually.
   [5683]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->SOFTMAX-XE-LOSS))"
   [56ee]: #x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MODEL-PERSISTENCE MGL-PAX:SECTION)"
   [5900]: #x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29 "(MGL-BP:*WARP-TIME* (VARIABLE))"
-  [59db]: #x-28MGL-BP-3A-40MGL-BP-ACTIVATION-SUBNET-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-ACTIVATION-SUBNET MGL-PAX:SECTION)"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
   [5f27]: #x-28MGL-COMMON-3ATARGET-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:TARGET (MGL-PAX:ACCESSOR MGL-BP:->SOFTMAX-XE-LOSS))"
   [603c]: #x-28MGL-CORE-3AWITH-STRIPES-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:WITH-STRIPES (MGL-PAX:MACRO))"
@@ -4624,6 +4694,7 @@ grow into a more serious toolset for NLP eventually.
   [676e]: #x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING (MGL-PAX:MACRO))"
   [68b6]: #x-28MGL-CORE-3AAPPLY-MONITORS-20FUNCTION-29 "(MGL-CORE:APPLY-MONITORS FUNCTION)"
   [6a39]: #x-28MGL-BP-3A--3ETANH-20CLASS-29 "(MGL-BP:->TANH CLASS)"
+  [6b29]: #x-28MGL-BP-3A-40MGL-BP-ACTIVATIONS-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-ACTIVATIONS MGL-PAX:SECTION)"
   [6d2c]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-DEPENDENCIES MGL-PAX:SECTION)"
   [6db7]: #x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29 "(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"
   [6e12]: #x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)"

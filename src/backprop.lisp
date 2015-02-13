@@ -321,14 +321,16 @@
        (clumps bpn)))
 
 (defmethod write-weights ((bpn bpn) stream)
-  (map-segments (lambda (weights)
-                  (write-weights weights stream))
-                bpn))
+  (map-clumps (lambda (clump)
+                (when (typep clump 'lump)
+                  (write-weights clump stream)))
+              bpn))
 
 (defmethod read-weights ((bpn bpn) stream)
-  (map-segments (lambda (weights)
-                  (read-weights weights stream))
-                bpn))
+  (map-clumps (lambda (clump)
+                (when (typep clump 'lump)
+                  (read-weights clump stream)))
+              bpn))
 
 
 (defsection @mgl-fnn (:title "Feed-Forward Nets")

@@ -48,6 +48,7 @@
             (setf (max-n-stripes lump) 7)
             (setf (n-stripes lump) 7))
           (test-derivatives lump inputs))
+        ;; ->BATCH-NORMALIZED with default BATCH-SIZE
         (let* ((inputs (list (->input :size 5)
                              (->weight :name 'scale :size 5)
                              (->weight :name 'shift :size 5)))
@@ -55,6 +56,16 @@
           (dolist (lump (cons lump inputs))
             (setf (max-n-stripes lump) 7)
             (setf (n-stripes lump) 7))
+          (test-derivatives lump inputs))
+        ;; ->BATCH-NORMALIZED with BATCH-SIZE 7 out of 21
+        (let* ((inputs (list (->input :size 5)
+                             (->weight :name 'scale :size 5)
+                             (->weight :name 'shift :size 5)))
+               (lump (->batch-normalized (first inputs) (second inputs)
+                                         (third inputs) :batch-size 7)))
+          (dolist (lump (cons lump inputs))
+            (setf (max-n-stripes lump) 21)
+            (setf (n-stripes lump) 21))
           (test-derivatives lump inputs))))))
 
 
