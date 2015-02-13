@@ -2,7 +2,7 @@
 
 (defsection @mgl-manual (:title "MGL Manual")
   (mgl asdf:system)
-  (@mgl-overview section)
+  (@mgl-introduction section)
   (@mgl-dataset section)
   (@mgl-resample section)
   (@mgl-model section)
@@ -15,6 +15,13 @@
   (@mgl-gp section)
   (@mgl-nlp section))
 
+(defsection @mgl-introduction (:title "Introduction")
+  (@mgl-overview section)
+  (@mgl-links section)
+  (@mgl-dependencies section)
+  (@mgl-code-organization section)
+  (@mgl-glossary section))
+
 (defsection @mgl-overview (:title "Overview")
   "\\MGL is a Common Lisp machine learning library by [Gábor
   Melis](http://quotenil.com) with some parts originally contributed
@@ -26,14 +33,13 @@
   In general, the focus is on power and performance not on ease of
   use. Perhaps one day there will be a cookie cutter interface with
   restricted functionality if a reasonable compromise is found between
-  power and utility.
+  power and utility.")
 
-  Here is the [official repository](https://github.com/melisgl/mgl)
-  and [HTML
-  documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)."
-  (@mgl-dependencies section)
-  (@mgl-code-organization section)
-  (@mgl-glossary section))
+(defsection @mgl-links (:title "Links")
+  "Here is the [official repository](https://github.com/melisgl/mgl)
+  and the [HTML
+  documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
+  for the latest version.")
 
 (defsection @mgl-dependencies (:title "Dependencies")
   "\\MGL used to rely on [LLA](https://github.com/tpapp/lla) to
@@ -50,12 +56,7 @@
   fall back on using BLAS and Lisp code. Wrapping code in
   MGL-MAT:WITH-CUDA* is basically all that's needed to run on the GPU,
   and with MGL-MAT:CUDA-AVAILABLE-P one can check whether the GPU is
-  really being used.
-
-  Prettier-than-markdown HTML documentation cross-linked with other
-  libraries is
-  [available](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
-  as part of [PAX World](http://melisgl.github.io/mgl-pax-world/).")
+  really being used.")
 
 (defsection @mgl-code-organization (:title "Code Organization")
   "\\MGL consists of several packages dedicated to different tasks.

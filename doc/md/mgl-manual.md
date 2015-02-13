@@ -5,10 +5,12 @@
 ## Table of Contents
 
 - [1 mgl ASDF System Details][e0d7]
-- [2 Overview][f995]
-    - [2.1 Dependencies][6d2c]
-    - [2.2 Code Organization][45db]
-    - [2.3 Glossary][0ab9]
+- [2 Introduction][3169]
+    - [2.1 Overview][f995]
+    - [2.2 Links][e486]
+    - [2.3 Dependencies][6d2c]
+    - [2.4 Code Organization][45db]
+    - [2.5 Glossary][0ab9]
 - [3 Datasets][72e9]
     - [3.1 Samplers][af7d]
         - [3.1.1 Function Sampler][2100]
@@ -85,9 +87,13 @@
 - Mailto: [mega@retes.hu](mailto:mega@retes.hu)
 - Homepage: [http://quotenil.com](http://quotenil.com)
 
+<a name='x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29'></a>
+
+## 2 Introduction
+
 <a name='x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29'></a>
 
-## 2 Overview
+### 2.1 Overview
 
 MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
@@ -101,13 +107,18 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
+<a name='x-28MGL-3A-40MGL-LINKS-20MGL-PAX-3ASECTION-29'></a>
+
+### 2.2 Links
+
 Here is the [official repository](https://github.com/melisgl/mgl)
-and [HTML
-documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html).
+and the [HTML
+documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
+for the latest version.
 
 <a name='x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29'></a>
 
-### 2.1 Dependencies
+### 2.3 Dependencies
 
 MGL used to rely on [LLA](https://github.com/tpapp/lla) to
 interface to BLAS and LAPACK. That's mostly history by now, but
@@ -125,14 +136,9 @@ fall back on using BLAS and Lisp code. Wrapping code in
 and with `MGL-MAT:CUDA-AVAILABLE-P` one can check whether the GPU is
 really being used.
 
-Prettier-than-markdown HTML documentation cross-linked with other
-libraries is
-[available](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
-as part of [PAX World](http://melisgl.github.io/mgl-pax-world/).
-
 <a name='x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29'></a>
 
-### 2.2 Code Organization
+### 2.4 Code Organization
 
 MGL consists of several packages dedicated to different tasks.
 For example, package `MGL-RESAMPLE` is about [Resampling][8fc3] and
@@ -155,7 +161,7 @@ in a while.
 
 <a name='x-28MGL-3A-40MGL-GLOSSARY-20MGL-PAX-3ASECTION-29'></a>
 
-### 2.3 Glossary
+### 2.5 Glossary
 
 Ultimately machine learning is about creating **models** of some
 domain. The observations in the modelled domain are called
@@ -4575,6 +4581,7 @@ grow into a more serious toolset for NLP eventually.
   [29a1]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-20FUNCTION-29 "(MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS FUNCTION)"
   [2abf]: #x-28MGL-BP-3A--3EWEIGHT-20CLASS-29 "(MGL-BP:->WEIGHT CLASS)"
   [2b76]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE FUNCTION)"
+  [3169]: #x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-INTRODUCTION MGL-PAX:SECTION)"
   [326c]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20GENERIC-FUNCTION-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS GENERIC-FUNCTION)"
   [32b3]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-CLASSIFICATION-COUNTER MGL-PAX:SECTION)"
   [332c]: #x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-ADAM-OPTIMIZER MGL-PAX:SECTION)"
@@ -4735,6 +4742,7 @@ grow into a more serious toolset for NLP eventually.
   [df57]: #x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "(MGL-GD:@MGL-GD-BATCH-GD-OPTIMIZER MGL-PAX:SECTION)"
   [e0c8]: #x-28MGL-GD-3AMOMENTUM-TYPE-20-28MGL-PAX-3AREADER-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "(MGL-GD:MOMENTUM-TYPE (MGL-PAX:READER MGL-GD::GD-OPTIMIZER))"
   [e0d7]: #x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29 "(\"mgl\" ASDF/SYSTEM:SYSTEM)"
+  [e486]: #x-28MGL-3A-40MGL-LINKS-20MGL-PAX-3ASECTION-29 "(MGL:@MGL-LINKS MGL-PAX:SECTION)"
   [e57e]: #x-28MGL-RESAMPLE-3AFRACTURE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:FRACTURE-STRATIFIED FUNCTION)"
   [e6a3]: #x-28MGL-CG-3AON-CG-BATCH-DONE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:ON-CG-BATCH-DONE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [e833]: #x-28MGL-BP-3A-40MGL-BP-LOSSES-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-LOSSES MGL-PAX:SECTION)"

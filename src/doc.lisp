@@ -3,10 +3,14 @@
 (defsection @mgl-readme (:title "MGL")
   (mgl asdf:system)
   (@mgl-overview section)
+  (@mgl-links section)
   (@mgl-documentation section))
 
 (defsection @mgl-documentation (:title "Documentation")
- "See the [MGL Manual](doc/md/mgl-manual.md) for more.")
+  "Documentation for this version is available in markdown format in
+  [MGL Manual](doc/md/mgl-manual.md). [HTML
+  documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
+  is generated for the latest version.")
 
 ;;;; Generating docs for MGL. Not included in the ASDF system.
 
