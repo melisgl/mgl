@@ -458,9 +458,17 @@
   (log-msg "test at n-instances: ~S~%" (n-instances optimizer))
   (log-padded
    (let ((bpn (bpn learner)))
-     (monitor-bpn-results (make-sampler (test optimizer)) bpn
-                          (make-mnist-label-monitors
-                           bpn :attributes '(:event "pred." :dataset "test")))))
+     (append
+      (monitor-bpn-results (make-sampler (training optimizer)
+                                         :max-n 10000)
+                           bpn
+                           (make-mnist-label-monitors
+                            bpn :attributes '(:event "pred."
+                                              :dataset "train")))
+      (monitor-bpn-results (make-sampler (test optimizer)) bpn
+                           (make-mnist-label-monitors
+                            bpn :attributes '(:event "pred."
+                                              :dataset "test"))))))
   (log-mat-room)
   (log-msg "---------------------------------------------------~%"))
 
@@ -1091,7 +1099,13 @@
 
 (defun init-bpn-weights (bpn &key stddev)
   (map-segments (lambda (weight)
-                  (gaussian-random! (nodes weight) :stddev stddev))
+                  (cond ((find :scale (name weight))
+                         (fill! 1 (nodes weight)))
+                        ((or (find :shift (name weight))
+                             (find :bias (name weight)))
+                         (fill! 0 (nodes weight)))
+                        (t
+                         (gaussian-random! (nodes weight) :stddev stddev))))
                 bpn))
 
 (defun train-mnist/3 (&key training test quick-run-p bpn-var bpn-filename)
@@ -1179,6 +1193,48 @@
                               :learning-rate 1
                               :learning-rate-decay 0.998
                               :l2-upper-bound (sqrt 3.75)
+                              :input-weight-penalty 0.000001
+                              :batch-size 96)
+          (when (and bpn-filename (not quick-run-p))
+            (save-weights bpn-filename bpn)))))))
+
+
+;;;; Batch-normalized max-channel
+
+(defun build-batch-normalized-max-channel-mnist-bpn
+    (&key (n-units-1 1200) (n-units-2 1200) (group-size 2))
+  (build-fnn (:class 'mnist-bpn)
+    (inputs (->input :size 784 :dropout 0.2))
+    (f1-activations (->batch-normalized-activation inputs :name 'f1
+                                                   :size n-units-1
+                                                   :batch-size 32))
+    (f1* (->max-channel f1-activations :group-size group-size))
+    (f1 (->dropout f1* :dropout 0.5))
+    (f2-activations (->batch-normalized-activation f1 :name 'f2
+                                                   :size n-units-2
+                                                   :batch-size 32))
+    (f2* (->max-channel f2-activations :group-size group-size))
+    (f2 (->dropout f2* :dropout 0.5))
+    (f3-activations (->batch-normalized-activation f2 :name 'f3
+                                                   :size n-units-2
+                                                   :batch-size 32))
+    (f3* (->max-channel f3-activations :group-size group-size))
+    (f3 (->dropout f3* :dropout 0.5))
+    (prediction (make-softmax f3))))
+
+(defun train-mnist/6 (&key training test quick-run-p bpn-var bpn-filename)
+  (with-cuda* ()
+    (with-example-log ()
+      (repeatably ()
+        (log-msg "TRAIN-MNIST/6~%")
+        (let ((bpn nil))
+          (setq* (bpn bpn-var) (build-batch-normalized-max-channel-mnist-bpn))
+          (init-bpn-weights bpn :stddev (sqrt (/ 1200)))
+          (train-mnist-bpn-gd bpn training test
+                              :n-softmax-epochs 0
+                              :n-epochs (if quick-run-p 2 3000)
+                              :learning-rate 1
+                              :learning-rate-decay (expt 0.998 1)
                               :input-weight-penalty 0.000001
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
@@ -1296,9 +1352,11 @@
                                             :key #'image-label))
                                :pass-fold t))
 
-(with-example-log ()
-  (let ((*default-mat-ctype* :float))
-    (train-mnist/5 :training (training-images) :test (test-images))))
+(repeatably ()
+  (with-example-log ()
+    (let ((*default-mat-ctype* :float)
+          (*cuda-enabled* t))
+      (train-mnist/6 :training (training-images) :test (test-images)))))
 
 (with-example-log ()
   ;; This only works with doubles for now, because boltzmann
@@ -1345,6 +1403,15 @@
 /5+L1:
 
 (alexandria:mean '(99.04 99.28 99.10 98.92 99.01 99.14 99.16)) => 99.09286
+
+/6+L1:
+2015-02-14 21:19:29: training at n-instances: 180000000
+2015-02-14 21:19:29: train train+ bpn PREDICTION acc.: 99.76% (60000)
+2015-02-14 21:19:29: train train+ bpn PREDICTION xent: 7.842d-5 (60000)
+2015-02-14 21:19:29: test at n-instances: 180000000
+2015-02-14 21:19:31: pred. test bpn PREDICTION acc.: 99.18% (10000)
+2015-02-14 21:19:31: pred. test bpn PREDICTION xent: 3.908d-4 (10000)
+
 
 2014-09-20 12:02:26: n-inputs: 60000000
 2014-09-20 12:02:26: cuda mats: 70307, copies: h->d: 800008, d->h: 2085009
