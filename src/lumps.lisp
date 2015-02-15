@@ -112,8 +112,8 @@
                   (size lump)
                   :unbound))
       (let ((mgl-cube:*let-input-through-p* t))
-        (format stream " ~S/~S :norm ~,5F" (n-stripes lump) (max-n-stripes lump)
-                (ignore-errors (nrm2 (nodes lump)))))))
+        (format stream " ~S/~S ~S ~,5F" (n-stripes lump) (max-n-stripes lump)
+                :norm (ignore-errors (nrm2 (nodes lump)))))))
   lump)
 
 (defmethod set-n-stripes (n-stripes (lump lump))
@@ -317,8 +317,8 @@
    (dropout
     :type (or null real)
     :initform 0.5 :initarg :dropout :accessor dropout
-    :documentation "If non-NIL, then in the forward pass zeroes out
-    each node in this chunk with DROPOUT probability.")
+    :documentation "If non-NIL, then in the forward pass zero out each
+    node in this chunk with DROPOUT probability.")
    (mask :initform nil :reader mask))
   (:documentation "The output of this lump is identical to its input,
   except it randomly zeroes out some of them during training which act
@@ -430,7 +430,7 @@
 
   ```cl-transcript
   (->input :size 10 :name 'some-input)
-  ==> #<->INPUT SOME-INPUT :SIZE 10 1/1 :norm 0.00000>
+  ==> #<->INPUT SOME-INPUT :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
 (defmethod initialize-instance :before ((lump ->input) &key &allow-other-keys)
@@ -551,7 +551,7 @@
   (->embedding :weights (->weight :name 'embedding-weights
                                   :dimensions '(3 5))
                :name 'embeddings)
-  ==> #<->EMBEDDING EMBEDDINGS :SIZE 5 1/1 :norm 0.00000>
+  ==> #<->EMBEDDING EMBEDDINGS :SIZE 5 1/1 :NORM 0.00000>
   ```"))
 
 (defmethod initialize-instance :after ((lump ->embedding)
@@ -622,7 +622,7 @@
 
   ```cl-transcript
   (->sigmoid (->activation (->input :size 10) :size 5) :name 'this)
-  ==> #<->SIGMOID THIS :SIZE 5 1/1 :norm 0.00000>
+  ==> #<->SIGMOID THIS :SIZE 5 1/1 :NORM 0.00000>
   ```
 
   The SIZE of this lump is the size of its input which is determined
@@ -1003,7 +1003,7 @@
 
   ```cl-transcript
   (->max (->input :size 120) :group-size 3 :name 'my-max)
-  ==> #<->MAX MY-MAX :SIZE 40 1/1 :norm 0.00000>
+  ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000>
   ```
 
   The advantage of ->MAX over ->RELU is that flow gradient is never
@@ -1447,7 +1447,7 @@
                                               :size 10)
                                 (->input :name 'target :size 10))
           :name 'squared-error)
-  ==> #<->LOSS SQUARED-ERROR :SIZE 1 1/1 :norm 0.00000>
+  ==> #<->LOSS SQUARED-ERROR :SIZE 1 1/1 :NORM 0.00000>
   ```
 
   Currently this lump is not CUDAized, but it will copy data from the
@@ -1886,7 +1886,7 @@
 
   ```cl-transcript
   (->gaussian-random :size 10 :name 'normal :mean 1 :variance 2)
-  ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :norm 0.00000>
+  ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
 (defmaker ->gaussian-random)
@@ -1913,7 +1913,7 @@
 
   ```cl-transcript
   (->sample-binary (->input :size 10) :name 'binarized-input)
-  ==> #<->SAMPLE-BINARY BINARIZED-INPUT :SIZE 10 1/1 :norm 0.00000>
+  ==> #<->SAMPLE-BINARY BINARIZED-INPUT :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
 (defmethod initialize-instance :after ((lump ->sample-binary)
@@ -2064,7 +2064,7 @@
   ```cl-transcript
   (->+ (list (->input :size 10) (->weight :size 10 :name 'bias))
        :name 'plus)
-  ==> #<->+ PLUS :SIZE 10 1/1 :norm 0.00000>
+  ==> #<->+ PLUS :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
 (defmethod initialize-instance :after ((lump ->+) &key size &allow-other-keys)
@@ -2120,7 +2120,7 @@
   ```cl-transcript
   (->* (->input :size 10) (->weight :size 10 :name 'scale)
        :name 'mult)
-  ==> #<->* MULT :SIZE 10 1/1 :norm 0.00000>
+  ==> #<->* MULT :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
 (defmethod initialize-instance :after ((lump ->*) &key size &allow-other-keys)

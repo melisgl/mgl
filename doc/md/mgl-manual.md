@@ -3701,7 +3701,7 @@ will never reference them again.
     
     ```cl-transcript
     (->input :size 10 :name 'some-input)
-    ==> #<->INPUT SOME-INPUT :SIZE 10 1/1 :norm 0.00000>
+    ==> #<->INPUT SOME-INPUT :SIZE 10 1/1 :NORM 0.00000>
     
     ```
 
@@ -3736,7 +3736,7 @@ in the name of efficiency.
     (->embedding :weights (->weight :name 'embedding-weights
                                     :dimensions '(3 5))
                  :name 'embeddings)
-    ==> #<->EMBEDDING EMBEDDINGS :SIZE 5 1/1 :norm 0.00000>
+    ==> #<->EMBEDDING EMBEDDINGS :SIZE 5 1/1 :NORM 0.00000>
     
     ```
 
@@ -3868,7 +3868,7 @@ activations are fed.
     
     ```cl-transcript
     (->sigmoid (->activation (->input :size 10) :size 5) :name 'this)
-    ==> #<->SIGMOID THIS :SIZE 5 1/1 :norm 0.00000>
+    ==> #<->SIGMOID THIS :SIZE 5 1/1 :NORM 0.00000>
     
     ```
     
@@ -3942,7 +3942,7 @@ We are in about year 2011.
     
     ```cl-transcript
     (->max (->input :size 120) :group-size 3 :name 'my-max)
-    ==> #<->MAX MY-MAX :SIZE 40 1/1 :norm 0.00000>
+    ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000>
     
     ```
     
@@ -4055,7 +4055,7 @@ a [`->LOSS`][ba60].
                                                 :size 10)
                                   (->input :name 'target :size 10))
             :name 'squared-error)
-    ==> #<->LOSS SQUARED-ERROR :SIZE 1 1/1 :norm 0.00000>
+    ==> #<->LOSS SQUARED-ERROR :SIZE 1 1/1 :NORM 0.00000>
     
     ```
     
@@ -4175,8 +4175,8 @@ a [`->LOSS`][ba60].
 
 - [accessor] **DROPOUT** *-\>DROPOUT* *(:DROPOUT = 0.5)*
 
-    If non-NIL, then in the forward pass zeroes out
-    each node in this chunk with `DROPOUT` probability.
+    If non-NIL, then in the forward pass zero out each
+    node in this chunk with `DROPOUT` probability.
 
 <a name='x-28MGL-BP-3A-40MGL-BP-GAUSSIAN-RANDOM-LUMP-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4193,7 +4193,7 @@ a [`->LOSS`][ba60].
     
     ```cl-transcript
     (->gaussian-random :size 10 :name 'normal :mean 1 :variance 2)
-    ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :norm 0.00000>
+    ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :NORM 0.00000>
     
     ```
 
@@ -4232,7 +4232,7 @@ a [`->LOSS`][ba60].
     
     ```cl-transcript
     (->sample-binary (->input :size 10) :name 'binarized-input)
-    ==> #<->SAMPLE-BINARY BINARIZED-INPUT :SIZE 10 1/1 :norm 0.00000>
+    ==> #<->SAMPLE-BINARY BINARIZED-INPUT :SIZE 10 1/1 :NORM 0.00000>
     
     ```
 
@@ -4295,7 +4295,7 @@ a [`->LOSS`][ba60].
     ```cl-transcript
     (->+ (list (->input :size 10) (->weight :size 10 :name 'bias))
          :name 'plus)
-    ==> #<->+ PLUS :SIZE 10 1/1 :norm 0.00000>
+    ==> #<->+ PLUS :SIZE 10 1/1 :NORM 0.00000>
     
     ```
 
@@ -4315,7 +4315,7 @@ a [`->LOSS`][ba60].
     ```cl-transcript
     (->* (->input :size 10) (->weight :size 10 :name 'scale)
          :name 'mult)
-    ==> #<->* MULT :SIZE 10 1/1 :norm 0.00000>
+    ==> #<->* MULT :SIZE 10 1/1 :NORM 0.00000>
     
     ```
 
