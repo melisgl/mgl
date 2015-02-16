@@ -68,16 +68,30 @@
 ;;;; A 784-1200-1200-1200 BPN is trained directly. ~98.91% in 7-fold
 ;;;; CV. ~98.97% with INPUT-WEIGHT-PENALTY.
 ;;;;
+;;;;     (98.88 99.11 98.84 98.82 98.77 98.90 99.07) => 98.91286
+;;;;     (98.81 99.15 98.97 98.85 98.86 99.13 99.04) => 98.972855
+;;;;
 ;;;;
 ;;;; Maxout BPN (see TRAIN-MNIST/4)
 ;;;;
 ;;;; I couldn't quite reproduce the 99.06% claimed in the paper.
 ;;;; 98.91% in 7-fold CV . 98.97% with INPUT-WEIGHT-PENALTY.
 ;;;;
+;;;;     (98.89 99.13 98.84 98.84 98.71 98.97 99.02) => 98.91429
+;;;;     (98.92 99.08 99.08 99.00 98.88 98.82 99.02) => 98.971436
+;;;;
 ;;;;
 ;;;; Max-channel BPN (see TRAIN-MNIST/5)
 ;;;;
 ;;;; 7-fold CV: 99.01%. 99.07% with INPUT-WEIGHT-PENALTY.
+;;;;
+;;;;     (98.92 99.26 99.01 98.91 98.82 99.05 99.13) => 99.01429
+;;;;     (99.04 99.28 99.10 98.92 99.01 99.14 99.16) => 99.09286
+;;;;
+;;;;
+;;;; Batch-normalized max-channel BPN (see TRAIN-MNIST/6)
+;;;;
+;;;;
 
 (in-package :mgl-example-mnist)
 
@@ -1367,42 +1381,6 @@
 (progn
   (makunbound '*training-images*)
   (makunbound '*test-images*))
-
-/3 with 1000 epochs
-
-(alexandria:mean '(98.82 99.02 98.89 98.78 98.70 98.89 98.89)) => 98.85571
-
-/4 with 1000 epochs
-
-(alexandria:mean '(98.83 99.02 98.85 98.80 98.67 98.97 98.88)) => 98.86
-
-/5 with 1000 epochs
-
-(alexandria:mean '(98.96 99.12 99.02 98.90 98.88 99.03 99.07)) => 98.99715
-
-/3:
-
-(alexandria:mean '(98.88 99.11 98.84 98.82 98.77 98.90 99.07)) => 98.91286
-
-/3+L1:
-
-(alexandria:mean '(98.81 99.15 98.97 98.85 98.86 99.13 99.04)) => 98.972855
-
-/4:
-
-(alexandria:mean '(98.89 99.13 98.84 98.84 98.71 98.97 99.02)) => 98.91429
-
-/4+L1:
-
-(alexandria:mean '(98.92 99.08 99.08 99.00 98.88 98.82 99.02)) => 98.971436
-
-/5:
-
-(alexandria:mean '(98.92 99.26 99.01 98.91 98.82 99.05 99.13)) => 99.01429
-
-/5+L1:
-
-(alexandria:mean '(99.04 99.28 99.10 98.92 99.01 99.14 99.16)) => 99.09286
 
 /6+L1:
 2015-02-14 21:19:29: training at n-instances: 180000000
