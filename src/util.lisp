@@ -275,11 +275,11 @@
 (defun decay-rate-to-half-life (decay-rate)
   (log 0.5 (- 1 decay-rate)))
 
-(defun log-prob-to-perplexity (log-prob)
-  (expt 2 (/ log-prob (log 2))))
+(defun cross-entropy-to-perplexity (cross-entropy)
+  (exp cross-entropy))
 
-(defun perplexity-to-log-prob (perplexity)
-  (* (log 2) (log perplexity 2)))
+(defun perplexity-to-cross-entropy (perplexity)
+  (log perplexity))
 
 (declaim (inline try-chance))
 (defun try-chance (chance)
