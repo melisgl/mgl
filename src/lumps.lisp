@@ -2800,9 +2800,8 @@
   lumps are packaged into a subnetwork to reduce clutter."))
 
 (defun ->lstm (inputs &key name cell-init output-init size
-               (gate-fn '->sigmoid) (input-fn '->tanh)
-               (output-fn '->tanh)
-               (peepholes t))
+               (activation-fn '->activation) (gate-fn '->sigmoid)
+               (input-fn '->tanh) (output-fn '->tanh) (peepholes t))
   "Create an LSTM layer consisting of input, forget, output gates with
   which input, cell state and output are scaled. Lots of lumps are
   created, the final one representing to output of the LSTM has NAME.
@@ -2837,7 +2836,12 @@
 
   If CELL-INIT is non-NIL, then it must be a CLUMP of SIZE form which
   stands for the initial state of the value cell (`c_{-1}`). CELL-INIT
-  being NIL is equivalent to the state of all zeros."
+  being NIL is equivalent to the state of all zeros.
+
+  ACTIVATION-FN defaults to ->ACTIVATION, but it can be for example
+  ->BATCH-NORMALIZED-ACTIVATION. In general, functions like the
+  aforementioned two with signature like (INPUTS &KEY NAME SIZE
+  PEEPHOLES) can be passed as ACTIVATION-FN."
   (check-type size index)
   (let* ((inputs (alexandria:ensure-list inputs))
          (input-gate-name `(,name :input))
@@ -2858,18 +2862,18 @@
       (build-fnn (:name name :class '->lstm)
         ;; i_t = s(W_ix * x_t + W_im * m_{t_1} + W_ic .* c_{t-1} + b_i)
         (input-gate
-         (funcall gate-fn (->activation (add (lagged-output) inputs)
-                                        :name input-gate-name :size size
-                                        :peepholes (when peepholes
-                                                     (add (lagged-cell) ())))
+         (funcall gate-fn (funcall activation-fn (add (lagged-output) inputs)
+                                   :name input-gate-name :size size
+                                   :peepholes (when peepholes
+                                                (add (lagged-cell) ())))
                   :name input-gate-name))
         ;; f_t = s(W_fx * x_t + W_fm * m_{t_1} + W_fc .* c_{t-1} + b_f)
         (forget-gate
-         (funcall gate-fn (->activation (add (lagged-output) inputs)
-                                        :name forget-gate-name
-                                        :size size
-                                        :peepholes (when peepholes
-                                                     (add (lagged-cell) ())))
+         (funcall gate-fn (funcall activation-fn (add (lagged-output) inputs)
+                                   :name forget-gate-name
+                                   :size size
+                                   :peepholes (when peepholes
+                                                (add (lagged-cell) ())))
                   :name forget-gate-name))
         ;; c_t = f_t .* c_{t-1} + i_t .* g(W_cx * x_t + W_cm * m_{t-1} + b_c)
         (cell
@@ -2879,17 +2883,18 @@
              (->* forget-gate (lagged-cell)
                   :shared-with-clump shared-with-clump))
            (->* input-gate (funcall input-fn
-                                    (->activation (add (lagged-output) inputs)
-                                                  :name cell-name
-                                                  :size size))
+                                    (funcall activation-fn
+                                             (add (lagged-output) inputs)
+                                             :name cell-name
+                                             :size size))
                 :shared-with-clump shared-with-clump)
            shared-with-clump))
         ;; o_t = s(W_ox * x_t + W_om * m_{t-1} + W_oc .* c_t + b_o)
         (output-gate
-         (funcall gate-fn (->activation (add (lagged-output) inputs)
-                                        :name output-gate-name :size size
-                                        :peepholes (when peepholes
-                                                     (list cell)))
+         (funcall gate-fn (funcall activation-fn (add (lagged-output) inputs)
+                                   :name output-gate-name :size size
+                                   :peepholes (when peepholes
+                                                (list cell)))
                   :name output-gate-name ))
         ;; m_t = o_t .* h(c_t)
         (output

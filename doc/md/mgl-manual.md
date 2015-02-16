@@ -4430,7 +4430,7 @@ a [`->LOSS`][ba60].
 
 <a name='x-28MGL-BP-3A--3ELSTM-20FUNCTION-29'></a>
 
-- [function] **-\>LSTM** *INPUTS &KEY NAME CELL-INIT OUTPUT-INIT SIZE (GATE-FN '-\>SIGMOID) (INPUT-FN '-\>TANH) (OUTPUT-FN '-\>TANH) (PEEPHOLES T)*
+- [function] **-\>LSTM** *INPUTS &KEY NAME CELL-INIT OUTPUT-INIT SIZE (ACTIVATION-FN '-\>ACTIVATION) (GATE-FN '-\>SIGMOID) (INPUT-FN '-\>TANH) (OUTPUT-FN '-\>TANH) (PEEPHOLES T)*
 
     Create an LSTM layer consisting of input, forget, output gates with
     which input, cell state and output are scaled. Lots of lumps are
@@ -4467,6 +4467,11 @@ a [`->LOSS`][ba60].
     If `CELL-INIT` is non-NIL, then it must be a [`CLUMP`][0e4a] of `SIZE` form which
     stands for the initial state of the value cell (`c_{-1}`). `CELL-INIT`
     being `NIL` is equivalent to the state of all zeros.
+    
+    `ACTIVATION-FN` defaults to `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]), but it can be for example
+    [`->BATCH-NORMALIZED-ACTIVATION`][7195]. In general, functions like the
+    aforementioned two with signature like (`INPUTS` `&KEY` `NAME` `SIZE`
+    `PEEPHOLES`) can be passed as `ACTIVATION-FN`.
 
 <a name='x-28MGL-BP-3A-40MGL-BP-SEQ-BARRIER-LUMP-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4700,6 +4705,7 @@ grow into a more serious toolset for NLP eventually.
   [6e12]: #x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-EXECUTORS MGL-PAX:SECTION)"
   [6e54]: #x-28MGL-CORE-3A-40MGL-MONITOR-20MGL-PAX-3ASECTION-29 "(MGL-CORE:@MGL-MONITOR MGL-PAX:SECTION)"
   [6fc3]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"
+  [7195]: #x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29 "(MGL-BP:->BATCH-NORMALIZED-ACTIVATION FUNCTION)"
   [72e9]: #x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29 "(MGL-DATASET:@MGL-DATASET MGL-PAX:SECTION)"
   [7319]: #x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29 "(MGL-BP:TRANSPOSE-WEIGHTS-P (MGL-PAX:READER MGL-BP:->V*M))"
   [745c]: #x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29 "(MGL-BP:@MGL-BP-LUMP MGL-PAX:SECTION)"
