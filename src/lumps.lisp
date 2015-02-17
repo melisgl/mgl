@@ -184,6 +184,11 @@
 (defmethod segment-derivatives ((lump lump))
   (derivatives lump))
 
+(defmethod non-constant-mats ((lump lump))
+  (if (derivatives lump)
+      (list (nodes lump) (derivatives lump))
+      (list (nodes lump))))
+
 ;;; Only weights are segments. Nothing to do for other lumps.
 (defmethod map-segments (fn (lump lump)))
 
@@ -283,6 +288,9 @@
           (t
            (apply #'->weight* args)))))
 
+(defmethod non-constant-mats ((lump ->weight))
+  ())
+
 (defmethod forward ((lump ->weight)))
 
 (defmethod backward ((lump ->weight)))
@@ -350,6 +358,11 @@
 (defmethod print-lump-parts ((lump ->dropout) stream)
   (when (dropout lump)
     (format stream " ~S ~,2F" :dropout (dropout lump))))
+
+(defmethod non-constant-mats ((lump ->dropout))
+  (if (mask lump)
+      (cons (mask lump) (call-next-method))
+      (call-next-method)))
 
 (defmethod forward ((lump ->dropout))
   (let ((x (x lump))
@@ -610,6 +623,10 @@
 
 (defmethod print-lump-parts ((lump ->batch-normalized) stream)
   (format stream " ~S ~S" :batch-size (batch-size lump)))
+
+(defmethod non-constant-mats ((lump ->batch-normalized))
+  (list* (population-mean lump) (population-stddev lump)
+         (append (batch-mean lump) (batch-stddev lump) (call-next-method))))
 
 (defun ->batch-normalized-activation (inputs &key (name (gensym)) size
                                       peepholes batch-size)
