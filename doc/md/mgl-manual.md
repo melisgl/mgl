@@ -4010,7 +4010,7 @@ We are in about year 2011.
     
     ```cl-transcript
     (->max (->input :size 120) :group-size 3 :name 'my-max)
-    ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000>
+    ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000 :GROUP-SIZE 3>
     
     ```
     

@@ -104,6 +104,10 @@
           (t
            1))))
 
+(defgeneric print-lump-parts (lump stream)
+  (:method (lump stream)
+    (declare (ignore lump stream))))
+
 (defmethod print-object ((lump lump) stream)
   (pprint-logical-block (stream ())
     (print-unreadable-object (lump stream :type t)
@@ -113,7 +117,8 @@
                   :unbound))
       (let ((mgl-cube:*let-input-through-p* t))
         (format stream " ~S/~S ~S ~,5F" (n-stripes lump) (max-n-stripes lump)
-                :norm (ignore-errors (nrm2 (nodes lump)))))))
+                :norm (ignore-errors (nrm2 (nodes lump)))))
+      (print-lump-parts lump stream)))
   lump)
 
 (defmethod set-n-stripes (n-stripes (lump lump))
@@ -341,6 +346,10 @@
 
 (defmethod default-size ((lump ->dropout))
   (size (x lump)))
+
+(defmethod print-lump-parts ((lump ->dropout) stream)
+  (when (dropout lump)
+    (format stream " ~S ~,2F" :dropout (dropout lump))))
 
 (defmethod forward ((lump ->dropout))
   (let ((x (x lump))
@@ -598,6 +607,9 @@
   (check-size-and-default-size lump size))
 
 (defmaker ->batch-normalized x scale shift)
+
+(defmethod print-lump-parts ((lump ->batch-normalized) stream)
+  (format stream " ~S ~S" :batch-size (batch-size lump)))
 
 (defun ->batch-normalized-activation (inputs &key (name (gensym)) size
                                       peepholes batch-size)
@@ -1317,7 +1329,7 @@
 
   ```cl-transcript
   (->max (->input :size 120) :group-size 3 :name 'my-max)
-  ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000>
+  ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000 :GROUP-SIZE 3>
   ```
 
   The advantage of ->MAX over ->RELU is that flow gradient is never
@@ -1331,6 +1343,10 @@
 
 (defmethod default-size ((lump ->max))
   (/ (size (x lump)) (group-size lump)))
+
+(defmethod print-lump-parts ((lump ->max) stream)
+  (when (/= (size lump) (group-size lump))
+    (format stream " ~S ~S" :group-size (group-size lump))))
 
 (defmethod forward ((lump ->max))
   (let* ((x (x lump))
@@ -1432,6 +1448,10 @@
 
 (defmethod default-size ((lump ->min))
   (/ (size (x lump)) (group-size lump)))
+
+(defmethod print-lump-parts ((lump ->max) stream)
+  (when (/= (size lump) (group-size lump))
+    (format stream " ~S ~S" :group-size (group-size lump))))
 
 (defmethod forward ((lump ->min))
   (let* ((x (x lump))
@@ -1540,6 +1560,10 @@
 
 (defmethod default-size ((lump ->max-channel))
   (size (x lump)))
+
+(defmethod print-lump-parts ((lump ->max-channel) stream)
+  (when (/= (size lump) (group-size lump))
+    (format stream " ~S ~S" :group-size (group-size lump))))
 
 (defmethod forward ((lump ->max-channel))
   (let* ((x (x lump))
@@ -1913,6 +1937,10 @@
                                        &key &allow-other-keys)
   (unless (slot-boundp lump 'group-size)
     (setf (slot-value lump 'group-size) (size lump))))
+
+(defmethod print-lump-parts ((lump ->max-channel) stream)
+  (when (/= (size lump) (group-size lump))
+    (format stream " ~S ~S" :group-size (group-size lump))))
 
 (defun ensure-softmax-target-matrix (softmax-xe-loss n)
   "Set TARGET of SOFTMAX-XE-LOSS to a MAT capable of holding the dense
@@ -2309,6 +2337,10 @@
 (defmethod default-size ((lump ->v*m))
   (/ (size (weights lump))
      (size (x lump))))
+
+(defmethod print-lump-parts ((lump ->v*m) stream)
+  (when (transpose-weights-p lump)
+    (format stream " ~S ~S" :tranpose t)))
 
 (defmethod forward ((lump ->v*m))
   (let* ((x (x lump))
