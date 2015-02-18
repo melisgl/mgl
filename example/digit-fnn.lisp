@@ -109,42 +109,44 @@
 #|
 
 ;;; Transcript follows:
-(train-digit-fnn)
-.. 2015-01-25 21:47:57: training at n-instances: 0
-.. 2015-01-25 21:47:57: train cost: 0.000e+0 (0)
-.. #<SEGMENTED-GD-OPTIMIZER {101AF31013}>
+(repeatably ()
+  (let ((*log-time* nil))
+    (train-digit-fnn)))
+.. training at n-instances: 0
+.. train cost: 0.000e+0 (0)
+.. #<SEGMENTED-GD-OPTIMIZER {10094BA193}>
 ..  SEGMENTED-GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
 ..                    #<SEGMENT-SET
-..                      (#<->WEIGHT # :SIZE 15 1/1 :norm 0.04560>
-..                       #<->WEIGHT # :SIZE 3 1/1 :norm 0.00943>
-..                       #<->WEIGHT # :SIZE 50 1/1 :norm 0.07021>
-..                       #<->WEIGHT # :SIZE 5 1/1 :norm 0.01594>)
-..                      {101B2178D3}>
-..                    {101AE7B063}>)
+..                      (#<->WEIGHT # :SIZE 15 1/1 :NORM 0.04473>
+..                       #<->WEIGHT # :SIZE 3 1/1 :NORM 0.01850>
+..                       #<->WEIGHT # :SIZE 50 1/1 :NORM 0.07159>
+..                       #<->WEIGHT # :SIZE 5 1/1 :NORM 0.03056>)
+..                      {100966C8A3}>
+..                    {100940DED3}>)
 ..    SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                  15 1/1 :norm 0.04560>
+..                  15 1/1 :NORM 0.04473>
 ..                #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                  3 1/1 :norm 0.00943>
+..                  3 1/1 :NORM 0.01850>
 ..                #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                  50 1/1 :norm 0.07021>
+..                  50 1/1 :NORM 0.07159>
 ..                #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                  5 1/1 :norm 0.01594>)
+..                  5 1/1 :NORM 0.03056>)
 ..  
-.. #<BATCH-GD-OPTIMIZER {101AE7B063}>
+.. #<BATCH-GD-OPTIMIZER {100940DED3}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
 ..                    (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
-..                       15 1/1 :norm 0.04560>
+..                       15 1/1 :NORM 0.04473>
 ..                     #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
-..                       3 1/1 :norm 0.00943>
+..                       3 1/1 :NORM 0.01850>
 ..                     #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
-..                       50 1/1 :norm 0.07021>
+..                       50 1/1 :NORM 0.07159>
 ..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
-..                       5 1/1 :norm 0.01594>)
-..                    {101B2178D3}>
+..                       5 1/1 :NORM 0.03056>)
+..                    {100966C8A3}>
 ..    LEARNING-RATE = 1.00000e+0
 ..    MOMENTUM = 9.00000e-1
 ..    MOMENTUM-TYPE = :NORMAL
@@ -155,45 +157,45 @@
 ..  
 ..  BATCH-GD-OPTIMIZER description:
 ..    N-BEFORE-UPATE-HOOK = 0
-..  #<DIGIT-FNN {101AF33DC3}>
+..  #<DIGIT-FNN {10094BA5D3}>
 ..   BPN description:
-..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :norm 0.00000>
+..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :NORM 0.00000>
 ..                #<->ACTIVATION
 ..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
 ..                  :CLUMPS 4>
-..                #<->RELU HIDDEN :SIZE 5 1/50 :norm 0.00000>
+..                #<->RELU HIDDEN :SIZE 5 1/50 :NORM 0.00000>
 ..                #<->ACTIVATION
 ..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
 ..                  :CLUMPS 4>
-..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :norm 0.00000>)
+..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :NORM 0.00000>)
 ..     N-STRIPES = 1
 ..     MAX-N-STRIPES = 50
-..   2015-01-25 21:47:57: pred. cost: 1.098d+0 (1000.00)
-.. 2015-01-25 21:47:57: training at n-instances: 1000
-.. 2015-01-25 21:47:57: train cost: 1.093d+0 (1000.00)
-.. 2015-01-25 21:47:57: training at n-instances: 2000
-.. 2015-01-25 21:47:57: train cost: 5.491d-1 (1000.00)
-.. 2015-01-25 21:47:57: training at n-instances: 3000
-.. 2015-01-25 21:47:57: train cost: 4.281d-3 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 4000
-.. 2015-01-25 21:47:58: train cost: 2.767d-4 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 5000
-.. 2015-01-25 21:47:58: train cost: 1.029d-4 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 6000
-.. 2015-01-25 21:47:58: train cost: 5.664d-5 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 7000
-.. 2015-01-25 21:47:58: train cost: 4.567d-5 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 8000
-.. 2015-01-25 21:47:58: train cost: 3.989d-5 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 9000
-.. 2015-01-25 21:47:58: train cost: 3.374d-5 (1000.00)
-.. 2015-01-25 21:47:58: training at n-instances: 10000
-.. 2015-01-25 21:47:58: train cost: 3.220d-5 (1000.00)
-.. 2015-01-25 21:47:58: pred. cost: 3.382d-5 (1000.00)
+..   pred. cost: 1.100d+0 (1000.00)
+.. training at n-instances: 1000
+.. train cost: 1.093d+0 (1000.00)
+.. training at n-instances: 2000
+.. train cost: 5.886d-1 (1000.00)
+.. training at n-instances: 3000
+.. train cost: 3.574d-3 (1000.00)
+.. training at n-instances: 4000
+.. train cost: 1.601d-7 (1000.00)
+.. training at n-instances: 5000
+.. train cost: 1.973d-9 (1000.00)
+.. training at n-instances: 6000
+.. train cost: 4.882d-10 (1000.00)
+.. training at n-instances: 7000
+.. train cost: 2.771d-10 (1000.00)
+.. training at n-instances: 8000
+.. train cost: 2.283d-10 (1000.00)
+.. training at n-instances: 9000
+.. train cost: 2.123d-10 (1000.00)
+.. training at n-instances: 10000
+.. train cost: 2.263d-10 (1000.00)
+.. pred. cost: 2.210d-10 (1000.00)
 ..
-==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :norm 2.56299>
--->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :norm 11.03941>
--->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :norm 8.04568>
--->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :norm 10.49271>)
+==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :NORM 2.94294>
+-->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :NORM 11.48995>
+-->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :NORM 3.39103>
+-->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :NORM 11.39339>)
 
 |#

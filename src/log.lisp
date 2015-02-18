@@ -5,6 +5,7 @@
   (log-msg function)
   (with-logging-entry macro)
   (*log-file* variable)
+  (*log-time* variable)
   (log-mat-room function))
 
 (defun time->string (&optional (time (get-universal-time)))
@@ -15,16 +16,20 @@
 
 (defvar *log-file* nil)
 
+(defvar *log-time* t)
+
 (defun log-msg (format &rest args)
   (pprint-logical-block (*trace-output* nil)
-    (format *trace-output* "~A: " (time->string))
+    (when *log-time*
+      (format *trace-output* "~A: " (time->string)))
     (pprint-logical-block (*trace-output* nil)
       (apply #'format *trace-output* format args)))
   (when *log-file*
     (with-open-file (s *log-file* :direction :output
                        :if-exists :append :if-does-not-exist :create)
       (pprint-logical-block (s nil)
-        (format s "~A: " (time->string))
+        (when *log-time*
+          (format s "~A: " (time->string)))
         (pprint-logical-block (s nil)
           (apply #'format s format args))))))
 
