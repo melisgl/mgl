@@ -37,6 +37,7 @@
    #:group
    #:subseq*
    #:max-position
+   #:insert-into-sorted-vector
    #:hash-table->vector
    #:repeatedly
    #:make-sequence-generator

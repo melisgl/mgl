@@ -163,6 +163,30 @@
                          maximizing (elt seq i))
                    seq :start start :end end))))
 
+(defun insert-into-sorted-vector
+    (item vector pred &key key (max-length (array-total-size vector)))
+  "Insert ITEM into VECTOR while keeping it sorted by PRED. Extend the
+  vector if needed while respecting MAX-LENGTH. "
+  (declare (type (array * (*)) vector)
+           (type index max-length)
+           (optimize speed))
+  (let* ((key (if key (coerce key 'function) nil))
+         (pred (coerce pred 'function))
+         (len (length vector))
+         (item-key (apply-key key item)))
+    ;; Pick off the common case quickly where ITEM won't be collected.
+    (unless (and (= len max-length)
+                 (funcall pred (apply-key key (aref vector (1- len))) item-key))
+      (let ((pos (1+ (or (position item-key vector
+                                   :key key :test-not pred :from-end t)
+                         -1))))
+        (when (< pos max-length)
+          (when (< len max-length)
+            (vector-push-extend nil vector))
+          (replace vector vector :start1 (1+ pos) :start2 pos :end2 len)
+          (setf (aref vector pos) item))))
+    vector))
+
 (defun hash-table->vector (hash-table)
   (let ((v (make-array (hash-table-count hash-table)))
         (i 0))
