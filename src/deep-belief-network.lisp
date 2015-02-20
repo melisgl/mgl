@@ -191,10 +191,10 @@
                              dbn)
                            dataset dbn monitors)))
 
-(defmethod write-weights ((dbn dbn) stream)
+(defmethod write-weights* ((dbn dbn) stream context)
   (dolist (rbm (rbms dbn))
-    (write-weights rbm stream)))
+    (write-weights* rbm stream context)))
 
-(defmethod read-weights ((dbn dbn) stream)
+(defmethod read-weights* ((dbn dbn) stream context)
   (dolist (rbm (rbms dbn))
-    (read-weights rbm stream)))
+    (read-weights* rbm stream context)))

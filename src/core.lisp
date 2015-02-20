@@ -7,24 +7,19 @@
 
 
 (defsection @mgl-model-persistence (:title "Model Persistence")
-  (read-weights generic-function)
-  (write-weights generic-function)
   (load-weights function)
-  (save-weights function))
-
-(defgeneric read-weights (model stream)
-  (:documentation "Read the weights of MODEL from the bivalent STREAM
-  where weights mean the learnt parameters. There is currently no
-  sanity checking of data which will most certainly change in the
-  future together with the serialization format."))
-
-(defgeneric write-weights (model stream)
-  (:documentation "Write weight of MODEL to the bivalent STREAM."))
+  (save-weights function)
+  (read-weights function)
+  (write-weights function)
+  (read-weights* generic-function)
+  (write-weights* generic-function))
 
 (defun load-weights (filename model)
   "Load weights of MODEL from FILENAME."
   (with-open-file (stream filename :element-type 'unsigned-byte)
-    (read-weights model stream)))
+    (read-weights model stream)
+    (assert (= (file-position stream) (file-length stream)) ()
+            "LOAD-WEIGHTS did not read the whole file.")))
 
 (defun save-weights (filename model &key (if-exists :error)
                      (ensure t))
@@ -38,6 +33,37 @@
                           :if-exists if-exists
                           :element-type 'unsigned-byte)
     (write-weights model stream)))
+
+(defun read-weights (model stream)
+  "Read the weights of MODEL from the bivalent STREAM where weights
+  mean the learnt parameters. There is currently no sanity checking of
+  data which will most certainly change in the future together with
+  the serialization format."
+  (read-weights* model stream (make-hash-table)))
+
+(defun write-weights (model stream)
+  "Write weight of MODEL to the bivalent STREAM."
+  (write-weights* model stream (make-hash-table)))
+
+(defgeneric read-weights* (model stream context)
+  (:documentation "This is the extension point for READ-WEIGHTS. It is
+  guaranteed that primary READ-WEIGHTS* methods will be called only
+  once for each MODEL (under EQ). CONTEXT is an opaque object and must
+  be passed on to any recursive READ-WEIGHTS* calls.")
+  (:method :around (model stream context)
+    (unless (gethash model context)
+      (setf (gethash model context) t)
+      (call-next-method))))
+
+(defgeneric write-weights* (model stream context)
+  (:documentation "This is the extension point for WRITE-WEIGHTS. It
+  is guaranteed that primary WRITE-WEIGHTS* methods will be called
+  only once for each MODEL (under EQ). CONTEXT is an opaque object and
+  must be passed on to any recursive WRITE-WEIGHTS* calls.")
+  (:method :around (model stream context)
+    (unless (gethash model context)
+      (setf (gethash model context) t)
+      (call-next-method))))
 
 
 (defsection @mgl-model-stripe (:title "Batch Processing")

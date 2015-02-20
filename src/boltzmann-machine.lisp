@@ -942,10 +942,10 @@
   (do-cloud-runs ((start end) cloud)
     (funcall fn start end)))
 
-(defmethod write-weights ((cloud full-cloud) stream)
+(defmethod write-weights* ((cloud full-cloud) stream seen)
   (write-mat (weights cloud) stream))
 
-(defmethod read-weights ((cloud full-cloud) stream)
+(defmethod read-weights* ((cloud full-cloud) stream seen)
   (read-mat (weights cloud) stream))
 
 
@@ -1041,13 +1041,13 @@
   (funcall fn (cloud-a cloud))
   (funcall fn (cloud-b cloud)))
 
-(defmethod write-weights ((cloud factored-cloud) stream)
-  (write-weights (cloud-a cloud) stream)
-  (write-weights (cloud-b cloud) stream))
+(defmethod write-weights* ((cloud factored-cloud) stream seen)
+  (write-weights* (cloud-a cloud) stream seen)
+  (write-weights* (cloud-b cloud) stream seen))
 
-(defmethod read-weights ((cloud factored-cloud) stream)
-  (read-weights (cloud-a cloud) stream)
-  (read-weights (cloud-b cloud) stream))
+(defmethod read-weights* ((cloud factored-cloud) stream seen)
+  (read-weights* (cloud-a cloud) stream seen)
+  (read-weights* (cloud-b cloud) stream seen))
 
 
 ;;;; Boltzmann Machine
@@ -1370,13 +1370,13 @@
              (map-segments fn cloud))
        (clouds bm)))
 
-(defmethod write-weights ((bm bm) stream)
+(defmethod write-weights* ((bm bm) stream context)
   (dolist (cloud (clouds bm))
-    (write-weights cloud stream)))
+    (write-weights* cloud stream context)))
 
-(defmethod read-weights ((bm bm) stream)
+(defmethod read-weights* ((bm bm) stream context)
   (dolist (cloud (clouds bm))
-    (read-weights cloud stream)))
+    (read-weights* cloud stream context)))
 
 
 ;;;; Deep Boltzmann Machine

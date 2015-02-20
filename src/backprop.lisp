@@ -320,16 +320,16 @@
              (map-segments fn clump))
        (clumps bpn)))
 
-(defmethod write-weights ((bpn bpn) stream)
+(defmethod write-weights* ((bpn bpn) stream context)
   (map-clumps (lambda (clump)
                 (when (typep clump 'lump)
-                  (write-weights clump stream)))
+                  (write-weights* clump stream context)))
               bpn))
 
-(defmethod read-weights ((bpn bpn) stream)
+(defmethod read-weights* ((bpn bpn) stream context)
   (map-clumps (lambda (clump)
                 (when (typep clump 'lump)
-                  (read-weights clump stream)))
+                  (read-weights* clump stream context)))
               bpn))
 
 

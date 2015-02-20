@@ -192,9 +192,9 @@
 ;;; Only weights are segments. Nothing to do for other lumps.
 (defmethod map-segments (fn (lump lump)))
 
-(defmethod write-weights ((lump lump) stream))
+(defmethod write-weights* ((lump lump) stream context))
 
-(defmethod read-weights ((lump lump) stream))
+(defmethod read-weights* ((lump lump) stream context))
 
 
 (defsection @mgl-bp-weight-lump (:title "Weight Lump")
@@ -298,10 +298,10 @@
 (defmethod map-segments (fn (lump ->weight))
   (funcall fn lump))
 
-(defmethod write-weights ((lump ->weight) stream)
+(defmethod write-weights* ((lump ->weight) stream context)
   (write-mat (nodes lump) stream))
 
-(defmethod read-weights ((lump ->weight) stream)
+(defmethod read-weights* ((lump ->weight) stream context)
   (read-mat (nodes lump) stream))
 
 
@@ -856,11 +856,11 @@
                              (foo (ensure-population-mean lump)
                                   (ensure-population-stddev lump))))))))))))
 
-(defmethod write-weights ((lump ->batch-normalized) stream)
+(defmethod write-weights* ((lump ->batch-normalized) stream context)
   (write-mat (ensure-population-mean lump) stream)
   (write-mat (ensure-population-stddev lump) stream))
 
-(defmethod read-weights ((lump ->batch-normalized) stream)
+(defmethod read-weights* ((lump ->batch-normalized) stream context)
   (read-mat (ensure-population-mean lump) stream)
   (read-mat (ensure-population-stddev lump) stream))
 
