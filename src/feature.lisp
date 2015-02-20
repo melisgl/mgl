@@ -129,11 +129,11 @@
         all))))
 
 (defun index-scored-features (feature-scores n &key (start 0))
-  "Take scored features as a feature -> score hash table \(returned by
+  "Take scored features as a feature -> score hash table (returned by
   COUNT-FEATURES or COMPUTE-FEATURE-LLR, for instance) and return a
-  feature -> index hash table that maps the first N \(or less)
-  features with the highest scores to distinct dense indices starting
-  from START."
+  feature -> index hash table that maps the first N (or less) features
+  with the highest scores to distinct dense indices starting from
+  START."
   (let ((sorted (stable-sort (hash-table->vector feature-scores)
                              #'> :key #'cdr)))
     (flet ((vector->hash-table (v)

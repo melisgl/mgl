@@ -42,7 +42,7 @@
   The first return value is the BLEU score (between 0 and 1, not as a
   percentage), the second value is the brevity penalty and the third
   is a list n-gram precisions (also between 0 and 1 or NIL), one for
-  each element in [1..N].
+  each element in \\[1..`N`].
 
   This is basically a reimplementation of
   [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).

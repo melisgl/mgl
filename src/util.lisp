@@ -356,7 +356,7 @@
 (defun multinomial-log-likelihood-ratio (k1 k2)
   "See \"Accurate Methods for the Statistics of Surprise and
   Coincidence\" by Ted Dunning
-  \(http://citeseer.ist.psu.edu/29096.html).
+  (http://citeseer.ist.psu.edu/29096.html).
 
   K1 is the number of outcomes in each class. K2 is the same in a
   possibly different process.
