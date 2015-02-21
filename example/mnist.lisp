@@ -565,7 +565,7 @@
         (cond (load-dbn-p
                (repeatably ()
                  (setq* (dbn dbn-var) (make-instance 'mnist-dbn/1))
-                 (load-weights dbn-filename dbn)
+                 (load-state dbn-filename dbn)
                  (log-msg "Loaded DBN~%")
                  (log-padded
                   (monitor-dbn-mean-field-reconstructions
@@ -581,7 +581,7 @@
                                   :start-level 0 :learning-rate 0.1
                                   :decay 0.0002 :visible-sampling nil)
                  (unless quick-run-p
-                   (save-weights dbn-filename dbn)))))
+                   (save-state dbn-filename dbn)))))
         (repeatably ()
           (setq* (bpn bpn-var) (unroll-mnist-dbn/1 dbn))
           (cond (dropoutp
@@ -594,13 +594,13 @@
                                      :set-dropout-p t
                                      :rescale-on-dropout-p t)
                  (unless quick-run-p
-                   (save-weights bpn-filename bpn)))
+                   (save-state bpn-filename bpn)))
                 (t
                  (train-mnist-bpn-cg bpn training test
                                      :n-softmax-epochs (if quick-run-p 1 5)
                                      :n-epochs (if quick-run-p 2 37))
                  (unless quick-run-p
-                   (save-weights bpn-filename bpn)))))
+                   (save-state bpn-filename bpn)))))
         (values bpn dbn)))))
 
 
@@ -828,13 +828,13 @@
                     :decay 0.001
                     :visible-sampling t))
                  (unless quick-run-p
-                   (save-weights dbn-filename dbn)))
+                   (save-state dbn-filename dbn)))
                (train-dbm ()
                  (repeatably ()
                    (train-mnist-dbm dbm training test
                                     :n-epochs (if quick-run-p 1 500)))
                  (unless quick-run-p
-                   (save-weights dbm-filename dbm)))
+                   (save-state dbm-filename dbm)))
                (make-dbm ()
                  (repeatably ()
                    (setq* (dbm dbm-var) (make-mnist-dbm))))
@@ -843,11 +843,11 @@
                    (setq* (dbn dbn-var) (make-mnist-dbn/2 dbm)))))
           (cond (load-dbm-p
                  (make-dbm)
-                 (load-weights dbm-filename dbm))
+                 (load-state dbm-filename dbm))
                 (load-dbn-p
                  (make-dbm)
                  (make-dbn)
-                 (load-weights dbn-filename dbn)
+                 (load-state dbn-filename dbn)
                  (log-msg "Loaded DBN~%")
                  (train-dbm))
                 (t
@@ -891,13 +891,13 @@
                                        :set-dropout-p t
                                        :rescale-on-dropout-p t)
                    (unless quick-run-p
-                     (save-weights bpn-filename bpn)))
+                     (save-state bpn-filename bpn)))
                   (t
                    (train-mnist-bpn-cg bpn training test :batch-size 10000
                                        :n-softmax-epochs (if quick-run-p 1 5)
                                        :n-epochs (if quick-run-p 1 100))
                    (unless quick-run-p
-                     (save-weights bpn-filename bpn))))))))))
+                     (save-state bpn-filename bpn))))))))))
 
 (defmethod negative-phase (batch (learner bm-pcd-learner)
                            (optimizer mnist-dbm-optimizer) multiplier)
@@ -1139,7 +1139,7 @@
                               :input-weight-penalty 0.000001
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
-            (save-weights bpn-filename bpn)))))))
+            (save-state bpn-filename bpn)))))))
 
 
 ;;;; Maxout
@@ -1173,7 +1173,7 @@
                               :input-weight-penalty 0.000001
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
-            (save-weights bpn-filename bpn)))))))
+            (save-state bpn-filename bpn)))))))
 
 
 ;;;; Max-channel
@@ -1210,7 +1210,7 @@
                               :input-weight-penalty 0.000001
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
-            (save-weights bpn-filename bpn)))))))
+            (save-state bpn-filename bpn)))))))
 
 
 ;;;; Batch-normalized max-channel
@@ -1252,7 +1252,7 @@
                               :input-weight-penalty 0.000001
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
-            (save-weights bpn-filename bpn)))))))
+            (save-state bpn-filename bpn)))))))
 
 
 ;;;; Globals for tracking progress of training and filenames

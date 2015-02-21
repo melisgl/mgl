@@ -1,27 +1,27 @@
 (in-package :mgl-core)
 
-(defsection @mgl-model (:title "Models")
-  (@mgl-model-persistence section)
+(defsection @mgl-core (:title "Core")
+  (@mgl-persistence section)
   (@mgl-model-stripe section)
   (@mgl-executors section))
 
 
-(defsection @mgl-model-persistence (:title "Model Persistence")
-  (load-weights function)
-  (save-weights function)
-  (read-weights function)
-  (write-weights function)
-  (read-weights* generic-function)
-  (write-weights* generic-function))
+(defsection @mgl-persistence (:title "Persistence")
+  (load-state function)
+  (save-state function)
+  (read-state function)
+  (write-state function)
+  (read-state* generic-function)
+  (write-state* generic-function))
 
-(defun load-weights (filename model)
+(defun load-state (filename model)
   "Load weights of MODEL from FILENAME."
   (with-open-file (stream filename :element-type 'unsigned-byte)
-    (read-weights model stream)
+    (read-state model stream)
     (assert (= (file-position stream) (file-length stream)) ()
-            "LOAD-WEIGHTS did not read the whole file.")))
+            "LOAD-STATE did not read the whole file.")))
 
-(defun save-weights (filename model &key (if-exists :error)
+(defun save-state (filename model &key (if-exists :error)
                      (ensure t))
   "Save weights of MODEL to FILENAME. If ENSURE, then
   ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
@@ -32,34 +32,34 @@
                           :if-does-not-exist :create
                           :if-exists if-exists
                           :element-type 'unsigned-byte)
-    (write-weights model stream)))
+    (write-state model stream)))
 
-(defun read-weights (model stream)
+(defun read-state (model stream)
   "Read the weights of MODEL from the bivalent STREAM where weights
   mean the learnt parameters. There is currently no sanity checking of
   data which will most certainly change in the future together with
   the serialization format."
-  (read-weights* model stream (make-hash-table)))
+  (read-state* model stream (make-hash-table)))
 
-(defun write-weights (model stream)
+(defun write-state (model stream)
   "Write weight of MODEL to the bivalent STREAM."
-  (write-weights* model stream (make-hash-table)))
+  (write-state* model stream (make-hash-table)))
 
-(defgeneric read-weights* (model stream context)
-  (:documentation "This is the extension point for READ-WEIGHTS. It is
-  guaranteed that primary READ-WEIGHTS* methods will be called only
-  once for each MODEL (under EQ). CONTEXT is an opaque object and must
-  be passed on to any recursive READ-WEIGHTS* calls.")
+(defgeneric read-state* (model stream context)
+  (:documentation "This is the extension point for READ-STATE. It is
+  guaranteed that primary READ-STATE* methods will be called only once
+  for each MODEL (under EQ). CONTEXT is an opaque object and must be
+  passed on to any recursive READ-STATE* calls.")
   (:method :around (model stream context)
     (unless (gethash model context)
       (setf (gethash model context) t)
       (call-next-method))))
 
-(defgeneric write-weights* (model stream context)
-  (:documentation "This is the extension point for WRITE-WEIGHTS. It
-  is guaranteed that primary WRITE-WEIGHTS* methods will be called
-  only once for each MODEL (under EQ). CONTEXT is an opaque object and
-  must be passed on to any recursive WRITE-WEIGHTS* calls.")
+(defgeneric write-state* (model stream context)
+  (:documentation "This is the extension point for WRITE-STATE. It is
+  guaranteed that primary WRITE-STATE* methods will be called only
+  once for each MODEL (under EQ). CONTEXT is an opaque object and must
+  be passed on to any recursive WRITE-STATE* calls.")
   (:method :around (model stream context)
     (unless (gethash model context)
       (setf (gethash model context) t)

@@ -20,8 +20,8 @@
     - [4.3 Bagging][0675]
     - [4.4 CV Bagging][ca85]
     - [4.5 Miscellaneous Operations][7540]
-- [5 Models][8b7f]
-    - [5.1 Model Persistence][56ee]
+- [5 Core][56f6]
+    - [5.1 Persistence][6470]
     - [5.2 Batch Processing][0552]
     - [5.3 Executors][6e12]
         - [5.3.1 Parameterized Executor Cache][1426]
@@ -638,43 +638,61 @@ contains it.
     ```
 
 
-<a name='x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29'></a>
+<a name='x-28MGL-CORE-3A-40MGL-CORE-20MGL-PAX-3ASECTION-29'></a>
 
-## 5 Models
+## 5 Core
 
 ###### \[in package MGL-CORE\]
-<a name='x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a>
+<a name='x-28MGL-CORE-3A-40MGL-PERSISTENCE-20MGL-PAX-3ASECTION-29'></a>
 
-### 5.1 Model Persistence
+### 5.1 Persistence
 
-<a name='x-28MGL-CORE-3AREAD-WEIGHTS-20GENERIC-FUNCTION-29'></a>
+<a name='x-28MGL-CORE-3ALOAD-STATE-20FUNCTION-29'></a>
 
-- [generic-function] **READ-WEIGHTS** *MODEL STREAM*
-
-    Read the weights of `MODEL` from the bivalent `STREAM`
-    where weights mean the learnt parameters. There is currently no
-    sanity checking of data which will most certainly change in the
-    future together with the serialization format.
-
-<a name='x-28MGL-CORE-3AWRITE-WEIGHTS-20GENERIC-FUNCTION-29'></a>
-
-- [generic-function] **WRITE-WEIGHTS** *MODEL STREAM*
-
-    Write weight of `MODEL` to the bivalent `STREAM`.
-
-<a name='x-28MGL-CORE-3ALOAD-WEIGHTS-20FUNCTION-29'></a>
-
-- [function] **LOAD-WEIGHTS** *FILENAME MODEL*
+- [function] **LOAD-STATE** *FILENAME MODEL*
 
     Load weights of `MODEL` from `FILENAME`.
 
-<a name='x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29'></a>
+<a name='x-28MGL-CORE-3ASAVE-STATE-20FUNCTION-29'></a>
 
-- [function] **SAVE-WEIGHTS** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
+- [function] **SAVE-STATE** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
 
     Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
     `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
     on to `OPEN`.
+
+<a name='x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29'></a>
+
+- [function] **READ-STATE** *MODEL STREAM*
+
+    Read the weights of `MODEL` from the bivalent `STREAM` where weights
+    mean the learnt parameters. There is currently no sanity checking of
+    data which will most certainly change in the future together with
+    the serialization format.
+
+<a name='x-28MGL-CORE-3AWRITE-STATE-20FUNCTION-29'></a>
+
+- [function] **WRITE-STATE** *MODEL STREAM*
+
+    Write weight of `MODEL` to the bivalent `STREAM`.
+
+<a name='x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **READ-STATE\*** *MODEL STREAM CONTEXT*
+
+    This is the extension point for [`READ-STATE`][2061]. It is
+    guaranteed that primary [`READ-STATE*`][3e58] methods will be called only once
+    for each `MODEL` (under EQ). `CONTEXT` is an opaque object and must be
+    passed on to any recursive [`READ-STATE*`][3e58] calls.
+
+<a name='x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29'></a>
+
+- [generic-function] **WRITE-STATE\*** *MODEL STREAM CONTEXT*
+
+    This is the extension point for [`WRITE-STATE`][76b9]. It is
+    guaranteed that primary [`WRITE-STATE*`][7dbb] methods will be called only
+    once for each `MODEL` (under EQ). `CONTEXT` is an opaque object and must
+    be passed on to any recursive [`WRITE-STATE*`][7dbb] calls.
 
 <a name='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a>
 
@@ -3416,7 +3434,7 @@ the concepts involved. Make sure you are comfortable with
 
 - [reader] **MAX-LAG** *RNN* *(:MAX-LAG = 1)*
 
-    The networks built by [`UNFOLDER`][8b7ff] may contain new
+    The networks built by [`UNFOLDER`][8b7f] may contain new
     weights up to time step `MAX-LAG`. Beyond that point, all weight
     lumps must be reappearances of weight lumps with the same name at
     previous time steps. Most recurrent networks reference only the
@@ -3461,7 +3479,7 @@ the concepts involved. Make sure you are comfortable with
 
 - [macro] **BUILD-RNN** *(&KEY RNN (CLASS ''RNN) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &BODY BODY*
 
-    Create an `RNN` with `MAX-N-STRIPES` and `MAX-LAG` whose [`UNFOLDER`][8b7ff] is `BODY`
+    Create an `RNN` with `MAX-N-STRIPES` and `MAX-LAG` whose [`UNFOLDER`][8b7f] is `BODY`
     wrapped in a lambda. Bind symbol given as the `RNN` argument to the
     `RNN` object so that `BODY` can see it.
 
@@ -3472,7 +3490,7 @@ the concepts involved. Make sure you are comfortable with
     In `RNN` or if it's `NIL` the `RNN` being extended with another
     [`BPN`][0e98] (called *unfolding*), look up the [`CLUMP`][0e4a] with `NAME` in the [`BPN`][0e98]
     that's `LAG` number of time steps before the [`BPN`][0e98] being added. If this
-    function is called from [`UNFOLDER`][8b7ff] of an `RNN` (which is what happens
+    function is called from [`UNFOLDER`][8b7f] of an `RNN` (which is what happens
     behind the scene in the body of [`BUILD-RNN`][4a7b]), then it returns an
     opaque object representing a lagged connection to a clump, else it
     returns the [`CLUMP`][0e4a] itself.
@@ -3536,7 +3554,7 @@ will never reference them again.
     allows.
     
     Suppose we have a typical `RNN` that only ever references the previous
-    time step so its [`MAX-LAG`][0302] is 1. Its [`UNFOLDER`][8b7ff] returns [`BPN`][0e98]s of
+    time step so its [`MAX-LAG`][0302] is 1. Its [`UNFOLDER`][8b7f] returns [`BPN`][0e98]s of
     identical structure bar a shift in their time lagged connections
     except for the very first, so [`WARP-START`][d0f6] and [`WARP-LENGTH`][788a] are both 1.
     If [`*WARP-TIME*`][5900] is `NIL`, then the mapping from [`TIME-STEP`][9b9d] to the [`BPN`][0e98] in
@@ -3572,14 +3590,14 @@ will never reference them again.
 
 - [reader] **WARP-START** *RNN* *(:WARP-START = 1)*
 
-    The [`TIME-STEP`][9b9d] from which [`UNFOLDER`][8b7ff] will create
+    The [`TIME-STEP`][9b9d] from which [`UNFOLDER`][8b7f] will create
     [`BPN`][0e98]s that essentially repeat every [`WARP-LENGTH`][788a] steps.
 
 <a name='x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
 
 - [reader] **WARP-LENGTH** *RNN* *(:WARP-LENGTH = 1)*
 
-    An integer such that the [`BPN`][0e98] [`UNFOLDER`][8b7ff] creates at
+    An integer such that the [`BPN`][0e98] [`UNFOLDER`][8b7f] creates at
     time step `I` (where `(<= WARP-START I)`) is identical to the [`BPN`][0e98]
     created at time step `(+ WARP-START (MOD (- I WARP-START)
     WARP-LENGTH))` except for a shift in its time lagged
@@ -3895,7 +3913,7 @@ use activation subnets to reduce the clutter.
     batch means and standard deviances (termed *population
     statistics*) is updated. When making predictions, normalization is
     performed using these statistics. These population statistics are
-    persisted by [`SAVE-WEIGHTS`][060d].
+    persisted by [`SAVE-STATE`][33f8].
 
 <a name='x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29'></a>
 
@@ -4600,7 +4618,7 @@ grow into a more serious toolset for NLP eventually.
     The first return value is the [`BLEU`][edb3] score (between 0 and 1, not as a
     percentage), the second value is the brevity penalty and the third
     is a list n-gram precisions (also between 0 and 1 or `NIL`), one for
-    each element in [1..N][].
+    each element in [1..`N`][].
     
     This is basically a reimplementation of
     [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
@@ -4627,7 +4645,6 @@ grow into a more serious toolset for NLP eventually.
   [0302]: #x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"
   [0359]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:DO-BATCHES-FOR-MODEL (MGL-PAX:MACRO))"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "Batch Processing"
-  [060d]: #x-28MGL-CORE-3ASAVE-WEIGHTS-20FUNCTION-29 "(MGL-CORE:SAVE-WEIGHTS FUNCTION)"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "Bagging"
   [089c]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION)"
   [08c9]: #x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29 "(MGL-CORE:CONFUSION-MATRIX CLASS)"
@@ -4650,6 +4667,7 @@ grow into a more serious toolset for NLP eventually.
   [1f57]: #x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION)"
   [1f98]: #x-28MGL-BP-3A-40MGL-BP-INPUTS-20MGL-PAX-3ASECTION-29 "Inputs"
   [1fa8]: #x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29 "(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"
+  [2061]: #x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29 "(MGL-CORE:READ-STATE FUNCTION)"
   [2100]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29 "Function Sampler"
   [2292]: #x-28MGL-BP-3A--3E-2B-20CLASS-29 "(MGL-BP:->+ CLASS)"
   [2364]: #x-28MGL-CORE-3A-40MGL-MEASURER-20MGL-PAX-3ASECTION-29 "Measurers"
@@ -4665,6 +4683,7 @@ grow into a more serious toolset for NLP eventually.
   [32b3]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29 "Classification Counters"
   [332c]: #x-28MGL-GD-3A-40MGL-GD-ADAM-OPTIMIZER-20MGL-PAX-3ASECTION-29 "Adam Optimizer"
   [3339]: #x-28MGL-CORE-3AMEASURER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "(MGL-CORE:MEASURER (MGL-PAX:READER MGL-CORE:MONITOR))"
+  [33f8]: #x-28MGL-CORE-3ASAVE-STATE-20FUNCTION-29 "(MGL-CORE:SAVE-STATE FUNCTION)"
   [3498]: #x-28MGL-CORE-3ADO-EXECUTORS-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:DO-EXECUTORS (MGL-PAX:MACRO))"
   [3626]: #x-28MGL-CORE-3AMAKE-CLASSIFICATION-ACCURACY-MONITORS-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:MAKE-CLASSIFICATION-ACCURACY-MONITORS* GENERIC-FUNCTION)"
   [3712]: #x-28MGL-BP-3AVARIANCE-FOR-PREDICTION-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EGAUSSIAN-RANDOM-29-29 "(MGL-BP:VARIANCE-FOR-PREDICTION (MGL-PAX:ACCESSOR MGL-BP:->GAUSSIAN-RANDOM))"
@@ -4677,6 +4696,7 @@ grow into a more serious toolset for NLP eventually.
   [3c83]: #x-28MGL-BP-3A--3ESIGMOID-20CLASS-29 "(MGL-BP:->SIGMOID CLASS)"
   [3ca8]: #x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29 "(MGL-CORE:MONITOR-MODEL-RESULTS FUNCTION)"
   [3d84]: #x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29 "Activation Functions"
+  [3e58]: #x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:READ-STATE* GENERIC-FUNCTION)"
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "Cross-validation"
   [44dc]: #x-28MGL-BP-3ABP-LEARNER-20CLASS-29 "(MGL-BP:BP-LEARNER CLASS)"
   [45db]: #x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29 "Code Organization"
@@ -4693,12 +4713,13 @@ grow into a more serious toolset for NLP eventually.
   [53a7]: #x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29 "Gradient Descent"
   [5478]: #x-28MGL-BP-3A--3EV-2AM-20CLASS-29 "(MGL-BP:->V*M CLASS)"
   [5683]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->SOFTMAX-XE-LOSS))"
-  [56ee]: #x-28MGL-CORE-3A-40MGL-MODEL-PERSISTENCE-20MGL-PAX-3ASECTION-29 "Model Persistence"
+  [56f6]: #x-28MGL-CORE-3A-40MGL-CORE-20MGL-PAX-3ASECTION-29 "Core"
   [5900]: #x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29 "(MGL-BP:*WARP-TIME* (VARIABLE))"
   [5a3f]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "(MGL-RESAMPLE:STRATIFY FUNCTION)"
   [5f27]: #x-28MGL-COMMON-3ATARGET-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29 "(MGL-COMMON:TARGET (MGL-PAX:ACCESSOR MGL-BP:->SOFTMAX-XE-LOSS))"
   [603c]: #x-28MGL-CORE-3AWITH-STRIPES-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:WITH-STRIPES (MGL-PAX:MACRO))"
   [622d]: #x-28MGL-BP-3AFNN-20CLASS-29 "(MGL-BP:FNN CLASS)"
+  [6470]: #x-28MGL-CORE-3A-40MGL-PERSISTENCE-20MGL-PAX-3ASECTION-29 "Persistence"
   [66a1]: #x-28MGL-OPT-3AN-INSTANCES-20-28MGL-PAX-3AREADER-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "(MGL-OPT:N-INSTANCES (MGL-PAX:READER MGL-OPT:ITERATIVE-OPTIMIZER))"
   [676e]: #x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING (MGL-PAX:MACRO))"
   [68b6]: #x-28MGL-CORE-3AAPPLY-MONITORS-20FUNCTION-29 "(MGL-CORE:APPLY-MONITORS FUNCTION)"
@@ -4717,10 +4738,12 @@ grow into a more serious toolset for NLP eventually.
   [7519]: #x-28MGL-BP-3A--3ERELU-20CLASS-29 "(MGL-BP:->RELU CLASS)"
   [7540]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "Miscellaneous Operations"
   [76b8]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-FROM FUNCTION)"
+  [76b9]: #x-28MGL-CORE-3AWRITE-STATE-20FUNCTION-29 "(MGL-CORE:WRITE-STATE FUNCTION)"
   [76e4]: #x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"
   [788a]: #x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"
   [794a]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "Implementing Optimizers"
   [7ae7]: #x-28MGL-RESAMPLE-3ASAMPLE-STRATIFIED-20FUNCTION-29 "(MGL-RESAMPLE:SAMPLE-STRATIFIED FUNCTION)"
+  [7dbb]: #x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29 "(MGL-CORE:WRITE-STATE* GENERIC-FUNCTION)"
   [7f6b]: #x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "(MGL-CG:CG-ARGS (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"
   [7fed]: #x-28MGL-BP-3A-40MGL-BP-TRAINING-20MGL-PAX-3ASECTION-29 "Training"
   [80c4]: #x-28MGL-BP-3A--3EINPUT-20CLASS-29 "(MGL-BP:->INPUT CLASS)"
@@ -4738,8 +4761,7 @@ grow into a more serious toolset for NLP eventually.
   [89b4]: #x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29 "Cost Function"
   [8a3b]: #x-28MGL-CORE-3ACOUNTER-VALUES-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER-VALUES GENERIC-FUNCTION)"
   [8b70]: #x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29 "Backprop Overview"
-  [8b7f]: #x-28MGL-CORE-3A-40MGL-MODEL-20MGL-PAX-3ASECTION-29 "Models"
-  [8b7ff]: #x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"
+  [8b7f]: #x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"
   [8fc3]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29 "Resampling"
   [9112]: #x-28MGL-CORE-3AATTRIBUTES-20-28MGL-PAX-3AACCESSOR-20MGL-CORE-3AATTRIBUTED-29-29 "(MGL-CORE:ATTRIBUTES (MGL-PAX:ACCESSOR MGL-CORE:ATTRIBUTED))"
   [9142]: #x-28MGL-BP-3AFIND-CLUMP-20FUNCTION-29 "(MGL-BP:FIND-CLUMP FUNCTION)"

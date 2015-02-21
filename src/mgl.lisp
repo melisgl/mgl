@@ -5,7 +5,7 @@
   (@mgl-introduction section)
   (@mgl-dataset section)
   (@mgl-resample section)
-  (@mgl-model section)
+  (@mgl-core section)
   (@mgl-monitoring section)
   (@mgl-classification section)
   (@mgl-opt section)
