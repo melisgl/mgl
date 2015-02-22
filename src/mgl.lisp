@@ -8,6 +8,7 @@
   (@mgl-core section)
   (@mgl-monitoring section)
   (@mgl-classification section)
+  (@mgl-features section)
   (@mgl-opt section)
   (@mgl-diffun section)
   (@mgl-bp section)

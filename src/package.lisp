@@ -93,14 +93,6 @@
    #:define-slots-not-to-be-copied
    #:define-slots-to-be-shallow-copied
    #:copy
-   ;; Feature selection, encoding
-   #:count-features
-   #:compute-feature-llrs
-   #:compute-feature-disambiguities
-   #:index-scored-features
-   #:read-indexed-features
-   #:write-indexed-features
-   #:encode/bag-of-words
    ;; Repeatable experiments
    #:*experiment-random-seed*
    #:call-repeatably
@@ -335,7 +327,7 @@
 
 (mgl-pax:define-package #:mgl-nlp
   (:documentation "See MGL-NLP:@MGL-NLP.")
-  (:use #:common-lisp #:mgl-pax #:mgl-util))
+  (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-core))
 
 (mgl-pax:define-package #:mgl
   (:documentation "See MGL:@MGL-MANUAL. This package reexports

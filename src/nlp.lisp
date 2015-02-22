@@ -1,10 +1,13 @@
 (in-package :mgl-nlp)
 
+(named-readtables:in-readtable pythonic-string-reader:pythonic-string-syntax)
+
 (defsection @mgl-nlp (:title "Natural Language Processing")
   "This in nothing more then a couple of utilities for now which may
   grow into a more serious toolset for NLP eventually."
   (make-n-gram-mappee function)
-  (bleu function))
+  (bleu function)
+  (@mgl-nlp-bag-of-words section))
 
 (defun make-n-gram-mappee (function n)
   "Make a function of a single argument that's suitable as the
@@ -123,3 +126,103 @@
                        (exp (/ (loop for p in precisions sum (log p)) n))))
                 brevity-penalty
                 precisions)))))
+
+
+(defsection @mgl-nlp-bag-of-words (:title "Bag of Words")
+  (bag-of-words-encoder class)
+  (feature-encoder (reader bag-of-words-encoder))
+  (feature-mapper (reader bag-of-words-encoder))
+  (encoded-feature-test (reader bag-of-words-encoder))
+  (encoded-feature-type (reader bag-of-words-encoder))
+  (bag-of-words-kind (reader bag-of-words-encoder)))
+
+(defclass bag-of-words-encoder ()
+  ((feature-encoder :initarg :feature-encoder :reader feature-encoder)
+   (feature-mapper :initarg :feature-mapper :reader feature-mapper)
+   (encoded-feature-test :initform #'eql :initarg :encoded-feature-test
+                         :reader encoded-feature-test)
+   (encoded-feature-type :initform t :initarg :encoded-feature-type
+                         :reader encoded-feature-type)
+   (kind :initform :binary :initarg :kind :reader bag-of-words-kind
+         :type (member :binary :frequency
+                       :normalized-binary :normalized-frequency)))
+  (:documentation """ENCODE all features of a document with a sparse
+  vector. Get the features of document from MAPPER, encode each
+  feature with FEATURE-ENCODER. FEATURE-ENCODER may return NIL if the
+  feature is not used. The result is a vector of encoded-feature/value
+  conses. encoded-features are unique (under ENCODED-FEATURE-TEST)
+  within the vector but are in no particular order.
+
+  Depending on KIND, value is calculated in various ways:
+
+  - For :FREQUENCY it is the number of times the corresponding feature
+  was found in DOCUMENT.
+
+  - For :BINARY it is always 1.
+
+  - For :NORMALIZED-FREQUENCY and :NORMALIZED-BINARY are like the
+    unnormalized counterparts except that as the final step values in
+    the assembled sparse vector are normalized to sum to 1.
+
+  - Finally, :COMPACTED-BINARY is like :BINARY but the return values
+    is not a vector of conses, but a vector of element-type
+    ENCODED-FEATURE-TYPE.
+
+  ```cl-transcript
+  (let* ((feature-indexer
+           (make-indexer
+            (alexandria:alist-hash-table '(("I" . 3) ("me" . 2) ("mine" . 1)))
+            2))
+         (bag-of-words-encoder
+           (make-instance 'bag-of-words-encoder
+                          :feature-encoder feature-indexer
+                          :feature-mapper (lambda (fn document)
+                                            (map nil fn document))
+                          :kind :frequency)))
+    (encode bag-of-words-encoder '("All" "through" "day" "I" "me" "mine"
+                                   "I" "me" "mine" "I" "me" "mine")))
+  => #((0 . 3.0d0) (1 . 3.0d0))
+  ```"""))
+
+(defmethod encode ((encoder bag-of-words-encoder) decoded)
+  (let ((feature-encoder (feature-encoder encoder)))
+    (encode/bag-of-words decoded
+                         (feature-mapper encoder)
+                         (lambda (feature)
+                           (encode feature-encoder feature))
+                         :kind (bag-of-words-kind encoder)
+                         :encoded-feature-type (encoded-feature-type encoder))))
+
+(defun encode/bag-of-words (document mapper feature-encoder &key (kind :binary)
+                            (encoded-feature-type t))
+  (assert (member kind '(:binary :frequency
+                         :normalized-binary :normalized-frequency
+                         :compacted-binary)))
+  (let ((v (make-array 20 :adjustable t :fill-pointer 0)))
+    (funcall mapper
+             (lambda (feature)
+               (let ((index (funcall feature-encoder feature)))
+                 (when index
+                   (let ((pos (position index v :key #'car)))
+                     (if pos
+                         (incf (cdr (aref v pos)))
+                         (vector-push-extend (cons index #.(flt 1)) v))))))
+             document)
+    (when (member kind '(:binary :normalized-binary :compacted-binary))
+      (loop for x across v
+            do (setf (cdr x) #.(flt 1))))
+    (when (member kind '(:normalized-binary :normalized-frequency))
+      (let ((sum (loop for x across v summing (cdr x))))
+        (map-into v (lambda (x)
+                      (cons (car x)
+                            (/ (cdr x) sum)))
+                  v)))
+    (let ((r (stable-sort v #'< :key #'car)))
+      (if (eq kind :compacted-binary)
+          (compact-binary-feature-vector r encoded-feature-type)
+          r))))
+
+(defun compact-binary-feature-vector (feature-vector element-type)
+  (make-array (length feature-vector)
+              :element-type element-type
+              :initial-contents (map 'vector #'car feature-vector)))
