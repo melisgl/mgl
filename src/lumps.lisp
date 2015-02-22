@@ -307,6 +307,11 @@
 
 ;;;; Resolve references to lagged clumps behind the scenes.
 
+;;; silence style warnings
+(defgeneric x (object))
+(defgeneric y (object))
+(defgeneric args (object))
+
 (defmethod x :around (object)
   (resolve-clumps (call-next-method)))
 
