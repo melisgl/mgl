@@ -81,16 +81,6 @@
   `(locally ,@body))
 
 
-;;;; Pathnames
-
-(defparameter *mgl-dir*
-  (make-pathname :name nil :type nil
-                 :defaults (asdf:component-pathname (asdf:find-system :mgl))))
-
-(defun asdf-system-relative-pathname (pathname)
-  (namestring (merge-pathnames pathname *mgl-dir*)))
-
-
 ;;;; Misc
 
 (defun split-plist (list keys)

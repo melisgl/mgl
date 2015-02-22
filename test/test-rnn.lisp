@@ -71,13 +71,13 @@
                      (aref (mgl-bp::bpns net) 0)
                      (lumps (aref (mgl-bp::bpns net) 0)))))
         (cl-dot:dot-graph dgraph
-                          (asdf-system-relative-pathname "bpn0.png")
+                          (asdf:system-relative-pathname :mgl "bpn0.png")
                           :format :png))
       (let ((dgraph (cl-dot:generate-graph-from-roots
                      (aref (mgl-bp::bpns net) 1)
                      (lumps (aref (mgl-bp::bpns net) 1)))))
         (cl-dot:dot-graph dgraph
-                          (asdf-system-relative-pathname "bpn1.png")
+                          (asdf:system-relative-pathname :mgl "bpn1.png")
                           :format :png)))
     (log-msg "test cost: ~S~%"
              (bpn-error (make-instance 'function-sampler

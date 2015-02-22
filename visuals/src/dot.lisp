@@ -207,17 +207,20 @@
   (let ((dgraph (cl-dot:generate-graph-from-roots dbn (chunks dbn)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "visuals/test-dbn.png")
+                      (asdf:system-relative-pathname
+                       :mgl "visuals/test-dbn.png")
                       :format :png))
   (let ((dgraph (cl-dot:generate-graph-from-roots dbm (chunks dbm)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "visuals/test-dbm.png")
+                      (asdf:system-relative-pathname
+                       :mgl "visuals/test-dbm.png")
                       :format :png))
   (let ((dgraph (cl-dot:generate-graph-from-roots bpn (clumps bpn)
                                                   '(:rankdir "BT"))))
     (cl-dot:dot-graph dgraph
-                      (asdf-system-relative-pathname "visuals/test-bpn.png")
+                      (asdf:system-relative-pathname
+                       :mgl "visuals/test-bpn.png")
                       :format :png)))
 
 |#

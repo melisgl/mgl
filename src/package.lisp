@@ -26,8 +26,6 @@
    #:*no-array-bounds-check*
    #:the!
    #:with-zero-on-underflow
-   ;; Pathnames
-   #:asdf-system-relative-pathname
    ;; Misc
    #:split-plist
    #:while

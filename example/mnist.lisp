@@ -1414,18 +1414,21 @@
 (let ((dgraph (cl-dot:generate-graph-from-roots *dbn/2* (chunks *dbn/2*)
                                                 '(:rankdir "BT"))))
   (cl-dot:dot-graph dgraph
-                    (asdf-system-relative-pathname "example/mnist-dbn-2.png")
+                    (asdf:system-relative-pathname
+                     :mgl "example/mnist-dbn-2.png")
                     :format :png))
 
 (let ((dgraph (cl-dot:generate-graph-from-roots *dbm/2* (chunks *dbm/2*)
                                                 '(:rankdir "BT"))))
   (cl-dot:dot-graph dgraph
-                    (asdf-system-relative-pathname "example/mnist-dbm-2.png")
+                    (asdf:system-relative-pathname
+                     :mgl "example/mnist-dbm-2.png")
                     :format :png))
 
 (let ((dgraph (cl-dot:generate-graph-from-roots *bpn/2* (lumps *bpn/2*))))
   (cl-dot:dot-graph dgraph
-                    (asdf-system-relative-pathname "example/mnist-bpn-2.png")
+                    (asdf:system-relative-pathname
+                     :mgl "example/mnist-bpn-2.png")
                     :format :png))
 
 (dotimes (i 100)
