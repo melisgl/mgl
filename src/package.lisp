@@ -129,7 +129,8 @@
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util
         #:mgl-dataset #:mgl-core
-        #:mgl-opt)
+        #:mgl-opt
+        #:named-readtables #:pythonic-string-reader)
   (:export #:@mgl-gd))
 
 (mgl-pax:define-package #:mgl-cg

@@ -38,7 +38,8 @@
                              (:file "nlp")
                              (:file "mgl"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
-                            #:mgl-gnuplot #:mgl-mat #:mgl-pax))
+                            #:mgl-gnuplot #:mgl-mat #:mgl-pax
+                            #:named-readtables #:pythonic-string-reader))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system '#:mgl))))
   (asdf:oos 'asdf:load-op '#:mgl-test)

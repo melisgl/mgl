@@ -1,5 +1,7 @@
 (in-package :mgl-gd)
 
+(in-readtable pythonic-string-syntax)
+
 (defsection @mgl-gd (:title "Gradient Descent")
   "Gradient descent is a first-order optimization algorithm. Relying
   completely on first derivatives, it does not even evaluate the
@@ -239,24 +241,26 @@
 
 (defclass sgd-optimizer (batch-gd-optimizer)
   ()
-  (:documentation "With BATCH-SIZE 1 this is Stochastic Gradient
+  (:documentation """With BATCH-SIZE 1 this is Stochastic Gradient
   Descent. With higher batch sizes, one gets mini-batch and Batch
   Gradient Descent.
 
   Assuming that ACCUMULATOR has the sum of gradients for a mini-batch,
   the weight update looks like this:
 
-      delta_w' += momentum * delta_w +
-                  accumulator / batch_size + l2 * w + l1 * sign(w)
+  $$\Delta_w^{t+1} = momentum \Delta_w^t
+    + \frac{accumulator}{batchsize}
+    + l_2 w + l_1 sign(w)$$
 
-      w' -= learning_rate * delta_w'
+  $$w^{t+1} = w^{t} - learningrate \Delta_w$$
 
   which is the same as the more traditional formulation:
 
-      delta_w' += momentum * delta_w +
-                  learning_rate * (df/dw / batch_size + l2 * w + l1 * sign(w))
+  $$\Delta_w^{t+1} = momentum * \Delta_w^{t}
+    + learningrate \left(\frac{\frac{df}{dw}}{batchsize}
+                         + l_2 w + l_1 sign(w)\right)$$
 
-      w' -= delta_w'
+  $$w^{t+1} = w^{t} - \Delta_w$$
 
   but the former works better when batch size, momentum or learning
   rate change during the course of optimization. The above is with
@@ -264,7 +268,7 @@
   also available.
 
   See @MGL-GD-BATCH-GD-OPTIMIZER for the description of the various
-  options common to all batch based optimizers."))
+  options common to all batch based optimizers."""))
 
 (defmethod maybe-update-weights ((optimizer sgd-optimizer)
                                  gradient-source n-new-inputs)
