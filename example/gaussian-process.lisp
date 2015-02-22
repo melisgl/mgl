@@ -208,10 +208,9 @@
                                  ((noise-variance roughness)
                                   nil))))
                          (when learning-rate
-                           (make-instance 'batch-gd-optimizer
+                           (make-instance 'sgd-optimizer
                                           :learning-rate (flt learning-rate)
                                           :momentum (flt 0.9)
-                                          ;; ??
                                           :batch-size 100)))))))
     (monitor-optimization-periodically
      optimizer '((:fn log-bpn-test-error

@@ -27,7 +27,7 @@
 (defun name-in-p (name seq)
   (find name seq :test #'name=))
 
-(defclass test-batch-gd-optimizer (batch-gd-optimizer)
+(defclass test-batch-gd-optimizer (sgd-optimizer)
   ())
 
 (defmethod learning-rate ((optimizer test-batch-gd-optimizer))

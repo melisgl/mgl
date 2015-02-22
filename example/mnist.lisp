@@ -344,7 +344,7 @@
 
 ;;;; DBN training
 
-(defclass mnist-rbm-segment-optimizer (batch-gd-optimizer)
+(defclass mnist-rbm-segment-optimizer (sgd-optimizer)
   ((n-instances-in-epoch
     :initarg :n-instances-in-epoch
     :reader n-instances-in-epoch)))
@@ -693,7 +693,7 @@
   (monitor-bm-mean-field-bottom-up
    sampler dbm (make-mnist-label-monitors dbm :attributes attributes)))
 
-(defclass mnist-dbm-segment-optimizer (batch-gd-optimizer)
+(defclass mnist-dbm-segment-optimizer (sgd-optimizer)
   ((n-instances-in-epoch
     :initarg :n-instances-in-epoch
     :reader n-instances-in-epoch)))
@@ -924,7 +924,7 @@
 (defclass mnist-bpn-gd-optimizer (mnist-bp-optimizer segmented-gd-optimizer)
   ())
 
-(defclass mnist-bpn-gd-segment-optimizer (batch-gd-optimizer)
+(defclass mnist-bpn-gd-segment-optimizer (sgd-optimizer)
   ((n-instances-in-epoch
     :initarg :n-instances-in-epoch
     :reader n-instances-in-epoch)

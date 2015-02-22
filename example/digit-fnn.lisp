@@ -58,7 +58,7 @@
                          ;; optimizer. But it need not be so, in
                          ;; general.
                          (constantly
-                          (make-instance 'batch-gd-optimizer
+                          (make-instance 'sgd-optimizer
                                          :learning-rate 1
                                          :momentum 0.9
                                          :batch-size 100))))
@@ -114,17 +114,17 @@
     (train-digit-fnn)))
 .. training at n-instances: 0
 .. train cost: 0.000e+0 (0)
-.. #<SEGMENTED-GD-OPTIMIZER {10094BA193}>
+.. #<SEGMENTED-GD-OPTIMIZER {100E112E93}>
 ..  SEGMENTED-GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
-..    OPTIMIZERS = (#<BATCH-GD-OPTIMIZER
+..    OPTIMIZERS = (#<SGD-OPTIMIZER
 ..                    #<SEGMENT-SET
 ..                      (#<->WEIGHT # :SIZE 15 1/1 :NORM 0.04473>
 ..                       #<->WEIGHT # :SIZE 3 1/1 :NORM 0.01850>
 ..                       #<->WEIGHT # :SIZE 50 1/1 :NORM 0.07159>
 ..                       #<->WEIGHT # :SIZE 5 1/1 :NORM 0.03056>)
-..                      {100966C8A3}>
-..                    {100940DED3}>)
+..                      {100E335B73}>
+..                    {100E06DF83}>)
 ..    SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
 ..                  15 1/1 :NORM 0.04473>
 ..                #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
@@ -134,7 +134,7 @@
 ..                #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
 ..                  5 1/1 :NORM 0.03056>)
 ..  
-.. #<BATCH-GD-OPTIMIZER {100940DED3}>
+.. #<SGD-OPTIMIZER {100E06DF83}>
 ..  GD-OPTIMIZER description:
 ..    N-INSTANCES = 0
 ..    SEGMENT-SET = #<SEGMENT-SET
@@ -146,7 +146,7 @@
 ..                       50 1/1 :NORM 0.07159>
 ..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
 ..                       5 1/1 :NORM 0.03056>)
-..                    {100966C8A3}>
+..                    {100E335B73}>
 ..    LEARNING-RATE = 1.00000e+0
 ..    MOMENTUM = 9.00000e-1
 ..    MOMENTUM-TYPE = :NORMAL
@@ -157,7 +157,7 @@
 ..  
 ..  BATCH-GD-OPTIMIZER description:
 ..    N-BEFORE-UPATE-HOOK = 0
-..  #<DIGIT-FNN {10094BA5D3}>
+..  #<DIGIT-FNN {100E11A423}>
 ..   BPN description:
 ..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :NORM 0.00000>
 ..                #<->ACTIVATION

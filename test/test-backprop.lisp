@@ -170,7 +170,7 @@
                      (make-instance 'test-bp-optimizer
                                     :segmenter
                                     (repeatedly
-                                      (make-instance 'batch-gd-optimizer
+                                      (make-instance 'sgd-optimizer
                                                      :learning-rate .01
                                                      :momentum 0.9
                                                      :batch-size 10)))))
@@ -253,11 +253,13 @@
                        (make-instance 'test-bp-optimizer
                                       :segmenter
                                       (repeatedly
-                                        ;; Small learning rate and huge decay
-                                        ;; because the network is constructed in
-                                        ;; such a way that pushes all weights up
-                                        ;; towards infinity.
-                                        (make-instance 'batch-gd-optimizer
+                                        ;; Small learning rate and
+                                        ;; huge decay because the
+                                        ;; network is constructed in
+                                        ;; such a way that pushes all
+                                        ;; weights up towards
+                                        ;; infinity.
+                                        (make-instance 'sgd-optimizer
                                                        :learning-rate 0.01
                                                        :momentum 0.9
                                                        :weight-decay 0
@@ -309,7 +311,7 @@
                        (make-instance 'test-bp-optimizer
                                       :segmenter
                                       (repeatedly
-                                        (make-instance 'batch-gd-optimizer
+                                        (make-instance 'sgd-optimizer
                                                        :learning-rate 0.1
                                                        :momentum 0.9
                                                        :batch-size 100)))))
@@ -412,7 +414,7 @@
                        (make-instance 'test-bp-optimizer
                                       :segmenter
                                       (repeatedly
-                                        (make-instance 'batch-gd-optimizer
+                                        (make-instance 'sgd-optimizer
                                                        :learning-rate 0.01
                                                        :momentum 0.9
                                                        :batch-size 10)))))

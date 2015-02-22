@@ -102,7 +102,7 @@
                  'test-optimizer
                  :segmenter
                  (repeatedly
-                   (make-instance 'batch-gd-optimizer
+                   (make-instance 'sgd-optimizer
                                   :learning-rate (flt learning-rate)
                                   :momentum (flt 0.9)
                                   :batch-size batch-size)))
@@ -195,7 +195,7 @@
                                    (make-instance
                                     (if missingp
                                         'per-weight-batch-gd-optimizer
-                                        'batch-gd-optimizer)
+                                        'sgd-optimizer)
                                     :learning-rate
                                     (if (member (name chunk)
                                                 '(((inputs features) :a)
