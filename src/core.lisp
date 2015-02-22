@@ -16,7 +16,7 @@
 
 (defun load-state (filename model)
   "Load weights of MODEL from FILENAME."
-  (with-open-file (stream filename :element-type 'unsigned-byte)
+  (with-open-file (stream filename)
     (read-state model stream)
     (assert (= (file-position stream) (file-length stream)) ()
             "LOAD-STATE did not read the whole file.")))
@@ -30,8 +30,7 @@
     (ensure-directories-exist filename))
   (with-open-file (stream filename :direction :output
                           :if-does-not-exist :create
-                          :if-exists if-exists
-                          :element-type 'unsigned-byte)
+                          :if-exists if-exists)
     (write-state model stream)))
 
 (defun read-state (model stream)
