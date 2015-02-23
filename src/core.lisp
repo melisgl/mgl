@@ -16,13 +16,14 @@
 
 (defun load-state (filename model)
   "Load weights of MODEL from FILENAME."
-  (with-open-file (stream filename)
+  (with-open-file (stream filename
+                          #+sbcl :element-type #+sbcl :default)
     (read-state model stream)
     (assert (= (file-position stream) (file-length stream)) ()
             "LOAD-STATE did not read the whole file.")))
 
 (defun save-state (filename model &key (if-exists :error)
-                     (ensure t))
+                   (ensure t))
   "Save weights of MODEL to FILENAME. If ENSURE, then
   ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
   on to OPEN."
@@ -30,7 +31,8 @@
     (ensure-directories-exist filename))
   (with-open-file (stream filename :direction :output
                           :if-does-not-exist :create
-                          :if-exists if-exists)
+                          :if-exists if-exists
+                          #+sbcl :element-type #+sbcl :default)
     (write-state model stream)))
 
 (defun read-state (model stream)
