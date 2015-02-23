@@ -464,6 +464,7 @@
 (define-descriptions (optimizer adam-optimizer :inheritp t)
   (mean-decay-rate (mean-decay-rate optimizer) "~,5E")
   (mean-decay-rate-decay (mean-decay-rate-decay optimizer) "~,5E")
+  (effective-mean-decay-rate (effective-mean-decay-rate optimizer) "~,5E")
   (variance-decay-rate (variance-decay-rate optimizer) "~,5E")
   (variance-adjustment (variance-adjustment optimizer) "~,5E"))
 
@@ -492,14 +493,19 @@
   (set-n-instances optimizer gradient-source
                    (+ (n-instances optimizer) n-new-inputs)))
 
+(defun effective-mean-decay-rate (optimizer)
+  (- 1 (* (- 1 (mean-decay-rate optimizer))
+          (expt (mean-decay-rate-decay optimizer)
+                ;; The MAX 0 is only to produce sensible output in
+                ;; DESCRIBE when N-STEPS is 0.
+                (max 0 (1- (adam-time-step optimizer)))))))
+
 (defun update-all-weights/adam (optimizer)
   (assert (eq (momentum-type optimizer) :none) ()
           "Momentum is not implemented for ADAM-OPTIMIZER.")
   (incf (adam-time-step optimizer))
   (let* ((mean-decay-rate (mean-decay-rate optimizer))
-         (mean-decay-rate* (- 1 (* (- 1 mean-decay-rate)
-                                   (expt (mean-decay-rate-decay optimizer)
-                                         (1- (adam-time-step optimizer))))))
+         (mean-decay-rate* (effective-mean-decay-rate optimizer))
          (rmsprop (= 1 mean-decay-rate))
          (accumulator (accumulator optimizer))
          (mean-estimates (if rmsprop
@@ -555,9 +561,7 @@
           "Momentum is not implemented for ADAM-OPTIMIZER.")
   (incf (adam-time-step optimizer))
   (let* ((mean-decay-rate (mean-decay-rate optimizer))
-         (mean-decay-rate* (- 1 (* (- 1 mean-decay-rate)
-                                   (expt (mean-decay-rate-decay optimizer)
-                                         (1- (adam-time-step optimizer))))))
+         (mean-decay-rate* (effective-mean-decay-rate optimizer))
          (mean-estimates (if (= 1 mean-decay-rate)
                              nil
                              (ensure-mean-estimates optimizer)))
