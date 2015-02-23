@@ -275,13 +275,13 @@
     (setf (slot-value indexer 'decodings)
           (reverse-map (encodings indexer)))))
 
-(defun make-indexer (scored-features n &key (start 0))
+(defun make-indexer (scored-features n &key (start 0) (class 'encoder/decoder))
   "Take the top N features from SCORED-FEATURES (see
   @MGL-FEATURE-SELECTION), assign indices to them starting from START.
-  Return an ENCODER/DECODER that converts between objects and
-  indices."
+  Return an ENCODER/DECODER (or another CLASS) that converts between
+  objects and indices."
   (let ((encodings (index-scored-features scored-features n :start start)))
-    (make-instance 'encoder/decoder :encodings encodings
+    (make-instance class :encodings encodings
                    :decodings (reverse-map encodings))))
 
 (defun reverse-map (hash-table)

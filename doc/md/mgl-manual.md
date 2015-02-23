@@ -1713,12 +1713,12 @@ is [`DECODE`][c554]ing)
 
 <a name='x-28MGL-CORE-3AMAKE-INDEXER-20FUNCTION-29'></a>
 
-- [function] **MAKE-INDEXER** *SCORED-FEATURES N &KEY (START 0)*
+- [function] **MAKE-INDEXER** *SCORED-FEATURES N &KEY (START 0) (CLASS 'ENCODER/DECODER)*
 
     Take the top `N` features from `SCORED-FEATURES` (see
     [Feature Selection][a313]), assign indices to them starting from `START`.
-    Return an [`ENCODER/DECODER`][169b] that converts between objects and
-    indices.
+    Return an [`ENCODER/DECODER`][169b] (or another `CLASS`) that converts between
+    objects and indices.
 
 Also see [Bag of Words][c1bc].
 
