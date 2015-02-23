@@ -467,13 +467,22 @@
     (call-next-method))
   (let ((n-weights (size (segment-set optimizer))))
     (setf (variance-estimates optimizer) (make-mat n-weights))
-    (setf (mean-estimates optimizer) (make-mat n-weights))))
+    ;; Create this one lazily to save memory. It's not needed if
+    ;; MEAN-DECAY-RATE-DECAY is always 1.
+    (setf (mean-estimates optimizer) nil)))
+
+(defun ensure-mean-estimates (optimizer)
+  (or (mean-estimates optimizer)
+      (setf (mean-estimates optimizer)
+            (make-mat (mat-size (variance-estimates optimizer))))))
 
 (defmethod maybe-update-weights ((optimizer adam-optimizer)
                                  gradient-source n-new-inputs)
   (when (<= (batch-size optimizer)
             (incf (n-instances-in-batch optimizer) n-new-inputs))
-    (update-all-weights/adam optimizer))
+    (if (use-segment-derivatives-p optimizer)
+        (update-all-weights/adam-use-segment-derivatives optimizer)
+        (update-all-weights/adam optimizer)))
   (set-n-instances optimizer gradient-source
                    (+ (n-instances optimizer) n-new-inputs)))
 
@@ -487,7 +496,9 @@
                                          (1- (adam-time-step optimizer))))))
          (rmsprop (= 1 mean-decay-rate))
          (accumulator (accumulator optimizer))
-         (mean-estimates (if rmsprop accumulator (mean-estimates optimizer)))
+         (mean-estimates (if rmsprop
+                             accumulator
+                             (ensure-mean-estimates optimizer)))
          (variance-estimates (variance-estimates optimizer))
          (variance-decay-rate (variance-decay-rate optimizer))
          (variance-adjustment (variance-adjustment optimizer))
@@ -530,6 +541,67 @@
                                  start-in-segment-set)
           (axpy! -1 accumulator weights))))
     (fill! 0 accumulator)
+    (setf (n-instances-in-batch optimizer) 0))
+  (map nil #'funcall (after-update-hook optimizer)))
+
+(defun update-all-weights/adam-use-segment-derivatives (optimizer)
+  (assert (eq (momentum-type optimizer) :none) ()
+          "Momentum is not implemented for ADAM-OPTIMIZER.")
+  (incf (adam-time-step optimizer))
+  (let* ((mean-decay-rate (mean-decay-rate optimizer))
+         (mean-decay-rate* (- 1 (* (- 1 mean-decay-rate)
+                                   (expt (mean-decay-rate-decay optimizer)
+                                         (1- (adam-time-step optimizer))))))
+         (mean-estimates (if (= 1 mean-decay-rate)
+                             nil
+                             (ensure-mean-estimates optimizer)))
+         (variance-estimates (variance-estimates optimizer))
+         (variance-decay-rate (variance-decay-rate optimizer))
+         (variance-adjustment (variance-adjustment optimizer))
+         (learning-rate (learning-rate optimizer))
+         (n-instances (n-instances-in-batch optimizer))
+         (weight-decay (weight-decay optimizer))
+         (weight-penalty (weight-penalty optimizer))
+         (step (adam-time-step optimizer)))
+    (assert (< (expt (- 1 mean-decay-rate) 2)
+               (sqrt (- 1 variance-decay-rate)))
+            () "Convergence constraint not satisfied.")
+    (do-segment-set (segment start-in-segment-set)
+                    (segment-set optimizer)
+      (declare (ignore start-in-segment-set))
+      (let ((accumulator (segment-derivatives segment)))
+        (scal! (/ n-instances) accumulator)))
+    (map nil #'funcall (before-update-hook optimizer))
+    (do-segment-set (segment start-in-segment-set)
+                    (segment-set optimizer)
+      (let ((weights (segment-weights segment))
+            (accumulator (segment-derivatives segment)))
+        (unless (zerop weight-penalty)
+          (add-sign! weight-penalty weights 1 accumulator))
+        (unless (zerop weight-decay)
+          (axpy! weight-decay weights accumulator))
+        (flet ((foo (mean-estimates)
+                 (with-shape-and-displacement (variance-estimates
+                                               (mat-dimensions accumulator)
+                                               start-in-segment-set)
+                   (geem! variance-decay-rate accumulator accumulator
+                          (- 1 variance-decay-rate) variance-estimates)
+                   (adam-update (* learning-rate
+                                   (/ (- 1 (expt (- 1 mean-decay-rate) step)))
+                                   (sqrt (- 1 (expt (- 1 variance-decay-rate)
+                                                    step))))
+                                mean-estimates variance-estimates
+                                variance-adjustment accumulator))))
+          (if mean-estimates
+              (with-shape-and-displacement
+                  (mean-estimates (mat-dimensions accumulator)
+                   start-in-segment-set)
+                (scal! (- 1 mean-decay-rate*) mean-estimates)
+                (axpy! mean-decay-rate* accumulator mean-estimates)
+                (foo mean-estimates))
+              (foo accumulator)))
+        (axpy! -1 accumulator weights)
+        (fill! 0 accumulator)))
     (setf (n-instances-in-batch optimizer) 0))
   (map nil #'funcall (after-update-hook optimizer)))
 

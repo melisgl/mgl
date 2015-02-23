@@ -969,8 +969,9 @@
   (let ((clumps-not-to-be-zeroed ()))
     (do-gradient-sink ((clump accumulator) gradient-sink)
       (if (eq (derivatives clump) accumulator)
-          ;; The optimizer is using DERIVATIVES directly as its
-          ;; accumulator and will zero it when it sees it.
+          ;; The optimizer is using DERIVATIVES directly (see
+          ;; USE-SEGMENT-DERIVATIVES-P) as its accumulator and will
+          ;; zero it when it sees fit.
           (push clump clumps-not-to-be-zeroed)
           (axpy! multiplier (derivatives clump) accumulator)))
     ;; All weight derivatives must be zeroed, even the ones not being
