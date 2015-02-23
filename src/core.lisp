@@ -14,17 +14,17 @@
   (read-state* generic-function)
   (write-state* generic-function))
 
-(defun load-state (filename model)
-  "Load weights of MODEL from FILENAME."
+(defun load-state (filename object)
+  "Load weights of OBJECT from FILENAME."
   (with-open-file (stream filename
                           #+sbcl :element-type #+sbcl :default)
-    (read-state model stream)
+    (read-state object stream)
     (assert (= (file-position stream) (file-length stream)) ()
             "LOAD-STATE did not read the whole file.")))
 
-(defun save-state (filename model &key (if-exists :error)
+(defun save-state (filename object &key (if-exists :error)
                    (ensure t))
-  "Save weights of MODEL to FILENAME. If ENSURE, then
+  "Save weights of OBJECT to FILENAME. If ENSURE, then
   ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
   on to OPEN."
   (when ensure
@@ -33,37 +33,37 @@
                           :if-does-not-exist :create
                           :if-exists if-exists
                           #+sbcl :element-type #+sbcl :default)
-    (write-state model stream)))
+    (write-state object stream)))
 
-(defun read-state (model stream)
-  "Read the weights of MODEL from the bivalent STREAM where weights
+(defun read-state (object stream)
+  "Read the weights of OBJECT from the bivalent STREAM where weights
   mean the learnt parameters. There is currently no sanity checking of
   data which will most certainly change in the future together with
   the serialization format."
-  (read-state* model stream (make-hash-table)))
+  (read-state* object stream (make-hash-table)))
 
-(defun write-state (model stream)
-  "Write weight of MODEL to the bivalent STREAM."
-  (write-state* model stream (make-hash-table)))
+(defun write-state (object stream)
+  "Write weight of OBJECT to the bivalent STREAM."
+  (write-state* object stream (make-hash-table)))
 
-(defgeneric read-state* (model stream context)
+(defgeneric read-state* (object stream context)
   (:documentation "This is the extension point for READ-STATE. It is
   guaranteed that primary READ-STATE* methods will be called only once
-  for each MODEL (under EQ). CONTEXT is an opaque object and must be
+  for each OBJECT (under EQ). CONTEXT is an opaque object and must be
   passed on to any recursive READ-STATE* calls.")
-  (:method :around (model stream context)
-    (unless (gethash model context)
-      (setf (gethash model context) t)
+  (:method :around (object stream context)
+    (unless (gethash object context)
+      (setf (gethash object context) t)
       (call-next-method))))
 
-(defgeneric write-state* (model stream context)
+(defgeneric write-state* (object stream context)
   (:documentation "This is the extension point for WRITE-STATE. It is
   guaranteed that primary WRITE-STATE* methods will be called only
-  once for each MODEL (under EQ). CONTEXT is an opaque object and must
+  once for each OBJECT (under EQ). CONTEXT is an opaque object and must
   be passed on to any recursive WRITE-STATE* calls.")
-  (:method :around (model stream context)
-    (unless (gethash model context)
-      (setf (gethash model context) t)
+  (:method :around (object stream context)
+    (unless (gethash object context)
+      (setf (gethash object context) t)
       (call-next-method))))
 
 

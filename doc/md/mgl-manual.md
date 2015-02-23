@@ -652,49 +652,49 @@ contains it.
 
 <a name='x-28MGL-CORE-3ALOAD-STATE-20FUNCTION-29'></a>
 
-- [function] **LOAD-STATE** *FILENAME MODEL*
+- [function] **LOAD-STATE** *FILENAME OBJECT*
 
-    Load weights of `MODEL` from `FILENAME`.
+    Load weights of `OBJECT` from `FILENAME`.
 
 <a name='x-28MGL-CORE-3ASAVE-STATE-20FUNCTION-29'></a>
 
-- [function] **SAVE-STATE** *FILENAME MODEL &KEY (IF-EXISTS :ERROR) (ENSURE T)*
+- [function] **SAVE-STATE** *FILENAME OBJECT &KEY (IF-EXISTS :ERROR) (ENSURE T)*
 
-    Save weights of `MODEL` to `FILENAME`. If `ENSURE`, then
+    Save weights of `OBJECT` to `FILENAME`. If `ENSURE`, then
     `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
     on to `OPEN`.
 
 <a name='x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29'></a>
 
-- [function] **READ-STATE** *MODEL STREAM*
+- [function] **READ-STATE** *OBJECT STREAM*
 
-    Read the weights of `MODEL` from the bivalent `STREAM` where weights
+    Read the weights of `OBJECT` from the bivalent `STREAM` where weights
     mean the learnt parameters. There is currently no sanity checking of
     data which will most certainly change in the future together with
     the serialization format.
 
 <a name='x-28MGL-CORE-3AWRITE-STATE-20FUNCTION-29'></a>
 
-- [function] **WRITE-STATE** *MODEL STREAM*
+- [function] **WRITE-STATE** *OBJECT STREAM*
 
-    Write weight of `MODEL` to the bivalent `STREAM`.
+    Write weight of `OBJECT` to the bivalent `STREAM`.
 
 <a name='x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29'></a>
 
-- [generic-function] **READ-STATE\*** *MODEL STREAM CONTEXT*
+- [generic-function] **READ-STATE\*** *OBJECT STREAM CONTEXT*
 
     This is the extension point for [`READ-STATE`][2061]. It is
     guaranteed that primary [`READ-STATE*`][3e58] methods will be called only once
-    for each `MODEL` (under EQ). `CONTEXT` is an opaque object and must be
+    for each `OBJECT` (under EQ). `CONTEXT` is an opaque object and must be
     passed on to any recursive [`READ-STATE*`][3e58] calls.
 
 <a name='x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29'></a>
 
-- [generic-function] **WRITE-STATE\*** *MODEL STREAM CONTEXT*
+- [generic-function] **WRITE-STATE\*** *OBJECT STREAM CONTEXT*
 
     This is the extension point for [`WRITE-STATE`][76b9]. It is
     guaranteed that primary [`WRITE-STATE*`][7dbb] methods will be called only
-    once for each `MODEL` (under EQ). `CONTEXT` is an opaque object and must
+    once for each `OBJECT` (under EQ). `CONTEXT` is an opaque object and must
     be passed on to any recursive [`WRITE-STATE*`][7dbb] calls.
 
 <a name='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a>

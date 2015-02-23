@@ -29,7 +29,7 @@
   (@mgl-gd-utilities section))
 
 ;;;; The class hierarchy:
-;;;; 
+;;;;
 ;;;; ITERATIVE-OPTIMIZER
 ;;;;   BASE-GD-OPTIMIZER [not exported]
 ;;;;     GD-OPTIMIZER [not exported]
