@@ -326,6 +326,9 @@
   (map nil #'funcall (after-update-hook optimizer)))
 
 (defun update-all-weights/sgd-normal (optimizer)
+  (assert (not (use-segment-derivatives-p optimizer)) ()
+          "SGD-OPTIMIZER supports USE-SEGMENT-DERIVATIVES-P only with
+          MOMENTUM :NONE.")
   (let ((accumulator (accumulator optimizer))
         (weight-deltas (weight-deltas optimizer))
         (learning-rate (learning-rate optimizer))
@@ -356,6 +359,9 @@
   (map nil #'funcall (after-update-hook optimizer)))
 
 (defun update-all-weights/sgd-nesterov (optimizer)
+  (assert (not (use-segment-derivatives-p optimizer)) ()
+          "SGD-OPTIMIZER supports USE-SEGMENT-DERIVATIVES-P only with
+          MOMENTUM :NONE.")
   (let ((accumulator (accumulator optimizer))
         (weight-deltas (weight-deltas optimizer))
         (learning-rate (learning-rate optimizer))
@@ -687,6 +693,9 @@
                                  gradient-source n-new-inputs)
   (declare (type index n-new-inputs))
   (assert (eq (momentum-type optimizer) :normal))
+  (assert (not (use-segment-derivatives-p optimizer)) ()
+          "NORMALIZED-BATCH-GD-OPTIMIZER does not support ~
+          USE-SEGMENT-DERIVATIVES-P.")
   (let ((accumulator (accumulator optimizer))
         (n-weight-uses-in-batch (n-weight-uses-in-batch optimizer))
         (weight-deltas (weight-deltas optimizer))
@@ -777,6 +786,9 @@
                                  gradient-source n-new-inputs)
   (assert (= 1 n-new-inputs))
   (assert (eq (momentum-type optimizer) :normal))
+  (assert (not (use-segment-derivatives-p optimizer)) ()
+          "PER-WEIGHT-BATCH-GD-OPTIMIZER does not support ~
+          USE-SEGMENT-DERIVATIVES-P.")
   (let ((accumulator (accumulator optimizer))
         (n-weight-uses-in-batch (n-weight-uses-in-batch optimizer))
         (weight-deltas (weight-deltas optimizer))
