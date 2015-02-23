@@ -262,14 +262,14 @@
 
 (defmethod write-state* ((indexer encoder/decoder) stream context)
   (with-standard-io-syntax
-    (prin1 (cons (hash-table-test (encodings indexer))
-                 (alexandria:hash-table-alist (encodings indexer)))
-           stream)))
+    (format stream "~S~%"
+            (cons (hash-table-test (encodings indexer))
+                  (alexandria:hash-table-alist (encodings indexer))))))
 
 (defmethod read-state* ((indexer encoder/decoder) stream context)
-  (destructuring-bind (test alist) (with-standard-io-syntax
-                                     (let ((*read-eval* nil))
-                                       (read stream)))
+  (destructuring-bind (test . alist) (with-standard-io-syntax
+                                       (let ((*read-eval* nil))
+                                         (read stream)))
     (setf (slot-value indexer 'encodings)
           (alexandria:alist-hash-table alist :test test))
     (setf (slot-value indexer 'decodings)
