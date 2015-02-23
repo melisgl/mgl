@@ -15,18 +15,20 @@
   (write-state* generic-function))
 
 (defun load-state (filename object)
-  "Load weights of OBJECT from FILENAME."
+  "Load weights of OBJECT from FILENAME. Return OBJECT."
   (with-open-file (stream filename
                           #+sbcl :element-type #+sbcl :default)
     (read-state object stream)
     (assert (= (file-position stream) (file-length stream)) ()
-            "LOAD-STATE did not read the whole file.")))
+            "LOAD-STATE left ~D bytes unread."
+            (- (file-length stream) (file-position stream)))
+    object))
 
 (defun save-state (filename object &key (if-exists :error)
                    (ensure t))
   "Save weights of OBJECT to FILENAME. If ENSURE, then
   ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
-  on to OPEN."
+  on to OPEN. Return OBJECT."
   (when ensure
     (ensure-directories-exist filename))
   (with-open-file (stream filename :direction :output
@@ -39,12 +41,14 @@
   "Read the weights of OBJECT from the bivalent STREAM where weights
   mean the learnt parameters. There is currently no sanity checking of
   data which will most certainly change in the future together with
-  the serialization format."
-  (read-state* object stream (make-hash-table)))
+  the serialization format. Return OBJECT."
+  (read-state* object stream (make-hash-table))
+  object)
 
 (defun write-state (object stream)
-  "Write weight of OBJECT to the bivalent STREAM."
-  (write-state* object stream (make-hash-table)))
+  "Write weight of OBJECT to the bivalent STREAM. Return OBJECT."
+  (write-state* object stream (make-hash-table))
+  object)
 
 (defgeneric read-state* (object stream context)
   (:documentation "This is the extension point for READ-STATE. It is

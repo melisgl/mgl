@@ -654,7 +654,7 @@ contains it.
 
 - [function] **LOAD-STATE** *FILENAME OBJECT*
 
-    Load weights of `OBJECT` from `FILENAME`.
+    Load weights of `OBJECT` from `FILENAME`. Return `OBJECT`.
 
 <a name='x-28MGL-CORE-3ASAVE-STATE-20FUNCTION-29'></a>
 
@@ -662,7 +662,7 @@ contains it.
 
     Save weights of `OBJECT` to `FILENAME`. If `ENSURE`, then
     `ENSURE-DIRECTORIES-EXIST` is called on `FILENAME`. `IF-EXISTS` is passed
-    on to `OPEN`.
+    on to `OPEN`. Return `OBJECT`.
 
 <a name='x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29'></a>
 
@@ -671,13 +671,13 @@ contains it.
     Read the weights of `OBJECT` from the bivalent `STREAM` where weights
     mean the learnt parameters. There is currently no sanity checking of
     data which will most certainly change in the future together with
-    the serialization format.
+    the serialization format. Return `OBJECT`.
 
 <a name='x-28MGL-CORE-3AWRITE-STATE-20FUNCTION-29'></a>
 
 - [function] **WRITE-STATE** *OBJECT STREAM*
 
-    Write weight of `OBJECT` to the bivalent `STREAM`.
+    Write weight of `OBJECT` to the bivalent `STREAM`. Return `OBJECT`.
 
 <a name='x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29'></a>
 
