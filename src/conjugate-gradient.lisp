@@ -394,7 +394,7 @@
 
     The latter 5 of which are the return values of the CG function.")
    (segment-set :reader segment-set :documentation "Segments to train.")
-   (weights :initform nil :accessor weights :type mat)
+   (weights :initform nil :accessor weights :type (or mat null))
    (spare-vectors
     :initform nil :accessor spare-vectors :type list
     :documentation "Pre-allocated vectors to make CG less consy.")

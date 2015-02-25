@@ -40,14 +40,14 @@
     :type index :initarg :size :reader size
     :documentation "The number of values in a single stripe.")
    (nodes
-    :initform nil :type mat :reader nodes
+    :initform nil :type (or mat null) :reader nodes
     :documentation "The values computed by the lump in the forward
     pass are stored here. It is an `N-STRIPES * SIZE` matrix that has
     storage allocated for `MAX-N-STRIPES * SIZE` elements for
     non-weight lumps. ->WEIGHT lumps have no stripes nor restrictions
     on their shape.")
    (derivatives
-    :type mat :reader derivatives
+    :type (or mat null) :reader derivatives
     :documentation "The derivatives computed in the backward pass are
     stored here. This matrix is very much like [NODES][(reader lump)]
     in shape and size.")
@@ -225,6 +225,7 @@
 
 (defmethod initialize-instance :around ((weight ->weight) &key dimensions size
                                         &allow-other-keys)
+  (assert (or size dimensions) () "SIZE or DIMENSIONS must be specified.")
   (setf (slot-value weight 'dimensions)
         (if dimensions
             (alexandria:ensure-list dimensions)
@@ -1471,7 +1472,7 @@
 (defmethod default-size ((lump ->min))
   (/ (size (x lump)) (group-size lump)))
 
-(defmethod print-lump-parts ((lump ->max) stream)
+(defmethod print-lump-parts ((lump ->min) stream)
   (when (/= (size lump) (group-size lump))
     (format stream " ~S ~S" :group-size (group-size lump))))
 
@@ -1960,7 +1961,7 @@
   (unless (slot-boundp lump 'group-size)
     (setf (slot-value lump 'group-size) (size lump))))
 
-(defmethod print-lump-parts ((lump ->max-channel) stream)
+(defmethod print-lump-parts ((lump ->softmax-xe-loss) stream)
   (when (/= (size lump) (group-size lump))
     (format stream " ~S ~S" :group-size (group-size lump))))
 

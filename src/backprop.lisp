@@ -182,7 +182,7 @@
     can be set. When set N-STRIPES of all CLUMPS get set to the same
     value.")
    (max-n-stripes
-    :initform nil :type index :initarg :max-n-stripes
+    :initform nil :type (or index null) :initarg :max-n-stripes
     :reader max-n-stripes
     :documentation "The maximum number of instances the network can
     operate on in parallel. Within BUILD-FNN or BUILD-RNN, it defaults
