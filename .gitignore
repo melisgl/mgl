@@ -1,5 +1,6 @@
 *~
 *.fasl
+*.*fsl
 *.png
 *.dbn
 *.dbm
