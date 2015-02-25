@@ -478,28 +478,33 @@
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defclass ,name ,direct-superclasses ,direct-slots ,@options)))
 
-(defmacro defmaker (name &rest unkeyword-args)
+(defmacro defmaker ((name &key unkeyword-args (make-instance-args (gensym)))
+                    &body body)
   (destructuring-bind (name maker-name)
       (if (listp name) name (list name name))
     (let ((args (make-instance-args (find-class name))))
       `(defun ,maker-name (,@unkeyword-args
                            &key ,@(remove-unkeyword-args args unkeyword-args))
-         (apply #'make-instance ',name
-                (append ,@(mapcan
-                           (lambda (arg)
-                             (destructuring-bind (var initform
-                                                  &optional indicator) arg
-                               (declare (ignore initform))
-                               (let ((keyword (alexandria:make-keyword var)))
-                                 (cond ((find var unkeyword-args)
-                                        `((list ,keyword ,var)))
-                                       (indicator
-                                        `((if ,indicator
-                                              (list ,keyword ,var)
-                                              ())))
-                                       (t
-                                        `((list ,keyword ,var)))))))
-                           args)))))))
+         (let ((,make-instance-args
+                 (append ,@(mapcan
+                            (lambda (arg)
+                              (destructuring-bind
+                                  (var initform &optional indicator) arg
+                                (declare (ignore initform))
+                                (let ((keyword
+                                        (alexandria:make-keyword var)))
+                                  (cond ((find var unkeyword-args)
+                                         `((list ,keyword ,var)))
+                                        (indicator
+                                         `((if ,indicator
+                                               (list ,keyword ,var)
+                                               ())))
+                                        (t
+                                         `((list ,keyword ,var)))))))
+                            args))))
+           ,(if body
+                `(locally ,@body)
+                `(apply #'make-instance ',name ,make-instance-args)))))))
 
 (defun remove-unkeyword-args (args unkeyword-args)
   (assert (every (lambda (unkeyword-arg)

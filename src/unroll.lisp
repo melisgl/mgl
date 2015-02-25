@@ -389,7 +389,7 @@
 (defclass-now ->constant (lump)
   ((default-value :initform 1)))
 
-(defmaker ->constant)
+(defmaker (->constant))
 
 (defmethod default-size ((lump ->constant))
   1)

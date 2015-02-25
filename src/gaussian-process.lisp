@@ -240,7 +240,7 @@
    ;; one gp per stripe
    (posterior-gps :accessor posterior-gps)))
 
-(defmaker ->gp)
+(defmaker (->gp))
 
 (defmethod default-size ((lump ->gp))
   1)
@@ -370,7 +370,7 @@
     :initarg :drop-negative-index-p
     :reader drop-negative-index-p)))
 
-(defmaker ->ref)
+(defmaker (->ref))
 
 (defmethod default-size ((lump ->ref))
   (size (index lump)))
@@ -427,7 +427,7 @@
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
 
-(defmaker ->rep x n)
+(defmaker (->rep :unkeyword-args (x n)))
 
 (defmethod default-size ((lump ->rep))
   (* (n lump) (size (x lump))))
@@ -478,7 +478,7 @@
   ((x :initarg :x :reader x)
    (n :initarg :n :reader n)))
 
-(defmaker ->stretch x n)
+(defmaker (->stretch :unkeyword-args (x n)))
 
 (defmethod default-size ((lump ->stretch))
   (* (n lump) (size (x lump))))
@@ -562,7 +562,7 @@
    (length-scale :initarg :length-scale :reader length-scale)
    (roughness :initarg :roughness :reader roughness)))
 
-(defmaker ->rough-exponential x)
+(defmaker (->rough-exponential :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->rough-exponential))
   (size (x lump)))
@@ -654,7 +654,7 @@
   ((x :initarg :x :reader x)
    (period :initarg :period :reader period)))
 
-(defmaker ->periodic x)
+(defmaker (->periodic :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->periodic))
   (size (x lump)))

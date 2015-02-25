@@ -52,7 +52,11 @@
         (let* ((inputs (list (->input :size 5)
                              (->weight :name 'scale :size 5)
                              (->weight :name 'shift :size 5)))
-               (lump (apply #'->batch-normalized inputs)))
+               (lump (->batch-normalized
+                      (first inputs)
+                      :normalization (->batch-normalization
+                                      (second inputs) (third inputs)
+                                      :name 'bhn :batch-size 7))))
           (dolist (lump (cons lump inputs))
             (setf (max-n-stripes lump) 7)
             (setf (n-stripes lump) 7))
@@ -61,8 +65,11 @@
         (let* ((inputs (list (->input :size 5)
                              (->weight :name 'scale :size 5)
                              (->weight :name 'shift :size 5)))
-               (lump (->batch-normalized (first inputs) (second inputs)
-                                         (third inputs) :batch-size 7)))
+               (lump (->batch-normalized
+                      (first inputs)
+                      :normalization (->batch-normalization
+                                      (second inputs) (third inputs)
+                                      :name 'bhn :batch-size 7))))
           (dolist (lump (cons lump inputs))
             (setf (max-n-stripes lump) 21)
             (setf (n-stripes lump) 21))

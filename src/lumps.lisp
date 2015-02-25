@@ -221,7 +221,8 @@
   => (5 10)
   ```"))
 
-(defmaker (->weight ->weight*))
+(defmaker (->weight :make-instance-args args)
+  (maybe-copy-weight '->weight args))
 
 (defmethod initialize-instance :around ((weight ->weight) &key dimensions size
                                         &allow-other-keys)
@@ -276,10 +277,10 @@
   lump normally. If FROM-BPN is NIL, then no weights are copied."
   `(call-with-weights-copied ,from-bpn (lambda () ,@body)))
 
-(defun ->weight (&rest args)
+(defun maybe-copy-weight (class-name args)
   (assert (getf args :name) ()
-          "->WEIGHT lumps must be named explicitly to allow weight ~
-          sharing to work.")
+          "~A lumps must be named explicitly to allow weight ~
+          sharing to work." class-name)
   (let* ((name (getf args :name))
          (to-be-copied (find name *lumps-to-copy* :key #'name :test #'name=)))
     (cond (to-be-copied
@@ -287,7 +288,7 @@
              (add-clump to-be-copied *bpn-being-built*))
            to-be-copied)
           (t
-           (apply #'->weight* args)))))
+           (apply #'make-instance class-name args)))))
 
 (defmethod non-constant-mats ((lump ->weight))
   ())
@@ -356,7 +357,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->dropout x)
+(defmaker (->dropout :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->dropout))
   (size (x lump)))
@@ -468,7 +469,7 @@
 (defmethod initialize-instance :before ((lump ->input) &key &allow-other-keys)
   (setf (slot-value lump 'x) lump))
 
-(defmaker ->input)
+(defmaker (->input))
 
 (defmethod forward ((lump ->input))
   ;; Let dropout do its thing.
@@ -481,7 +482,7 @@
 
 (defsection @mgl-bp-activations (:title "Activations")
   (@mgl-bp-activation-subnet section)
-  (@mgl-bp-batch-normalized-lump section))
+  (@mgl-bp-batch-normalization section))
 
 
 (defsection @mgl-bp-activation-subnet (:title "Activation Subnet")
@@ -559,22 +560,47 @@
                     :shared-with-clump shared-with-clump)))))))))
 
 
-(defsection @mgl-bp-batch-normalized-lump (:title "Batch-Normalized Lump")
+(defsection @mgl-bp-batch-normalization (:title "Batch-Normalization")
+  "Batch normalization is special in that it has state apart from the
+  computed results (NODES) and its derivatives (DERIVATIVES). This
+  state is the estimated mean and variance of its inputs and they are
+  encapsulated by ->BATCH-NORMALIZATION.
+
+  The actual work is performed by the ->BATCH-NORMALIZED lump that has
+  a ->BATCH-NORMALIZATION as its BATCH-NORMALIZATION. The reason for
+  this split of responsability is to allow multiple batch
+  normalization operations to share the same state.
+
+  We are going to discuss the concepts from the ground up, but feel
+  free to skip ahead to the ->BATCH-NORMALIZED-ACTIVATION utility
+  function that covers most of the practical use cases."
+  (->batch-normalization class)
+  (scale (reader ->batch-normalization))
+  (shift (reader ->batch-normalization))
+  (batch-size (reader ->batch-normalization))
+  (variance-adjustment (reader ->batch-normalization))
+  (population-decay (reader ->batch-normalization))
+  "Now let's move on to how batch normalization is actually
+  performed."
   (->batch-normalized class)
-  (variance-adjustment (accessor ->batch-normalized))
-  (population-decay (accessor ->batch-normalized))
+  (batch-normalization (reader ->batch-normalized))
   (->batch-normalized-activation function))
 
-(defclass-now ->batch-normalized (lump)
-  ((x :initarg :x :reader x)
-   (scale :initarg :scale :reader scale)
-   (shift :initarg :shift :reader shift)
+(defclass-now ->batch-normalization (->weight)
+  ((scale
+    :initarg :scale :reader scale
+    :documentation "A weight lump of the same size as SHIFT. This is
+    $\\gamma$ in the paper.")
+   (shift
+    :initarg :shift :reader shift
+    :documentation "A weight lump of the same size as SCALE. This is
+    $\\beta$ in the paper.")
    ;; A list of means of (SIZE X), one for each subbatch, of which
    ;; there are (/ N-STRIPES BATCH-SIZE).
    (batch-mean :initform nil :accessor batch-mean)
    (batch-stddev :initform nil :accessor batch-stddev)
    (batch-size
-    :initform nil :initarg :batch-size :accessor batch-size
+    :initform nil :initarg :batch-size :reader batch-size
     :documentation "Normally all stripes participate in the batch.
     Lowering the number of stripes may increase the regularization
     effect, but it also makes the computation less efficient. By
@@ -588,19 +614,89 @@
     normalization. This effectively cancels the regularization effect,
     leaving only the faster learning.")
    (variance-adjustment
-    :initform 1e-8 :accessor variance-adjustment
+    :initform 1e-4 :reader variance-adjustment
     :documentation "A small positive real number that's added to the
-    sample stddev. It's _epsilon_ in the paper.")
+    sample stddev. This is $\\epsilon$ in the paper.")
    (population-mean :initform nil :accessor population-mean)
    (population-stddev :initform nil :accessor population-stddev)
    (population-decay
-    :initform 0.99 :initarg :population-decay :accessor population-decay
+    :initform 0.99 :initarg :population-decay :reader population-decay
     :documentation "While training, an exponential moving average of
     batch means and standard deviances (termed _population
     statistics_) is updated. When making predictions, normalization is
     performed using these statistics. These population statistics are
     persisted by SAVE-STATE.")
    (n-steps :initform 0 :accessor n-steps))
+  (:documentation "The primary purpose of this class is to hold the
+  estimated mean and variance of the inputs to be normalized and allow
+  them to be shared between multiple ->BATCH-NORMALIZED lumps that
+  carry out the computation. These estimations are saved and loaded by
+  SAVE-STATE and LOAD-STATE.
+
+  ```commonlisp
+  (->batch-normalization
+   (->weight :name '(h1 :scale) :size 10)
+   (->weight :name '(h1 :shift) :size 10)
+   :name '(h1 :batch-normalization))
+  ```"))
+
+(defmaker (->batch-normalization
+           :unkeyword-args (scale shift)
+           :make-instance-args args)
+  (maybe-copy-weight '->batch-normalization (list* :size (size scale) args)))
+
+(defmethod default-size ((lump ->batch-normalization))
+  (size (scale lump)))
+
+(defun ensure-batch-mean (lump subbatch-index)
+  (let ((length (length (batch-mean lump))))
+    (if (< subbatch-index length)
+        (setf (elt (batch-mean lump) subbatch-index)
+              (adjust! (elt (batch-mean lump) subbatch-index)
+                       (list 1 (size lump)) 0))
+        (setf (slot-value lump 'batch-mean)
+              (append1 (batch-mean lump) (make-mat (list 1 (size lump)))))))
+  (elt (batch-mean lump) subbatch-index))
+
+(defun ensure-batch-stddev (lump subbatch-index)
+  (let ((length (length (batch-stddev lump))))
+    (if (< subbatch-index length)
+        (setf (elt (batch-stddev lump) subbatch-index)
+              (adjust! (elt (batch-stddev lump) subbatch-index)
+                       (list 1 (size lump)) 0))
+        (setf (slot-value lump 'batch-stddev)
+              (append1 (batch-stddev lump) (make-mat (list 1 (size lump)))))))
+  (elt (batch-stddev lump) subbatch-index))
+
+(defun ensure-population-mean (lump)
+  (setf (slot-value lump 'population-mean)
+        (if (population-mean lump)
+            (adjust! (population-mean lump) (list 1 (size lump)) 0)
+            (make-mat (list 1 (size lump)))))
+  (population-mean lump))
+
+(defun ensure-population-stddev (lump)
+  (setf (slot-value lump 'population-stddev)
+        (if (population-stddev lump)
+            (adjust! (population-stddev lump) (list 1 (size lump)) 0)
+            (make-mat (list 1 (size lump))
+                      :initial-element (variance-adjustment lump))))
+  (population-stddev lump))
+
+(defmethod write-state* ((lump ->batch-normalization) stream context)
+  (write-mat (ensure-population-mean lump) stream)
+  (write-mat (ensure-population-stddev lump) stream))
+
+(defmethod read-state* ((lump ->batch-normalization) stream context)
+  (read-mat (ensure-population-mean lump) stream)
+  (read-mat (ensure-population-stddev lump) stream))
+
+(defclass-now ->batch-normalized (lump)
+  ((x :initarg :x :reader x)
+   (normalization
+    :initarg :normalization :reader batch-normalization
+    :documentation "The ->BATCH-NORMALIZATION of this lump. May be
+    shared between multiple ->BATCH-NORMALIZED lumps."))
   (:documentation "This is an implementation of v1 of the [Batch
   Normalization paper](http://arxiv.org/abs/1502.03167). The output of
   ->BATCH-NORMALIZED is its input normalized so that for all elements
@@ -612,11 +708,6 @@
   the same. The primary purpose of this lump is to speed up learning,
   but it also acts as a regularizer. See the paper for the details.
 
-  In addition to what is to be normalized, ->BATCH-NORMALIZED takes
-  weight lumps of the same size as the primary input. These represent
-  the learnt scaling and shift factors (they are _gamma_ and _beta_ in
-  the paper).
-
   The primary input of ->BATCH-NORMALIZED is often an ->ACTIVATION and
   its output is fed into an activation function (see
   @MGL-BP-ACTIVATION-FUNCTIONS)."))
@@ -625,93 +716,29 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->batch-normalized x scale shift)
+(defmaker (->batch-normalized :unkeyword-args (x)))
 
 (defmethod print-lump-parts ((lump ->batch-normalized) stream)
-  (format stream " ~S ~S" :batch-size (batch-size lump)))
-
-(defmethod non-constant-mats ((lump ->batch-normalized))
-  (list* (population-mean lump) (population-stddev lump)
-         (append (batch-mean lump) (batch-stddev lump) (call-next-method))))
-
-(defun ->batch-normalized-activation (inputs &key (name (gensym)) size
-                                      peepholes batch-size)
-  "Wraps an ->ACTIVATION in ->BATCH-NORMALIZED and creates the two
-  weight lumps for the scale and shift
-  parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
-  10)` is equivalent to:
-
-  ```commonlisp
-  (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
-                      (->weight :name '(h1 :scale) :size 10)
-                      (->weight :name '(h1 :shift) :size 10)
-                      :name '(h1 :batch-normalized-activation))
-  ```
-
-  Note how biases are turned off since normalization will cancel them
-  anyway (but a shift is added which amounts to the same effect)."
-  (->batch-normalized (->activation inputs :name name :size size
-                                    :peepholes peepholes :add-bias-p nil)
-                      (->weight :name `(,name :scale) :size size)
-                      (->weight :name `(,name :shift) :size size)
-                      :batch-size batch-size
-                      :name `(,name :batch-normalized-activation)))
+  (format stream " ~S ~S" :batch-size (batch-size (batch-normalization lump))))
 
 (defmethod default-size ((lump ->batch-normalized))
   (size (x lump)))
 
-(defun ensure-batch-mean (lump subbatch-index)
-  (let ((x (x lump)))
-    (let ((length (length (batch-mean lump))))
-      (if (< subbatch-index length)
-          (setf (elt (batch-mean lump) subbatch-index)
-                (adjust! (elt (batch-mean lump) subbatch-index)
-                         (list 1 (size x)) 0))
-          (setf (slot-value lump 'batch-mean)
-                (append1 (batch-mean lump) (make-mat (list 1 (size x))))))))
-  (elt (batch-mean lump) subbatch-index))
-
-(defun ensure-batch-stddev (lump subbatch-index)
-  (let ((x (x lump)))
-    (let ((length (length (batch-stddev lump))))
-      (if (< subbatch-index length)
-          (setf (elt (batch-stddev lump) subbatch-index)
-                (adjust! (elt (batch-stddev lump) subbatch-index)
-                         (list 1 (size x)) 0))
-          (setf (slot-value lump 'batch-stddev)
-                (append1 (batch-stddev lump) (make-mat (list 1 (size x))))))))
-  (elt (batch-stddev lump) subbatch-index))
-
-(defun ensure-population-mean (lump)
-  (let ((x (x lump)))
-    (setf (slot-value lump 'population-mean)
-          (if (population-mean lump)
-              (adjust! (population-mean lump) (list 1 (size x)) 0)
-              (make-mat (list 1 (size x))))))
-  (population-mean lump))
-
-(defun ensure-population-stddev (lump)
-  (let ((x (x lump)))
-    (setf (slot-value lump 'population-stddev)
-          (if (population-stddev lump)
-              (adjust! (population-stddev lump) (list 1 (size x)) 0)
-              (make-mat (list 1 (size x))))))
-  (population-stddev lump))
-
 (defmethod forward ((lump ->batch-normalized))
-  (let* ((x (x lump))
-         (population-mean (ensure-population-mean lump))
-         (population-stddev (ensure-population-stddev lump))
+  (let* ((state (batch-normalization lump))
+         (x (x lump))
+         (population-mean (ensure-population-mean state))
+         (population-stddev (ensure-population-stddev state))
          (n-stripes (n-stripes x))
-         (batch-size (if (member (batch-size lump) '(nil :use-population))
+         (batch-size (if (member (batch-size state) '(nil :use-population))
                          n-stripes
-                         (batch-size lump)))
-         (use-population-p (eq (batch-size lump) :use-population))
+                         (batch-size state)))
+         (use-population-p (eq (batch-size state) :use-population))
          (nx (nodes x))
          (nl (nodes lump))
          (size (size lump))
          (dimensions (list batch-size size))
-         (decay (population-decay lump)))
+         (decay (population-decay state)))
     (assert (= size (size x)))
     (when *in-training-p*
       (assert (zerop (mod n-stripes batch-size)) ()
@@ -719,21 +746,21 @@
               n-stripes))
     (flet ((foo (batch-mean batch-stddev)
              (with-ones (ones (list batch-size 1))
-               ;; calculate BATCH-MEAN and BATCH-STDDEV, update
-               ;; POPULATION-MEAN and POPULATION-STDDEV
+               ;; Calculate BATCH-MEAN and BATCH-STDDEV, update
+               ;; POPULATION-MEAN and POPULATION-STDDEV.
                (when *in-training-p*
-                 (incf (n-steps lump))
+                 (incf (n-steps state))
                  (sum! nx batch-mean :axis 0)
                  (scal! (/ batch-size) batch-mean)
                  (with-thread-cached-mat (diffs dimensions)
                    ;; Subtract BATCH-MEAN from each row of X and place
-                   ;; the result in DIFFS.
+                   ;; the result into DIFFS.
                    (copy! nx diffs)
                    (gemm! -1 ones batch-mean 1 diffs)
                    (.square! diffs)
                    (sum! diffs batch-stddev :axis 0)
                    (scal! (/ batch-size) batch-stddev)
-                   (.+! (variance-adjustment lump) batch-stddev)
+                   (.+! (variance-adjustment state) batch-stddev)
                    (.sqrt! batch-stddev))
                  ;; update population statistics
                  (scal! decay population-mean)
@@ -746,7 +773,7 @@
                             (or (not use-population-p)
                                 ;; KLUDGE: let the population
                                 ;; statistics settle
-                                (< (n-steps lump) (/ (expt (- 1 decay) 2)))))
+                                (< (n-steps state) (log 0.1 decay))))
                        (values batch-mean batch-stddev)
                        (values population-mean population-stddev))
                  ;; FIXOPT: when training this has been done above
@@ -756,8 +783,8 @@
                    (gemm! 1 ones stddev 0 stddevs)
                    (.inv! stddevs)
                    (.*! stddevs nl)))
-               (scale-columns! (nodes (scale lump)) nl)
-               (gemm! 1 ones (nodes (shift lump)) 1 nl))))
+               (scale-columns! (nodes (scale state)) nl)
+               (gemm! 1 ones (nodes (shift state)) 1 nl))))
       (let ((batch-dimensions (list batch-size size)))
         (with-shape-and-displacement (nx)
           (with-shape-and-displacement (nl)
@@ -766,25 +793,27 @@
                   do (let ((start (* stripe-start size)))
                        (reshape-and-displace! nx batch-dimensions start)
                        (reshape-and-displace! nl batch-dimensions start)
-                       (foo (ensure-batch-mean lump subbatch-index)
-                            (ensure-batch-stddev lump subbatch-index))))))))))
+                       (foo (ensure-batch-mean state subbatch-index)
+                            (ensure-batch-stddev state subbatch-index))))))))))
 
 (defmethod backward ((lump ->batch-normalized))
-  (let* ((x (x lump))
+  (let* ((state (batch-normalization lump))
+         (x (x lump))
          (nx (nodes x))
          (dl/dy (derivatives lump))
          (dl/dx (derivatives x))
-         (gamma (nodes (scale lump)))
-         (dl/dgamma (derivatives (scale lump)))
-         (dl/dbeta (derivatives (shift lump)))
+         (gamma (nodes (scale state)))
+         (dl/dgamma (derivatives (scale state)))
+         (dl/dbeta (derivatives (shift state)))
          (n-stripes (n-stripes lump))
-         (batch-size (if (member (batch-size lump) '(nil :use-population))
+         (batch-size (if (member (batch-size state) '(nil :use-population))
                          n-stripes
-                         (batch-size lump)))
-         (use-population-p (eq (batch-size lump) :use-population))
+                         (batch-size state)))
+         (use-population-p (eq (batch-size state) :use-population))
          (size (size lump))
          (dimensions (list batch-size size))
-         (row-dimensions (list 1 size)))
+         (row-dimensions (list 1 size))
+         (decay (population-decay state)))
     (assert (= size (size x)))
     (assert (zerop (mod n-stripes batch-size)) ()
             "BATCH-SIZE ~S is not a divisor of N-STRIPES ~S." batch-size
@@ -853,22 +882,40 @@
                          (reshape-and-displace! dl/dx batch-dimensions start)
                          (if (and *in-training-p*
                                   (or (not use-population-p)
-                                      (< (n-steps lump)
-                                         (expt (- 1 (population-decay lump))
-                                               -2))))
-                             (foo (ensure-batch-mean lump subbatch-index)
+                                      (< (n-steps state) (log 0.1 decay))))
+                             (foo (ensure-batch-mean state subbatch-index)
                                   (ensure-batch-stddev
-                                   lump subbatch-index))
-                             (foo (ensure-population-mean lump)
-                                  (ensure-population-stddev lump))))))))))))
+                                   state subbatch-index))
+                             (foo (ensure-population-mean state)
+                                  (ensure-population-stddev state))))))))))))
 
-(defmethod write-state* ((lump ->batch-normalized) stream context)
-  (write-mat (ensure-population-mean lump) stream)
-  (write-mat (ensure-population-stddev lump) stream))
+(defun ->batch-normalized-activation (inputs &key (name (gensym)) size
+                                      peepholes (batch-size :use-population))
+  "Creates and wraps an ->ACTIVATION in ->BATCH-NORMALIZED and with
+  its BATCH-NORMALIZATION the two weight lumps for the scale and shift
+  parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
+  10)` is equivalent to:
 
-(defmethod read-state* ((lump ->batch-normalized) stream context)
-  (read-mat (ensure-population-mean lump) stream)
-  (read-mat (ensure-population-stddev lump) stream))
+  ```commonlisp
+  (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
+                      :normalization (->batch-normalization
+                                      (->weight :name '(h1 :scale) :size 10)
+                                      (->weight :name '(h1 :shift) :size 10)
+                                      :name '(h1 :batch-normalization))
+                      :name '(h1 :batch-normalized-activation))
+  ```
+
+  Note how biases are turned off since normalization will cancel them
+  anyway (but a shift is added which amounts to the same effect)."
+  (->batch-normalized
+   (->activation inputs :name name :size size
+                 :peepholes peepholes :add-bias-p nil)
+   :normalization (->batch-normalization
+                   (->weight :name `(,name :scale) :size size)
+                   (->weight :name `(,name :shift) :size size)
+                   :size size :batch-size batch-size
+                   :name `(,name :batch-normalization))
+   :name `(,name :batch-normalized-activation)))
 
 
 (defsection @mgl-bp-embedding-lump (:title "Embedding Lump")
@@ -907,7 +954,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->embedding)
+(defmaker (->embedding))
 
 (defmethod default-size ((lump ->embedding))
   (mat-dimension (nodes (weights lump)) 1))
@@ -977,7 +1024,7 @@
   The SIZE of this lump is the size of its input which is determined
   automatically."))
 
-(defmaker ->sigmoid x)
+(defmaker (->sigmoid :unkeyword-args (x)))
 
 (defmethod forward ((lump ->sigmoid))
   (let ((x (x lump)))
@@ -1072,7 +1119,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->tanh x)
+(defmaker (->tanh :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->tanh))
   (size (x lump)))
@@ -1166,7 +1213,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->scaled-tanh x)
+(defmaker (->scaled-tanh :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->scaled-tanh))
   (size (x lump)))
@@ -1262,7 +1309,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->relu x)
+(defmaker (->relu :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->relu))
   (size (x lump)))
@@ -1362,7 +1409,7 @@
 (defmethod initialize-instance :after ((lump ->max) &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->max x)
+(defmaker (->max :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->max))
   (/ (size (x lump)) (group-size lump)))
@@ -1467,7 +1514,7 @@
 (defmethod initialize-instance :after ((lump ->min) &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->min x)
+(defmaker (->min :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->min))
   (/ (size (x lump)) (group-size lump)))
@@ -1579,7 +1626,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->max-channel x)
+(defmaker (->max-channel :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->max-channel))
   (size (x lump)))
@@ -1724,7 +1771,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->sum x)
+(defmaker (->sum :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->sum))
   1)
@@ -1761,7 +1808,7 @@
   their derivatives. Error lumps have exactly one node (per stripe)
   whose value is computed as the sum of nodes in their input lump."))
 
-(defmaker ->loss x)
+(defmaker (->loss :unkeyword-args (x)))
 
 (defmethod forward :around ((lump ->loss))
   (call-next-method)
@@ -1818,7 +1865,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->squared-difference x y)
+(defmaker (->squared-difference :unkeyword-args (x y)))
 
 (defmethod default-size ((lump ->squared-difference))
   (size (x lump)))
@@ -1951,7 +1998,7 @@
   it is nearly ubiquitous. See the @MGL-FNN-TUTORIAL and the
   @MGL-RNN-TUTORIAL for how this loss and SET-INPUT work together."))
 
-(defmaker ->softmax-xe-loss x)
+(defmaker (->softmax-xe-loss :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->softmax-xe-loss))
   (size (x lump)))
@@ -2254,7 +2301,7 @@
   ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :NORM 0.00000>
   ```"))
 
-(defmaker ->gaussian-random)
+(defmaker (->gaussian-random))
 
 (defmethod forward ((lump ->gaussian-random))
   (gaussian-random! (nodes lump) :mean (mean lump)
@@ -2285,7 +2332,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->sample-binary x)
+(defmaker (->sample-binary :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->sample-binary))
   (size (x lump)))
@@ -2344,7 +2391,7 @@
   of this lump. If TRANSPOSE-WEIGHTS-P then WEIGHTS is `N x M` and `X
   * WEIGHTS'` is computed."))
 
-(defmaker ->v*m x weights)
+(defmaker (->v*m :unkeyword-args (x weights)))
 
 (defmethod initialize-instance :after ((lump ->v*m) &key
                                        &allow-other-keys)
@@ -2439,7 +2486,7 @@
 (defmethod initialize-instance :after ((lump ->+) &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->+ args)
+(defmaker (->+ :unkeyword-args (args)))
 
 (defmethod default-size ((lump ->+))
   (if (slot-boundp lump 'size)
@@ -2495,7 +2542,7 @@
 (defmethod initialize-instance :after ((lump ->*) &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->* x y)
+(defmaker (->* :unkeyword-args (x y)))
 
 (defmethod default-size ((lump ->*))
   (size (x lump)))
@@ -2574,7 +2621,7 @@
 (defclass-now ->abs (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->abs x)
+(defmaker (->abs :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->abs))
   (size (x lump)))
@@ -2630,7 +2677,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->sin x)
+(defmaker (->sin :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->sin))
   (size (x lump)))
@@ -2710,7 +2757,7 @@
 (defclass-now ->exp (lump)
   ((x :initarg :x :reader x)))
 
-(defmaker ->exp x)
+(defmaker (->exp :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->exp))
   (size (x lump)))
@@ -2760,7 +2807,7 @@
     vector then its length must be MAX-N-STRIPES which automatically
     maintained.")))
 
-(defmaker ->normalized x)
+(defmaker (->normalized :unkeyword-args (x)))
 
 (defmethod default-size ((lump ->normalized))
   (size (x lump)))
@@ -2988,7 +3035,7 @@
                                        &key size &allow-other-keys)
   (check-size-and-default-size lump size))
 
-(defmaker ->seq-barrier)
+(defmaker (->seq-barrier))
 
 (defmethod default-size ((lump ->seq-barrier))
   (size (funcall (seq-elt-fn lump) 0)))
