@@ -68,7 +68,7 @@
 
 (defun apply-monitors (monitors &rest arguments)
   "Call APPLY-MONITOR on each monitor in MONITORS and ARGUMENTS. This
-  qqqqis how an event is fired."
+  is how an event is fired."
   (dolist (monitor monitors)
     (apply #'apply-monitor monitor arguments)))
 
@@ -107,7 +107,7 @@
   the model's results to MONITORS.
 
   See the model specific versions of this functions such as
-  MONITOR-BPN-RESULTS."
+  MGL-BP:MONITOR-BPN-RESULTS."
   (when monitors
     (do-batches-for-model (batch (dataset model))
       (apply-monitors monitors batch (funcall fn batch)))

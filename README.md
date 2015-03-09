@@ -1,4 +1,4 @@
-<a name='x-28MGL-3A-40MGL-README-20MGL-PAX-3ASECTION-29'></a>
+<a id='x-28MGL-3A-40MGL-README-20MGL-PAX-3ASECTION-29'></a>
 
 # MGL
 
@@ -10,7 +10,7 @@
 - [4 Documentation][0dee]
 
 ###### \[in package MGL\]
-<a name='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a>
+<a id='x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29'></a>
 
 ## 1 mgl ASDF System Details
 
@@ -22,7 +22,7 @@
 - Mailto: [mega@retes.hu](mailto:mega@retes.hu)
 - Homepage: [http://quotenil.com](http://quotenil.com)
 
-<a name='x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29'></a>
+<a id='x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29'></a>
 
 ## 2 Overview
 
@@ -38,7 +38,7 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
-<a name='x-28MGL-3A-40MGL-LINKS-20MGL-PAX-3ASECTION-29'></a>
+<a id='x-28MGL-3A-40MGL-LINKS-20MGL-PAX-3ASECTION-29'></a>
 
 ## 3 Links
 
@@ -47,7 +47,7 @@ and the [HTML
 documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
 for the latest version.
 
-<a name='x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29'></a>
+<a id='x-28MGL-3A-40MGL-DOCUMENTATION-20MGL-PAX-3ASECTION-29'></a>
 
 ## 4 Documentation
 

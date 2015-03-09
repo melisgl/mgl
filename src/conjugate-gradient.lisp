@@ -73,8 +73,6 @@
   (*default-max-n-evaluations-per-line-search* variable)
   (*default-max-n-evaluations* variable)
   (cg-optimizer class)
-  (n-instances (reader iterative-optimizer))
-  (termination (accessor iterative-optimizer))
   (batch-size (accessor cg-optimizer))
   (cg-args (accessor cg-optimizer))
   (on-cg-batch-done (accessor cg-optimizer))
