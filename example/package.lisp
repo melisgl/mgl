@@ -7,9 +7,7 @@
    #:with-example-log))
 
 (cl:defpackage :mgl-example-mnist
-  (:use #:common-lisp #:mgl-mat #:mgl-util #:mgl-log #:mgl-dataset #:mgl-core
-        #:mgl-opt #:mgl-gd #:mgl-cg
-        #:mgl-bm #:mgl-bp #:mgl-unroll #:mgl-example-util)
+  (:use #:common-lisp #:mgl)
   (:export #:*mnist-dir*
            #:train-mnist))
 

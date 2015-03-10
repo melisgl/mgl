@@ -110,7 +110,10 @@
   (merge-pathnames "mnist-save/" *example-dir*)
   "Set this to the directory where the trained models are saved.")
 
+(defparameter *n-labels* 10)
+
 (defstruct image
+  (id nil :type fixnum)
   (label nil :type (integer 0 10))
   (array nil :type mat))
 
@@ -159,33 +162,35 @@
 (defun load-training (&optional (mnist-data-dir *mnist-data-dir*))
   (log-msg "Loading training images~%")
   (prog1
-      (map 'vector
-           (lambda (label array)
-             (make-image :label label :array array))
-           (with-open-file (s (merge-pathnames "train-labels-idx1-ubyte"
-                                               mnist-data-dir)
-                            :element-type 'unsigned-byte)
-             (read-image-labels s))
-           (with-open-file (s (merge-pathnames "train-images-idx3-ubyte"
-                                               mnist-data-dir)
-                            :element-type 'unsigned-byte)
-             (read-image-arrays s)))
+      (let ((id 0))
+        (map 'vector
+             (lambda (label array)
+               (make-image :id (incf id) :label label :array array))
+             (with-open-file (s (merge-pathnames "train-labels-idx1-ubyte"
+                                                 mnist-data-dir)
+                                :element-type 'unsigned-byte)
+               (read-image-labels s))
+             (with-open-file (s (merge-pathnames "train-images-idx3-ubyte"
+                                                 mnist-data-dir)
+                                :element-type 'unsigned-byte)
+               (read-image-arrays s))))
     (log-msg "Loading training images done~%")))
 
 (defun load-test (&optional (mnist-data-dir *mnist-data-dir*))
   (log-msg "Loading test images~%")
   (prog1
-      (map 'vector
-           (lambda (label array)
-             (make-image :label label :array array))
-           (with-open-file (s (merge-pathnames "t10k-labels-idx1-ubyte"
-                                               mnist-data-dir)
-                            :element-type 'unsigned-byte)
-             (read-image-labels s))
-           (with-open-file (s (merge-pathnames "t10k-images-idx3-ubyte"
-                                               mnist-data-dir)
-                            :element-type 'unsigned-byte)
-             (read-image-arrays s)))
+      (let ((id 0))
+        (map 'vector
+             (lambda (label array)
+               (make-image :id (decf id) :label label :array array))
+             (with-open-file (s (merge-pathnames "t10k-labels-idx1-ubyte"
+                                                 mnist-data-dir)
+                                :element-type 'unsigned-byte)
+               (read-image-labels s))
+             (with-open-file (s (merge-pathnames "t10k-images-idx3-ubyte"
+                                                 mnist-data-dir)
+                                :element-type 'unsigned-byte)
+               (read-image-arrays s))))
     (log-msg "Loading test images done~%")))
 
 (defvar *training-images*)
@@ -200,6 +205,12 @@
   (unless (boundp '*test-images*)
     (setq *test-images* (load-test)))
   *test-images*)
+
+(defun find-image-by-id (id)
+  (find id (if (plusp id)
+               (training-images)
+               (test-images))
+        :key #'image-id))
 
 
 ;;;; Sampling, clamping, utilities
@@ -460,6 +471,72 @@
       (let ((mgl-bp::*bpn-being-built* bpn))
         (make-softmax (list lump)))
       bpn)))
+
+(defun predict-batch-with-bpn (bpn dataset)
+  (let ((prediction-nodes (nodes (find-clump 'prediction bpn)))
+        (mgl-bp::*in-training-p* nil)
+        (predictions (make-hash-table)))
+    (do-batches-for-model (samples (dataset bpn))
+      (set-input samples bpn)
+      (forward bpn)
+      (loop for sample in samples
+            for i upfrom 0
+            do (let ((instance (first sample)))
+                 (setf (gethash instance predictions)
+                       (with-shape-and-displacement (prediction-nodes)
+                         (let ((row (reshape-to-row-matrix!
+                                     prediction-nodes i)))
+                           (copy-mat (reshape! row (mat-size row)))))))))
+    (alexandria:hash-table-alist predictions)))
+
+(defun classification-accuracy (predictions)
+  (let ((n-hits 0))
+    (loop for prediction in predictions
+          do (destructuring-bind (image . confidences) prediction
+               (when (= (image-label image)
+                        (first (max-row-positions
+                                (reshape confidences
+                                         (list 1 (mat-size confidences))))))
+                 (incf n-hits))))
+    (/ n-hits (length predictions))))
+
+(defun save-predictions (predictions filename)
+  (with-standard-io-syntax
+    (with-open-file (stream filename :direction :output
+                            :if-does-not-exist :create)
+      (dolist (prediction (sort (copy-seq predictions) #'<
+                                :key (lambda (prediction)
+                                       (image-id (car prediction)))))
+        (destructuring-bind (image . confidences) prediction
+          (format stream "~S ~S~%" (image-id image)
+                  (coerce (mat-to-array confidences) 'list)))))))
+
+(defun load-predictions (filename)
+  (with-open-file (stream filename)
+    (loop for line = (read-line stream nil nil)
+          while line
+          collect (with-input-from-string (stream line)
+                    (cons (let ((image-id (read stream)))
+                            (or (find-image-by-id image-id)
+                                (error "Bad image id ~S in line ~S."
+                                       image-id line)))
+                          (array-to-mat (coerce (read stream) 'vector)))))))
+
+(defun average-overlapping-predictions (prediction-seqs)
+  (let ((r (make-hash-table)))
+    (loop for predictions in prediction-seqs
+          do (loop for prediction in predictions
+                   do (destructuring-bind (instance . confidences) prediction
+                        (let ((entry (gethash instance r
+                                              (cons 0 (make-mat *n-labels*)))))
+                          (incf (car entry))
+                          (axpy! 1 confidences (cdr entry))
+                          (setf (gethash instance r) entry)))))
+    (mapcar (lambda (pair)
+              (cons (car pair)
+                    (destructuring-bind (n . confidences) (cdr pair)
+                      (scal! (/ n) confidences))))
+            (alexandria:hash-table-alist r))))
 
 
 ;;;; BPN training
@@ -1176,7 +1253,7 @@
             (save-state bpn-filename bpn)))))))
 
 
-;;;; Max-channel
+;;;; Max-channel [5]
 
 (defun build-max-channel-mnist-bpn (&key (n-units-1 1200) (n-units-2 1200)
                                     (group-size 2))
@@ -1193,7 +1270,7 @@
     (f3 (->dropout f3*))
     (prediction (make-softmax f3))))
 
-(defun train-mnist/5 (&key training test quick-run-p bpn-var bpn-filename)
+(defun train-mnist/5 (&key training test quick-run-p bpn-var filename)
   (with-cuda* ()
     (with-example-log ()
       (repeatably ()
@@ -1209,11 +1286,12 @@
                               :l2-upper-bound (sqrt 3.75)
                               :input-weight-penalty 0.000001
                               :batch-size 96)
-          (when (and bpn-filename (not quick-run-p))
-            (save-state bpn-filename bpn)))))))
+          (when (and filename (not quick-run-p))
+            (save-state filename bpn))
+          bpn)))))
 
 
-;;;; Batch-normalized max-channel
+;;;; Batch-normalized max-channel [6]
 
 (defun build-batch-normalized-max-channel-mnist-bpn
     (&key (n-units-1 1200) (n-units-2 1200) (group-size 2))
@@ -1253,6 +1331,100 @@
                               :batch-size 96)
           (when (and bpn-filename (not quick-run-p))
             (save-state bpn-filename bpn)))))))
+
+
+;;;; CV bagging [7]
+
+(defun train-mnist/7 (&key training test quick-run-p bpn-var filename)
+  (with-cuda* ()
+    (with-example-log ()
+      (repeatably ()
+        (log-msg "TRAIN-MNIST/7~%")
+        (let ((bpn nil))
+          (setq* (bpn bpn-var) (build-max-channel-mnist-bpn))
+          (init-bpn-weights bpn :stddev 0.01)
+          (train-mnist-bpn-gd bpn training test
+                              :n-softmax-epochs 0
+                              :n-epochs (if quick-run-p 2 1500)
+                              :learning-rate 1
+                              :learning-rate-decay (expt 0.998 2)
+                              :l2-upper-bound (sqrt 3.75)
+                              :input-weight-penalty 0.000001
+                              :batch-size 96)
+          (when (and filename (not quick-run-p))
+            (save-state filename bpn))
+          bpn)))))
+
+(defun run-cv-bagging (fn &key (save-dir *mnist-save-dir*)
+                       (training (training-images))
+                       (test (test-images))
+                       (n-folds 2)
+                       n-iterations)
+  (assert (or (not (uiop/filesystem:directory-exists-p save-dir))
+              (endp (directory (merge-pathnames "*" save-dir)))))
+  (ensure-directories-exist save-dir)
+  (let* ((*experiment-random-seed* 1234)
+         (bag-index 0))
+    (repeatably ()
+      (bag-cv training
+              (lambda (fold out-of-bag in-bag)
+                (log-msg "Starting bag ~S (fold ~S)~%" bag-index fold)
+                (trivial-garbage:gc :full t)
+                (let* ((bpn
+                         (let ((*experiment-random-seed*
+                                 (+ *experiment-random-seed* bag-index)))
+                           (funcall fn :training in-bag
+                                    :test out-of-bag
+                                    :filename
+                                    (merge-pathnames
+                                     (format nil "bag-~S-model" bag-index)
+                                     save-dir))))
+                       (out-of-bag-predictions
+                         (predict-batch-with-bpn
+                          bpn (make-sampler out-of-bag))))
+                  (save-predictions
+                   out-of-bag-predictions
+                   (merge-pathnames
+                    (format nil "bag-~S-out-of-bag-predictions-bpn" bag-index)
+                    save-dir))
+                  (when test
+                    (save-predictions
+                     (predict-batch-with-bpn bpn (make-sampler test))
+                     (merge-pathnames
+                      (format nil "bag-~S-test-predictions-bpn" bag-index)
+                      save-dir)))
+                  (log-msg "Finished bag ~S~%" bag-index)
+                  (let ((out-of-bag-predictions
+                          (average-overlapping-predictions
+                           (mapcar
+                            #'load-predictions
+                            (directory (merge-pathnames
+                                        "bag-*-out-of-bag-predictions-bpn"
+                                        save-dir)))))
+                        (test-predictions
+                          (average-overlapping-predictions
+                           (mapcar
+                            #'load-predictions
+                            (directory (merge-pathnames
+                                        "bag-*-test-predictions-bpn"
+                                        save-dir))))))
+                    (log-msg "Test results with ~S bags~%" (1+ bag-index))
+                    (log-msg "out-of-bag acc. ~,2F~%"
+                             (* 100 (classification-accuracy
+                                     out-of-bag-predictions)))
+                    (when test
+                      (log-msg "test       acc. ~,2F~%"
+                               (* 100 (classification-accuracy
+                                       test-predictions))))))
+                (incf bag-index)
+                (values))
+              :n-folds n-folds
+              :n n-iterations
+              :split-fn (lambda (seq fold n-folds)
+                          (split-stratified seq fold n-folds
+                                            :key #'image-label))
+              :pass-fold t
+              :random-state (make-random-state nil)))))
 
 
 ;;;; Globals for tracking progress of training and filenames
@@ -1365,6 +1537,9 @@
                                             seq fold n-folds
                                             :key #'image-label))
                                :pass-fold t))
+
+(run-cv-bagging 'train-mnist/7 :training (training-images) :test (test-images)
+                :save-dir (merge-pathnames "cv-bagged-7/" *mnist-save-dir*))
 
 (repeatably ()
   (with-example-log ()
