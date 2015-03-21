@@ -7,7 +7,7 @@
    #:with-example-log))
 
 (cl:defpackage :mgl-example-mnist
-  (:use #:common-lisp #:mgl)
+  (:use #:common-lisp #:mgl #:mgl-example-util)
   (:export #:*mnist-dir*
            #:train-mnist))
 
