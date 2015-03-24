@@ -437,6 +437,10 @@
 
 ;;; Return a vector of indices. (ELT SEQ (AREF PERMUTATION I)) is
 ;;; sorted by PRED.
+;;;
+;;;     (let ((seq '(3 1 2)))
+;;;       (permute seq (sorting-permutation seq #'<)))
+;;;     => (1 2 3)
 (defun sorting-permutation (seq pred &key (key #'identity))
   (sort (coerce (alexandria:iota (length seq))
                 'vector)

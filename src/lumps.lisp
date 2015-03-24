@@ -2927,7 +2927,7 @@
   `c` is the cell state and `m` is the actual output.
 
   Weight matrices for connections from `c` (`W_ic`, `W_fc` and `W_oc`)
-  diagonal and are represented by just the vector of diagonal values.
+  are diagonal and represented by just the vector of diagonal values.
   These connections are only added if PEEPHOLES is true.
 
   A notable difference from the paper is that in addition to being a
