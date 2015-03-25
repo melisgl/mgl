@@ -1052,7 +1052,11 @@
         for yi of-type index upfrom start-y
         do (setf (aref y yi)
                  (let ((xe (aref x xi)))
-                   (/ (1+ (with-zero-on-underflow (xe) (exp (- xe)))))))))
+                   (cond ((< 88.0 xe)
+                          1.0)
+                         ((< xe -88.0)
+                          0.0)
+                         (t (/ (1+ (exp (- xe))))))))))
 
 (define-cuda-kernel (cuda-sigmoid!)
     (void ((x :mat :input) (n int) (y :mat :output)))
