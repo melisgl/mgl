@@ -4838,9 +4838,11 @@ grow into a more serious toolset for NLP eventually.
     determines the largest n-grams to consider.
     
     The first return value is the [`BLEU`][edb3] score (between 0 and 1, not as a
-    percentage), the second value is the brevity penalty and the third
-    is a list n-gram precisions (also between 0 and 1 or `NIL`), one for
-    each element in [1..`N`][].
+    percentage). The second value is the sum of the lengths of
+    `CANDIDATES` divided by the sum of the lengths of `REFERENCES` (or `NIL`,
+    if the denominator is 0). The third is a list of n-gram
+    precisions (also between 0 and 1 or `NIL`), one for each element in
+    [1..`N`][].
     
     This is basically a reimplementation of
     [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
@@ -4849,7 +4851,7 @@ grow into a more serious toolset for NLP eventually.
     (bleu '((1 2 3 4) (a b))
           '((1 2 3 4) (1 2)))
     => 0.8408964
-    => 1.0
+    => 1
     => (;; 1-gram precision: 4/6
         2/3
         ;; 2-gram precision: 3/4

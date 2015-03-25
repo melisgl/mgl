@@ -16,7 +16,7 @@
                                                   ((a b) (1 2)))
                                                 :candidate-key #'first
                                                 :reference-key #'second))
-                 '(0.8408964 1.0 (2/3 3/4 1 1)))))
+                 '(0.8408964 1 (2/3 3/4 1 1)))))
 
 ;;; This can be used to compare to multi-bleu.perl.
 #+nil
