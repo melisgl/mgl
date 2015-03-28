@@ -2138,7 +2138,7 @@ too.
     variance of each derivative as exponential moving averages. The step
     it takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
     mean, `V` is the estimated variance, and `E` is a small adjustment
-    factor to prevent the gradient from blowing up. See version 2 of the
+    factor to prevent the gradient from blowing up. See version 5 of the
     [paper](http://arxiv.org/abs/1412.6980) for more.
     
     Note that using momentum is not supported with Adam. In fact, an
@@ -2153,31 +2153,31 @@ too.
 
     Same thing as [`LEARNING-RATE`][4ffe] but with the default suggested by the Adam paper.
 
-<a id='x-28MGL-GD-3AMEAN-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+<a id='x-28MGL-GD-3AMEAN-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **MEAN-DECAY-RATE** *ADAM-OPTIMIZER* *(:MEAN-DECAY-RATE = 0.1)*
-
-    A number between 0 and 1 that determines how fast
-    the estimated mean of derivatives is updated. 1 basically gives
-    you `RMSPROP` (if [`VARIANCE-DECAY-RATE`][ab6d] is not too small) or
-    AdaGrad (if [`VARIANCE-DECAY-RATE`][ab6d] is infinitesimal and the learning
-    rate is annealed. This is `B_1` in the paper.
-
-<a id='x-28MGL-GD-3AMEAN-DECAY-RATE-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
-
-- [accessor] **MEAN-DECAY-RATE-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY-RATE-DECAY = (- 1 1.d-7))*
-
-    A value that should be close to 1. The gap between
-    1 and [`MEAN-DECAY-RATE`][cac7] is multiplied by this value after each
-    update. This is `lambda` in the paper.
-
-<a id='x-28MGL-GD-3AVARIANCE-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
-
-- [accessor] **VARIANCE-DECAY-RATE** *ADAM-OPTIMIZER* *(:VARIANCE-DECAY-RATE = 0.001)*
+- [accessor] **MEAN-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY = 0.9)*
 
     A number between 0 and 1 that determines how fast
-    the estimated variance of derivatives is updated. This is `B_2` in
+    the estimated mean of derivatives is updated. 0 basically gives
+    you `RMSPROP` (if [`VARIANCE-DECAY`][192e] is not too large) or AdaGrad (if
+    [`VARIANCE-DECAY`][192e] is close to 1 and the learning rate is annealed.
+    This is $\beta\_1$ in the paper.
+
+<a id='x-28MGL-GD-3AMEAN-DECAY-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **MEAN-DECAY-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY-DECAY = (- 1 1.d-7))*
+
+    A value that should be close to 1. [`MEAN-DECAY`][c434] is
+    multiplied by this value after each update. This is $\lambda$ in
     the paper.
+
+<a id='x-28MGL-GD-3AVARIANCE-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
+
+- [accessor] **VARIANCE-DECAY** *ADAM-OPTIMIZER* *(:VARIANCE-DECAY = 0.999)*
+
+    A number between 0 and 1 that determines how fast
+    the estimated variance of derivatives is updated. This is
+    $\beta\_2$ in the paper.
 
 <a id='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
@@ -3375,9 +3375,9 @@ the concepts involved. Make sure you are comfortable with
     (minimize (monitor-optimization-periodically
                (make-instance 'adam-optimizer
                               :learning-rate 0.2
-                              :mean-decay-rate 0.1
-                              :mean-decay-rate-decay 0.9
-                              :variance-decay-rate 0.1
+                              :mean-decay 0.9
+                              :mean-decay-decay 0.9
+                              :variance-decay 0.9
                               :batch-size 100)
                '((:fn log-test-error :period 30000)
                  (:fn reset-optimization-monitors :period 3000)))
@@ -4958,6 +4958,7 @@ grow into a more serious toolset for NLP eventually.
   [1605]: #x-28MGL-BP-3ARENORMALIZE-ACTIVATIONS-20FUNCTION-29 "(MGL-BP:RENORMALIZE-ACTIVATIONS FUNCTION)"
   [169b]: #x-28MGL-CORE-3AENCODER-2FDECODER-20CLASS-29 "(MGL-CORE:ENCODER/DECODER CLASS)"
   [181f]: #x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29 "Clump API"
+  [192e]: #x-28MGL-GD-3AVARIANCE-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-DECAY (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [1a5d]: #x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29 "Differentiable Functions"
   [1f57]: #x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION)"
   [1f98]: #x-28MGL-BP-3A-40MGL-BP-INPUTS-20MGL-PAX-3ASECTION-29 "Inputs"
@@ -5104,7 +5105,6 @@ grow into a more serious toolset for NLP eventually.
   [aa2d]: #x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:STEP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [ab6b]: #x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:->EMBEDDING))"
-  [ab6d]: #x-28MGL-GD-3AVARIANCE-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:VARIANCE-DECAY-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [abfb]: #x-28MGL-BP-3A--3ESUM-20CLASS-29 "(MGL-BP:->SUM CLASS)"
   [aec4]: #x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29 "Time Warp"
   [af7d]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "Samplers"
@@ -5134,11 +5134,11 @@ grow into a more serious toolset for NLP eventually.
   [c27a]: #x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29 "(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"
   [c2a0]: #x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29 "FNN Tutorial"
   [c401]: #x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29 "(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"
+  [c434]: #x-28MGL-GD-3AMEAN-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:MEAN-DECAY (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [c54c]: #x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-GRADIENT-SOURCE* GENERIC-FUNCTION)"
   [c554]: #x-28MGL-CORE-3ADECODE-20GENERIC-FUNCTION-29 "(MGL-CORE:DECODE GENERIC-FUNCTION)"
   [c83f]: #x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29 "RNN Tutorial"
   [ca85]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "CV Bagging"
-  [cac7]: #x-28MGL-GD-3AMEAN-DECAY-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "(MGL-GD:MEAN-DECAY-RATE (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER))"
   [cc50]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29 "Classification Monitors"
   [d011]: #x-28MGL-CORE-3A-40MGL-ATTRIBUTES-20MGL-PAX-3ASECTION-29 "Attributes"
   [d0f6]: #x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29 "(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"
