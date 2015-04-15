@@ -2093,7 +2093,8 @@
         (set (aref buffer thread-idx-x) 0.0)
         (do ((i i-start (+ i i-step)))
             ((<= i-end i))
-          (let ((z (exp (- (aref input i) max-k))))
+          ;; Use the approximate __expf() function to gain about 10%.
+          (let ((z (__exp (- (aref input i) max-k))))
             (set (aref buffer thread-idx-x)
                  (+ (aref buffer thread-idx-x) z))
             (set (aref output i) z))))
@@ -2107,10 +2108,13 @@
           (set (aref buffer #.*n-softmax-threads*) sum-k)))
       (syncthreads)
       ;; softmax
-      (let ((sum-k (aref buffer #.*n-softmax-threads*)))
+      (let ((sum-kk (aref buffer #.*n-softmax-threads*)))
         (do ((i i-start (+ i i-step)))
             ((<= i-end i))
-          (set (aref output i) (/ (aref output i) sum-k)))))))
+          (set (aref output i)
+               ;; Using __divide nets 20%, and 40% when denormals are
+               ;; involved.
+               (__divide (aref output i) sum-kk)))))))
 
 (defmacro do-sparse-targets (((group-start target-index target-value)
                               targets group-size)
