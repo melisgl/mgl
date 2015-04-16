@@ -2043,14 +2043,15 @@
   total cross-entropy is the sum of cross-entropies per group of
   [GROUP-SIZE][(reader ->softmax-xe-loss)] elements:
 
-      XE(x) = - sum_{i=1,g} t_i * ln(s_i)
+  $$XE(x) = - \\sum_{i=1,g} t_i \\ln(s_i)$$
 
   where `g` is the number of classes ([GROUP-SIZE][(reader
   ->softmax-xe-loss)]), `t_i` are the targets (i.e. the true
   probabilities of the class, often all zero but one), `s_i` is the
   output of softmax calculated from input `X`:
 
-      s_i = softmax{x_1, x_2, ..., x_g} = e^x_i / (sum_{j=1,g} e^x_j)
+  $$s_i = {softmax}(x_1, x_2, ..., x_g) =
+    \\frac{e^x_i}{\\sum_{j=1,g} e^x_j}$$
 
   In other words, in the forward phase this lump takes input `X`,
   computes its elementwise EXP, normalizes each group of
@@ -2991,11 +2992,19 @@
   Andrew Senior, Francoise Beaufays). Using the notation from that
   paper:
 
-      i_t = s(W_ix * x_t + W_im * m_{t_1} + W_ic .* c_{t-1} + b_i)
-      f_t = s(W_fx * x_t + W_fm * m_{t_1} + W_fc .* c_{t-1} + b_f)
-      c_t = f_t .* c_{t-1} + i_t .* g(W_cx * x_t + W_cm  * m_{t-1} + b_c)
-      o_t = s(W_ox * x_t + W_om * m_{t-1} + W_oc .* c_t + b_o)
-      m_t = o_t .* h(c_t)
+  $$i_t = s(W\\_{ix} x\\_t + W\\_{im} m\\_{t-1} + W\\_{ic} \\odot
+  c\\_{t-1} + b\\_i)$$
+
+  $$f\\_t = s(W\\_{fx} x\\_t + W\\_{fm} m\\_{t-1} + W\\_{fc} \\odot
+  c\\_{t-1} + b\\_f)$$
+
+  $$c\\_t = f\\_t \\odot c\\_{t-1} + i\\_t \\odot g(W\\_{cx} x\\_t +
+  W\\_{cm} m\\_{t-1} + b\\_c)$$
+
+  $$o\\_t = s(W\\_{ox} x\\_t + W\\_{om} m\\_{t-1} + W\\_{oc} \\odot
+  c\\_t + b\\_o)$$
+
+  $$m\\_t = o\\_t \\odot h(c\\_t)$$
 
   ... where `i`, `f`, and `o` are the input, forget and output gates.
   `c` is the cell state and `m` is the actual output.
@@ -3036,14 +3045,14 @@
                    output-init
                    (lag output-name))))
       (build-fnn (:name name :class '->lstm)
-        ;; i_t = s(W_ix * x_t + W_im * m_{t_1} + W_ic .* c_{t-1} + b_i)
+        ;; i_t = s(W_ix * x_t + W_im * m_{t-1} + W_ic .* c_{t-1} + b_i)
         (input-gate
          (funcall gate-fn (funcall activation-fn (add (lagged-output) inputs)
                                    :name input-gate-name :size size
                                    :peepholes (when peepholes
                                                 (add (lagged-cell) ())))
                   :name input-gate-name))
-        ;; f_t = s(W_fx * x_t + W_fm * m_{t_1} + W_fc .* c_{t-1} + b_f)
+        ;; f_t = s(W_fx * x_t + W_fm * m_{t-1} + W_fc .* c_{t-1} + b_f)
         (forget-gate
          (funcall gate-fn (funcall activation-fn (add (lagged-output) inputs)
                                    :name forget-gate-name

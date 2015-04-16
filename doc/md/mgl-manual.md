@@ -4146,16 +4146,16 @@ use activation subnets to reduce the clutter.
     training.
     
     With the special value `:USE-POPULATION`, instead of the mean and
-    the stddev of the current batch, use the population statistics for
-    normalization. This effectively cancels the regularization effect,
-    leaving only the faster learning.
+    the variance of the current batch, use the population statistics
+    for normalization. This effectively cancels the regularization
+    effect, leaving only the faster learning.
 
 <a id='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29'></a>
 
 - [reader] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZATION* *(:VARIANCE-ADJUSTMENT = 1.e-4)*
 
     A small positive real number that's added to the
-    sample stddev. This is $\epsilon$ in the paper.
+    sample variance. This is $\epsilon$ in the paper.
 
 <a id='x-28MGL-BP-3APOPULATION-DECAY-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29'></a>
 
@@ -4417,13 +4417,14 @@ a [`->LOSS`][ba60].
     total cross-entropy is the sum of cross-entropies per group of
     [`GROUP-SIZE`][5683] elements:
     
-        XE(x) = - sum_{i=1,g} t_i * ln(s_i)
+    $$XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i)$$
     
     where `g` is the number of classes ([`GROUP-SIZE`][5683]), `t_i` are the targets (i.e. the true
     probabilities of the class, often all zero but one), `s_i` is the
     output of softmax calculated from input `X`:
     
-        s_i = softmax{x_1, x_2, ..., x_g} = e^x_i / (sum_{j=1,g} e^x_j)
+    $$s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
+      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}$$
     
     In other words, in the forward phase this lump takes input `X`,
     computes its elementwise `EXP`, normalizes each group of
@@ -4718,11 +4719,19 @@ a [`->LOSS`][ba60].
     Andrew Senior, Francoise Beaufays). Using the notation from that
     paper:
     
-        i_t = s(W_ix * x_t + W_im * m_{t_1} + W_ic .* c_{t-1} + b_i)
-        f_t = s(W_fx * x_t + W_fm * m_{t_1} + W_fc .* c_{t-1} + b_f)
-        c_t = f_t .* c_{t-1} + i_t .* g(W_cx * x_t + W_cm  * m_{t-1} + b_c)
-        o_t = s(W_ox * x_t + W_om * m_{t-1} + W_oc .* c_t + b_o)
-        m_t = o_t .* h(c_t)
+    $$i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
+    c\_{t-1} + b\_i)$$
+    
+    $$f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
+    c\_{t-1} + b\_f)$$
+    
+    $$c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
+    W\_{cm} m\_{t-1} + b\_c)$$
+    
+    $$o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    c\_t + b\_o)$$
+    
+    $$m\_t = o\_t \odot h(c\_t)$$
     
     ... where `i`, `f`, and `o` are the input, forget and output gates.
     `c` is the cell state and `m` is the actual output.
