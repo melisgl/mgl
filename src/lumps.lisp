@@ -561,143 +561,46 @@
 
 
 (defsection @mgl-bp-batch-normalization (:title "Batch-Normalization")
-  "Batch normalization is special in that it has state apart from the
-  computed results (NODES) and its derivatives (DERIVATIVES). This
-  state is the estimated mean and variance of its inputs and they are
-  encapsulated by ->BATCH-NORMALIZATION.
-
-  The actual work is performed by the ->BATCH-NORMALIZED lump that has
-  a ->BATCH-NORMALIZATION as its BATCH-NORMALIZATION. The reason for
-  this split of responsability is to allow multiple batch
-  normalization operations to share the same state.
-
-  We are going to discuss the concepts from the ground up, but feel
-  free to skip ahead to the ->BATCH-NORMALIZED-ACTIVATION utility
-  function that covers most of the practical use cases."
+  (->batch-normalized class)
+  (batch-normalization (reader ->batch-normalized))
   (->batch-normalization class)
   (scale (reader ->batch-normalization))
   (shift (reader ->batch-normalization))
   (batch-size (reader ->batch-normalization))
   (variance-adjustment (reader ->batch-normalization))
   (population-decay (reader ->batch-normalization))
-  "Now let's move on to how batch normalization is actually
-  performed."
-  (->batch-normalized class)
-  (batch-normalization (reader ->batch-normalized))
   (->batch-normalized-activation function))
-
-(defclass-now ->batch-normalization (->weight)
-  ((scale
-    :initarg :scale :reader scale
-    :documentation "A weight lump of the same size as SHIFT. This is
-    $\\gamma$ in the paper.")
-   (shift
-    :initarg :shift :reader shift
-    :documentation "A weight lump of the same size as SCALE. This is
-    $\\beta$ in the paper.")
-   ;; A list of means of (SIZE X), one for each subbatch, of which
-   ;; there are (/ N-STRIPES BATCH-SIZE).
-   (batch-mean :initform nil :accessor batch-mean)
-   (batch-stddev :initform nil :accessor batch-stddev)
-   (batch-size
-    :initform nil :initarg :batch-size :reader batch-size
-    :documentation "Normally all stripes participate in the batch.
-    Lowering the number of stripes may increase the regularization
-    effect, but it also makes the computation less efficient. By
-    setting BATCH-SIZE to a divisor of N-STRIPES one can decouple the
-    concern of efficiency from that of regularization. The default
-    value, NIL, is equivalent to N-STRIPES. BATCH-SIZE only affects
-    training.
-
-    With the special value :USE-POPULATION, instead of the mean and
-    the stddev of the current batch, use the population statistics for
-    normalization. This effectively cancels the regularization effect,
-    leaving only the faster learning.")
-   (variance-adjustment
-    :initform 1e-4 :reader variance-adjustment
-    :documentation "A small positive real number that's added to the
-    sample stddev. This is $\\epsilon$ in the paper.")
-   (population-mean :initform nil :accessor population-mean)
-   (population-stddev :initform nil :accessor population-stddev)
-   (population-decay
-    :initform 0.99 :initarg :population-decay :reader population-decay
-    :documentation "While training, an exponential moving average of
-    batch means and standard deviances (termed _population
-    statistics_) is updated. When making predictions, normalization is
-    performed using these statistics. These population statistics are
-    persisted by SAVE-STATE.")
-   (n-steps :initform 0 :accessor n-steps))
-  (:documentation "The primary purpose of this class is to hold the
-  estimated mean and variance of the inputs to be normalized and allow
-  them to be shared between multiple ->BATCH-NORMALIZED lumps that
-  carry out the computation. These estimations are saved and loaded by
-  SAVE-STATE and LOAD-STATE.
-
-  ```commonlisp
-  (->batch-normalization
-   (->weight :name '(h1 :scale) :size 10)
-   (->weight :name '(h1 :shift) :size 10)
-   :name '(h1 :batch-normalization))
-  ```"))
-
-(defmaker (->batch-normalization
-           :unkeyword-args (scale shift)
-           :make-instance-args args)
-  (maybe-copy-weight '->batch-normalization (list* :size (size scale) args)))
-
-(defmethod default-size ((lump ->batch-normalization))
-  (size (scale lump)))
-
-(defun ensure-batch-mean (lump subbatch-index)
-  (let ((length (length (batch-mean lump))))
-    (if (< subbatch-index length)
-        (setf (elt (batch-mean lump) subbatch-index)
-              (adjust! (elt (batch-mean lump) subbatch-index)
-                       (list 1 (size lump)) 0))
-        (setf (slot-value lump 'batch-mean)
-              (append1 (batch-mean lump) (make-mat (list 1 (size lump)))))))
-  (elt (batch-mean lump) subbatch-index))
-
-(defun ensure-batch-stddev (lump subbatch-index)
-  (let ((length (length (batch-stddev lump))))
-    (if (< subbatch-index length)
-        (setf (elt (batch-stddev lump) subbatch-index)
-              (adjust! (elt (batch-stddev lump) subbatch-index)
-                       (list 1 (size lump)) 0))
-        (setf (slot-value lump 'batch-stddev)
-              (append1 (batch-stddev lump) (make-mat (list 1 (size lump)))))))
-  (elt (batch-stddev lump) subbatch-index))
-
-(defun ensure-population-mean (lump)
-  (setf (slot-value lump 'population-mean)
-        (if (population-mean lump)
-            (adjust! (population-mean lump) (list 1 (size lump)) 0)
-            (make-mat (list 1 (size lump)))))
-  (population-mean lump))
-
-(defun ensure-population-stddev (lump)
-  (setf (slot-value lump 'population-stddev)
-        (if (population-stddev lump)
-            (adjust! (population-stddev lump) (list 1 (size lump)) 0)
-            (make-mat (list 1 (size lump))
-                      :initial-element (variance-adjustment lump))))
-  (population-stddev lump))
-
-(defmethod write-state* ((lump ->batch-normalization) stream context)
-  (write-mat (ensure-population-mean lump) stream)
-  (write-mat (ensure-population-stddev lump) stream))
-
-(defmethod read-state* ((lump ->batch-normalization) stream context)
-  (read-mat (ensure-population-mean lump) stream)
-  (read-mat (ensure-population-stddev lump) stream))
 
 (defclass-now ->batch-normalized (lump)
   ((x :initarg :x :reader x)
    (normalization
     :initarg :normalization :reader batch-normalization
     :documentation "The ->BATCH-NORMALIZATION of this lump. May be
-    shared between multiple ->BATCH-NORMALIZED lumps."))
-  (:documentation "This is an implementation of v1 of the [Batch
+    shared between multiple ->BATCH-NORMALIZED lumps.
+
+    Batch normalization is special in that it has state apart from the
+    computed results (NODES) and its derivatives (DERIVATIVES). This
+    state is the estimated mean and variance of its inputs and they
+    are encapsulated by ->BATCH-NORMALIZATION.
+
+    If NORMALIZATION is not given at instantiation, then a new
+    ->BATCH-NORMALIZATION object will be created automatically,
+    passing :BATCH-SIZE, :VARIANCE-ADJUSTMENT, and :POPULATION-DECAY
+    arguments on to ->BATCH-NORMALIZATION. See [BATCH-SIZE][(reader
+    ->batch-normalization)], [VARIANCE-ADJUSTMENT][(reader
+    ->batch-normalization)] and [POPULATION-DECAY][(reader
+    ->batch-normalization)]. New scale and shift weight lumps will be
+    created with names:
+
+        `(,name :scale)
+        `(,name :shift)
+
+    where [NAME][dislocated] is the NAME of this lump.
+
+    This default behavior covers the use-case where the statistics
+    kept by ->BATCH-NORMALIZATION are to be shared only between time
+    steps of an RNN."))
+  (:documentation "This is an implementation of v3 of the [Batch
   Normalization paper](http://arxiv.org/abs/1502.03167). The output of
   ->BATCH-NORMALIZED is its input normalized so that for all elements
   the mean across stripes is zero and the variance is 1. That is, the
@@ -708,18 +611,76 @@
   the same. The primary purpose of this lump is to speed up learning,
   but it also acts as a regularizer. See the paper for the details.
 
+  To normalize the output of [LUMP][dislocated] without no additional
+  regularizer effect:
+
+  ```commonlisp
+  (->batch-normalized lump :batch-size :use-population)
+  ```
+
+  The above uses an exponential moving average to estimate the mean
+  and variance of batches and these estimations are used at both
+  training and test time. In contrast to this, the published version
+  uses the sample mean and variance of the current batch at training
+  time which injects noise into the process. The noise is higher for
+  lower batch sizes and has a regularizing effect. This is the default
+  behavior (equivalent to `:BATCH-SIZE NIL`):
+
+  ```commonlisp
+  (->batch-normalized lump)
+  ```
+
+  For performance reasons one may wish to process a higher number of
+  instances in a batch (in the sense of N-STRIPES) and get the
+  regularization effect associated with a lower batch size. This is
+  possible by setting :BATCH-SIZE to a divisor of the the number of
+  stripes. Say, the number of stripes is 128, but we want as much
+  regularization as we would get with 32:
+
+  ```commonlisp
+  (->batch-normalized lump :batch-size 32)
+  ```
+
   The primary input of ->BATCH-NORMALIZED is often an ->ACTIVATION and
   its output is fed into an activation function (see
   @MGL-BP-ACTIVATION-FUNCTIONS)."))
 
 (defmethod initialize-instance :after ((lump ->batch-normalized)
-                                       &key size &allow-other-keys)
-  (check-size-and-default-size lump size))
+                                       &key size batch-size variance-adjustment
+                                       population-decay
+                                       &allow-other-keys)
+  (check-size-and-default-size lump size)
+  (when (uninterned-symbol-p (name lump))
+    (setf (slot-value lump 'name) `(,(name (x lump)) :batch-normalized)))
+  (unless (slot-boundp lump 'normalization)
+    (setf (slot-value lump 'normalization)
+          (let ((name (name lump))
+                (size (default-size lump)))
+            (apply #'->batch-normalization
+                   (->weight :name `(,name :scale) :size size)
+                   (->weight :name `(,name :shift) :size size)
+                   :name `(,name :batch-normalization)
+                   `(,@(when batch-size
+                         `(:batch-size ,batch-size))
+                     ,@(when variance-adjustment
+                         `(:variance-adjustment ,variance-adjustment))
+                     ,@(when population-decay
+                         `(:population-decay ,population-decay))))))))
 
-(defmaker (->batch-normalized :unkeyword-args (x)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar +default-variance-adjustment+ 1e-4)
+  (defvar +default-population-decay+ 0.99))
+
+(defmaker (->batch-normalized :unkeyword-args (x)
+           :make-instance-args args
+           :extra-keyword-args
+           ((batch-size nil)
+            (variance-adjustment #.+default-variance-adjustment+)
+            (population-decay #.+default-population-decay+))))
 
 (defmethod print-lump-parts ((lump ->batch-normalized) stream)
-  (format stream " ~S ~S" :batch-size (batch-size (batch-normalization lump))))
+  (format stream " ~S ~S"
+          :batch-size (ignore-errors (batch-size (batch-normalization lump)))))
 
 (defmethod default-size ((lump ->batch-normalized))
   (size (x lump)))
@@ -889,33 +850,134 @@
                              (foo (ensure-population-mean state)
                                   (ensure-population-stddev state))))))))))))
 
+(defclass-now ->batch-normalization (->weight)
+  ((scale
+    :initarg :scale :reader scale
+    :documentation "A weight lump of the same size as SHIFT. This is
+    $\\gamma$ in the paper.")
+   (shift
+    :initarg :shift :reader shift
+    :documentation "A weight lump of the same size as SCALE. This is
+    $\\beta$ in the paper.")
+   ;; A list of means of (SIZE X), one for each subbatch, of which
+   ;; there are (/ N-STRIPES BATCH-SIZE).
+   (batch-mean :initform nil :accessor batch-mean)
+   (batch-stddev :initform nil :accessor batch-stddev)
+   (batch-size
+    :initform nil :initarg :batch-size :reader batch-size
+    :documentation "Normally all stripes participate in the batch.
+    Lowering the number of stripes may increase the regularization
+    effect, but it also makes the computation less efficient. By
+    setting BATCH-SIZE to a divisor of N-STRIPES one can decouple the
+    concern of efficiency from that of regularization. The default
+    value, NIL, is equivalent to N-STRIPES. BATCH-SIZE only affects
+    training.
+
+    With the special value :USE-POPULATION, instead of the mean and
+    the stddev of the current batch, use the population statistics for
+    normalization. This effectively cancels the regularization effect,
+    leaving only the faster learning.")
+   (variance-adjustment
+    :initform #.+default-variance-adjustment+
+    :initarg :variance-adjustment :reader variance-adjustment
+    :documentation "A small positive real number that's added to the
+    sample stddev. This is $\\epsilon$ in the paper.")
+   (population-mean :initform nil :accessor population-mean)
+   (population-stddev :initform nil :accessor population-stddev)
+   (population-decay
+    :initform #.+default-population-decay+
+    :initarg :population-decay :reader population-decay
+    :documentation "While training, an exponential moving average of
+    batch means and standard deviances (termed _population
+    statistics_) is updated. When making predictions, normalization is
+    performed using these statistics. These population statistics are
+    persisted by SAVE-STATE.")
+   (n-steps :initform 0 :accessor n-steps))
+  (:documentation "The primary purpose of this class is to hold the
+  estimated mean and variance of the inputs to be normalized and allow
+  them to be shared between multiple ->BATCH-NORMALIZED lumps that
+  carry out the computation. These estimations are saved and loaded by
+  SAVE-STATE and LOAD-STATE.
+
+  ```commonlisp
+  (->batch-normalization (->weight :name '(h1 :scale) :size 10)
+                         (->weight :name '(h1 :shift) :size 10)
+                         :name '(h1 :batch-normalization))
+  ```"))
+
+(defmaker (->batch-normalization
+           :unkeyword-args (scale shift)
+           :make-instance-args args)
+  (maybe-copy-weight '->batch-normalization (list* :size (size scale) args)))
+
+(defmethod default-size ((lump ->batch-normalization))
+  (size (scale lump)))
+
+(defun ensure-batch-mean (lump subbatch-index)
+  (let ((length (length (batch-mean lump))))
+    (if (< subbatch-index length)
+        (setf (elt (batch-mean lump) subbatch-index)
+              (adjust! (elt (batch-mean lump) subbatch-index)
+                       (list 1 (size lump)) 0))
+        (setf (slot-value lump 'batch-mean)
+              (append1 (batch-mean lump) (make-mat (list 1 (size lump)))))))
+  (elt (batch-mean lump) subbatch-index))
+
+(defun ensure-batch-stddev (lump subbatch-index)
+  (let ((length (length (batch-stddev lump))))
+    (if (< subbatch-index length)
+        (setf (elt (batch-stddev lump) subbatch-index)
+              (adjust! (elt (batch-stddev lump) subbatch-index)
+                       (list 1 (size lump)) 0))
+        (setf (slot-value lump 'batch-stddev)
+              (append1 (batch-stddev lump) (make-mat (list 1 (size lump)))))))
+  (elt (batch-stddev lump) subbatch-index))
+
+(defun ensure-population-mean (lump)
+  (setf (slot-value lump 'population-mean)
+        (if (population-mean lump)
+            (adjust! (population-mean lump) (list 1 (size lump)) 0)
+            (make-mat (list 1 (size lump)))))
+  (population-mean lump))
+
+(defun ensure-population-stddev (lump)
+  (setf (slot-value lump 'population-stddev)
+        (if (population-stddev lump)
+            (adjust! (population-stddev lump) (list 1 (size lump)) 0)
+            (make-mat (list 1 (size lump))
+                      :initial-element (variance-adjustment lump))))
+  (population-stddev lump))
+
+(defmethod write-state* ((lump ->batch-normalization) stream context)
+  (write-mat (ensure-population-mean lump) stream)
+  (write-mat (ensure-population-stddev lump) stream))
+
+(defmethod read-state* ((lump ->batch-normalization) stream context)
+  (read-mat (ensure-population-mean lump) stream)
+  (read-mat (ensure-population-stddev lump) stream))
+
 (defun ->batch-normalized-activation (inputs &key (name (gensym)) size
-                                      peepholes (batch-size :use-population))
-  "Creates and wraps an ->ACTIVATION in ->BATCH-NORMALIZED and with
-  its BATCH-NORMALIZATION the two weight lumps for the scale and shift
+                                      peepholes batch-size variance-adjustment
+                                      population-decay)
+  "A utility functions that creates and wraps an ->ACTIVATION in
+  ->BATCH-NORMALIZED and with its BATCH-NORMALIZATION the two weight
+  lumps for the scale and shift
   parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
   10)` is equivalent to:
 
   ```commonlisp
   (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
-                      :normalization (->batch-normalization
-                                      (->weight :name '(h1 :scale) :size 10)
-                                      (->weight :name '(h1 :shift) :size 10)
-                                      :name '(h1 :batch-normalization))
                       :name '(h1 :batch-normalized-activation))
   ```
 
   Note how biases are turned off since normalization will cancel them
   anyway (but a shift is added which amounts to the same effect)."
   (->batch-normalized
-   (->activation inputs :name name :size size
-                 :peepholes peepholes :add-bias-p nil)
-   :normalization (->batch-normalization
-                   (->weight :name `(,name :scale) :size size)
-                   (->weight :name `(,name :shift) :size size)
-                   :size size :batch-size batch-size
-                   :name `(,name :batch-normalization))
-   :name `(,name :batch-normalized-activation)))
+   (->activation inputs :name name :size size :peepholes peepholes
+                 :add-bias-p nil)
+   :name `(,name :batch-normalized-activation)
+   :batch-size batch-size :variance-adjustment variance-adjustment
+   :population-decay population-decay))
 
 
 (defsection @mgl-bp-embedding-lump (:title "Embedding Lump")

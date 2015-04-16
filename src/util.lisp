@@ -482,11 +482,13 @@
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defclass ,name ,direct-superclasses ,direct-slots ,@options)))
 
-(defmacro defmaker ((name &key unkeyword-args (make-instance-args (gensym)))
+(defmacro defmaker ((name &key unkeyword-args extra-keyword-args
+                     (make-instance-args (gensym)))
                     &body body)
   (destructuring-bind (name maker-name)
       (if (listp name) name (list name name))
-    (let ((args (make-instance-args (find-class name))))
+    (let ((args (append (make-instance-args (find-class name))
+                        extra-keyword-args)))
       `(defun ,maker-name (,@unkeyword-args
                            &key ,@(remove-unkeyword-args args unkeyword-args))
          (let ((,make-instance-args
@@ -543,7 +545,7 @@
                       (list (intern (symbol-name initarg))
                             nil
                             (gensym (symbol-name initarg)))))
-                (swank-mop:slot-definition-initargs slot)))
+                (closer-mop:slot-definition-initargs slot)))
              slots)
      allow-other-keys-p)))
 

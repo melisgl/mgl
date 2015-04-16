@@ -4026,19 +4026,81 @@ use activation subnets to reduce the clutter.
 
 ##### Batch-Normalization
 
-Batch normalization is special in that it has state apart from the
-computed results ([`NODES`][136a]) and its derivatives ([`DERIVATIVES`][3aa4]). This
-state is the estimated mean and variance of its inputs and they are
-encapsulated by [`->BATCH-NORMALIZATION`][202f].
+<a id='x-28MGL-BP-3A--3EBATCH-NORMALIZED-20CLASS-29'></a>
 
-The actual work is performed by the [`->BATCH-NORMALIZED`][2ca6] lump that has
-a [`->BATCH-NORMALIZATION`][202f] as its [`BATCH-NORMALIZATION`][b117]. The reason for
-this split of responsability is to allow multiple batch
-normalization operations to share the same state.
+- [class] **-\>BATCH-NORMALIZED** *[LUMP][9cf1]*
 
-We are going to discuss the concepts from the ground up, but feel
-free to skip ahead to the [`->BATCH-NORMALIZED-ACTIVATION`][7195] utility
-function that covers most of the practical use cases.
+    This is an implementation of v3 of the [Batch
+    Normalization paper](http://arxiv.org/abs/1502.03167). The output of
+    `->BATCH-NORMALIZED` is its input normalized so that for all elements
+    the mean across stripes is zero and the variance is 1. That is, the
+    mean of the batch is subtracted from the inputs and they are
+    rescaled by their sample stddev. Actually, after the normalization
+    step the values are rescaled and shifted (but this time with learnt
+    parameters) in order to keep the representational power of the model
+    the same. The primary purpose of this lump is to speed up learning,
+    but it also acts as a regularizer. See the paper for the details.
+    
+    To normalize the output of `LUMP` without no additional
+    regularizer effect:
+    
+    ```commonlisp
+    (->batch-normalized lump :batch-size :use-population)
+    ```
+    
+    The above uses an exponential moving average to estimate the mean
+    and variance of batches and these estimations are used at both
+    training and test time. In contrast to this, the published version
+    uses the sample mean and variance of the current batch at training
+    time which injects noise into the process. The noise is higher for
+    lower batch sizes and has a regularizing effect. This is the default
+    behavior (equivalent to `:BATCH-SIZE NIL`):
+    
+    ```commonlisp
+    (->batch-normalized lump)
+    ```
+    
+    For performance reasons one may wish to process a higher number of
+    instances in a batch (in the sense of [`N-STRIPES`][dca7]) and get the
+    regularization effect associated with a lower batch size. This is
+    possible by setting `:BATCH-SIZE` to a divisor of the the number of
+    stripes. Say, the number of stripes is 128, but we want as much
+    regularization as we would get with 32:
+    
+    ```commonlisp
+    (->batch-normalized lump :batch-size 32)
+    ```
+    
+    The primary input of `->BATCH-NORMALIZED` is often an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) and
+    its output is fed into an activation function (see
+    [Activation Functions][3d84]).
+
+<a id='x-28MGL-BP-3ABATCH-NORMALIZATION-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29'></a>
+
+- [reader] **BATCH-NORMALIZATION** *-\>BATCH-NORMALIZED* *(:NORMALIZATION)*
+
+    The [`->BATCH-NORMALIZATION`][202f] of this lump. May be
+    shared between multiple [`->BATCH-NORMALIZED`][2ca6] lumps.
+    
+    Batch normalization is special in that it has state apart from the
+    computed results ([`NODES`][136a]) and its derivatives ([`DERIVATIVES`][3aa4]). This
+    state is the estimated mean and variance of its inputs and they
+    are encapsulated by [`->BATCH-NORMALIZATION`][202f].
+    
+    If `NORMALIZATION` is not given at instantiation, then a new
+    [`->BATCH-NORMALIZATION`][202f] object will be created automatically,
+    passing `:BATCH-SIZE`, `:VARIANCE-ADJUSTMENT`, and `:POPULATION-DECAY`
+    arguments on to [`->BATCH-NORMALIZATION`][202f]. See [`BATCH-SIZE`][6949], [`VARIANCE-ADJUSTMENT`][74d5] and [`POPULATION-DECAY`][4c8a]. New scale and shift weight lumps will be
+    created with names:
+    
+        `(,name :scale)
+        `(,name :shift)
+    
+    where `NAME` is the `NAME`([`0`][a7eb] [`1`][47d4]) of this lump.
+    
+    This default behavior covers the use-case where the statistics
+    kept by [`->BATCH-NORMALIZATION`][202f] are to be shared only between time
+    steps of an [`RNN`][b9d7].
 
 <a id='x-28MGL-BP-3A--3EBATCH-NORMALIZATION-20CLASS-29'></a>
 
@@ -4051,10 +4113,9 @@ function that covers most of the practical use cases.
     [`SAVE-STATE`][33f8] and [`LOAD-STATE`][49f7].
     
     ```commonlisp
-    (->batch-normalization
-     (->weight :name '(h1 :scale) :size 10)
-     (->weight :name '(h1 :shift) :size 10)
-     :name '(h1 :batch-normalization))
+    (->batch-normalization (->weight :name '(h1 :scale) :size 10)
+                           (->weight :name '(h1 :shift) :size 10)
+                           :name '(h1 :batch-normalization))
     ```
 
 
@@ -4091,7 +4152,7 @@ function that covers most of the practical use cases.
 
 <a id='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29'></a>
 
-- [reader] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZATION* *(= 1.e-4)*
+- [reader] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZATION* *(:VARIANCE-ADJUSTMENT = 1.e-4)*
 
     A small positive real number that's added to the
     sample stddev. This is $\epsilon$ in the paper.
@@ -4106,50 +4167,18 @@ function that covers most of the practical use cases.
     performed using these statistics. These population statistics are
     persisted by [`SAVE-STATE`][33f8].
 
-Now let's move on to how batch normalization is actually
-performed.
-
-<a id='x-28MGL-BP-3A--3EBATCH-NORMALIZED-20CLASS-29'></a>
-
-- [class] **-\>BATCH-NORMALIZED** *[LUMP][9cf1]*
-
-    This is an implementation of v1 of the [Batch
-    Normalization paper](http://arxiv.org/abs/1502.03167). The output of
-    `->BATCH-NORMALIZED` is its input normalized so that for all elements
-    the mean across stripes is zero and the variance is 1. That is, the
-    mean of the batch is subtracted from the inputs and they are
-    rescaled by their sample stddev. Actually, after the normalization
-    step the values are rescaled and shifted (but this time with learnt
-    parameters) in order to keep the representational power of the model
-    the same. The primary purpose of this lump is to speed up learning,
-    but it also acts as a regularizer. See the paper for the details.
-    
-    The primary input of `->BATCH-NORMALIZED` is often an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) and
-    its output is fed into an activation function (see
-    [Activation Functions][3d84]).
-
-<a id='x-28MGL-BP-3ABATCH-NORMALIZATION-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29'></a>
-
-- [reader] **BATCH-NORMALIZATION** *-\>BATCH-NORMALIZED* *(:NORMALIZATION)*
-
-    The [`->BATCH-NORMALIZATION`][202f] of this lump. May be
-    shared between multiple [`->BATCH-NORMALIZED`][2ca6] lumps.
-
 <a id='x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29'></a>
 
-- [function] **-\>BATCH-NORMALIZED-ACTIVATION** *INPUTS &KEY (NAME (GENSYM)) SIZE PEEPHOLES (BATCH-SIZE :USE-POPULATION)*
+- [function] **-\>BATCH-NORMALIZED-ACTIVATION** *INPUTS &KEY (NAME (GENSYM)) SIZE PEEPHOLES BATCH-SIZE VARIANCE-ADJUSTMENT POPULATION-DECAY*
 
-    Creates and wraps an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) in [`->BATCH-NORMALIZED`][2ca6] and with
-    its [`BATCH-NORMALIZATION`][b117] the two weight lumps for the scale and shift
+    A utility functions that creates and wraps an `->ACTIVATION`([`0`][4d7a] [`1`][b3ac]) in
+    [`->BATCH-NORMALIZED`][2ca6] and with its [`BATCH-NORMALIZATION`][b117] the two weight
+    lumps for the scale and shift
     parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
     10)` is equivalent to:
     
     ```commonlisp
     (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
-                        :normalization (->batch-normalization
-                                        (->weight :name '(h1 :scale) :size 10)
-                                        (->weight :name '(h1 :shift) :size 10)
-                                        :name '(h1 :batch-normalization))
                         :name '(h1 :batch-normalized-activation))
     ```
     
@@ -4999,11 +5028,13 @@ grow into a more serious toolset for NLP eventually.
   [4293]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "Cross-validation"
   [44dc]: #x-28MGL-BP-3ABP-LEARNER-20CLASS-29 "(MGL-BP:BP-LEARNER CLASS)"
   [45db]: #x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29 "Code Organization"
+  [47d4]: #x-28MGL-COMMON-3ANAME-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "(MGL-COMMON:NAME (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER))"
   [49f7]: #x-28MGL-CORE-3ALOAD-STATE-20FUNCTION-29 "(MGL-CORE:LOAD-STATE FUNCTION)"
   [4a7b]: #x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29 "(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"
   [4a97]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION)"
   [4b61]: #x-28MGL-GD-3A-40MGL-GD-NORMALIZED-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29 "Normalized Batch Optimizer"
   [4c7c]: #x-28MGL-OPT-3AACCUMULATE-GRADIENTS-2A-20GENERIC-FUNCTION-29 "(MGL-OPT:ACCUMULATE-GRADIENTS* GENERIC-FUNCTION)"
+  [4c8a]: #x-28MGL-BP-3APOPULATION-DECAY-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "(MGL-BP:POPULATION-DECAY (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION))"
   [4d7a]: #x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29 "(MGL-BP:->ACTIVATION FUNCTION)"
   [4e21]: #x-28MGL-CORE-3ACOUNTER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "(MGL-CORE:COUNTER (MGL-PAX:READER MGL-CORE:MONITOR))"
   [4f63]: #x-28MGL-CORE-3AN-STRIPES-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "(MGL-CORE:N-STRIPES (MGL-PAX:READER MGL-BP:BPN))"
@@ -5040,6 +5071,7 @@ grow into a more serious toolset for NLP eventually.
   [7319]: #x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29 "(MGL-BP:TRANSPOSE-WEIGHTS-P (MGL-PAX:READER MGL-BP:->V*M))"
   [745c]: #x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29 "Lump Base Class"
   [7471]: #x-28MGL-CORE-3ACOUNTER-20GENERIC-FUNCTION-29 "(MGL-CORE:COUNTER GENERIC-FUNCTION)"
+  [74d5]: #x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "(MGL-GD:VARIANCE-ADJUSTMENT (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION))"
   [7519]: #x-28MGL-BP-3A--3ERELU-20CLASS-29 "(MGL-BP:->RELU CLASS)"
   [7540]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "Miscellaneous Operations"
   [757e]: #x-28MGL-CORE-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "Features"
@@ -5102,6 +5134,7 @@ grow into a more serious toolset for NLP eventually.
   [a3fa]: #x-28MGL-BP-3A--3ESQUARED-DIFFERENCE-20CLASS-29 "(MGL-BP:->SQUARED-DIFFERENCE CLASS)"
   [a519]: #x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29 "(MGL-DATASET:MAP-DATASETS FUNCTION)"
   [a5c2]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20-28METHOD-20NIL-20-28MGL-OPT-3AITERATIVE-OPTIMIZER-20T-29-29-29 "(MGL-OPT:RESET-OPTIMIZATION-MONITORS (METHOD NIL (MGL-OPT:ITERATIVE-OPTIMIZER T)))"
+  [a7eb]: #x-28MGL-COMMON-3ANAME-20-28METHOD-20NIL-20-28MGL-CORE-3AATTRIBUTED-29-29-29 "(MGL-COMMON:NAME (METHOD NIL (MGL-CORE:ATTRIBUTED)))"
   [aa2d]: #x-28MGL-BP-3ASTEP-MONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "(MGL-BP:STEP-MONITORS (MGL-PAX:ACCESSOR MGL-BP:RNN))"
   [aac7]: #x-28MGL-CORE-3ALABEL-INDICES-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDICES GENERIC-FUNCTION)"
   [ab6b]: #x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:->EMBEDDING))"
