@@ -2274,13 +2274,24 @@ too.
 
 #### 9.3.4 Utilities
 
-<a id='x-28MGL-GD-3ACLIP-GRADIENTS-20FUNCTION-29'></a>
+<a id='x-28MGL-GD-3ACLIP-L2-NORM-20FUNCTION-29'></a>
 
-- [function] **CLIP-GRADIENTS** *MATS L2-UPPER-BOUND &KEY CALLBACK*
+- [function] **CLIP-L2-NORM** *MATS L2-UPPER-BOUND &KEY CALLBACK*
+
+    Scale `MATS` so that their $L\_2$ norm does not exceed `L2-UPPER-BOUND`.
+    
+    Compute the norm of of `MATS` as if they were a single vector. If the
+    norm is greater than `L2-UPPER-BOUND`, then scale each matrix
+    destructively by the norm divided by `L2-UPPER-BOUND` and if non-NIL
+    call the function `CALLBACK` with the scaling factor.
 
 <a id='x-28MGL-GD-3AARRANGE-FOR-CLIPPING-GRADIENTS-20FUNCTION-29'></a>
 
 - [function] **ARRANGE-FOR-CLIPPING-GRADIENTS** *BATCH-GD-OPTIMIZER L2-UPPER-BOUND &KEY CALLBACK*
+
+    Make it so that the norm of the batch normalized gradients
+    accumulated by `BATCH-GD-OPTIMIZER` is clipped to `L2-UPPER-BOUND`
+    before every update. See [`CLIP-L2-NORM`][0836].
 
 <a id='x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29'></a>
 
@@ -4977,6 +4988,7 @@ grow into a more serious toolset for NLP eventually.
   [0359]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29 "(MGL-CORE:DO-BATCHES-FOR-MODEL (MGL-PAX:MACRO))"
   [0552]: #x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29 "Batch Processing"
   [0675]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "Bagging"
+  [0836]: #x-28MGL-GD-3ACLIP-L2-NORM-20FUNCTION-29 "(MGL-GD:CLIP-L2-NORM FUNCTION)"
   [089c]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "(MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION)"
   [08c9]: #x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29 "(MGL-CORE:CONFUSION-MATRIX CLASS)"
   [0924]: #x-28MGL-CORE-3A-40MGL-MONITORING-20MGL-PAX-3ASECTION-29 "Monitoring"

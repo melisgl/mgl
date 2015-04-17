@@ -906,11 +906,16 @@
 
 
 (defsection @mgl-gd-utilities (:title "Utilities")
-  (clip-gradients function)
+  (clip-l2-norm function)
   (arrange-for-clipping-gradients function))
 
-;;; FIXDOC
-(defun clip-gradients (mats l2-upper-bound &key callback)
+(defun clip-l2-norm (mats l2-upper-bound &key callback)
+  "Scale MATS so that their $L_2$ norm does not exceed L2-UPPER-BOUND.
+
+  Compute the norm of of MATS as if they were a single vector. If the
+  norm is greater than L2-UPPER-BOUND, then scale each matrix
+  destructively by the norm divided by L2-UPPER-BOUND and if non-NIL
+  call the function CALLBACK with the scaling factor."
   (let ((sum 0))
     (map nil (lambda (mat)
                (incf sum (expt (nrm2 mat) 2)))
@@ -925,11 +930,13 @@
                mats)
           scale)))))
 
-;;; FIXDOC
 (defun arrange-for-clipping-gradients (batch-gd-optimizer l2-upper-bound
                                        &key callback)
+  "Make it so that the norm of the batch normalized gradients
+  accumulated by BATCH-GD-OPTIMIZER is clipped to L2-UPPER-BOUND
+  before every update. See CLIP-L2-NORM."
   (push (lambda ()
-          (clip-gradients
+          (clip-l2-norm
            (if (use-segment-derivatives-p batch-gd-optimizer)
                (let ((accumulators ()))
                  (do-gradient-sink ((segment accumulator) batch-gd-optimizer)
