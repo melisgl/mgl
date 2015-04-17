@@ -689,7 +689,7 @@
   (let* ((state (batch-normalization lump))
          (x (x lump))
          (population-mean (ensure-population-mean state))
-         (population-stddev (ensure-population-stddev state))
+         (population-variance (ensure-population-variance state))
          (n-stripes (n-stripes x))
          (batch-size (if (member (batch-size state) '(nil :use-population))
                          n-stripes
@@ -705,10 +705,10 @@
       (assert (zerop (mod n-stripes batch-size)) ()
               "BATCH-SIZE ~S is not a divisor of N-STRIPES ~S." batch-size
               n-stripes))
-    (flet ((foo (batch-mean batch-stddev)
+    (flet ((foo (batch-mean batch-variance)
              (with-ones (ones (list batch-size 1))
-               ;; Calculate BATCH-MEAN and BATCH-STDDEV, update
-               ;; POPULATION-MEAN and POPULATION-STDDEV.
+               ;; Calculate BATCH-MEAN and BATCH-VARIANCE, update
+               ;; POPULATION-MEAN and POPULATION-VARIANCE.
                (when *in-training-p*
                  (incf (n-steps state))
                  (sum! nx batch-mean :axis 0)
@@ -719,31 +719,31 @@
                    (copy! nx diffs)
                    (gemm! -1 ones batch-mean 1 diffs)
                    (.square! diffs)
-                   (sum! diffs batch-stddev :axis 0)
-                   (scal! (/ batch-size) batch-stddev)
-                   (.+! (variance-adjustment state) batch-stddev)
-                   (.sqrt! batch-stddev))
+                   (sum! diffs batch-variance :axis 0)
+                   (scal! (/ batch-size) batch-variance))
                  ;; update population statistics
                  (scal! decay population-mean)
                  (axpy! (- 1 decay) batch-mean population-mean)
-                 (scal! decay population-stddev)
-                 (axpy! (- 1 decay) batch-stddev population-stddev))
+                 (scal! decay population-variance)
+                 (axpy! (- 1 decay) batch-variance population-variance))
                ;; calculate the output
-               (multiple-value-bind (mean stddev)
+               (multiple-value-bind (mean variance)
                    (if (and *in-training-p*
                             (or (not use-population-p)
                                 ;; KLUDGE: let the population
                                 ;; statistics settle
                                 (< (n-steps state) (log 0.1 decay))))
-                       (values batch-mean batch-stddev)
-                       (values population-mean population-stddev))
+                       (values batch-mean batch-variance)
+                       (values population-mean population-variance))
                  ;; FIXOPT: when training this has been done above
                  (copy! nx nl)
                  (gemm! -1 ones mean 1 nl)
-                 (with-thread-cached-mat (stddevs dimensions)
-                   (gemm! 1 ones stddev 0 stddevs)
-                   (.inv! stddevs)
-                   (.*! stddevs nl)))
+                 (with-thread-cached-mat (variances dimensions)
+                   (gemm! 1 ones variance 0 variances)
+                   (.+! (variance-adjustment state) variances)
+                   (.sqrt! variances)
+                   (.inv! variances)
+                   (.*! variances nl)))
                (scale-columns! (nodes (scale state)) nl)
                (gemm! 1 ones (nodes (shift state)) 1 nl))))
       (let ((batch-dimensions (list batch-size size)))
@@ -755,7 +755,8 @@
                        (reshape-and-displace! nx batch-dimensions start)
                        (reshape-and-displace! nl batch-dimensions start)
                        (foo (ensure-batch-mean state subbatch-index)
-                            (ensure-batch-stddev state subbatch-index))))))))))
+                            (ensure-batch-variance state
+                                                   subbatch-index))))))))))
 
 (defmethod backward ((lump ->batch-normalized))
   (let* ((state (batch-normalization lump))
@@ -779,7 +780,7 @@
     (assert (zerop (mod n-stripes batch-size)) ()
             "BATCH-SIZE ~S is not a divisor of N-STRIPES ~S." batch-size
             n-stripes)
-    (flet ((foo (batch-mean batch-stddev)
+    (flet ((foo (batch-mean batch-variance)
              (with-ones (ones (list batch-size 1))
                (with-thread-cached-mats
                    ((x-mu* dimensions)
@@ -790,8 +791,10 @@
                  ;; x-mu* = x - mu*
                  (copy! nx x-mu*)
                  (gemm! -1 ones batch-mean 1 x-mu*)
-                 ;; 1/stddev* = 1 ./ stddev
-                 (gemm! 1 ones batch-stddev 0 1/stddev*)
+                 ;; 1/stddev* = 1 ./ sqrt(variance + \epsilon)
+                 (gemm! 1 ones batch-variance 0 1/stddev*)
+                 (.+! (variance-adjustment state) 1/stddev*)
+                 (.sqrt! 1/stddev*)
                  (.inv! 1/stddev*)
                  ;; dl/dx^.*1/stddev = dl/dy .* gamma* .* 1/stddev*
                  (geem! 1 dl/dy 1/stddev* 0 dl/dx^.*1/stddev)
@@ -845,10 +848,10 @@
                                   (or (not use-population-p)
                                       (< (n-steps state) (log 0.1 decay))))
                              (foo (ensure-batch-mean state subbatch-index)
-                                  (ensure-batch-stddev
+                                  (ensure-batch-variance
                                    state subbatch-index))
                              (foo (ensure-population-mean state)
-                                  (ensure-population-stddev state))))))))))))
+                                  (ensure-population-variance state))))))))))))
 
 (defclass-now ->batch-normalization (->weight)
   ((scale
@@ -862,7 +865,7 @@
    ;; A list of means of (SIZE X), one for each subbatch, of which
    ;; there are (/ N-STRIPES BATCH-SIZE).
    (batch-mean :initform nil :accessor batch-mean)
-   (batch-stddev :initform nil :accessor batch-stddev)
+   (batch-variance :initform nil :accessor batch-variance)
    (batch-size
     :initform nil :initarg :batch-size :reader batch-size
     :documentation "Normally all stripes participate in the batch.
@@ -874,16 +877,16 @@
     training.
 
     With the special value :USE-POPULATION, instead of the mean and
-    the stddev of the current batch, use the population statistics for
-    normalization. This effectively cancels the regularization effect,
-    leaving only the faster learning.")
+    the variance of the current batch, use the population statistics
+    for normalization. This effectively cancels the regularization
+    effect, leaving only the faster learning.")
    (variance-adjustment
     :initform #.+default-variance-adjustment+
     :initarg :variance-adjustment :reader variance-adjustment
     :documentation "A small positive real number that's added to the
-    sample stddev. This is $\\epsilon$ in the paper.")
+    sample variance. This is $\\epsilon$ in the paper.")
    (population-mean :initform nil :accessor population-mean)
-   (population-stddev :initform nil :accessor population-stddev)
+   (population-variance :initform nil :accessor population-variance)
    (population-decay
     :initform #.+default-population-decay+
     :initarg :population-decay :reader population-decay
@@ -923,15 +926,16 @@
               (append1 (batch-mean lump) (make-mat (list 1 (size lump)))))))
   (elt (batch-mean lump) subbatch-index))
 
-(defun ensure-batch-stddev (lump subbatch-index)
-  (let ((length (length (batch-stddev lump))))
+(defun ensure-batch-variance (lump subbatch-index)
+  (let ((length (length (batch-variance lump))))
     (if (< subbatch-index length)
-        (setf (elt (batch-stddev lump) subbatch-index)
-              (adjust! (elt (batch-stddev lump) subbatch-index)
+        (setf (elt (batch-variance lump) subbatch-index)
+              (adjust! (elt (batch-variance lump) subbatch-index)
                        (list 1 (size lump)) 0))
-        (setf (slot-value lump 'batch-stddev)
-              (append1 (batch-stddev lump) (make-mat (list 1 (size lump)))))))
-  (elt (batch-stddev lump) subbatch-index))
+        (setf (slot-value lump 'batch-variance)
+              (append1 (batch-variance lump)
+                       (make-mat (list 1 (size lump)))))))
+  (elt (batch-variance lump) subbatch-index))
 
 (defun ensure-population-mean (lump)
   (setf (slot-value lump 'population-mean)
@@ -940,21 +944,21 @@
             (make-mat (list 1 (size lump)))))
   (population-mean lump))
 
-(defun ensure-population-stddev (lump)
-  (setf (slot-value lump 'population-stddev)
-        (if (population-stddev lump)
-            (adjust! (population-stddev lump) (list 1 (size lump)) 0)
+(defun ensure-population-variance (lump)
+  (setf (slot-value lump 'population-variance)
+        (if (population-variance lump)
+            (adjust! (population-variance lump) (list 1 (size lump)) 0)
             (make-mat (list 1 (size lump))
                       :initial-element (variance-adjustment lump))))
-  (population-stddev lump))
+  (population-variance lump))
 
 (defmethod write-state* ((lump ->batch-normalization) stream context)
   (write-mat (ensure-population-mean lump) stream)
-  (write-mat (ensure-population-stddev lump) stream))
+  (write-mat (ensure-population-variance lump) stream))
 
 (defmethod read-state* ((lump ->batch-normalization) stream context)
   (read-mat (ensure-population-mean lump) stream)
-  (read-mat (ensure-population-stddev lump) stream))
+  (read-mat (ensure-population-variance lump) stream))
 
 (defun ->batch-normalized-activation (inputs &key (name (gensym)) size
                                       peepholes batch-size variance-adjustment
