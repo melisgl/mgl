@@ -2,8 +2,11 @@
 
 (asdf:defsystem #:mgl-visuals
   :name "Visualization for MGL"
-  :author "Gabor Melis"
-  :licence "MIT"
+  :licence "MIT, see COPYING."
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "Code to generate diagrams from models."
   :components ((:module "src"
                 :components ((:module "visuals"
                               :serial t

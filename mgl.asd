@@ -1,10 +1,14 @@
 ;;;; -*- mode: Lisp -*-
 
 (asdf:defsystem #:mgl
-  :name "MGL, the machine learning library"
-  :author "Gabor Melis"
+  :licence "MIT, see COPYING."
   :version "0.0.6"
-  :licence "MIT"
+  :name "MGL, the machine learning library"
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "MGL is a machine learning library for backpropagation
+  neural networks, boltzmann machines, gaussian processes and more."
   :components ((:module "src"
                 :serial t
                 :components ((:file "package")

@@ -1,9 +1,12 @@
 ;;;; -*- mode: Lisp -*-
 
 (asdf:defsystem #:mgl-test
-  :name "Tests for MGL, the machine learning library"
-  :author "Gabor Melis"
-  :licence "MIT"
+  :name "Tests for MGL"
+  :licence "MIT, see COPYING."
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "Test system for MGL, the machine learning library."
   :components ((:module "test"
                 :serial t
                 :components ((:file "package")

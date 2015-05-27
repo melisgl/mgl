@@ -2,8 +2,11 @@
 
 (asdf:defsystem #:mgl-gnuplot
   :name "MGL Gnuplot"
-  :author "Gabor Melis"
-  :licence "MIT"
+  :licence "MIT, see COPYING."
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "Simple Gnuplot interface."
   :components ((:module "src"
                 :components ((:module "gnuplot"
                               :serial t

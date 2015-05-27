@@ -1,9 +1,12 @@
 ;;;; -*- mode: Lisp -*-
 
 (asdf:defsystem #:mgl-example
-  :name "Examples for MGL, the machine learning library"
-  :author "Gabor Melis"
-  :licence "MIT"
+  :name "Examples for MGL"
+  :licence "MIT, see COPYING."
+  :author "Gábor Melis"
+  :mailto "mega@retes.hu"
+  :homepage "http://quotenil.com"
+  :description "Examples for MGL, the machine learning library."
   :components ((:module "example"
                 :serial t
                 :components ((:file "package")
