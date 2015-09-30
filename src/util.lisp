@@ -111,12 +111,27 @@
     `(dolist (,e ,list)
        (push ,e ,place))))
 
-(defun group (seq n)
-  (let ((l (length seq)))
-    (if (zerop l)
-        seq
-        (loop for i below l by n
-              collect (subseq seq i (min l (+ i n)))))))
+(defun group (seq group-size &key (start 0) (end (length seq)))
+  (if (= start end)
+      ()
+      (loop for i upfrom start below end by group-size
+            collect (subseq seq i (min end (+ i group-size))))))
+
+(defun sort-groups! (seq pred group-size &key key (start 0) (end (length seq)))
+  (let ((v (map 'vector (lambda (e) (cons e (apply-key key e))) seq)))
+    (loop for i upfrom start below end by group-size
+          do (let* ((length (min group-size (- end i)))
+                    (a (make-array length :displaced-to v
+                                   :displaced-index-offset i)))
+               (replace seq (sort a pred :key #'cdr) :start1 i)))
+    (map (if (listp seq) 'list 'vector) #'car v)))
+
+(defun shuffle-groups (seq group-size &key (start 0) (end (length seq)))
+  (apply #'concatenate (if (listp seq) 'list 'vector)
+         `(,(subseq seq 0 start)
+           ,@(mgl-resample:shuffle!
+              (group seq group-size :start start :end end))
+           ,(subseq seq end))))
 
 (defun subseq* (sequence start &optional end)
   (setq start (max 0 start))
@@ -217,6 +232,18 @@
       (prog1
           (aref vector n)
         (setf n (mod (1+ n) l))))))
+
+(defun make-sorted-group-generator (generator pred group-size &key key
+                                    randomize-size)
+  (assert (plusp group-size))
+  (let ((group ()))
+    (lambda ()
+      (unless group
+        (setq group (sort (loop repeat group-size collect (funcall generator))
+                          pred :key key))
+        (when randomize-size
+          (setq group (shuffle-groups group randomize-size))))
+      (pop group))))
 
 (defun applies-to-p (generic-function &rest args)
   (find nil (compute-applicable-methods generic-function args)

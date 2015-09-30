@@ -33,6 +33,8 @@
    #:append1
    #:push-all
    #:group
+   #:sort-group!
+   #:shuffle-groups
    #:subseq*
    #:max-position
    #:insert-into-sorted-vector
@@ -40,6 +42,7 @@
    #:repeatedly
    #:make-sequence-generator
    #:make-random-generator
+   #:make-sorted-group-generator
    #:applies-to-p
    #:uninterned-symbol-p
    ;; Periodic fn
