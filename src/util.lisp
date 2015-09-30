@@ -469,11 +469,11 @@
 ;;;       (permute seq (sorting-permutation seq #'<)))
 ;;;     => (1 2 3)
 (defun sorting-permutation (seq pred &key (key #'identity))
-  (sort (coerce (alexandria:iota (length seq))
-                'vector)
-        (lambda (a b)
-          (funcall pred (funcall key (elt seq a))
-                   (funcall key (elt seq b))))))
+  (stable-sort (coerce (alexandria:iota (length seq))
+                       'vector)
+               (lambda (a b)
+                 (funcall pred (funcall key (elt seq a))
+                          (funcall key (elt seq b))))))
 
 
 ;;;; Array utilities
