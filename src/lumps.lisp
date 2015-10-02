@@ -721,21 +721,27 @@
                    (.square! diffs)
                    (sum! diffs batch-variance :axis 0)
                    (scal! (/ batch-size) batch-variance))
-                 ;; update population statistics
-                 (scal! decay population-mean)
-                 (axpy! (- 1 decay) batch-mean population-mean)
-                 (scal! decay population-variance)
-                 (axpy! (- 1 decay) batch-variance population-variance))
+                 ;; Update population statistics.
+                 (cond ((= (n-steps state) 1)
+                        ;; Make it unbiased.
+                        (copy! batch-mean population-mean)
+                        (copy! batch-variance population-variance))
+                       (t
+                        (scal! decay population-mean)
+                        (axpy! (- 1 decay) batch-mean population-mean)
+                        (scal! decay population-variance)
+                        (axpy! (- 1 decay)
+                               batch-variance population-variance))))
                ;; calculate the output
                (multiple-value-bind (mean variance)
-                   (if (and *in-training-p*
-                            (or (not use-population-p)
-                                ;; KLUDGE: let the population
-                                ;; statistics settle
-                                (< (n-steps state) (log 0.1 decay))))
+                   (if (or (and *in-training-p* (not use-population-p))
+                           ;; KLUDGE: let the population statistics
+                           ;; settle a bit before using them
+                           (< (n-steps state) (log 0.1 decay)))
                        (values batch-mean batch-variance)
                        (values population-mean population-variance))
-                 ;; FIXOPT: when training this has been done above
+                 ;; FIXOPT: when training, this has already been done
+                 ;; above
                  (copy! nx nl)
                  (gemm! -1 ones mean 1 nl)
                  (with-thread-cached-mat (variances dimensions)
@@ -844,9 +850,8 @@
                          (reshape-and-displace! nx batch-dimensions start)
                          (reshape-and-displace! dl/dy batch-dimensions start)
                          (reshape-and-displace! dl/dx batch-dimensions start)
-                         (if (and *in-training-p*
-                                  (or (not use-population-p)
-                                      (< (n-steps state) (log 0.1 decay))))
+                         (if (or (and *in-training-p* (not use-population-p))
+                                 (< (n-steps state) (log 0.1 decay)))
                              (foo (ensure-batch-mean state subbatch-index)
                                   (ensure-batch-variance
                                    state subbatch-index))
