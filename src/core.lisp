@@ -207,7 +207,7 @@
 
   For example, if we have a function that builds bpn a for an input of
   a certain size, then we can create a factory that creates bpns for a
-  particular call. The factory probably wants keep the weights the
+  particular call. The factory probably wants to keep the weights the
   same though. In @MGL-PARAMETERIZED-EXECUTOR-CACHE,
   MAKE-EXECUTOR-WITH-PARAMETERS is this factory.
 

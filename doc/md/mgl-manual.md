@@ -833,7 +833,7 @@ an internal inconsistency in the model.
     
     For example, if we have a function that builds bpn a for an input of
     a certain size, then we can create a factory that creates bpns for a
-    particular call. The factory probably wants keep the weights the
+    particular call. The factory probably wants to keep the weights the
     same though. In [Parameterized Executor Cache][1426],
     [`MAKE-EXECUTOR-WITH-PARAMETERS`][b73e] is this factory.
     
@@ -4471,14 +4471,14 @@ a [`->LOSS`][ba60].
     can also be a sequence of batch size length that contains the
     index value pairs of non-zero entries:
     
-        (;; first instance in batch has to non-zero targets
+        (;; first instance in batch has two non-zero targets
          (;; class 10 has 30% expected probability
           (10 . 0.3)
           ;; class 2 has 70% expected probability
           (2 .  0.7))
          ;; second instance in batch puts 100% on class 7
          7
-         ;; more instance in the batch follow
+         ;; more instances in the batch follow
          ...)
     
     Actually, in the rare case where [`GROUP-SIZE`][5683] is not `SIZE`([`0`][c401] [`1`][6db7]) (i.e. there are several softmax
