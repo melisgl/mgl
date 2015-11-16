@@ -30,13 +30,15 @@
   => (("hello" . 1) ("is" . 1) ("our" . 1) ("this" . 1) ("world" . 2))
   ```"""
   (let ((features (make-hash-table :test #'equal)))
-    (map nil (lambda (document)
-               (let ((document (funcall key document)))
-                 (funcall mapper
-                          (lambda (feature)
-                            (incf (gethash feature features 0)))
-                          document)))
-         documents)
+    (flet ((foo (document)
+             (let ((document (funcall key document)))
+               (funcall mapper
+                        (lambda (feature)
+                          (incf (gethash feature features 0)))
+                        document))))
+      (if (typep documents 'sequence)
+          (map nil #'foo documents)
+          (funcall documents #'foo)))
     features))
 
 (defun document-features (document mapper)
