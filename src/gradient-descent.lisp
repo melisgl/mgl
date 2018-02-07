@@ -129,7 +129,7 @@
     momentum.")
    (momentum-type
     :initform :normal :initarg :momentum-type :reader momentum-type
-    :type '(member :none :normal :nesterov)
+    :type (member :none :normal :nesterov)
     :documentation "One of :NORMAL, :NESTEROV or :NONE. For pure
     optimization Nesterov's momentum may be better, but it may also
     increases chances of overfitting. Using :NONE is equivalent to 0
@@ -151,7 +151,7 @@
     it. Putting it on feature biases consitutes a sparsity constraint
     on the features.")
    (after-update-hook
-    :type 'list
+    :type list
     :initform () :initarg :after-update-hook :accessor after-update-hook
     :documentation "A list of functions with no arguments called after
     each weight update."))
