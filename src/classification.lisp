@@ -430,10 +430,13 @@
   ((counts :initform (make-hash-table) :initarg :counts :reader counts))
   (:documentation "A confusion matrix keeps count of classification
   results. The correct class is called `target' and the output of the
-  classifier is called `prediction'. Classes are compared with
-  EQUAL."))
+  classifier is called `prediction'."))
+
+(defun confusion-matrix-test (matrix)
+  (hash-table-test (counts matrix)))
 
 (defun make-confusion-matrix (&key (test #'eql))
+  "Classes are compared with TEST."
   (make-instance 'confusion-matrix
                  :counts (make-hash-table :test test)))
 
@@ -472,11 +475,12 @@
   classes from the counts. This can be overridden if, for instance,
   some classes are not present in the results.")
   (:method ((matrix confusion-matrix))
-    (let ((all-classes ()))
+    (let ((all-classes ())
+          (test (confusion-matrix-test matrix)))
       (map-confusion-matrix (lambda (target prediction count)
                               (declare (ignore count))
-                              (pushnew target all-classes :test #'equal)
-                              (pushnew prediction all-classes :test #'equal))
+                              (pushnew target all-classes :test test)
+                              (pushnew prediction all-classes :test test))
                             matrix)
       all-classes)))
 
@@ -492,11 +496,12 @@
   filter, although those are provided in separate convenience
   functions."
   (let ((n-hits 0)
-        (total 0))
+        (total 0)
+        (test (confusion-matrix-test matrix)))
     (map-confusion-matrix (lambda (target prediction count)
                             (when (or (null filter)
                                       (funcall filter target prediction))
-                              (when (eql target prediction)
+                              (when (funcall test target prediction)
                                 (incf n-hits count))
                               (incf total count)))
                           matrix)
@@ -507,18 +512,21 @@
 (defun confusion-matrix-precision (matrix prediction)
   "Return the accuracy over the cases when the classifier said
   PREDICTION."
-  (confusion-matrix-accuracy matrix
-                             :filter (lambda (target prediction2)
-                                       (declare (ignore target))
-                                       (eql prediction prediction2))))
+  (let ((test (confusion-matrix-test matrix)))
+    (confusion-matrix-accuracy matrix
+                               :filter (lambda (target prediction2)
+                                         (declare (ignore target))
+                                         (funcall test prediction
+                                                  prediction2)))))
 
 (defun confusion-matrix-recall (matrix target)
   "Return the accuracy over the cases when the correct class is
   TARGET."
-  (confusion-matrix-accuracy matrix
-                             :filter (lambda (target2 prediction)
-                                       (declare (ignore prediction))
-                                       (eql target target2))))
+  (let ((test (confusion-matrix-test matrix)))
+    (confusion-matrix-accuracy matrix
+                               :filter (lambda (target2 prediction)
+                                         (declare (ignore prediction))
+                                         (funcall test target target2)))))
 
 (defun add-confusion-matrix (matrix result-matrix)
   "Add MATRIX into RESULT-MATRIX."

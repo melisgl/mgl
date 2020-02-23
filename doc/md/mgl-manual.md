@@ -1376,7 +1376,7 @@ behind [Classification Monitors][cc50].
 
 <a id='x-28MGL-CORE-3AMEASURE-CROSS-ENTROPY-20FUNCTION-29'></a>
 
-- [function] **MEASURE-CROSS-ENTROPY** *TRUTHS PREDICTIONS &KEY TRUTH-KEY PREDICTION-KEY (MIN-PREDICTION-PR 1.d-15)*
+- [function] **MEASURE-CROSS-ENTROPY** *TRUTHS PREDICTIONS &KEY TRUTH-KEY PREDICTION-KEY (MIN-PREDICTION-PR 1.0d-15)*
 
     Return the sum of the cross-entropy between pairs of elements with
     the same index of `TRUTHS` and `PREDICTIONS`. `TRUTH-KEY` is a function
@@ -1495,12 +1495,13 @@ behind [Classification Monitors][cc50].
 
     A confusion matrix keeps count of classification
     results. The correct class is called `target' and the output of the
-    classifier is called`prediction'. Classes are compared with
-    `EQUAL`.
+    classifier is called`prediction'.
 
 <a id='x-28MGL-CORE-3AMAKE-CONFUSION-MATRIX-20FUNCTION-29'></a>
 
 - [function] **MAKE-CONFUSION-MATRIX** *&KEY (TEST #'EQL)*
+
+    Classes are compared with `TEST`.
 
 <a id='x-28MGL-CORE-3ASORT-CONFUSION-CLASSES-20GENERIC-FUNCTION-29'></a>
 
@@ -2149,7 +2150,7 @@ too.
 
 <a id='x-28MGL-GD-3ALEARNING-RATE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **LEARNING-RATE** *ADAM-OPTIMIZER* *(= 2.e-4)*
+- [accessor] **LEARNING-RATE** *ADAM-OPTIMIZER* *(= 2.0e-4)*
 
     Same thing as [`LEARNING-RATE`][4ffe] but with the default suggested by the Adam paper.
 
@@ -2165,7 +2166,7 @@ too.
 
 <a id='x-28MGL-GD-3AMEAN-DECAY-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **MEAN-DECAY-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY-DECAY = (- 1 1.d-7))*
+- [accessor] **MEAN-DECAY-DECAY** *ADAM-OPTIMIZER* *(:MEAN-DECAY-DECAY = (- 1 1.0d-7))*
 
     A value that should be close to 1. [`MEAN-DECAY`][c434] is
     multiplied by this value after each update. This is $\lambda$ in
@@ -2181,7 +2182,7 @@ too.
 
 <a id='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29'></a>
 
-- [accessor] **VARIANCE-ADJUSTMENT** *ADAM-OPTIMIZER* *(:VARIANCE-ADJUSTMENT = 1.d-7)*
+- [accessor] **VARIANCE-ADJUSTMENT** *ADAM-OPTIMIZER* *(:VARIANCE-ADJUSTMENT = 1.0d-7)*
 
     Within the bowels of adam, the estimated mean is
     divided by the square root of the estimated variance (per weight)
@@ -4163,7 +4164,7 @@ use activation subnets to reduce the clutter.
 
 <a id='x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29'></a>
 
-- [reader] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZATION* *(:VARIANCE-ADJUSTMENT = 1.e-4)*
+- [reader] **VARIANCE-ADJUSTMENT** *-\>BATCH-NORMALIZATION* *(:VARIANCE-ADJUSTMENT = 1.0e-4)*
 
     A small positive real number that's added to the
     sample variance. This is $\epsilon$ in the paper.
