@@ -7,3 +7,4 @@
 *.bpn
 *.log
 example/mnist-data
+doc/

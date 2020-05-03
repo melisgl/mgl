@@ -1,4 +1,4 @@
-# MGL
+# MGL Manual
 
 ###### \[in package MGL\]
 ## mgl ASDF System Details
@@ -11,7 +11,9 @@
 - Mailto: [mega@retes.hu](mailto:mega@retes.hu)
 - Homepage: [http://quotenil.com](http://quotenil.com)
 
-## Overview
+## Introduction
+
+### Overview
 
 MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
@@ -25,19 +27,4098 @@ use. Perhaps one day there will be a cookie cutter interface with
 restricted functionality if a reasonable compromise is found between
 power and utility.
 
-## Links
+### Links
 
 Here is the [official repository](https://github.com/melisgl/mgl)
 and the [HTML
 documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
 for the latest version.
 
-## Documentation
+### Dependencies
 
-Documentation for this version is available in markdown format in
-[MGL Manual](doc/md/mgl-manual.md). [HTML
-documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
-is generated for the latest version.
+MGL used to rely on [LLA](https://github.com/tpapp/lla) to
+interface to BLAS and LAPACK. That's mostly history by now, but
+configuration of foreign libraries is still done via LLA. See the
+README in LLA on how to set things up. Note that these days OpenBLAS
+is easier to set up and just as fast as ATLAS.
+
+[CL-CUDA](https://github.com/takagi/cl-cuda) and
+[MGL-MAT](https://github.com/melisgl/mgl) are the two main
+dependencies and also the ones not yet in quicklisp, so just drop
+them into `quicklisp/local-projects/`. If there is no suitable GPU
+on the system or the CUDA SDK is not installed, MGL will simply
+fall back on using BLAS and Lisp code. Wrapping code in
+MGL-MAT:WITH-CUDA\* is basically all that's needed to run on the GPU,
+and with MGL-MAT:CUDA-AVAILABLE-P one can check whether the GPU is
+really being used.
+
+### Code Organization
+
+MGL consists of several packages dedicated to different tasks.
+For example, package `MGL-RESAMPLE` is about @MGL-RESAMPLE and
+`MGL-GD` is about @MGL-GD and so on. On one hand, having many
+packages makes it easier to cleanly separate API and implementation
+and also to explore into a specific task. At other times, they can
+be a hassle, so the MGL package itself reexports every external
+symbol found in all the other packages that make up MGL and
+MGL-MAT (see MGL-MAT:@MAT-MANUAL) on which it heavily relies.
+
+One exception to this rule is the bundled, but independent
+MGL-GNUPLOT library.
+
+The built in tests can be run with:
+
+    (ASDF:OOS 'ASDF:TEST-OP '#:MGL)
+
+Note, that most of the tests are rather stochastic and can fail once
+in a while.
+
+### Glossary
+
+Ultimately machine learning is about creating **models** of some
+domain. The observations in the modelled domain are called
+**instances** (also known as examples or samples). Sets of instances
+are called **datasets**. Datasets are used when fitting a model or
+when making **predictions**. Sometimes the word predictions is too
+specific, and the results obtained from applying a model to some
+instances are simply called **results**.
+
+## Datasets
+
+###### \[in package MGL-DATASET\]
+An instance can often be any kind of object of the user's choice.
+It is typically represented by a set of numbers which is called a
+feature vector or by a structure holding the feature vector, the
+label, etc. A dataset is a SEQUENCE of such instances or a
+@MGL-SAMPLER object that produces instances.
+
+- [function] MAP-DATASET FN DATASET
+
+    Call FN with each instance in DATASET. This is basically equivalent
+    to iterating over the elements of a sequence or a sampler (see
+    @MGL-SAMPLER).
+
+- [function] MAP-DATASETS FN DATASETS &KEY (IMPUTE NIL IMPUTEP)
+
+    Call FN with a list of instances, one from each dataset in
+    DATASETS. Return nothing. If IMPUTE is specified then iterate until
+    the largest dataset is consumed imputing IMPUTE for missing values.
+    If IMPUTE is not specified then iterate until the smallest dataset
+    runs out.
+    
+    ```cl-transcript
+    (map-datasets #'prin1 '((0 1 2) (:a :b)))
+    .. (0 :A)(1 :B)
+    
+    (map-datasets #'prin1 '((0 1 2) (:a :b)) :impute nil)
+    .. (0 :A)(1 :B)(2 NIL)
+    
+    ```
+    
+    It is of course allowed to mix sequences with samplers:
+    
+    ```cl-transcript
+    (map-datasets #'prin1
+                  (list '(0 1 2)
+                        (make-sequence-sampler '(:a :b) :max-n-samples 2)))
+    .. (0 :A)(1 :B)
+    
+    ```
+
+
+### Samplers
+
+Some algorithms do not need random access to the entire dataset and
+can work with a stream observations. Samplers are simple generators
+providing two functions: SAMPLE and FINISHEDP.
+
+- [generic-function] SAMPLE SAMPLER
+
+    If SAMPLER has not run out of data (see FINISHEDP)
+    SAMPLE returns an object that represents a sample from the world to
+    be experienced or, in other words, simply something the can be used
+    as input for training or prediction. It is not allowed to call
+    SAMPLE if SAMPLER is FINISHEDP.
+
+- [generic-function] FINISHEDP SAMPLER
+
+    See if SAMPLER has run out of examples.
+
+- [function] LIST-SAMPLES SAMPLER MAX-SIZE
+
+    Return a list of samples of length at most MAX-SIZE or less if
+    SAMPLER runs out.
+
+- [function] MAKE-SEQUENCE-SAMPLER SEQ &KEY MAX-N-SAMPLES
+
+    Create a sampler that returns elements of SEQ in their original
+    order. If MAX-N-SAMPLES is non-nil, then at most MAX-N-SAMPLES are
+    sampled.
+
+- [function] MAKE-RANDOM-SAMPLER SEQ &KEY MAX-N-SAMPLES (REORDER #'MGL-RESAMPLE:SHUFFLE)
+
+    Create a sampler that returns elements of SEQ in random order. If
+    MAX-N-SAMPLES is non-nil, then at most MAX-N-SAMPLES are sampled.
+    The first pass over a shuffled copy of SEQ, and this copy is
+    reshuffled whenever the sampler reaches the end of it. Shuffling is
+    performed by calling the REORDER function.
+
+- [variable] *INFINITELY-EMPTY-DATASET* #<FUNCTION-SAMPLER "infinitely empty" >
+
+    This is the default dataset for MGL-OPT:MINIMIZE. It's an infinite
+    stream of NILs.
+
+#### Function Sampler
+
+- [class] FUNCTION-SAMPLER
+
+    A sampler with a function in its GENERATOR that
+    produces a stream of samples which may or may not be finite
+    depending on MAX-N-SAMPLES. FINISHEDP returns T iff MAX-N-SAMPLES is
+    non-nil, and it's not greater than the number of samples
+    generated (N-SAMPLES).
+    
+        (list-samples (make-instance 'function-sampler
+                                     :generator (lambda ()
+                                                  (random 10))
+                                     :max-n-samples 5)
+                      10)
+        => (3 5 2 3 3)
+
+
+- [reader] GENERATOR FUNCTION-SAMPLER (:GENERATOR)
+
+    A generator function of no arguments that returns
+    the next sample.
+
+- [accessor] MAX-N-SAMPLES FUNCTION-SAMPLER (:MAX-N-SAMPLES = NIL)
+
+- [reader] NAME FUNCTION-SAMPLER (:NAME = NIL)
+
+    An arbitrary object naming the sampler. Only used
+    for printing the sampler object.
+
+- [reader] N-SAMPLES FUNCTION-SAMPLER (:N-SAMPLES = 0)
+
+
+
+## Resampling
+
+###### \[in package MGL-RESAMPLE\]
+The focus of this package is on resampling methods such as
+cross-validation and bagging which can be used for model evaluation,
+model selection, and also as a simple form of ensembling. Data
+partitioning and sampling functions are also provided because they
+tend to be used together with resampling.
+
+### Partitions
+
+The following functions partition a dataset (currently only
+SEQUENCEs are supported) into a number of partitions. For each
+element in the original dataset there is exactly one partition that
+contains it.
+
+- [function] FRACTURE FRACTIONS SEQ &KEY WEIGHT
+
+    Partition SEQ into a number of subsequences. FRACTIONS is either a
+    positive integer or a list of non-negative real numbers. WEIGHT is
+    NIL or a function that returns a non-negative real number when
+    called with an element from SEQ. If FRACTIONS is a positive integer
+    then return a list of that many subsequences with equal sum of
+    weights bar rounding errors, else partition SEQ into subsequences,
+    where the sum of weights of subsequence I is proportional to element
+    I of FRACTIONS. If WEIGHT is NIL, then it's element is assumed to
+    have the same weight.
+    
+    To split into 5 sequences:
+    
+    ```cl-transcript
+    (fracture 5 '(0 1 2 3 4 5 6 7 8 9))
+    => ((0 1) (2 3) (4 5) (6 7) (8 9))
+    
+    ```
+    
+    To split into two sequences whose lengths are proportional to 2 and
+    3:
+    
+    ```cl-transcript
+    (fracture '(2 3) '(0 1 2 3 4 5 6 7 8 9))
+    => ((0 1 2 3) (4 5 6 7 8 9))
+    
+    ```
+
+
+- [function] STRATIFY SEQ &KEY (KEY #'IDENTITY) (TEST #'EQL)
+
+    Return the list of strata of SEQ. SEQ is a sequence of elements for
+    which the function KEY returns the class they belong to. Such
+    classes are opaque objects compared for equality with TEST. A
+    stratum is a sequence of elements with the same (under TEST) KEY.
+    
+    ```cl-transcript
+    (stratify '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+    => ((0 2 4 6 8) (1 3 5 7 9))
+    
+    ```
+
+
+- [function] FRACTURE-STRATIFIED FRACTIONS SEQ &KEY (KEY #'IDENTITY) (TEST #'EQL) WEIGHT
+
+    Similar to FRACTURE, but also makes sure that keys are evenly
+    distributed among the partitions (see STRATIFY). It can be useful
+    for classification tasks to partition the data set while keeping the
+    distribution of classes the same.
+    
+    Note that the sets returned are not in random order. In fact, they
+    are sorted internally by KEY.
+    
+    For example, to make two splits with approximately the same number
+    of even and odd numbers:
+    
+    ```cl-transcript
+    (fracture-stratified 2 '(0 1 2 3 4 5 6 7 8 9) :key #'evenp)
+    => ((0 2 1 3) (4 6 8 5 7 9))
+    
+    ```
+
+
+### Cross-validation
+
+- [function] CROSS-VALIDATE DATA FN &KEY (N-FOLDS 5) (FOLDS (ALEXANDRIA:IOTA N-FOLDS)) (SPLIT-FN #'SPLIT-FOLD/MOD) PASS-FOLD
+
+    Map FN over the FOLDS of DATA split with SPLIT-FN and collect the
+    results in a list. The simplest demonstration is:
+    
+    ```cl-transcript
+    (cross-validate '(0 1 2 3 4)
+                    (lambda (test training)
+                     (list test training))
+                    :n-folds 5)
+    => (((0) (1 2 3 4))
+        ((1) (0 2 3 4))
+        ((2) (0 1 3 4))
+        ((3) (0 1 2 4))
+        ((4) (0 1 2 3)))
+    
+    ```
+    
+    Of course, in practice one would typically train a model and return
+    the trained model and/or its score on TEST. Also, sometimes one may
+    want to do only some of the folds and remember which ones they were:
+    
+    ```cl-transcript
+    (cross-validate '(0 1 2 3 4)
+                    (lambda (fold test training)
+                     (list :fold fold test training))
+                    :folds '(2 3)
+                    :pass-fold t)
+    => ((:fold 2 (2) (0 1 3 4))
+        (:fold 3 (3) (0 1 2 4)))
+    
+    ```
+    
+    Finally, the way the data is split can be customized. By default
+    SPLIT-FOLD/MOD is called with the arguments DATA, the fold (from
+    among FOLDS) and N-FOLDS. SPLIT-FOLD/MOD returns two values which
+    are then passed on to FN. One can use SPLIT-FOLD/CONT or
+    SPLIT-STRATIFIED or any other function that works with these
+    arguments. The only real constraint is that FN has to take as many
+    arguments (plus the fold argument if PASS-FOLD) as SPLIT-FN
+    returns.
+
+- [function] SPLIT-FOLD/MOD SEQ FOLD N-FOLDS
+
+    Partition SEQ into two sequences: one with elements of SEQ with
+    indices whose remainder is FOLD when divided with N-FOLDS, and a
+    second one with the rest. The second one is the larger set. The
+    order of elements remains stable. This function is suitable as the
+    SPLIT-FN argument of CROSS-VALIDATE.
+
+- [function] SPLIT-FOLD/CONT SEQ FOLD N-FOLDS
+
+    Imagine dividing SEQ into N-FOLDS subsequences of the same
+    size (bar rounding). Return the subsequence of index FOLD as the
+    first value and the all the other subsequences concatenated into one
+    as the second value. The order of elements remains stable. This
+    function is suitable as the SPLIT-FN argument of CROSS-VALIDATE.
+
+- [function] SPLIT-STRATIFIED SEQ FOLD N-FOLDS &KEY (KEY #'IDENTITY) (TEST #'EQL) WEIGHT
+
+    Split SEQ into N-FOLDS partitions (as in FRACTURE-STRATIFIED).
+    Return the partition of index FOLD as the first value, and the
+    concatenation of the rest as the second value. This function is
+    suitable as the SPLIT-FN argument of CROSS-VALIDATE (mostly likely
+    as a closure with KEY, TEST, WEIGHT bound).
+
+### Bagging
+
+- [function] BAG SEQ FN &KEY (RATIO 1) N WEIGHT (REPLACEMENT T) KEY (TEST #'EQL) (RANDOM-STATE \*RANDOM-STATE\*)
+
+    Sample from SEQ with SAMPLE-FROM (passing RATIO, WEIGHT,
+    REPLACEMENT), or SAMPLE-STRATIFIED if KEY is not NIL. Call FN with
+    the sample. If N is NIL then keep repeating this until FN performs a
+    non-local exit. Else N must be a non-negative integer, N iterations
+    will be performed, the primary values returned by FN collected into
+    a list and returned. See SAMPLE-FROM and SAMPLE-STRATIFIED for
+    examples.
+
+- [function] SAMPLE-FROM RATIO SEQ &KEY WEIGHT REPLACEMENT (RANDOM-STATE \*RANDOM-STATE\*)
+
+    Return a sequence constructed by sampling with or without
+    REPLACEMENT from SEQ. The sum of weights in the result sequence will
+    approximately be the sum of weights of SEQ times RATIO. If WEIGHT is
+    NIL then elements are assumed to have equal weights, else WEIGHT
+    should return a non-negative real number when called with an element
+    of SEQ.
+    
+    To randomly select half of the elements:
+    
+    ```common-lisp
+    (sample-from 1/2 '(0 1 2 3 4 5))
+    => (5 3 2)
+    ```
+    
+    To randomly select some elements such that the sum of their weights
+    constitute about half of the sum of weights across the whole
+    sequence:
+    
+    ```common-lisp
+    (sample-from 1/2 '(0 1 2 3 4 5 6 7 8 9) :weight #'identity)
+    => ;; sums to 28 that's near 45/2
+       (9 4 1 6 8)
+    ```
+    
+    To sample with replacement (that is, allowing the element to be
+    sampled multiple times):
+    
+    ```common-lisp
+    (sample-from 1 '(0 1 2 3 4 5) :replacement t)
+    => (1 1 5 1 4 4)
+    ```
+
+
+- [function] SAMPLE-STRATIFIED RATIO SEQ &KEY WEIGHT REPLACEMENT (KEY #'IDENTITY) (TEST #'EQL) (RANDOM-STATE \*RANDOM-STATE\*)
+
+    Like SAMPLE-FROM but makes sure that the weighted proportion of
+    classes in the result is approximately the same as the proportion in
+    SEQ. See STRATIFY for the description of KEY and TEST.
+
+### CV Bagging
+
+- [function] BAG-CV DATA FN &KEY N (N-FOLDS 5) (FOLDS (ALEXANDRIA:IOTA N-FOLDS)) (SPLIT-FN #'SPLIT-FOLD/MOD) PASS-FOLD (RANDOM-STATE \*RANDOM-STATE\*)
+
+    Perform cross-validation on different shuffles of DATA N times and
+    collect the results. Since CROSS-VALIDATE collects the return values
+    of FN, the return value of this function is a list of lists of FN
+    results. If N is NIL, don't collect anything just keep doing
+    repeated CVs until FN performs a non-local exit.
+    
+    The following example simply collects the test and training sets for
+    2-fold CV repeated 3 times with shuffled data:
+    
+    ```commonlisp
+    ;;; This is non-deterministic.
+    (bag-cv '(0 1 2 3 4) #'list :n 3 :n-folds 2)
+    => ((((2 3 4) (1 0))
+         ((1 0) (2 3 4)))
+        (((2 1 0) (4 3))
+         ((4 3) (2 1 0)))
+        (((1 0 3) (2 4))
+         ((2 4) (1 0 3))))
+    ```
+    
+    CV bagging is useful when a single CV is not producing stable
+    results. As an ensemble method, CV bagging has the advantage over
+    bagging that each example will occur the same number of times and
+    after the first CV is complete there is a complete but less reliable
+    estimate for each example which gets refined by further CVs.
+
+### Miscellaneous Operations
+
+- [function] SPREAD-STRATA SEQ &KEY (KEY #'IDENTITY) (TEST #'EQL)
+
+    Return a sequence that's a reordering of SEQ such that elements
+    belonging to different strata (under KEY and TEST, see STRATIFY) are
+    distributed evenly. The order of elements belonging to the same
+    stratum is unchanged.
+    
+    For example, to make sure that even and odd numbers are distributed
+    evenly:
+    
+    ```cl-transcript
+    (spread-strata '(0 2 4 6 8 1 3 5 7 9) :key #'evenp)
+    => (0 1 2 3 4 5 6 7 8 9)
+    
+    ```
+    
+    Same thing with unbalanced classes:
+    
+    ```cl-transcript
+    (spread-strata (vector 0 2 3 5 6 1 4)
+                   :key (lambda (x)
+                          (if (member x '(1 4))
+                              t
+                              nil)))
+    => #(0 1 2 3 4 5 6)
+    
+    ```
+
+
+- [function] ZIP-EVENLY SEQS &KEY RESULT-TYPE
+
+    Make a single sequence out of the sequences in SEQS so that in the
+    returned sequence indices of elements belonging to the same source
+    sequence are spread evenly across the whole range. The result is a
+    list is RESULT-TYPE is LIST, it's a vector if RESULT-TYPE is VECTOR.
+    If RESULT-TYPE is NIL, then it's determined by the type of the first
+    sequence in SEQS.
+    
+    ```cl-transcript
+    (zip-evenly '((0 2 4) (1 3)))
+    => (0 1 2 3 4)
+    
+    ```
+
+
+## Core
+
+###### \[in package MGL-CORE\]
+### Persistence
+
+- [function] LOAD-STATE FILENAME OBJECT
+
+    Load weights of OBJECT from FILENAME. Return OBJECT.
+
+- [function] SAVE-STATE FILENAME OBJECT &KEY (IF-EXISTS :ERROR) (ENSURE T)
+
+    Save weights of OBJECT to FILENAME. If ENSURE, then
+    ENSURE-DIRECTORIES-EXIST is called on FILENAME. IF-EXISTS is passed
+    on to OPEN. Return OBJECT.
+
+- [function] READ-STATE OBJECT STREAM
+
+    Read the weights of OBJECT from the bivalent STREAM where weights
+    mean the learnt parameters. There is currently no sanity checking of
+    data which will most certainly change in the future together with
+    the serialization format. Return OBJECT.
+
+- [function] WRITE-STATE OBJECT STREAM
+
+    Write weight of OBJECT to the bivalent STREAM. Return OBJECT.
+
+- [generic-function] READ-STATE* OBJECT STREAM CONTEXT
+
+    This is the extension point for READ-STATE. It is
+    guaranteed that primary READ-STATE\* methods will be called only once
+    for each OBJECT (under EQ). CONTEXT is an opaque object and must be
+    passed on to any recursive READ-STATE\* calls.
+
+- [generic-function] WRITE-STATE* OBJECT STREAM CONTEXT
+
+    This is the extension point for WRITE-STATE. It is
+    guaranteed that primary WRITE-STATE\* methods will be called only
+    once for each OBJECT (under EQ). CONTEXT is an opaque object and must
+    be passed on to any recursive WRITE-STATE\* calls.
+
+### Batch Processing
+
+Processing instances one by one during training or prediction can
+be slow. The models that support batch processing for greater
+efficiency are said to be *striped*.
+
+Typically, during or after creating a model, one sets MAX-N-STRIPES
+on it a positive integer. When a batch of instances is to be fed to
+the model it is first broken into subbatches of length that's at
+most MAX-N-STRIPES. For each subbatch, SET-INPUT (FIXDOC) is called
+and a before method takes care of setting N-STRIPES to the actual
+number of instances in the subbatch. When MAX-N-STRIPES is set
+internal data structures may be resized which is an expensive
+operation. Setting N-STRIPES is a comparatively cheap operation,
+often implemented as matrix reshaping.
+
+Note that for models made of different parts (for example,
+[MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
+values affects the constituent parts, but one should never change
+the number stripes of the parts directly because that would lead to
+an internal inconsistency in the model.
+
+- [generic-function] MAX-N-STRIPES OBJECT
+
+    The number of stripes with which the OBJECT is
+    capable of dealing simultaneously. 
+
+- [generic-function] SET-MAX-N-STRIPES MAX-N-STRIPES OBJECT
+
+    Allocate the necessary stuff to allow for
+    MAX-N-STRIPES number of stripes to be worked with simultaneously in
+    OBJECT. This is called when MAX-N-STRIPES is SETF'ed.
+
+- [generic-function] N-STRIPES OBJECT
+
+    The number of stripes currently present in OBJECT.
+    This is at most MAX-N-STRIPES.
+
+- [generic-function] SET-N-STRIPES N-STRIPES OBJECT
+
+    Set the number of stripes (out of MAX-N-STRIPES)
+    that are in use in OBJECT. This is called when N-STRIPES is
+    SETF'ed.
+
+- [macro] WITH-STRIPES SPECS &BODY BODY
+
+    Bind start and optionally end indices belonging to stripes in
+    striped objects.
+    
+        (WITH-STRIPES ((STRIPE1 OBJECT1 START1 END1)
+                       (STRIPE2 OBJECT2 START2)
+                       ...)
+         ...)
+    
+    This is how one's supposed to find the index range corresponding to
+    the Nth input in an input lump of a bpn:
+    
+         (with-stripes ((n input-lump start end))
+           (loop for i upfrom start below end
+                 do (setf (mref (nodes input-lump) i) 0d0)))
+    
+    Note how the input lump is striped, but the matrix into which we are
+    indexing (NODES) is not known to WITH-STRIPES. In fact, for lumps
+    the same stripe indices work with NODES and MGL-BP:DERIVATIVES.
+
+- [generic-function] STRIPE-START STRIPE OBJECT
+
+    Return the start index of STRIPE in some array or
+    matrix of OBJECT.
+
+- [generic-function] STRIPE-END STRIPE OBJECT
+
+    Return the end index (exclusive) of STRIPE in some
+    array or matrix of OBJECT.
+
+- [generic-function] SET-INPUT INSTANCES MODEL
+
+    Set INSTANCES as inputs in MODEL. SAMPLES is always
+    a SEQUENCE of instances even for models not capable of batch
+    operation. It sets N-STRIPES to (LENGTH INSTANCES) in a :BEFORE
+    method.
+
+- [function] MAP-BATCHES-FOR-MODEL FN DATASET MODEL
+
+    Call FN with batches of instances from DATASET suitable for MODEL.
+    The number of instances in a batch is MAX-N-STRIPES of MODEL or less
+    if there are no more instances left.
+
+- [macro] DO-BATCHES-FOR-MODEL (BATCH (DATASET MODEL)) &BODY BODY
+
+    Convenience macro over MAP-BATCHES-FOR-MODEL.
+
+### Executors
+
+- [generic-function] MAP-OVER-EXECUTORS FN INSTANCES PROTOTYPE-EXECUTOR
+
+    Divide INSTANCES between executors that perform the
+    same function as PROTOTYPE-EXECUTOR and call FN with the instances
+    and the executor for which the instances are.
+    
+    Some objects conflate function and call: the forward pass of a
+    [MGL-BP:BPN][class] computes output from inputs so it is like a
+    function but it also doubles as a function call in the sense that
+    the bpn (function) object changes state during the computation of
+    the output. Hence not even the forward pass of a bpn is thread safe.
+    There is also the restriction that all inputs must be of the same
+    size.
+    
+    For example, if we have a function that builds bpn a for an input of
+    a certain size, then we can create a factory that creates bpns for a
+    particular call. The factory probably wants to keep the weights the
+    same though. In @MGL-PARAMETERIZED-EXECUTOR-CACHE,
+    MAKE-EXECUTOR-WITH-PARAMETERS is this factory.
+    
+    Parallelization of execution is another possibility
+    MAP-OVER-EXECUTORS allows, but there is no prebuilt solution for it,
+    yet.
+    
+    The default implementation simply calls FN with INSTANCES and
+    PROTOTYPE-EXECUTOR.
+
+- [macro] DO-EXECUTORS (INSTANCES OBJECT) &BODY BODY
+
+    Convenience macro on top of MAP-OVER-EXECUTORS.
+
+#### Parameterized Executor Cache
+
+- [class] PARAMETERIZED-EXECUTOR-CACHE-MIXIN
+
+    Mix this into a model, implement
+    INSTANCE-TO-EXECUTOR-PARAMETERS and MAKE-EXECUTOR-WITH-PARAMETERS
+    and DO-EXECUTORS will be to able build executors suitable for
+    different instances. The canonical example is using a BPN to compute
+    the means and convariances of a gaussian process. Since each
+    instance is made of a variable number of observations, the size of
+    the input is not constant, thus we have a bpn (an executor) for each
+    input dimension (the parameters).
+
+- [generic-function] MAKE-EXECUTOR-WITH-PARAMETERS PARAMETERS CACHE
+
+    Create a new executor for PARAMETERS. CACHE is a
+    PARAMETERIZED-EXECUTOR-CACHE-MIXIN. In the BPN gaussian process
+    example, PARAMETERS would be a list of input dimensions.
+
+- [generic-function] INSTANCE-TO-EXECUTOR-PARAMETERS INSTANCE CACHE
+
+    Return the parameters for an executor able to
+    handle INSTANCE. Called by MAP-OVER-EXECUTORS on CACHE (that's a
+    PARAMETERIZED-EXECUTOR-CACHE-MIXIN). The returned parameters are
+    keys in an EQUAL parameters->executor hash table.
+
+## Monitoring
+
+###### \[in package MGL-CORE\]
+When training or applying a model, one often wants to track various
+statistics. For example, in the case of training a neural network
+with cross-entropy loss, these statistics could be the average
+cross-entropy loss itself, classification accuracy, or even the
+entire confusion matrix and sparsity levels in hidden layers. Also,
+there is the question of what to do with the measured values (log
+and forget, add to some counter or a list).
+
+So there may be several phases of operation when we want to keep an
+eye on. Let's call these **events**. There can also be many fairly
+independent things to do in response to an event. Let's call these
+**monitors**. Some monitors are a composition of two operations: one
+that extracts some measurements and another that aggregates those
+measurements. Let's call these two **measurers** and **counters**,
+respectively.
+
+For example, consider training a backpropagation neural network. We
+want to look at the state of of network just after the backward
+pass. MGL-BP:BP-LEARNER has a [MONITORS][(accessor bp-learner)]
+event hook corresponding to the moment after backpropagating the
+gradients. Suppose we are interested in how the training cost
+evolves:
+
+    (push (make-instance 'monitor
+                         :measurer (lambda (instances bpn)
+                                     (declare (ignore instances))
+                                     (mgl-bp:cost bpn))
+                         :counter (make-instance 'basic-counter))
+          (monitors learner))
+
+During training, this monitor will track the cost of training
+examples behind the scenes. If we want to print and reset this
+monitor periodically we can put another monitor on
+MGL-OPT:ITERATIVE-OPTIMIZER's MGL-OPT:ON-N-INSTANCES-CHANGED
+accessor:
+
+    (push (lambda (optimizer gradient-source n-instances)
+            (declare (ignore optimizer))
+            (when (zerop (mod n-instances 1000))
+              (format t "n-instances: ~S~%" n-instances)
+              (dolist (monitor (monitors gradient-source))
+                (when (counter monitor)
+                  (format t "~A~%" (counter monitor))
+                  (reset-counter (counter monitor)))))
+          (mgl-opt:on-n-instances-changed optimizer))
+
+Note that the monitor we push can be anything as long as
+APPLY-MONITOR is implemented on it with the appropriate signature.
+Also note that the ZEROP + MOD logic is fragile, so you will likely
+want to use MGL-OPT:MONITOR-OPTIMIZATION-PERIODICALLY instead of
+doing the above.
+
+So that's the general idea. Concrete events are documented where
+they are signalled. Often there are task specific utilities that
+create a reasonable set of default monitors (see
+@MGL-CLASSIFICATION-MONITOR).
+
+- [function] APPLY-MONITORS MONITORS &REST ARGUMENTS
+
+    Call APPLY-MONITOR on each monitor in MONITORS and ARGUMENTS. This
+    is how an event is fired.
+
+- [generic-function] APPLY-MONITOR MONITOR &REST ARGUMENTS
+
+    Apply MONITOR to ARGUMENTS. This sound fairly
+    generic, because it is. MONITOR can be anything, even a simple
+    function or symbol, in which case this is just CL:APPLY. See
+    @MGL-MONITOR for more.
+
+- [generic-function] COUNTER MONITOR
+
+    Return an object representing the state of MONITOR
+    or NIL, if it doesn't have any (say because it's a simple logging
+    function). Most monitors have counters into which they accumulate
+    results until they are printed and reset. See @MGL-COUNTER for
+    more.
+
+- [function] MONITOR-MODEL-RESULTS FN DATASET MODEL MONITORS
+
+    Call FN with batches of instances from DATASET until it runs
+    out (as in DO-BATCHES-FOR-MODEL). FN is supposed to apply MODEL to
+    the batch and return some kind of result (for neural networks, the
+    result is the model state itself). Apply MONITORS to each batch and
+    the result returned by FN for that batch. Finally, return the list
+    of counters of MONITORS.
+    
+    The purpose of this function is to collect various results and
+    statistics (such as error measures) efficiently by applying the
+    model only once, leaving extraction of quantities of interest from
+    the model's results to MONITORS.
+    
+    See the model specific versions of this functions such as
+    MGL-BP:MONITOR-BPN-RESULTS.
+
+- [generic-function] MONITORS OBJECT
+
+    Return monitors associated with OBJECT. See various
+    methods such as [MONITORS][(accessor mgl-bp:bp-learner)] for more
+    documentation.
+
+### Monitors
+
+- [class] MONITOR
+
+    A monitor that has another monitor called MEASURER
+    embedded in it. When this monitor is applied, it applies the
+    measurer and passes the returned values to ADD-TO-COUNTER called on
+    its COUNTER slot. One may further specialize APPLY-MONITOR to change
+    that.
+    
+    This class is useful when the same event monitor is applied
+    repeatedly over a period and its results must be aggregated such as
+    when training statistics are being tracked or when predictions are
+    begin made. Note that the monitor must be compatible with the event
+    it handles. That is, the embedded MEASURER must be prepared to take
+    the arguments that are documented to come with the event.
+
+- [reader] MEASURER MONITOR (:MEASURER)
+
+    This must be a monitor itself which only means
+    that APPLY-MONITOR is defined on it (but see @MGL-MONITORING). The
+    returned values are aggregated by [COUNTER][(READER MONITOR)]. See
+    @MGL-MEASURER for a library of measurers.
+
+- [reader] COUNTER MONITOR (:COUNTER)
+
+    The COUNTER of a monitor carries out the
+    aggregation of results returned by MEASURER. The See @MGL-COUNTER
+    for a library of counters.
+
+### Measurers
+
+MEASURER is a part of MONITOR objects, an embedded monitor that
+computes a specific quantity (e.g. classification accuracy) from the
+arguments of event it is applied to (e.g. the model results).
+Measurers are often implemented by combining some kind of model
+specific extractor with a generic measurer function.
+
+All generic measurer functions return their results as multiple
+values matching the arguments of ADD-TO-COUNTER for a counter of a
+certain type (see @MGL-COUNTER) so as to make them easily used in a
+MONITOR:
+
+    (multiple-value-call #'add-to-counter <some-counter>
+                         <call-to-some-measurer>)
+
+The counter class compatible with the measurer this way is noted for
+each function.
+
+For a list of measurer functions see @MGL-CLASSIFICATION-MEASURER.
+
+### Counters
+
+- [generic-function] ADD-TO-COUNTER COUNTER &REST ARGS
+
+    Add ARGS to COUNTER in some way. See specialized
+    methods for type specific documentation. The kind of arguments to be
+    supported is the what the measurer functions (see @MGL-MEASURER)
+    intended to be paired with the counter return as multiple values.
+
+- [generic-function] COUNTER-VALUES COUNTER
+
+    Return any number of values representing the state
+    of COUNTER. See specialized methods for type specific
+    documentation.
+
+- [generic-function] COUNTER-RAW-VALUES COUNTER
+
+    Return any number of values representing the state
+    of COUNTER in such a way that passing the returned values as
+    arguments ADD-TO-COUNTER on a fresh instance of the same type
+    recreates the original state.
+
+- [generic-function] RESET-COUNTER COUNTER
+
+    Restore state of COUNTER to what it was just after
+    creation.
+
+#### Attributes
+
+- [class] ATTRIBUTED
+
+    This is a utility class that all counters subclass.
+    The ATTRIBUTES plist can hold basically anything. Currently the
+    attributes are only used when printing and they can be specified by
+    the user. The monitor maker functions such as those in
+    @MGL-CLASSIFICATION-MONITOR also add attributes of their own to the
+    counters they create.
+    
+    With the :PREPEND-ATTRIBUTES initarg when can easily add new
+    attributes without clobbering the those in the :INITFORM, (:TYPE
+    "rmse") in this case.
+    
+        (princ (make-instance 'rmse-counter
+                              :prepend-attributes '(:event "pred."
+                                                    :dataset "test")))
+        ;; pred. test rmse: 0.000e+0 (0)
+        => #<RMSE-COUNTER pred. test rmse: 0.000e+0 (0)>
+
+
+- [accessor] ATTRIBUTES ATTRIBUTED (:ATTRIBUTES = NIL)
+
+    A plist of attribute keys and values.
+
+- [method] NAME (ATTRIBUTED ATTRIBUTED)
+
+    Return a string assembled from the values of the ATTRIBUTES of
+    ATTRIBUTED. If there are multiple entries with the same key, then
+    they are printed near together.
+    
+    Values may be padded according to an enclosing
+    WITH-PADDED-ATTRIBUTE-PRINTING.
+
+- [macro] WITH-PADDED-ATTRIBUTE-PRINTING (ATTRIBUTEDS) &BODY BODY
+
+    Note the width of values for each attribute key which is the number
+    of characters in the value's PRINC-TO-STRING'ed representation. In
+    BODY, if attributes with they same key are printed they are forced
+    to be at least this wide. This allows for nice, table-like output:
+    
+        (let ((attributeds
+                (list (make-instance 'basic-counter
+                                     :attributes '(:a 1 :b 23 :c 456))
+                      (make-instance 'basic-counter
+                                     :attributes '(:a 123 :b 45 :c 6)))))
+          (with-padded-attribute-printing (attributeds)
+            (map nil (lambda (attributed)
+                       (format t "~A~%" attributed))
+                 attributeds)))
+        ;; 1   23 456: 0.000e+0 (0)
+        ;; 123 45 6  : 0.000e+0 (0)
+
+
+- [function] LOG-PADDED ATTRIBUTEDS
+
+    Log (see LOG-MSG) ATTRIBUTEDS non-escaped (as in PRINC or ~A) with
+    the output being as table-like as possible.
+
+#### Counter classes
+
+In addition to the really basic ones here, also see
+@MGL-CLASSIFICATION-COUNTER.
+
+- [class] BASIC-COUNTER ATTRIBUTED
+
+    A simple counter whose ADD-TO-COUNTER takes two
+    additional parameters: an increment to the internal sums of called
+    the NUMERATOR and DENOMINATOR. COUNTER-VALUES returns two
+    values:
+    
+    - NUMERATOR divided by DENOMINATOR (or 0 if DENOMINATOR is 0) and
+    
+    - DENOMINATOR
+    
+    Here is an example the compute the mean of 5 things received in two
+    batches:
+    
+         (let ((counter (make-instance 'basic-counter)))
+           (add-to-counter counter 6.5 3)
+           (add-to-counter counter 3.5 2)
+           counter)
+         => #<BASIC-COUNTER 2.00000e+0 (5)>
+
+
+- [class] RMSE-COUNTER BASIC-COUNTER
+
+    A BASIC-COUNTER with whose nominator accumulates
+    the square of some statistics. It has the attribute :TYPE "rmse".
+    COUNTER-VALUES returns the square root of what BASIC-COUNTER's
+    COUNTER-VALUES would return.
+    
+        (let ((counter (make-instance 'rmse-counter)))
+          (add-to-counter counter (+ (* 3 3) (* 4 4)) 2)
+          counter)
+        => #<RMSE-COUNTER rmse: 3.53553e+0 (2)>
+
+
+- [class] CONCAT-COUNTER ATTRIBUTED
+
+    A counter that simply concatenates
+    sequences.
+    
+    \`\`\`cl-transcript
+    (let ((counter (make-instance 'concat-counter)))
+      (add-to-counter counter '(1 2 3) #(4 5))
+      (add-to-counter counter '(6 7))
+      (counter-values counter))
+    => (1 2 3 4 5 6 7)
+    \`\`\`\`
+
+- [reader] CONCATENATION-TYPE CONCAT-COUNTER (:CONCATENATION-TYPE = 'LIST)
+
+    A type designator suitable as the RESULT-TYPE
+    argument to CONCATENATE.
+
+## Classification
+
+###### \[in package MGL-CORE\]
+To be able to measure classification related quantities, we need to
+define what the label of an instance is. Customization is possible
+by implementing a method for a specific type of instance, but these
+functions only ever appear as defaults that can be overridden.
+
+- [generic-function] LABEL-INDEX INSTANCE
+
+    Return the label of INSTANCE as a non-negative
+    integer.
+
+- [generic-function] LABEL-INDEX-DISTRIBUTION INSTANCE
+
+    Return a one dimensional array of probabilities
+    representing the distribution of labels. The probability of the
+    label with LABEL-INDEX `I` is element at index `I` of the returned
+    arrray.
+
+The following two functions are basically the same as the previous
+two, but in batch mode: they return a sequence of label indices or
+distributions. These are called on results produced by models.
+Implement these for a model and the monitor maker functions below
+will automatically work. See FIXDOC: for bpn and boltzmann.
+
+- [generic-function] LABEL-INDICES RESULTS
+
+    Return a sequence of label indices for RESULTS
+    produced by some model for a batch of instances. This is akin to
+    LABEL-INDEX.
+
+- [generic-function] LABEL-INDEX-DISTRIBUTIONS RESULT
+
+    Return a sequence of label index distributions for
+    RESULTS produced by some model for a batch of instances. This is
+    akin to LABEL-INDEX-DISTRIBUTION.
+
+### Classification Monitors
+
+The following functions return a list monitors. The monitors are
+for events of signature (INSTANCES MODEL) such as those produced by
+MONITOR-MODEL-RESULTS and its various model specific variations.
+They are model-agnostic functions, extensible to new classifier
+types. 
+
+- [function] MAKE-CLASSIFICATION-ACCURACY-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES (LABEL-INDEX-FN #'LABEL-INDEX)
+
+    Return a list of MONITOR objects associated with
+    [CLASSIFICATION-ACCURACY-COUNTER][]s. LABEL-INDEX-FN is a function
+    like LABEL-INDEX. See that function for more.
+    
+    Implemented in terms of MAKE-CLASSIFICATION-ACCURACY-MONITORS\*.
+
+- [function] MAKE-CROSS-ENTROPY-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES (LABEL-INDEX-DISTRIBUTION-FN #'LABEL-INDEX-DISTRIBUTION)
+
+    Return a list of MONITOR objects associated with
+    [CROSS-ENTROPY-COUNTER][]s. LABEL-INDEX-DISTRIBUTION-FN is a
+    function like LABEL-INDEX-DISTRIBUTION. See that function for more.
+    
+    Implemented in terms of MAKE-CROSS-ENTROPY-MONITORS\*.
+
+- [function] MAKE-LABEL-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES (LABEL-INDEX-FN #'LABEL-INDEX) (LABEL-INDEX-DISTRIBUTION-FN #'LABEL-INDEX-DISTRIBUTION)
+
+    Return classification accuracy and cross-entropy monitors. See
+    MAKE-CLASSIFICATION-ACCURACY-MONITORS and
+    MAKE-CROSS-ENTROPY-MONITORS for a description of paramters.
+
+The monitor makers above can be extended to support new classifier
+types via the following generic functions.
+
+- [generic-function] MAKE-CLASSIFICATION-ACCURACY-MONITORS* MODEL OPERATION-MODE LABEL-INDEX-FN ATTRIBUTES
+
+    Identical to MAKE-CLASSIFICATION-ACCURACY-MONITORS
+    bar the keywords arguments. Specialize this to add to support for
+    new model types. The default implementation also allows for some
+    extensibility: if LABEL-INDICES is defined on MODEL, then it will be
+    used to extract label indices from model results.
+
+- [generic-function] MAKE-CROSS-ENTROPY-MONITORS* MODEL OPERATION-MODE LABEL-INDEX-DISTRIBUTION-FN ATTRIBUTES
+
+    Identical to MAKE-CROSS-ENTROPY-MONITORS bar the
+    keywords arguments. Specialize this to add to support for new model
+    types. The default implementation also allows for some
+    extensibility: if LABEL-INDEX-DISTRIBUTIONS is defined on MODEL,
+    then it will be used to extract label distributions from model
+    results.
+
+### Classification Measurers
+
+The functions here compare some known good solution (also known as
+*ground truth* or *target*) to a prediction or approximation and
+return some measure of their [dis][]similarity. They are model
+independent, hence one has to extract the ground truths and
+predictions first. Rarely used directly, they are mostly hidden
+behind @MGL-CLASSIFICATION-MONITOR.
+
+- [function] MEASURE-CLASSIFICATION-ACCURACY TRUTHS PREDICTIONS &KEY (TEST #'EQL) TRUTH-KEY PREDICTION-KEY WEIGHT
+
+    Return the number of correct classifications and as the second
+    value the number of instances (equal to length of TRUTHS in the
+    non-weighted case). TRUTHS (keyed by TRUTH-KEY) is a sequence of
+    opaque class labels compared with TEST to another sequence of
+    classes labels in PREDICTIONS (keyed by PREDICTION-KEY). If WEIGHT
+    is non-nil, then it is a function that returns the weight of an
+    element of TRUTHS. Weighted cases add their weight to both
+    counts (returned as the first and second values) instead of 1 as in
+    the non-weighted case.
+    
+    Note how the returned values are suitable for MULTIPLE-VALUE-CALL
+    with #'ADD-TO-COUNTER and a CLASSIFICATION-ACCURACY-COUNTER.
+
+- [function] MEASURE-CROSS-ENTROPY TRUTHS PREDICTIONS &KEY TRUTH-KEY PREDICTION-KEY (MIN-PREDICTION-PR 1.0d-15)
+
+    Return the sum of the cross-entropy between pairs of elements with
+    the same index of TRUTHS and PREDICTIONS. TRUTH-KEY is a function
+    that's when applied to an element of TRUTHS returns a sequence
+    representing some kind of discrete target distribution (P in the
+    definition below). TRUTH-KEY may be NIL which is equivalent to the
+    IDENTITY function. PREDICTION-KEY is the same kind of key for
+    PREDICTIONS, but the sequence it returns represents a distribution
+    that approximates (Q below) the true one.
+    
+    Cross-entropy of the true and approximating distributions is defined
+    as:
+    
+        cross-entropy(p,q) = - sum_i p(i) * log(q(i))
+    
+    of which this function returns the sum over the pairs of elements of
+    TRUTHS and PREDICTIONS keyed by TRUTH-KEY and PREDICTION-KEY.
+    
+    Due to the logarithm, if q(i) is close to zero, we run into
+    numerical problems. To prevent this, all q(i) that are less than
+    MIN-PREDICTION-PR are treated as if they were MIN-PREDICTION-PR.
+    
+    The second value returned is the sum of p(i) over all TRUTHS and all
+    `I`. This is normally equal to `(LENGTH TRUTHS)`, since elements of
+    TRUTHS represent a probability distribution, but this is not
+    enforced which allows relative importance of elements to be
+    controlled.
+    
+    The third value returned is a plist that maps each index occurring
+    in the distribution sequences to a list of two elements:
+    
+         sum_j p_j(i) * log(q_j(i))
+    
+    and
+    
+        sum_j p_j(i)
+    
+    where `J` indexes into TRUTHS and PREDICTIONS.
+    
+        (measure-cross-entropy '((0 1 0)) '((0.1 0.7 0.2)))
+        => 0.35667497
+           1
+           (2 (0.0 0)
+            1 (0.35667497 1)
+            0 (0.0 0))
+    
+    Note how the returned values are suitable for MULTIPLE-VALUE-CALL
+    with #'ADD-TO-COUNTER and a CROSS-ENTROPY-COUNTER.
+
+- [function] MEASURE-ROC-AUC PREDICTIONS PRED &KEY (KEY #'IDENTITY) WEIGHT
+
+    Return the area under the ROC curve for PREDICTIONS representing
+    predictions for a binary classification problem. PRED is a predicate
+    function for deciding whether a prediction belongs to the so called
+    positive class. KEY returns a number for each element which is the
+    predictor's idea of how much that element is likely to belong to the
+    class, although it's not necessarily a probability.
+    
+    If WEIGHT is NIL, then all elements of PREDICTIONS count as 1
+    towards the unnormalized sum within AUC. Else WEIGHT must be a
+    function like KEY, but it should return the importance (a positive
+    real number) of elements. If the weight of an prediction is 2 then
+    it's as if there were another identical copy of that prediction in
+    PREDICTIONS.
+    
+    The algorithm is based on algorithm 2 in the paper 'An introduction
+    to ROC analysis' by Tom Fawcett.
+    
+    ROC AUC is equal to the probability of a randomly chosen positive
+    having higher KEY (score) than a randomly chosen negative element.
+    With equal scores in mind, a more precise version is: AUC is the
+    expectation of the above probability over all possible sequences
+    sorted by scores.
+
+- [function] MEASURE-CONFUSION TRUTHS PREDICTIONS &KEY (TEST #'EQL) TRUTH-KEY PREDICTION-KEY WEIGHT
+
+    Create a CONFUSION-MATRIX from TRUTHS and PREDICTIONS.
+    TRUTHS (keyed by TRUTH-KEY) is a sequence of class labels compared
+    with TEST to another sequence of class labels in PREDICTIONS (keyed
+    by PREDICTION-KEY). If WEIGHT is non-nil, then it is a function that
+    returns the weight of an element of TRUTHS. Weighted cases add their
+    weight to both counts (returned as the first and second values).
+    
+    Note how the returned confusion matrix can be added to another with
+    ADD-TO-COUNTER.
+
+### Classification Counters
+
+- [class] CLASSIFICATION-ACCURACY-COUNTER BASIC-COUNTER
+
+    A BASIC-COUNTER with "acc." as its :TYPE
+    attribute and a PRINT-OBJECT method that prints percentages.
+
+- [class] CROSS-ENTROPY-COUNTER BASIC-COUNTER
+
+    A BASIC-COUNTER with "xent" as its :TYPE
+    attribute.
+
+#### Confusion Matrices
+
+- [class] CONFUSION-MATRIX
+
+    A confusion matrix keeps count of classification
+    results. The correct class is called `target' and the output of the
+    classifier is called`prediction'.
+
+- [function] MAKE-CONFUSION-MATRIX &KEY (TEST #'EQL)
+
+    Classes are compared with TEST.
+
+- [generic-function] SORT-CONFUSION-CLASSES MATRIX CLASSES
+
+    Return a list of CLASSES sorted for presentation
+    purposes.
+
+- [generic-function] CONFUSION-CLASS-NAME MATRIX CLASS
+
+    Name of CLASS for presentation purposes.
+
+- [generic-function] CONFUSION-COUNT MATRIX TARGET PREDICTION
+
+- [generic-function] MAP-CONFUSION-MATRIX FN MATRIX
+
+    Call FN with `TARGET`, PREDICTION,
+    COUNT paramaters for each cell in the confusion matrix. Cells with a
+    zero count may be ommitted.
+
+- [generic-function] CONFUSION-MATRIX-CLASSES MATRIX
+
+    A list of all classes. The default is to collect
+    classes from the counts. This can be overridden if, for instance,
+    some classes are not present in the results.
+
+- [function] CONFUSION-MATRIX-ACCURACY MATRIX &KEY FILTER
+
+    Return the overall accuracy of the results in MATRIX. It's computed
+    as the number of correctly classified cases (hits) divided by the
+    name of cases. Return the number of hits and the number of cases as
+    the second and third value. If FILTER function is given, then call
+    it with the target and the prediction of the cell. Disregard cell
+    for which FILTER returns NIL.
+    
+    Precision and recall can be easily computed by giving the right
+    filter, although those are provided in separate convenience
+    functions.
+
+- [function] CONFUSION-MATRIX-PRECISION MATRIX PREDICTION
+
+    Return the accuracy over the cases when the classifier said
+    PREDICTION.
+
+- [function] CONFUSION-MATRIX-RECALL MATRIX TARGET
+
+    Return the accuracy over the cases when the correct class is
+    TARGET.
+
+- [function] ADD-CONFUSION-MATRIX MATRIX RESULT-MATRIX
+
+    Add MATRIX into RESULT-MATRIX.
+
+## Features
+
+###### \[in package MGL-CORE\]
+### Feature Selection
+
+The following *scoring functions* all return an EQUAL hash table
+that maps features to scores.
+
+- [function] COUNT-FEATURES DOCUMENTS MAPPER &KEY (KEY #'IDENTITY)
+
+    Return scored features as an EQUAL hash table whose keys are
+    features of DOCUMENTS and values are counts of occurrences of
+    features. MAPPER takes a function and a document and calls function
+    with features of the document.
+    
+    ```cl-transcript
+    (sort (alexandria:hash-table-alist
+           (count-features '(("hello" "world")
+                             ("this" "is" "our" "world"))
+                           (lambda (fn document)
+                             (map nil fn document))))
+          #'string< :key #'car)
+    => (("hello" . 1) ("is" . 1) ("our" . 1) ("this" . 1) ("world" . 2))
+    
+    ```
+
+
+- [function] FEATURE-LLRS DOCUMENTS MAPPER CLASS-FN &KEY (CLASSES (ALL-DOCUMENT-CLASSES DOCUMENTS CLASS-FN))
+
+    Return scored features as an EQUAL hash table whose keys are
+    features of DOCUMENTS and values are their log likelihood ratios.
+    MAPPER takes a function and a document and calls function with
+    features of the document.
+    
+    ```cl-transcript
+    (sort (alexandria:hash-table-alist
+           (feature-llrs '((:a "hello" "world")
+                           (:b "this" "is" "our" "world"))
+                         (lambda (fn document)
+                           (map nil fn (rest document)))
+                         #'first))
+          #'string< :key #'car)
+    => (("hello" . 2.6032386) ("is" . 2.6032386) ("our" . 2.6032386)
+        ("this" . 2.6032386) ("world" . 4.8428774e-8))
+    
+    ```
+
+
+- [function] FEATURE-DISAMBIGUITIES DOCUMENTS MAPPER CLASS-FN &KEY (CLASSES (ALL-DOCUMENT-CLASSES DOCUMENTS CLASS-FN))
+
+    Return scored features as an EQUAL hash table whose keys are
+    features of DOCUMENTS and values are their *disambiguities*. MAPPER
+    takes a function and a document and calls function with features of
+    the document.
+    
+    From the paper 'Using Ambiguity Measure Feature Selection Algorithm
+    for Support Vector Machine Classifier'.
+
+### Feature Encoding
+
+Features can rarely be fed directly to algorithms as is, they need
+to be transformed in some way. Suppose we have a simple language
+model that takes a single word as input and predicts the next word.
+However, both input and output is to be encoded as float vectors of
+length 1000. What we do is find the top 1000 words by some
+measure (see @MGL-FEATURE-SELECTION) and associate these words with
+the integers in [0..999][] (this is `ENCODE`ing). By using for
+example [one-hot](http://en.wikipedia.org/wiki/One-hot) encoding, we
+translate a word into a float vector when passing in the input. When
+the model outputs the probability distribution of the next word, we
+find the index of the max and find the word associated with it (this
+is `DECODE`ing)
+
+- [generic-function] ENCODE ENCODER DECODED
+
+    Encode DECODED with ENCODER. This interface is
+    generic enough to be almost meaningless. See ENCODER/DECODER for a
+    simple, MGL-NLP:BAG-OF-WORDS-ENCODER for a slightly more involved
+    example.
+    
+    If ENCODER is a function designator, then it's simply `FUNCALL`ed
+    with DECODED.
+
+- [generic-function] DECODE DECODER ENCODED
+
+    Decode ENCODED with ENCODER. For an DECODER /
+    ENCODER pair, `(DECODE DECODER (ENCODE ENCODER OBJECT))` must be
+    equal in some sense to `OBJECT`.
+    
+    If DECODER is a function designator, then it's simply `FUNCALL`ed
+    with ENCODED.
+
+- [class] ENCODER/DECODER
+
+    Implements O(1) ENCODE and DECODE by having an
+    internal decoded-to-encoded and an encoded-to-decoded EQUAL hash
+    table. ENCODER/DECODER objects can be saved and loaded (see
+    @MGL-PERSISTENCE) as long as the elements in the hash tables have
+    read/write consitency.
+    
+    ```cl-transcript
+    (let ((indexer
+            (make-indexer
+             (alexandria:alist-hash-table '(("I" . 3) ("me" . 2) ("mine" . 1)))
+             2)))
+      (values (encode indexer "I")
+              (encode indexer "me")
+              (encode indexer "mine")
+              (decode indexer 0)
+              (decode indexer 1)
+              (decode indexer 2)))
+    => 0
+    => 1
+    => NIL
+    => "I"
+    => "me"
+    => NIL
+    
+    ```
+
+
+- [function] MAKE-INDEXER SCORED-FEATURES N &KEY (START 0) (CLASS 'ENCODER/DECODER)
+
+    Take the top N features from SCORED-FEATURES (see
+    @MGL-FEATURE-SELECTION), assign indices to them starting from START.
+    Return an ENCODER/DECODER (or another CLASS) that converts between
+    objects and indices.
+
+Also see MGL-NLP:@MGL-NLP-BAG-OF-WORDS.
+
+## Gradient Based Optimization
+
+###### \[in package MGL-OPT\]
+We have a real valued, differentiable function F and the task is to
+find the parameters that minimize its value. Optimization starts
+from a single point in the parameter space of F, and this single
+point is updated iteratively based on the gradient and value of F at
+or around the current point.
+
+Note that while the stated problem is that of global optimization,
+for non-convex functions, most algorithms will tend to converge to a
+local optimum.
+
+Currently, there are two optimization algorithms:
+MGL-GD:@MGL-GD (with several variants) and MGL-CG:@MGL-CG both of
+which are first order methods (they do not need second order
+gradients) but more can be added with the @MGL-OPT-EXTENSION-API.
+
+- [function] MINIMIZE OPTIMIZER GRADIENT-SOURCE &KEY (WEIGHTS (LIST-SEGMENTS GRADIENT-SOURCE)) (DATASET \*INFINITELY-EMPTY-DATASET\*)
+
+    Minimize the value of the real valued function represented by
+    GRADIENT-SOURCE by updating some of its parameters in WEIGHTS (a MAT
+    or a sequence of MATs). Return WEIGHTS. DATASET (see
+    MGL:@MGL-DATASET) is a set of unoptimized parameters of the same
+    function. For example, WEIGHTS may be the weights of a neural
+    network while DATASET is the training set consisting of inputs
+    suitable for SET-INPUT. The default
+    DATASET, (*INFINITELY-EMPTY-DATASET*) is suitable for when all
+    parameters are optimized, so there is nothing left to come from the
+    environment.
+    
+    Optimization terminates if DATASET is a sampler and it runs out or
+    when some other condition met (see TERMINATION, for example). If
+    DATASET is a SEQUENCE, then it is reused over and over again.
+    
+    Examples for various optimizers are provided in MGL-GD:@MGL-GD and
+    MGL-CG:@MGL-CG.
+
+### Iterative Optimizer
+
+- [class] ITERATIVE-OPTIMIZER
+
+    An abstract base class of MGL-GD:@MGL-GD and
+    MGL-CG:@MGL-CG based optimizers that iterate over instances until a
+    termination condition is met.
+
+- [reader] N-INSTANCES ITERATIVE-OPTIMIZER (:N-INSTANCES = 0)
+
+    The number of instances this optimizer has seen so
+    far. Incremented automatically during optimization.
+
+- [accessor] TERMINATION ITERATIVE-OPTIMIZER (:TERMINATION = NIL)
+
+    If a number, it's the number of instances to train
+    on in the sense of N-INSTANCES. If N-INSTANCES is equal or greater
+    than this value optimization stops. If TERMINATION is NIL, then
+    optimization will continue. If it is T, then optimization will
+    stop. If it is a function of no arguments, then its return value
+    is processed as if it was returned by TERMINATION.
+
+- [accessor] ON-OPTIMIZATION-STARTED ITERATIVE-OPTIMIZER (:ON-OPTIMIZATION-STARTED = NIL)
+
+    An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called after initializations are
+    performed (INITIALIZE-OPTIMIZER*, INITIALIZE-GRADIENT-SOURCE*) but
+    before optimization is started.
+
+- [accessor] ON-OPTIMIZATION-FINISHED ITERATIVE-OPTIMIZER (:ON-OPTIMIZATION-FINISHED = NIL)
+
+    An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called when optimization has
+    finished.
+
+- [accessor] ON-N-INSTANCES-CHANGED ITERATIVE-OPTIMIZER (:ON-N-INSTANCES-CHANGED = NIL)
+
+    An event hook with parameters `(OPTIMIZER
+    GRADIENT-SOURCE N-INSTANCES)`. Called when optimization of a batch
+    of instances is done and N-INSTANCES is incremented.
+
+Now let's discuss a few handy utilities.
+
+- [function] MONITOR-OPTIMIZATION-PERIODICALLY OPTIMIZER PERIODIC-FNS
+
+    For each periodic function in the list of PERIODIC-FNS, add a
+    monitor to OPTIMIZER's ON-OPTIMIZATION-STARTED,
+    ON-OPTIMIZATION-FINISHED and ON-N-INSTANCES-CHANGED hooks. The
+    monitors are simple functions that just call each periodic function
+    with the event parameters (OPTIMIZER GRADIENT-SOURCE N-INSTANCES).
+    Return OPTIMIZER.
+    
+    To log and reset the monitors of the gradient source after every
+    1000 instances seen by OPTIMIZER:
+    
+        (monitor-optimization-periodically optimizer
+                                           '((:fn log-my-test-error
+                                              :period 2000)
+                                             (:fn reset-optimization-monitors
+                                              :period 1000
+                                              :last-eval 0)))
+    
+    Note how we don't pass it's allowed to just pass the initargs for a
+    PERIODIC-FN instead of PERIODIC-FN itself. The :LAST-EVAL 0 bit
+    prevents RESET-OPTIMIZATION-MONITORS from being called at the start
+    of the optimization when the monitors are empty anyway.
+
+- [generic-function] RESET-OPTIMIZATION-MONITORS OPTIMIZER GRADIENT-SOURCE
+
+    Report the state of [MONITORS][generic-function] of
+    OPTIMIZER and GRADIENT-SOURCE and reset their counters. See
+    MONITOR-OPTIMIZATION-PERIODICALLY for an example of how this is
+    used.
+
+- [method] RESET-OPTIMIZATION-MONITORS (OPTIMIZER ITERATIVE-OPTIMIZER) GRADIENT-SOURCE
+
+    Log the counters of the monitors of OPTIMIZER and GRADIENT-SOURCE
+    and reset them.
+
+- [generic-function] REPORT-OPTIMIZATION-PARAMETERS OPTIMIZER GRADIENT-SOURCE
+
+    A utility that's often called at the start of
+    optimization (from ON-OPTIMIZATION-STARTED). The default
+    implementation logs the description of GRADIENT-SOURCE (as in
+    DESCRIBE) and OPTIMIZER and calls LOG-MAT-ROOM.
+
+### Cost Function
+
+The function being minimized is often called the *cost* or the
+*loss* function.
+
+- [generic-function] COST MODEL
+
+    Return the value of the cost function being
+    minimized. Calling this only makes sense in the context of an
+    ongoing optimization (see MINIMIZE). The cost is that of a batch of
+    instances.
+
+- [function] MAKE-COST-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES
+
+    Return a list of MONITOR objects, each associated with one
+    BASIC-COUNTER with attribute :TYPE "cost". Implemented in terms of
+    MAKE-COST-MONITORS\*.
+
+- [generic-function] MAKE-COST-MONITORS* MODEL OPERATION-MODE ATTRIBUTES
+
+    Identical to MAKE-COST-MONITORS bar the keywords
+    arguments. Specialize this to add to support for new model types.
+
+### Gradient Descent
+
+###### \[in package MGL-GD\]
+Gradient descent is a first-order optimization algorithm. Relying
+completely on first derivatives, it does not even evaluate the
+function to be minimized. Let's see how to minimize a numerical lisp
+function with respect to some of its parameters.
+
+```commonlisp
+(cl:defpackage :mgl-example-sgd
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-sgd)
+
+;;; Create an object representing the sine function.
+(defparameter *diff-fn-1*
+  (make-instance 'mgl-diffun:diffun
+                 :fn #'sin
+                 ;; We are going to optimize its only parameter.
+                 :weight-indices '(0)))
+
+;;; Minimize SIN. Note that there is no dataset involved because all
+;;; parameters are being optimized.
+(minimize (make-instance 'sgd-optimizer :termination 1000)
+          *diff-fn-1*
+          :weights (make-mat 1))
+;;; => A MAT with a single value of about -pi/2.
+
+;;; Create a differentiable function for f(x,y)=(x-y)^2. X is a
+;;; parameter whose values come from the DATASET argument passed to
+;;; MINIMIZE. Y is a parameter to be optimized (a 'weight').
+(defparameter *diff-fn-2*
+  (make-instance 'mgl-diffun:diffun
+                 :fn (lambda (x y)
+                       (expt (- x y) 2))
+                 :parameter-indices '(0)
+                 :weight-indices '(1)))
+
+;;; Find the Y that minimizes the distance from the instances
+;;; generated by the sampler.
+(minimize (make-instance 'sgd-optimizer :batch-size 10)
+          *diff-fn-2*
+          :weights (make-mat 1)
+          :dataset (make-instance 'function-sampler
+                                  :generator (lambda ()
+                                               (list (+ 10
+                                                        (gaussian-random-1))))
+                                  :max-n-samples 1000))
+;;; => A MAT with a single value of about 10, the expected value of
+;;; the instances in the dataset.
+
+;;; The dataset can be a SEQUENCE in which case we'd better set
+;;; TERMINATION else optimization would never finish.
+(minimize (make-instance 'sgd-optimizer :termination 1000)
+          *diff-fn-2*
+          :weights (make-mat 1)
+          :dataset '((0) (1) (2) (3) (4) (5)))
+;;; => A MAT with a single value of about 2.5.
+```
+
+We are going to see a number of accessors for optimizer paramaters.
+In general, it's allowed to SETF real slot accessors (as opposed to
+readers and writers) at any time during optimization and so is
+defining a method on an optimizer subclass that computes the value
+in any way. For example, to decay the learning rate on a per
+mini-batch basis:
+
+```commonlisp
+(defmethod learning-rate ((optimizer my-sgd-optimizer))
+  (* (slot-value optimizer 'learning-rate)
+     (expt 0.998
+           (/ (n-instances optimizer) 60000))))
+```
+
+
+#### Batch Based Optimizers
+
+First let's see everything common to all batch based optimizers,
+then discuss @MGL-GD-SGD-OPTIMIZER, @MGL-GD-ADAM-OPTIMIZER and
+@MGL-GD-NORMALIZED-BATCH-GD-OPTIMIZER. All batch based optimizers
+are `ITERATIVE-OPTIMIZER`s, so see @MGL-OPT-ITERATIVE-OPTIMIZER
+too.
+
+- [class] BATCH-GD-OPTIMIZER GD-OPTIMIZER
+
+    Another abstract base class for gradient based
+    optimizers tath updates all weights simultaneously after chewing
+    through BATCH-SIZE inputs. See subclasses SGD-OPTIMIZER,
+    ADAM-OPTIMIZER and NORMALIZED-BATCH-GD-OPTIMIZER.
+    
+    PER-WEIGHT-BATCH-GD-OPTIMIZER may be a better choice when some
+    weights can go unused for instance due to missing input values.
+
+- [accessor] BATCH-SIZE GD-OPTIMIZER (:BATCH-SIZE = 1)
+
+    After having gone through BATCH-SIZE number of
+    inputs, weights are updated. With BATCH-SIZE 1, one gets
+    Stochastics Gradient Descent. With BATCH-SIZE equal to the number
+    of instances in the dataset, one gets standard, 'batch' gradient
+    descent. With BATCH-SIZE between these two extremes, one gets the
+    most practical 'mini-batch' compromise.
+
+- [accessor] LEARNING-RATE GD-OPTIMIZER (:LEARNING-RATE = 0.1)
+
+    This is the step size along the gradient. Decrease
+    it if optimization diverges, increase it if it doesn't make
+    progress.
+
+- [accessor] MOMENTUM GD-OPTIMIZER (:MOMENTUM = 0)
+
+    A value in the [0, 1) interval. MOMENTUM times the
+    previous weight change is added to the gradient. 0 means no
+    momentum.
+
+- [reader] MOMENTUM-TYPE GD-OPTIMIZER (:MOMENTUM-TYPE = :NORMAL)
+
+    One of :NORMAL, :NESTEROV or :NONE. For pure
+    optimization Nesterov's momentum may be better, but it may also
+    increases chances of overfitting. Using :NONE is equivalent to 0
+    momentum, but it also uses less memory. Note that with :NONE,
+    MOMENTUM is ignored even it it is non-zero.
+
+- [accessor] WEIGHT-DECAY GD-OPTIMIZER (:WEIGHT-DECAY = 0)
+
+    An L2 penalty. It discourages large weights, much
+    like a zero mean gaussian prior. WEIGHT-DECAY \* WEIGHT is added to
+    the gradient to penalize large weights. It's as if the function
+    whose minimum is sought had WEIGHT-DECAY\*sum\_i{0.5 \* WEIGHT\_i^2}
+    added to it.
+
+- [accessor] WEIGHT-PENALTY GD-OPTIMIZER (:WEIGHT-PENALTY = 0)
+
+    An L1 penalty. It encourages sparsity.
+    SIGN(WEIGHT) \* WEIGHT-PENALTY is added to the gradient pushing the
+    weight towards negative infinity. It's as if the function whose
+    minima is sought had WEIGHT-PENALTY\*sum\_i{abs(WEIGHT\_i)} added to
+    it. Putting it on feature biases consitutes a sparsity constraint
+    on the features.
+
+- [reader] USE-SEGMENT-DERIVATIVES-P GD-OPTIMIZER (:USE-SEGMENT-DERIVATIVES-P = NIL)
+
+    Save memory if both the gradient source (the model
+    being optimized) and the optimizer support this feature. It works
+    like this: the accumulator into which the gradient source is asked
+    to place the derivatives of a segment will be SEGMENT-DERIVATIVES
+    of the segment. This allows the optimizer not to allocate an
+    accumulator matrix into which the derivatives are summed.
+
+- [accessor] AFTER-UPDATE-HOOK GD-OPTIMIZER (:AFTER-UPDATE-HOOK = NIL)
+
+    A list of functions with no arguments called after
+    each weight update.
+
+- [accessor] BEFORE-UPDATE-HOOK BATCH-GD-OPTIMIZER (:BEFORE-UPDATE-HOOK = NIL)
+
+    A list of functions of no parameters. Each
+    function is called just before a weight update takes place (after
+    accumulated gradients have been divided the length of the batch).
+    Convenient to hang some additional gradient accumulating code
+    on.
+
+##### SGD Optimizer
+
+- [class] SGD-OPTIMIZER BATCH-GD-OPTIMIZER
+
+    With BATCH-SIZE 1 this is Stochastic Gradient
+    Descent. With higher batch sizes, one gets mini-batch and Batch
+    Gradient Descent.
+    
+    Assuming that ACCUMULATOR has the sum of gradients for a mini-batch,
+    the weight update looks like this:
+    
+    $$\Delta\_w^{t+1} = momentum \Delta\_w^t
+      + \frac{accumulator}{batchsize}
+      + l\_2 w + l\_1 sign(w)$$
+    
+    $$w^{t+1} = w^{t} - learningrate \Delta\_w$$
+    
+    which is the same as the more traditional formulation:
+    
+    $$\Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
+      + learningrate \left(\frac{\frac{df}{dw}}{batchsize}
+                           + l\_2 w + l\_1 sign(w)\right)$$
+    
+    $$w^{t+1} = w^{t} - \Delta\_w$$
+    
+    but the former works better when batch size, momentum or learning
+    rate change during the course of optimization. The above is with
+    normal momentum, Nesterov's momentum (see MOMENTUM-TYPE) momentum is
+    also available.
+    
+    See @MGL-GD-BATCH-GD-OPTIMIZER for the description of the various
+    options common to all batch based optimizers.
+
+##### Adam Optimizer
+
+- [class] ADAM-OPTIMIZER BATCH-GD-OPTIMIZER
+
+    Adam is a first-order stochasistic gradient descent
+    optimizer. It maintains an internal estimation for the mean and raw
+    variance of each derivative as exponential moving averages. The step
+    it takes is basically `M/(sqrt(V)+E)` where `M` is the estimated
+    mean, `V` is the estimated variance, and `E` is a small adjustment
+    factor to prevent the gradient from blowing up. See version 5 of the
+    [paper](http://arxiv.org/abs/1412.6980) for more.
+    
+    Note that using momentum is not supported with Adam. In fact, an
+    error is signalled if it's not :NONE.
+    
+    See @MGL-GD-BATCH-GD-OPTIMIZER for the description of the various
+    options common to all batch based optimizers.
+
+- [accessor] LEARNING-RATE ADAM-OPTIMIZER (= 2.0e-4)
+
+    Same thing as [LEARNING-RATE][(ACCESSOR
+    GD-OPTIMIZER)] but with the default suggested by the Adam paper.
+
+- [accessor] MEAN-DECAY ADAM-OPTIMIZER (:MEAN-DECAY = 0.9)
+
+    A number between 0 and 1 that determines how fast
+    the estimated mean of derivatives is updated. 0 basically gives
+    you RMSPROP (if VARIANCE-DECAY is not too large) or AdaGrad (if
+    VARIANCE-DECAY is close to 1 and the learning rate is annealed.
+    This is $\beta\_1$ in the paper.
+
+- [accessor] MEAN-DECAY-DECAY ADAM-OPTIMIZER (:MEAN-DECAY-DECAY = (- 1 1.0d-7))
+
+    A value that should be close to 1. MEAN-DECAY is
+    multiplied by this value after each update. This is $\lambda$ in
+    the paper.
+
+- [accessor] VARIANCE-DECAY ADAM-OPTIMIZER (:VARIANCE-DECAY = 0.999)
+
+    A number between 0 and 1 that determines how fast
+    the estimated variance of derivatives is updated. This is
+    $\beta\_2$ in the paper.
+
+- [accessor] VARIANCE-ADJUSTMENT ADAM-OPTIMIZER (:VARIANCE-ADJUSTMENT = 1.0d-7)
+
+    Within the bowels of adam, the estimated mean is
+    divided by the square root of the estimated variance (per weight)
+    which can lead to numerical problems if the denominator is near
+    zero. To avoid this, VARIANCE-ADJUSTMENT, which should be a small
+    positive number, is added to the denominator. This is `epsilon` in
+    the paper.
+
+##### Normalized Batch Optimizer
+
+- [class] NORMALIZED-BATCH-GD-OPTIMIZER BATCH-GD-OPTIMIZER
+
+    Like BATCH-GD-OPTIMIZER but keeps count of how many
+    times each weight was used in the batch and divides the accumulated
+    gradient by this count instead of dividing by N-INSTANCES-IN-BATCH.
+    This only makes a difference if there are missing values in the
+    learner that's being trained. The main feature that distuinguishes
+    this class from PER-WEIGHT-BATCH-GD-OPTIMIZER is that batches end at
+    same time for all weights.
+
+- [accessor] N-WEIGHT-USES-IN-BATCH NORMALIZED-BATCH-GD-OPTIMIZER
+
+    Number of uses of the weight in its current batch.
+
+#### Segmented GD Optimizer
+
+- [class] SEGMENTED-GD-OPTIMIZER BASE-GD-OPTIMIZER
+
+    An optimizer that delegates training of segments to
+    other optimizers. Useful to delegate training of different segments
+    to different optimizers (capable of working with segmentables) or
+    simply to not train all segments.
+
+- [reader] SEGMENTER SEGMENTED-GD-OPTIMIZER (:SEGMENTER)
+
+    When this optimizer is initialized it loops over
+    the segment of the learner with MAP-SEGMENTS. SEGMENTER is a
+    function that is called with each segment and returns an optimizer
+    or NIL. Several segments may be mapped to the same optimizer.
+    After the segment->optimizer mappings are collected, each
+    optimizer is initialized by INITIALIZE-OPTIMIZER with the list of
+    segments mapped to it.
+
+- [reader] SEGMENTS SEGMENTED-GD-OPTIMIZER
+
+SEGMENTED-GD-OPTIMIZER inherits from `ITERATIVE-OPTIMIZER`, so see
+@MGL-OPT-ITERATIVE-OPTIMIZER too.
+
+#### Per-weight Optimization
+
+- [class] PER-WEIGHT-BATCH-GD-OPTIMIZER GD-OPTIMIZER
+
+    This is much like @MGL-GD-BATCH-GD-OPTIMIZER but it
+    is more clever about when to update weights. Basically every weight
+    has its own batch independent from the batches of others. This has
+    desirable properties. One can for example put two neural networks
+    together without adding any connections between them and the
+    learning will produce results equivalent to the separated case.
+    Also, adding inputs with only missing values does not change
+    anything.
+    
+    Due to its very non-batch nature, there is no CUDA implementation of
+    this optimizer.
+
+- [accessor] N-WEIGHT-USES-IN-BATCH PER-WEIGHT-BATCH-GD-OPTIMIZER
+
+    Number of uses of the weight in its current batch.
+
+#### Utilities
+
+- [function] CLIP-L2-NORM MATS L2-UPPER-BOUND &KEY CALLBACK
+
+    Scale MATS so that their $L\_2$ norm does not exceed L2-UPPER-BOUND.
+    
+    Compute the norm of of MATS as if they were a single vector. If the
+    norm is greater than L2-UPPER-BOUND, then scale each matrix
+    destructively by the norm divided by L2-UPPER-BOUND and if non-NIL
+    call the function CALLBACK with the scaling factor.
+
+- [function] ARRANGE-FOR-CLIPPING-GRADIENTS BATCH-GD-OPTIMIZER L2-UPPER-BOUND &KEY CALLBACK
+
+    Make it so that the norm of the batch normalized gradients
+    accumulated by BATCH-GD-OPTIMIZER is clipped to L2-UPPER-BOUND
+    before every update. See CLIP-L2-NORM.
+
+### Conjugate Gradient
+
+###### \[in package MGL-CG\]
+Conjugate gradient is a first-order optimization algorithm. It's
+more advanced than gradient descent as it does line searches which
+unfortunately also makes it unsuitable for non-deterministic
+functions. Let's see how to minimize a numerical lisp function with
+respect to some of its parameters.
+
+```
+;;; Create an object representing the sine function.
+(defparameter *diff-fn-1*
+  (make-instance 'mgl-diffun:diffun
+                 :fn #'sin
+                 ;; We are going to optimize its only parameter.
+                 :weight-indices '(0)))
+
+;;; Minimize SIN. Note that there is no dataset involved because all
+;;; parameters are being optimized.
+(minimize (make-instance 'cg-optimizer
+                         :batch-size 1
+                         :termination 1)
+          *diff-fn-1*
+          :weights (make-mat 1))
+;;; => A MAT with a single value of about -pi/2.
+
+;;; Create a differentiable function for f(x,y)=(x-y)^2. X is a
+;;; parameter whose values come from the DATASET argument passed to
+;;; MINIMIZE. Y is a parameter to be optimized (a 'weight').
+(defparameter *diff-fn-2*
+  (make-instance 'mgl-diffun:diffun
+                 :fn (lambda (x y)
+                       (expt (- x y) 2))
+                 :parameter-indices '(0)
+                 :weight-indices '(1)))
+
+;;; Find the Y that minimizes the distance from the instances
+;;; generated by the sampler.
+(minimize (make-instance 'cg-optimizer :batch-size 10)
+          *diff-fn-2*
+          :weights (make-mat 1)
+          :dataset (make-instance 'function-sampler
+                                  :generator (lambda ()
+                                               (list (+ 10
+                                                        (gaussian-random-1))))
+                                  :max-n-samples 1000))
+;;; => A MAT with a single value of about 10, the expected value of
+;;; the instances in the dataset.
+
+;;; The dataset can be a SEQUENCE in which case we'd better set
+;;; TERMINATION else optimization would never finish. Note how a
+;;; single epoch suffices.
+(minimize (make-instance 'cg-optimizer :termination 6)
+          *diff-fn-2*
+          :weights (make-mat 1)
+          :dataset '((0) (1) (2) (3) (4) (5)))
+;;; => A MAT with a single value of about 2.5.
+```
+
+
+- [function] CG FN W &KEY (MAX-N-LINE-SEARCHES \*DEFAULT-MAX-N-LINE-SEARCHES\*) (MAX-N-EVALUATIONS-PER-LINE-SEARCH \*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH\*) (MAX-N-EVALUATIONS \*DEFAULT-MAX-N-EVALUATIONS\*) (SIG \*DEFAULT-SIG\*) (RHO \*DEFAULT-RHO\*) (INT \*DEFAULT-INT\*) (EXT \*DEFAULT-EXT\*) (RATIO \*DEFAULT-RATIO\*) SPARE-VECTORS
+
+    CG-OPTIMIZER passes each batch of data to this function with its
+    CG-ARGS passed on.
+    
+    Minimize a differentiable multivariate function with conjugate
+    gradient. The Polak-Ribiere flavour of conjugate gradients is used
+    to compute search directions, and a line search using quadratic and
+    cubic polynomial approximations and the Wolfe-Powell stopping
+    criteria is used together with the slope ratio method for guessing
+    initial step sizes. Additionally a bunch of checks are made to make
+    sure that exploration is taking place and that extrapolation will
+    not be unboundedly large.
+    
+    FN is a function of two parameters: WEIGHTS and DERIVATIVES. WEIGHTS
+    is a MAT of the same size as W that is where the search start from.
+    DERIVATIVES is also a MAT of that size and it is where FN shall
+    place the partial derivatives. FN returns the value of the function
+    that is being minimized.
+    
+    CG performs a number of line searches and invokes FN at each step. A
+    line search invokes FN at most MAX-N-EVALUATIONS-PER-LINE-SEARCH
+    number of times and can succeed in improving the minimum by the
+    sufficient margin or it can fail. Note, the even a failed line
+    search may improve further and hence change the weights it's just
+    that the improvement was deemed too small. CG stops when either:
+    
+    - two line searches fail in a row
+    
+    - MAX-N-LINE-SEARCHES is reached
+    
+    - MAX-N-EVALUATIONS is reached
+    
+    CG returns a MAT that contains the best weights, the minimum, the
+    number of line searches performed, the number of succesful line
+    searches and the number of evaluations.
+    
+    When using MAX-N-EVALUATIONS remember that there is an extra
+    evaluation of FN before the first line search.
+    
+    SPARE-VECTORS is a list of preallocated MATs of the same size as W.
+    Passing 6 of them covers the current need of the algorithm and it
+    will not cons up vectors of size W at all.
+    
+    NOTE: If the function terminates within a few iterations, it could
+    be an indication that the function values and derivatives are not
+    consistent (ie, there may be a bug in the implementation of FN
+    function).
+    
+    SIG and RHO are the constants controlling the Wolfe-Powell
+    conditions. SIG is the maximum allowed absolute ratio between
+    previous and new slopes (derivatives in the search direction), thus
+    setting SIG to low (positive) values forces higher precision in the
+    line-searches. RHO is the minimum allowed fraction of the
+    expected (from the slope at the initial point in the linesearch).
+    Constants must satisfy 0 < RHO < SIG < 1. Tuning of SIG (depending
+    on the nature of the function to be optimized) may speed up the
+    minimization; it is probably not worth playing much with RHO.
+
+- [variable] *DEFAULT-INT* 0.1
+
+    Don't reevaluate within INT of the limit of the current bracket.
+
+- [variable] *DEFAULT-EXT* 3
+
+    Extrapolate maximum EXT times the current step-size.
+
+- [variable] *DEFAULT-SIG* 0.1
+
+    SIG and RHO are the constants controlling the Wolfe-Powell
+    conditions. SIG is the maximum allowed absolute ratio between
+    previous and new slopes (derivatives in the search direction), thus
+    setting SIG to low (positive) values forces higher precision in the
+    line-searches.
+
+- [variable] *DEFAULT-RHO* 0.05
+
+    RHO is the minimum allowed fraction of the expected (from the slope
+    at the initial point in the linesearch). Constants must satisfy 0 <
+    RHO < SIG < 1.
+
+- [variable] *DEFAULT-RATIO* 10
+
+    Maximum allowed slope ratio.
+
+- [variable] *DEFAULT-MAX-N-LINE-SEARCHES* NIL
+
+- [variable] *DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH* 20
+
+- [variable] *DEFAULT-MAX-N-EVALUATIONS* NIL
+
+- [class] CG-OPTIMIZER ITERATIVE-OPTIMIZER
+
+    Updates all weights simultaneously after chewing
+    through BATCH-SIZE inputs.
+
+- [accessor] BATCH-SIZE CG-OPTIMIZER (:BATCH-SIZE)
+
+    After having gone through BATCH-SIZE number of
+    instances, weights are updated. Normally, CG operates on all
+    available data, but it may be useful to introduce some noise into
+    the optimization to reduce overfitting by using smaller batch
+    sizes. If BATCH-SIZE is not set, it is initialized to the size of
+    the dataset at the start of optimization.
+
+- [accessor] CG-ARGS CG-OPTIMIZER (:CG-ARGS = 'NIL)
+
+- [accessor] ON-CG-BATCH-DONE CG-OPTIMIZER (:ON-CG-BATCH-DONE = NIL)
+
+    An event hook called when processing a conjugate
+    gradient batch is done. The handlers on the hook are called with 8
+    arguments:
+    
+        (optimizer gradient-source instances
+         best-w best-f n-line-searches
+         n-succesful-line-searches n-evaluations)
+    
+    The latter 5 of which are the return values of the CG function.
+
+- [generic-function] LOG-CG-BATCH-DONE OPTIMIZER GRADIENT-SOURCE INSTANCES BEST-W BEST-F N-LINE-SEARCHES N-SUCCESFUL-LINE-SEARCHES N-EVALUATIONS
+
+    This is a function can be added to
+    ON-CG-BATCH-DONE. The default implementation simply logs the event
+    arguments.
+
+- [reader] SEGMENT-FILTER CG-OPTIMIZER (:SEGMENT-FILTER = (CONSTANTLY T))
+
+    A predicate function on segments that filters out
+    uninteresting segments. Called from INITIALIZE-OPTIMIZER\*.
+
+### Extension API
+
+#### Implementing Optimizers
+
+The following generic functions must be specialized for new
+optimizer types.
+
+- [generic-function] MINIMIZE* OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET
+
+    Called by MINIMIZE after INITIALIZE-OPTIMIZER\* and
+    INITIALIZE-GRADIENT-SOURCE\*, this generic function is the main
+    extension point for writing optimizers.
+
+- [generic-function] INITIALIZE-OPTIMIZER* OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET
+
+    Called automatically before training starts, this
+    function sets up OPTIMIZER to be suitable for optimizing
+    GRADIENT-SOURCE. It typically creates appropriately sized
+    accumulators for the gradients.
+
+- [generic-function] SEGMENTS OPTIMIZER
+
+    Several weight matrices known as *segments* can be
+    optimized by a single optimizer. This function returns them as a
+    list.
+
+The rest are just useful for utilities for implementing
+optimizers.
+
+- [function] TERMINATE-OPTIMIZATION-P N-INSTANCES TERMINATION
+
+    Utility function for subclasses of ITERATIVE-OPTIMIZER. It returns
+    whether optimization is to be terminated based on N-INSTANCES and
+    TERMINATION that are values of the respective accessors of
+    ITERATIVE-OPTIMIZER.
+
+- [function] SET-N-INSTANCES OPTIMIZER GRADIENT-SOURCE N-INSTANCES
+
+    Set [N-INSTANCES][(reader iterative-optimizer)] of OPTIMIZER and
+    fire ON-N-INSTANCES-CHANGED. ITERATIVE-OPTIMIZER subclasses must
+    call this to increment [N-INSTANCES][(reader iterative-optimizer)].
+
+- [class] SEGMENT-SET
+
+    This is a utility class for optimizers that have a
+    list of SEGMENTS and (the weights being optimized) is able to copy
+    back and forth between those segments and a single MAT (the
+    accumulator).
+
+- [reader] SEGMENTS SEGMENT-SET (:SEGMENTS)
+
+    A list of weight matrices.
+
+- [reader] SIZE SEGMENT-SET
+
+    The sum of the sizes of the weight matrices of
+    SEGMENTS.
+
+- [macro] DO-SEGMENT-SET (SEGMENT &OPTIONAL START) SEGMENT-SET &BODY BODY
+
+    Iterate over SEGMENTS in SEGMENT-SET. If START is specified, the it
+    is bound to the start index of SEGMENT within SEGMENT-SET. The start
+    index is the sum of the sizes of previous segments.
+
+- [function] SEGMENT-SET<-MAT SEGMENT-SET MAT
+
+    Copy the values of MAT to the weight matrices of SEGMENT-SET as if
+    they were concatenated into a single MAT.
+
+- [function] SEGMENT-SET->MAT SEGMENT-SET MAT
+
+    Copy the values of SEGMENT-SET to MAT as if they were concatenated
+    into a single MAT.
+
+#### Implementing Gradient Sources
+
+Weights can be stored in a multitude of ways. Optimizers need to
+update weights, so it is assumed that weights are stored in any
+number of MAT objects called segments.
+
+The generic functions in this section must all be specialized for
+new gradient sources except where noted.
+
+- [generic-function] MAP-SEGMENTS FN GRADIENT-SOURCE
+
+    Apply FN to each segment of GRADIENT-SOURCE.
+
+- [generic-function] MAP-SEGMENT-RUNS FN SEGMENT
+
+    Call FN with start and end of intervals of
+    consecutive indices that are not missing in SEGMENT. Called by
+    optimizers that support partial updates. The default implementation
+    assumes that all weights are present. This only needs to be
+    specialized if one plans to use an optimizer that knows how to deal
+    unused/missing weights such as MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER
+    and OPTIMIZER MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER.
+
+- [generic-function] SEGMENT-WEIGHTS SEGMENT
+
+    Return the weight matrix of SEGMENT. A segment
+    doesn't need to be a MAT object itself. For example, it may be a
+    MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
+    [MGL-BP:BPN][CLASS] whose NODES slot holds the weights.
+
+- [method] SEGMENT-WEIGHTS (MAT MAT)
+
+    When the segment is really a MAT, then just return it.
+
+- [generic-function] SEGMENT-DERIVATIVES SEGMENT
+
+    Return the derivatives matrix of SEGMENT. A segment
+    doesn't need to be a MAT object itself. For example, it may be a
+    MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
+    [MGL-BP:BPN][CLASS] whose DERIVATIVES slot holds the gradient.
+
+- [function] LIST-SEGMENTS GRADIENT-SOURCE
+
+    A utility function that returns the list of segments from
+    MAP-SEGMENTS on GRADIENT-SOURCE.
+
+- [generic-function] INITIALIZE-GRADIENT-SOURCE* OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET
+
+    Called automatically before MINIMIZE\* is called,
+    this function may be specialized if GRADIENT-SOURCE needs some kind
+    of setup.
+
+- [method] INITIALIZE-GRADIENT-SOURCE* OPTIMIZER GRADIENT-SOURCE WEIGHTS DATASET
+
+    The default method does nothing.
+
+- [generic-function] ACCUMULATE-GRADIENTS* GRADIENT-SOURCE SINK BATCH MULTIPLIER VALUEP
+
+    Add MULTIPLIER times the sum of first-order
+    gradients to accumulators of SINK (normally accessed with
+    DO-GRADIENT-SINK) and if VALUEP, return the sum of values of the
+    function being optimized for a BATCH of instances. GRADIENT-SOURCE
+    is the object representing the function being optimized, SINK is
+    gradient sink.
+    
+    Note the number of instances in BATCH may be larger than what
+    GRADIENT-SOURCE process in one go (in the sense of say,
+    MAX-N-STRIPES), so DO-BATCHES-FOR-MODEL or something like (GROUP
+    BATCH MAX-N-STRIPES) can be handy.
+
+#### Implementing Gradient Sinks
+
+Optimizers call ACCUMULATE-GRADIENTS\* on gradient sources. One
+parameter of ACCUMULATE-GRADIENTS\* is the SINK. A gradient sink
+knows what accumulator matrix (if any) belongs to a segment. Sinks
+are defined entirely by MAP-GRADIENT-SINK.
+
+- [generic-function] MAP-GRADIENT-SINK FN SINK
+
+    Call FN of lambda list (SEGMENT ACCUMULATOR) on
+    each segment and their corresponding accumulator MAT in SINK.
+
+- [macro] DO-GRADIENT-SINK ((SEGMENT ACCUMULATOR) SINK) &BODY BODY
+
+    A convenience macro on top of MAP-GRADIENT-SINK.
+
+## Differentiable Functions
+
+###### \[in package MGL-DIFFUN\]
+- [class] DIFFUN
+
+    DIFFUN dresses a lisp function (in its FN slot) as
+    a gradient source (see @MGL-OPT-GRADIENT-SOURCE) which allows it to
+    be used in MINIMIZE. See the examples in MGL-GD:@MGL-GD and
+    MGL-CG:@MGL-CG.
+
+- [reader] FN DIFFUN (:FN)
+
+    A real valued lisp function. It may have any
+    number of parameters.
+
+- [reader] PARAMETER-INDICES DIFFUN (:PARAMETER-INDICES = NIL)
+
+    The list of indices of parameters that we don't
+    optimize. Values for these will come from the DATASET argument of
+    MINIMIZE.
+
+- [reader] WEIGHT-INDICES DIFFUN (:WEIGHT-INDICES = NIL)
+
+    The list of indices of parameters to be optimized,
+    the values of which will come from the [WEIGHTS][displaced]
+    argument of MINIMIZE.
+
+## Backpropagation Neural Networks
+
+###### \[in package MGL-BP\]
+### Backprop Overview
+
+Backpropagation Neural Networks are just functions with lots of
+parameters called *weights* and a layered structure when presented
+as a [computational
+graph](http://en.wikipedia.org/wiki/Automatic_differentiation). The
+network is trained to MINIMIZE some kind of *loss function* whose
+value the network computes.
+
+In this implementation, a [BPN][class] is assembled from several
+`LUMP`s (roughly corresponding to layers). Both feed-forward and
+recurrent neural nets are supported (FNN and RNN, respectively).
+`BPN`s can contain not only `LUMP`s but other `BPN`s, too. As we
+see, networks are composite objects and the abstract base class for
+composite and simple parts is called CLUMP.
+
+- [class] CLUMP
+
+    A CLUMP is a LUMP or a [BPN][class]. It represents
+    a differentiable function. Arguments of clumps are given during
+    instantiation. Some arguments are clumps themselves so they get
+    permenantly wired together like this:
+    
+    ```commonlisp
+    (->v*m (->input :size 10 :name 'input)
+           (->weight :dimensions '(10 20) :name 'weight)
+           :name 'activation)
+    ```
+    
+    The above creates three clumps: the vector-matrix multiplication
+    clumps called `ACTIVATION` which has a reference to its operands:
+    INPUT and WEIGHT. Note that the example just defines a function, no
+    actual computation has taken place, yet.
+    
+    This wiring of `CLUMP`s is how one builds feed-forward nets (FNN) or
+    recurrent neural networks (RNN) that are `CLUMP`s themselves so one
+    can build nets in a hiearchical style if desired. Non-composite
+    `CLUMP`s are called LUMP (note the loss of `C` that stands for
+    composite). The various LUMP subtypes correspond to different layer
+    types (->SIGMOID, ->DROPOUT, ->RELU, ->TANH, etc).
+
+At this point, you may want to jump ahead to get a feel for how
+things work by reading the @MGL-FNN-TUTORIAL.
+
+### Clump API
+
+These are mostly for extension purposes. About the only thing
+needed from here for normal operation is NODES when clamping inputs
+or extracting predictions.
+
+- [generic-function] STRIPEDP CLUMP
+
+    For efficiency, forward and backprop phases do
+    their stuff in batch mode: passing a number of instances through the
+    network in batches. Thus clumps must be able to store values of and
+    gradients for each of these instances. However, some clumps produce
+    the same result for each instance in a batch. These clumps are the
+    weights, the parameters of the network. STRIPEDP returns true iff
+    CLUMP does not represent weights (i.e. it's not a ->WEIGHT).
+    
+    For striped clumps, their NODES and DERIVATIVES are MAT objects with
+    a leading dimension (number of rows in the 2d case) equal to the
+    number of instances in the batch. Non-striped clumps have no
+    restriction on their shape apart from what their usage dictates.
+
+- [generic-function] NODES OBJECT
+
+    Returns a MAT object representing the state or
+    result of OBJECT. The first dimension of the returned matrix is
+    equal to the number of stripes.
+
+`CLUMP`s' `NODES` holds the result computed by the most recent
+FORWARD. For ->INPUT lumps, this is where input values shall be
+placed (see SET-INPUT). Currently, the matrix is always two
+dimensional but this restriction may go away in the future.
+
+- [generic-function] DERIVATIVES CLUMP
+
+    Return the MAT object representing the partial
+    derivatives of the function CLUMP computes. The returned partial
+    derivatives were accumulated by previous BACKWARD calls.
+    
+    This matrix is shaped like the matrix returned by NODES.
+
+- [generic-function] FORWARD CLUMP
+
+    Compute the values of the function represented by
+    CLUMP for all stripes and place the results into NODES of CLUMP.
+
+- [generic-function] BACKWARD CLUMP
+
+    Compute the partial derivatives of the function
+    represented by CLUMP and add them to DERIVATIVES of the
+    corresponding argument clumps. The DERIVATIVES of CLUMP contains the
+    sum of partial derivatives of all clumps by the corresponding
+    output. This function is intended to be called after a FORWARD pass.
+    
+    Take the ->SIGMOID clump for example when the network is being
+    applied to a batch of two instances `x1` and `x2`. `x1` and `x2` are
+    set in the ->INPUT lump X. The sigmoid computes `1/(1+exp(-x))`
+    where `X` is its only argument clump.
+    
+        f(x) = 1/(1+exp(-x))
+    
+    When BACKWARD is called on the sigmoid lump, its DERIVATIVES is a
+    2x1 MAT object that contains the partial derivatives of the loss
+    function:
+    
+        dL(x1)/df
+        dL(x2)/df
+    
+    Now the BACKWARD method of the sigmoid needs to add `dL(x1)/dx1` and
+    `dL(x2)/dx2` to DERIVATIVES of `X`. Now, `dL(x1)/dx1 = dL(x1)/df *
+    df(x1)/dx1` and the first term is what we have in DERIVATIVES of the
+    sigmoid so it only needs to calculate the second term.
+
+In addition to the above, clumps also have to support SIZE,
+N-STRIPES, MAX-N-STRIPES (and the SETF methods of the latter two)
+which can be accomplished just by inheriting from BPN, FNN, RNN, or
+a LUMP.
+
+### BPNs
+
+- [class] BPN CLUMP
+
+    Abstract base class for FNN and RNN.
+
+- [reader] N-STRIPES BPN (:N-STRIPES = 1)
+
+    The current number of instances the network has.
+    This is automatically set to the number of instances passed to
+    SET-INPUT, so it rarely has to be manipulated directly although it
+    can be set. When set N-STRIPES of all CLUMPS get set to the same
+    value.
+
+- [reader] MAX-N-STRIPES BPN (:MAX-N-STRIPES = NIL)
+
+    The maximum number of instances the network can
+    operate on in parallel. Within BUILD-FNN or BUILD-RNN, it defaults
+    to MAX-N-STRIPES of that parent network, else it defaults to 1.
+    When set MAX-N-STRIPES of all CLUMPS get set to the same value.
+
+- [reader] CLUMPS BPN (:CLUMPS =
+ (MAKE-ARRAY 0 :ELEMENT-TYPE 'CLUMP :ADJUSTABLE T :FILL-POINTER T))
+
+    A topological sorted adjustable array with a fill
+    pointer that holds the clumps that make up the network. Clumps are
+    added to it by ADD-CLUMP or, more often, automatically when within
+    a BUILD-FNN or BUILD-RNN. Rarely needed, FIND-CLUMP takes care of
+    most uses.
+
+- [function] FIND-CLUMP NAME BPN &KEY (ERRORP T)
+
+    Find the clump with NAME among CLUMPS of BPN. As always, names are
+    compared with EQUAL. If not found, then return NIL or signal and
+    error depending on ERRORP.
+
+- [function] ADD-CLUMP CLUMP BPN
+
+    Add CLUMP to BPN. MAX-N-STRIPES of CLUMP gets set to that of BPN.
+    It is an error to add a clump with a name already used by one of the
+    CLUMPS of BPN.
+
+#### Training
+
+`BPN`s are trained to minimize the loss function they compute.
+Before a BPN is passed to MINIMIZE (as its `GRADIENT-SOURCE`
+argument), it must be wrapped in a BP-LEARNER object. BP-LEARNER has
+[MONITORS][(accessor bp-learner)] slot which is used for example by
+[RESET-OPTIMIZATION-MONITORS][(method () (iterative-optimizer
+t))].
+
+Without the bells an whistles, the basic shape of training is this:
+
+```commonlisp
+(minimize optimizer (make-instance 'bp-learner :bpn bpn)
+          :dataset dataset)
+```
+
+
+- [class] BP-LEARNER
+
+- [reader] BPN BP-LEARNER (:BPN)
+
+    The BPN for which this BP-LEARNER provides the
+    gradients.
+
+- [reader] MONITORS BP-LEARNER (:MONITORS = NIL)
+
+    A list of `MONITOR`s.
+
+#### Monitoring
+
+- [function] MONITOR-BPN-RESULTS DATASET BPN MONITORS
+
+    For every batch (of size MAX-N-STRIPES of BPN) of instances in
+    DATASET, set the batch as the next input with SET-INPUT, perform a
+    FORWARD pass and apply MONITORS to the BPN (with APPLY-MONITORS).
+    Finally, return the counters of MONITORS. This is built on top of
+    MONITOR-MODEL-RESULTS.
+
+- [function] MAKE-STEP-MONITOR-MONITORS RNN &KEY (COUNTER-VALUES-FN #'COUNTER-RAW-VALUES) (MAKE-COUNTER #'MAKE-STEP-MONITOR-MONITOR-COUNTER)
+
+    Return a list of monitors, one for every monitor in STEP-MONITORS
+    of RNN. These monitors extract the results from their warp
+    counterpairs with COUNTER-VALUES-FN and add them to their own
+    counter that's created by MAKE-COUNTER. Wow. Ew. The idea is that
+    one does something like this do monitor warped prediction:
+    
+    ```commonlisp
+    (let ((*warp-time* t))
+      (setf (step-monitors rnn)
+            (make-cost-monitors rnn :attributes '(:event "warped pred.")))
+      (monitor-bpn-results dataset rnn
+                           ;; Just collect and reset the warp
+                           ;; monitors after each batch of
+                           ;; instances.
+                           (make-step-monitor-monitors rnn)))
+    ```
+
+
+- [generic-function] MAKE-STEP-MONITOR-MONITOR-COUNTER STEP-COUNTER
+
+    In an RNN, STEP-COUNTER aggregates results of all
+    the time steps during the processing of instances in the current
+    batch. Return a new counter into which results from STEP-COUNTER can
+    be accumulated when the processing of the batch is finished. The
+    default implementation creates a copy of STEP-COUNTER.
+
+#### Feed-Forward Nets
+
+FNN and RNN have a lot in common (see their common superclass, BPN).
+There is very limited functionality that's specific to FNNs so let's
+get them out of they way before we study a full example.
+
+- [class] FNN BPN
+
+    A feed-forward neural net (as opposed to a
+    recurrent one, see RNN).
+
+- [macro] BUILD-FNN (&KEY FNN (CLASS ''FNN) INITARGS MAX-N-STRIPES NAME) &BODY CLUMPS
+
+    Syntactic sugar to assemble FNNs from CLUMPs. Like LET\*, it is a
+    sequence of bindings (of symbols to CLUMPs). The names of the clumps
+    created default to the symbol of the binding. In case a clump is not
+    bound to a symbol (because it was created in a nested expression),
+    the local function CLUMP can be used to find the clump with the
+    given name in the fnn being built. Example:
+    
+        (build-fnn ()
+          (features (->input :size n-features))
+          (biases (->weight :size n-features))
+          (weights (->weight :size (* n-hiddens n-features)))
+          (activations0 (->v*m :weights weights :x (clump 'features)))
+          (activations (->+ :args (list biases activations0)))
+          (output (->sigmoid :x activations)))
+
+
+##### FNN Tutorial
+
+Hopefully this example from `example/digit-fnn.lisp` illustrates
+the concepts involved. If it's too dense despite the comments, then
+read up on @MGL-DATASET, @MGL-OPT and come back.
+
+```commonlisp
+(cl:defpackage :mgl-example-digit-fnn
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-digit-fnn)
+
+;;; There are 10 possible digits used as inputs ...
+(defparameter *n-inputs* 10)
+;;; and we want to learn the rule that maps the input digit D to (MOD
+;;; (1+ D) 3).
+(defparameter *n-outputs* 3)
+
+;;; We define a feed-forward net to be able to specialize how inputs
+;;; are translated by adding a SET-INPUT method later.
+(defclass digit-fnn (fnn)
+  ())
+
+;;; Build a DIGIT-FNN with a single hidden layer of rectified linear
+;;; units and a softmax output.
+(defun make-digit-fnn (&key (n-hiddens 5))
+  (build-fnn (:class 'digit-fnn)
+    (input (->input :size *n-inputs*))
+    (hidden-activation (->activation input :size n-hiddens))
+    (hidden (->relu hidden-activation))
+    (output-activation (->activation hidden :size *n-outputs*))
+    (output (->softmax-xe-loss output-activation))))
+
+;;; This method is called with batches of 'instances' (input digits in
+;;; this case) by MINIMIZE and also by MONITOR-BPN-RESULTS before
+;;; performing a forward pass (i.e. computing the value of the
+;;; function represented by the network). Its job is to encode the
+;;; inputs by populating rows of the NODES matrix of the INPUT clump.
+;;;
+;;; Each input is encoded as a row of zeros with a single 1 at index
+;;; determined by the input digit. This is called one-hot encoding.
+;;; The TARGET could be encoded the same way, but instead we use the
+;;; sparse option supported by TARGET of ->SOFTMAX-XE-LOSS.
+(defmethod set-input (digits (fnn digit-fnn))
+  (let* ((input (nodes (find-clump 'input fnn)))
+         (output-lump (find-clump 'output fnn)))
+    (fill! 0 input)
+    (loop for i upfrom 0
+          for digit in digits
+          do (setf (mref input i digit) 1))
+    (setf (target output-lump)
+          (mapcar (lambda (digit)
+                    (mod (1+ digit) *n-outputs*))
+                  digits))))
+
+;;; Train the network by minimizing the loss (cross-entropy here) with
+;;; stochastic gradient descent.
+(defun train-digit-fnn ()
+  (let ((optimizer
+          ;; First create the optimizer for MINIMIZE.
+          (make-instance 'segmented-gd-optimizer
+                         :segmenter
+                         ;; We train each weight lump with the same
+                         ;; parameters and, in fact, the same
+                         ;; optimizer. But it need not be so, in
+                         ;; general.
+                         (constantly
+                          (make-instance 'sgd-optimizer
+                                         :learning-rate 1
+                                         :momentum 0.9
+                                         :batch-size 100))))
+        (fnn (make-digit-fnn)))
+    ;; The number of instances the FNN can work with in parallel. It's
+    ;; usually equal to the batch size or is a its divisor.
+    (setf (max-n-stripes fnn) 50)
+    ;; Initialize all weights randomly.
+    (map-segments (lambda (weights)
+                    (gaussian-random! (nodes weights) :stddev 0.01))
+                  fnn)
+    ;; Arrange for training and test error to be logged.
+    (monitor-optimization-periodically
+     optimizer '((:fn log-test-error :period 10000)
+                 (:fn reset-optimization-monitors :period 1000)))
+    ;; Finally, start the optimization.
+    (minimize optimizer
+              ;; Dress FNN in a BP-LEARNER and attach monitors for the
+              ;; cost to it. These monitors are going to be logged and
+              ;; reset after every 100 training instance by
+              ;; RESET-OPTIMIZATION-MONITORS above.
+              (make-instance 'bp-learner
+                             :bpn fnn
+                             :monitors (make-cost-monitors
+                                        fnn :attributes `(:event "train")))
+              ;; Training stops when the sampler runs out (after 10000
+              ;; instances).
+              :dataset (make-sampler 10000))))
+
+;;; Return a sampler object that produces MAX-N-SAMPLES number of
+;;; random inputs (numbers between 0 and 9).
+(defun make-sampler (max-n-samples)
+  (make-instance 'function-sampler :max-n-samples max-n-samples
+                 :generator (lambda () (random *n-inputs*))))
+
+;;; Log the test error. Also, describe the optimizer and the bpn at
+;;; the beginning of training. Called periodically during training
+;;; (see above).
+(defun log-test-error (optimizer learner)
+  (when (zerop (n-instances optimizer))
+    (describe optimizer)
+    (describe (bpn learner)))
+  (log-padded
+   (monitor-bpn-results (make-sampler 1000) (bpn learner)
+                        (make-cost-monitors
+                         (bpn learner) :attributes `(:event "pred.")))))
+
+#|
+
+;;; Transcript follows:
+(repeatably ()
+  (let ((*log-time* nil))
+    (train-digit-fnn)))
+.. training at n-instances: 0
+.. train cost: 0.000e+0 (0)
+.. #<SEGMENTED-GD-OPTIMIZER {100E112E93}>
+..  SEGMENTED-GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    OPTIMIZERS = (#<SGD-OPTIMIZER
+..                    #<SEGMENT-SET
+..                      (#<->WEIGHT # :SIZE 15 1/1 :NORM 0.04473>
+..                       #<->WEIGHT # :SIZE 3 1/1 :NORM 0.01850>
+..                       #<->WEIGHT # :SIZE 50 1/1 :NORM 0.07159>
+..                       #<->WEIGHT # :SIZE 5 1/1 :NORM 0.03056>)
+..                      {100E335B73}>
+..                    {100E06DF83}>)
+..    SEGMENTS = (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                  15 1/1 :NORM 0.04473>
+..                #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                  3 1/1 :NORM 0.01850>
+..                #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                  50 1/1 :NORM 0.07159>
+..                #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                  5 1/1 :NORM 0.03056>)
+..  
+.. #<SGD-OPTIMIZER {100E06DF83}>
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #<SEGMENT-SET
+..                    (#<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE
+..                       15 1/1 :NORM 0.04473>
+..                     #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE
+..                       3 1/1 :NORM 0.01850>
+..                     #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE
+..                       50 1/1 :NORM 0.07159>
+..                     #<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE
+..                       5 1/1 :NORM 0.03056>)
+..                    {100E335B73}>
+..    LEARNING-RATE = 1.00000e+0
+..    MOMENTUM = 9.00000e-1
+..    MOMENTUM-TYPE = :NORMAL
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  #<DIGIT-FNN {100E11A423}>
+..   BPN description:
+..     CLUMPS = #(#<->INPUT INPUT :SIZE 10 1/50 :NORM 0.00000>
+..                #<->ACTIVATION
+..                  (HIDDEN-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4>
+..                #<->RELU HIDDEN :SIZE 5 1/50 :NORM 0.00000>
+..                #<->ACTIVATION
+..                  (OUTPUT-ACTIVATION :ACTIVATION) :STRIPES 1/50
+..                  :CLUMPS 4>
+..                #<->SOFTMAX-XE-LOSS OUTPUT :SIZE 3 1/50 :NORM 0.00000>)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   pred. cost: 1.100d+0 (1000.00)
+.. training at n-instances: 1000
+.. train cost: 1.093d+0 (1000.00)
+.. training at n-instances: 2000
+.. train cost: 5.886d-1 (1000.00)
+.. training at n-instances: 3000
+.. train cost: 3.574d-3 (1000.00)
+.. training at n-instances: 4000
+.. train cost: 1.601d-7 (1000.00)
+.. training at n-instances: 5000
+.. train cost: 1.973d-9 (1000.00)
+.. training at n-instances: 6000
+.. train cost: 4.882d-10 (1000.00)
+.. training at n-instances: 7000
+.. train cost: 2.771d-10 (1000.00)
+.. training at n-instances: 8000
+.. train cost: 2.283d-10 (1000.00)
+.. training at n-instances: 9000
+.. train cost: 2.123d-10 (1000.00)
+.. training at n-instances: 10000
+.. train cost: 2.263d-10 (1000.00)
+.. pred. cost: 2.210d-10 (1000.00)
+..
+==> (#<->WEIGHT (:BIAS HIDDEN-ACTIVATION) :SIZE 5 1/1 :NORM 2.94294>
+-->  #<->WEIGHT (INPUT HIDDEN-ACTIVATION) :SIZE 50 1/1 :NORM 11.48995>
+-->  #<->WEIGHT (:BIAS OUTPUT-ACTIVATION) :SIZE 3 1/1 :NORM 3.39103>
+-->  #<->WEIGHT (HIDDEN OUTPUT-ACTIVATION) :SIZE 15 1/1 :NORM 11.39339>)
+
+|#
+```
+
+#### Recurrent Neural Nets
+
+##### RNN Tutorial
+
+Hopefully this example from `example/sum-sign-fnn.lisp` illustrates
+the concepts involved. Make sure you are comfortable with
+@MGL-FNN-TUTORIAL before reading this.
+
+```commonlisp
+(cl:defpackage :mgl-example-sum-sign-rnn
+  (:use #:common-lisp #:mgl))
+
+(in-package :mgl-example-sum-sign-rnn)
+
+;;; There is a single input at each time step...
+(defparameter *n-inputs* 1)
+;;; and we want to learn the rule that outputs the sign of the sum of
+;;; inputs so far in the sequence.
+(defparameter *n-outputs* 3)
+
+;;; Generate a training example that's a sequence of random length
+;;; between 1 and LENGTH. Elements of the sequence are lists of two
+;;; elements:
+;;;
+;;; 1. The input for the network (a single random number).
+;;;
+;;; 2. The sign of the sum of inputs so far encoded as 0, 1, 2 (for
+;;;    negative, zero and positive values). To add a twist, the sum is
+;;;    reset whenever a negative input is seen.
+(defun make-sum-sign-instance (&key (length 10))
+  (let ((length (max 1 (random length)))
+        (sum 0))
+    (loop for i below length
+          collect (let ((x (1- (* 2 (random 2)))))
+                    (incf sum x)
+                    (when (< x 0)
+                      (setq sum x))
+                    (list x (cond ((minusp sum) 0)
+                                  ((zerop sum) 1)
+                                  (t 2)))))))
+
+;;; Build an RNN with a single lstm hidden layer and softmax output.
+;;; For each time step, a SUM-SIGN-FNN will be instantiated.
+(defun make-sum-sign-rnn (&key (n-hiddens 1))
+  (build-rnn ()
+    (build-fnn (:class 'sum-sign-fnn)
+      (input (->input :size 1))
+      (h (->lstm input :name 'h :size n-hiddens))
+      (prediction (->softmax-xe-loss (->activation h :name 'prediction
+                                                   :size *n-outputs*))))))
+
+;;; We define this class to be able to specialize how inputs are
+;;; translated by adding a SET-INPUT method later.
+(defclass sum-sign-fnn (fnn)
+  ())
+
+;;; We have a batch of instances from MAKE-SUM-SIGN-INSTANCE for the
+;;; RNN. This function is invoked with elements of these instances
+;;; belonging to the same time step (i.e. at the same index) and sets
+;;; the input and target up.
+(defmethod set-input (instances (fnn sum-sign-fnn))
+  (let ((input-nodes (nodes (find-clump 'input fnn))))
+    (setf (target (find-clump 'prediction fnn))
+          (loop for stripe upfrom 0
+                for instance in instances
+                collect
+                ;; Sequences in the batch are not of equal length. The
+                ;; RNN sends a NIL our way if a sequence has run out.
+                (when instance
+                  (destructuring-bind (input target) instance
+                    (setf (mref input-nodes stripe 0) input)
+                    target))))))
+
+;;; Train the network by minimizing the loss (cross-entropy here) with
+;;; the Adam optimizer.
+(defun train-sum-sign-rnn ()
+  (let ((rnn (make-sum-sign-rnn)))
+    (setf (max-n-stripes rnn) 50)
+    ;; Initialize the weights in the usual sqrt(1 / fan-in) style.
+    (map-segments (lambda (weights)
+                    (let* ((fan-in (mat-dimension (nodes weights) 0))
+                           (limit (sqrt (/ 6 fan-in))))
+                      (uniform-random! (nodes weights)
+                                       :limit (* 2 limit))
+                      (.+! (- limit) (nodes weights))))
+                  rnn)
+    (minimize (monitor-optimization-periodically
+               (make-instance 'adam-optimizer
+                              :learning-rate 0.2
+                              :mean-decay 0.9
+                              :mean-decay-decay 0.9
+                              :variance-decay 0.9
+                              :batch-size 100)
+               '((:fn log-test-error :period 30000)
+                 (:fn reset-optimization-monitors :period 3000)))
+              (make-instance 'bp-learner
+                             :bpn rnn
+                             :monitors (make-cost-monitors rnn))
+              :dataset (make-sampler 30000))))
+
+;;; Return a sampler object that produces MAX-N-SAMPLES number of
+;;; random inputs.
+(defun make-sampler (max-n-samples &key (length 10))
+  (make-instance 'function-sampler :max-n-samples max-n-samples
+                 :generator (lambda ()
+                              (make-sum-sign-instance :length length))))
+
+;;; Log the test error. Also, describe the optimizer and the bpn at
+;;; the beginning of training. Called periodically during training
+;;; (see above).
+(defun log-test-error (optimizer learner)
+  (when (zerop (n-instances optimizer))
+    (describe optimizer)
+    (describe (bpn learner)))
+  (let ((rnn (bpn learner)))
+    (log-padded
+     (append
+      (monitor-bpn-results (make-sampler 1000) rnn
+                           (make-cost-monitors
+                            rnn :attributes '(:event "pred.")))
+      ;; Same result in a different way: monitor predictions for
+      ;; sequences up to length 20, but don't unfold the RNN
+      ;; unnecessarily to save memory.
+      (let ((*warp-time* t))
+        (monitor-bpn-results (make-sampler 1000 :length 20) rnn
+                             ;; Just collect and reset the warp
+                             ;; monitors after each batch of
+                             ;; instances.
+                             (make-cost-monitors
+                              rnn :attributes '(:event "warped pred."))))))
+    ;; Verify that no further unfoldings took place.
+    (assert (<= (length (clumps rnn)) 10)))
+  (log-mat-room))
+
+#|
+
+;;; Transcript follows:
+(let (;; Backprop nets do not need double float. Using single floats
+      ;; is faster and needs less memory.
+      (*default-mat-ctype* :float)
+      ;; Enable moving data in and out of GPU memory so that the RNN
+      ;; can work with sequences so long that the unfolded network
+      ;; wouldn't otherwise fit in the GPU.
+      (*cuda-window-start-time* 1)
+      (*log-time* nil))
+  ;; Seed the random number generators.
+  (repeatably ()
+    ;; Enable CUDA if available.
+    (with-cuda* ()
+      (train-sum-sign-rnn))))
+.. training at n-instances: 0
+.. cost: 0.000e+0 (0)
+.. #<ADAM-OPTIMIZER {1006CD5663}>
+..  GD-OPTIMIZER description:
+..    N-INSTANCES = 0
+..    SEGMENT-SET = #<SEGMENT-SET
+..                    (#<->WEIGHT (H #) :SIZE 1 1/1 :NORM 1.73685>
+..                     #<->WEIGHT (H #) :SIZE 1 1/1 :NORM 0.31893>
+..                     #<->WEIGHT (#1=# #2=# :PEEPHOLE) :SIZE
+..                       1 1/1 :NORM 1.81610>
+..                     #<->WEIGHT (H #2#) :SIZE 1 1/1 :NORM 0.21965>
+..                     #<->WEIGHT (#1# #3=# :PEEPHOLE) :SIZE
+..                       1 1/1 :NORM 1.74939>
+..                     #<->WEIGHT (H #3#) :SIZE 1 1/1 :NORM 0.40377>
+..                     #<->WEIGHT (H PREDICTION) :SIZE
+..                       3 1/1 :NORM 2.15898>
+..                     #<->WEIGHT (:BIAS PREDICTION) :SIZE
+..                       3 1/1 :NORM 2.94470>
+..                     #<->WEIGHT (#1# #4=# :PEEPHOLE) :SIZE
+..                       1 1/1 :NORM 0.97601>
+..                     #<->WEIGHT (INPUT #4#) :SIZE 1 1/1 :NORM 0.65261>
+..                     #<->WEIGHT (:BIAS #4#) :SIZE 1 1/1 :NORM 0.37653>
+..                     #<->WEIGHT (INPUT #1#) :SIZE 1 1/1 :NORM 0.92334>
+..                     #<->WEIGHT (:BIAS #1#) :SIZE 1 1/1 :NORM 0.01609>
+..                     #<->WEIGHT (INPUT #5=#) :SIZE 1 1/1 :NORM 1.09995>
+..                     #<->WEIGHT (:BIAS #5#) :SIZE 1 1/1 :NORM 1.41244>
+..                     #<->WEIGHT (INPUT #6=#) :SIZE 1 1/1 :NORM 0.40475>
+..                     #<->WEIGHT (:BIAS #6#) :SIZE 1 1/1 :NORM 1.75358>)
+..                    {1006CD8753}>
+..    LEARNING-RATE = 2.00000e-1
+..    MOMENTUM = NONE
+..    MOMENTUM-TYPE = :NONE
+..    WEIGHT-DECAY = 0.00000e+0
+..    WEIGHT-PENALTY = 0.00000e+0
+..    N-AFTER-UPATE-HOOK = 0
+..    BATCH-SIZE = 100
+..  
+..  BATCH-GD-OPTIMIZER description:
+..    N-BEFORE-UPATE-HOOK = 0
+..  
+..  ADAM-OPTIMIZER description:
+..    MEAN-DECAY-RATE = 1.00000e-1
+..    MEAN-DECAY-RATE-DECAY = 9.00000e-1
+..    VARIANCE-DECAY-RATE = 1.00000e-1
+..    VARIANCE-ADJUSTMENT = 1.00000d-7
+..  #<RNN {10047C77E3}>
+..   BPN description:
+..     CLUMPS = #(#<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>
+..                #<SUM-SIGN-FNN :STRIPES 1/50 :CLUMPS 4>)
+..     N-STRIPES = 1
+..     MAX-N-STRIPES = 50
+..   
+..   RNN description:
+..     MAX-LAG = 1
+..   pred.        cost: 1.223e+0 (4455.00)
+.. warped pred. cost: 1.228e+0 (9476.00)
+.. Foreign memory usage:
+.. foreign arrays: 162 (used bytes: 39,600)
+.. CUDA memory usage:
+.. device arrays: 114 (used bytes: 220,892, pooled bytes: 19,200)
+.. host arrays: 162 (used bytes: 39,600)
+.. host->device copies: 6,164, device->host copies: 4,490
+.. training at n-instances: 3000
+.. cost: 3.323e-1 (13726.00)
+.. training at n-instances: 6000
+.. cost: 3.735e-2 (13890.00)
+.. training at n-instances: 9000
+.. cost: 1.012e-2 (13872.00)
+.. training at n-instances: 12000
+.. cost: 3.026e-3 (13953.00)
+.. training at n-instances: 15000
+.. cost: 9.267e-4 (13948.00)
+.. training at n-instances: 18000
+.. cost: 2.865e-4 (13849.00)
+.. training at n-instances: 21000
+.. cost: 8.893e-5 (13758.00)
+.. training at n-instances: 24000
+.. cost: 2.770e-5 (13908.00)
+.. training at n-instances: 27000
+.. cost: 8.514e-6 (13570.00)
+.. training at n-instances: 30000
+.. cost: 2.705e-6 (13721.00)
+.. pred.        cost: 1.426e-6 (4593.00)
+.. warped pred. cost: 1.406e-6 (9717.00)
+.. Foreign memory usage:
+.. foreign arrays: 216 (used bytes: 52,800)
+.. CUDA memory usage:
+.. device arrays: 148 (used bytes: 224,428, pooled bytes: 19,200)
+.. host arrays: 216 (used bytes: 52,800)
+.. host->device copies: 465,818, device->host copies: 371,990
+..
+==> (#<->WEIGHT (H (H :OUTPUT)) :SIZE 1 1/1 :NORM 0.10624>
+-->  #<->WEIGHT (H (H :CELL)) :SIZE 1 1/1 :NORM 0.94460>
+-->  #<->WEIGHT ((H :CELL) (H :FORGET) :PEEPHOLE) :SIZE 1 1/1 :NORM 0.61312>
+-->  #<->WEIGHT (H (H :FORGET)) :SIZE 1 1/1 :NORM 0.38093>
+-->  #<->WEIGHT ((H :CELL) (H :INPUT) :PEEPHOLE) :SIZE 1 1/1 :NORM 1.17956>
+-->  #<->WEIGHT (H (H :INPUT)) :SIZE 1 1/1 :NORM 0.88011>
+-->  #<->WEIGHT (H PREDICTION) :SIZE 3 1/1 :NORM 49.93808>
+-->  #<->WEIGHT (:BIAS PREDICTION) :SIZE 3 1/1 :NORM 10.98112>
+-->  #<->WEIGHT ((H :CELL) (H :OUTPUT) :PEEPHOLE) :SIZE 1 1/1 :NORM 0.67996>
+-->  #<->WEIGHT (INPUT (H :OUTPUT)) :SIZE 1 1/1 :NORM 0.65251>
+-->  #<->WEIGHT (:BIAS (H :OUTPUT)) :SIZE 1 1/1 :NORM 10.23003>
+-->  #<->WEIGHT (INPUT (H :CELL)) :SIZE 1 1/1 :NORM 5.98116>
+-->  #<->WEIGHT (:BIAS (H :CELL)) :SIZE 1 1/1 :NORM 0.10681>
+-->  #<->WEIGHT (INPUT (H :FORGET)) :SIZE 1 1/1 :NORM 4.46301>
+-->  #<->WEIGHT (:BIAS (H :FORGET)) :SIZE 1 1/1 :NORM 1.57195>
+-->  #<->WEIGHT (INPUT (H :INPUT)) :SIZE 1 1/1 :NORM 0.36401>
+-->  #<->WEIGHT (:BIAS (H :INPUT)) :SIZE 1 1/1 :NORM 8.63833>)
+
+|#
+```
+
+- [class] RNN BPN
+
+    A recurrent neural net (as opposed to a
+    feed-forward one. It is typically built with BUILD-RNN that's no
+    more than a shallow convenience macro.
+    
+    An RNN takes instances as inputs that are sequences of variable
+    length. At each time step, the next unprocessed elements of these
+    sequences are set as input until all input sequences in the batch
+    run out. To be able to perform backpropagation, all intermediate
+    `LUMP`s must be kept around, so the recursive connections are
+    transformed out by
+    [unfolding](http://en.wikipedia.org/wiki/Backpropagation_through_time)
+    the network. Just how many lumps this means depends on the length of
+    the sequences.
+    
+    When an RNN is created, `MAX-LAG + 1` BPNs are instantiated so
+    that all weights are present and one can start training it.
+
+- [reader] UNFOLDER RNN (:UNFOLDER)
+
+    The UNFOLDER of an RNN is function of no arguments
+    that builds and returns a BPN. The unfolder is allowed to create
+    networks with arbitrary topology even different ones for different
+    [TIME-STEP][]s with the help of LAG, or nested RNNs. Weights of
+    the same name are shared between the folds. That is, if a ->WEIGHT
+    lump were to be created and a weight lump of the same name already
+    exists, then the existing lump will be added to the BPN created by
+    UNFOLDER.
+
+- [reader] MAX-LAG RNN (:MAX-LAG = 1)
+
+    The networks built by UNFOLDER may contain new
+    weights up to time step MAX-LAG. Beyond that point, all weight
+    lumps must be reappearances of weight lumps with the same name at
+    previous time steps. Most recurrent networks reference only the
+    state of lumps at the previous time step (with the function LAG),
+    hence the default of 1. But it is possible to have connections to
+    arbitrary time steps. The maximum connection lag must be specified
+    when creating the RNN.
+
+- [accessor] CUDA-WINDOW-START-TIME RNN (:CUDA-WINDOW-START-TIME = *CUDA-WINDOW-START-TIME*)
+
+    Due to unfolding, the memory footprint of an RNN
+    is almost linear in the number of time steps (i.e. the max
+    sequence length). For prediction, this is addressed by
+    @MGL-RNN-TIME-WARP. For training, we cannot discard results of
+    previous time steps because they are needed for backpropagation,
+    but we can at least move them out of GPU memory if they are not
+    going to be used for a while and copy them back before they are
+    needed. Obviously, this is only relevant if CUDA is being used.
+    
+    If CUDA-WINDOW-START-TIME is NIL, then this feature is turned off.
+    Else, during training, at CUDA-WINDOW-START-TIME or later time
+    steps, matrices belonging to non-weight lumps may be forced out of
+    GPU memory and later brought back as neeeded.
+    
+    This feature is implemented in terms of
+    MGL-MAT:WITH-SYNCING-CUDA-FACETS that uses CUDA host memory (also
+    known as *page-locked* or *pinned memory*) to do asynchronous
+    copies concurrently with normal computation. The consequence of
+    this is that it is now main memory usage that's unbounded which
+    toghether with page-locking makes it a potent weapon to bring a
+    machine to a halt. You were warned.
+
+- [variable] *CUDA-WINDOW-START-TIME* NIL
+
+    The default for CUDA-WINDOW-START-TIME.
+
+- [macro] BUILD-RNN (&KEY RNN (CLASS ''RNN) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &BODY BODY
+
+    Create an RNN with MAX-N-STRIPES and MAX-LAG whose UNFOLDER is BODY
+    wrapped in a lambda. Bind symbol given as the RNN argument to the
+    RNN object so that BODY can see it.
+
+- [function] LAG NAME &KEY (LAG 1) RNN PATH
+
+    In RNN or if it's NIL the RNN being extended with another
+    BPN (called *unfolding*), look up the CLUMP with NAME in the BPN
+    that's LAG number of time steps before the BPN being added. If this
+    function is called from UNFOLDER of an RNN (which is what happens
+    behind the scene in the body of BUILD-RNN), then it returns an
+    opaque object representing a lagged connection to a clump, else it
+    returns the CLUMP itself.
+    
+    FIXDOC: PATH
+
+- [function] TIME-STEP &KEY (RNN \*RNN\*)
+
+    Return the time step RNN is currently executing or being unfolded for.
+    It is 0 when the RNN is being unfolded for the first time.
+
+- [method] SET-INPUT INSTANCES (RNN RNN)
+
+    RNNs operate on batches of instances just like FNNs. But the
+    instances here are like datasets: sequences or samplers and they are
+    turned into sequences of batches of instances with
+    MAP-DATASETS :IMPUTE NIL. The batch of instances at index 2 is
+    clamped onto the BPN at time step 2 with SET-INPUT.
+    
+    When the input sequences in the batch are not of the same length,
+    already exhausted sequences will produce NIL (due to :IMPUTE NIL)
+    above. When such a NIL is clamped with SET-INPUT on a BPN of the
+    RNN, SET-INPUT must set the IMPORTANCE of the ->ERROR lumps to 0
+    else training would operate on the noise left there by previous
+    invocations.
+
+##### Time Warp
+
+The unbounded memory usage of `RNN`s with one BPN allocated per
+time step can become a problem. For training, where the gradients
+often have to be backpropagated from the last time step to the very
+beginning, this is hard to solve but with CUDA-WINDOW-START-TIME the
+limit is no longer GPU memory.
+
+For prediction on the other hand, one doesn't need to keep old steps
+around indefinitely: they can be discarded when future time steps
+will never reference them again.
+
+- [variable] *WARP-TIME* NIL
+
+    Controls whether warping is enabled (see @MGL-RNN-TIME-WARP). Don't
+    enable it for training, as it would make backprop impossible.
+
+- [function] WARPED-TIME &KEY (RNN \*RNN\*) (TIME (TIME-STEP :RNN RNN)) (LAG 0)
+
+    Return the index of the BPN in CLUMPS of RNN whose task it is to
+    execute computation at `(- (TIME-STEP RNN) LAG)`. This is normally
+    the same as TIME-STEP (disregarding LAG). That is, CLUMPS can be
+    indexed by TIME-STEP to get the BPN. However, when *WARP-TIME* is
+    true, execution proceeds in a cycle as the structure of the network
+    allows.
+    
+    Suppose we have a typical RNN that only ever references the previous
+    time step so its MAX-LAG is 1. Its UNFOLDER returns `BPN`s of
+    identical structure bar a shift in their time lagged connections
+    except for the very first, so WARP-START and WARP-LENGTH are both 1.
+    If *WARP-TIME* is NIL, then the mapping from TIME-STEP to the BPN in
+    CLUMPS is straightforward:
+    
+        time:   |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        warped: |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        bpn:    | b0 | b1 | b2 | b3 | b4 | b5
+    
+    When *WARP-TIME* is true, we reuse the `B1` - `B2` bpns in a loop:
+    
+        time:   |  0 |  1 |  2 |  3 |  4 |  5
+        --------+----+----+----+----+----+----
+        warped: |  0 |  1 |  2 |  1 |  2 |  1
+        --------+----+----+----+----+----+----
+        bpn:    | b0 | b1 | b2 | b1*| b2 | b1*
+    
+    `B1*` is the same BPN as `B1`, but its connections created by LAG go
+    through warped time and end up referencing `B2`. This way, memory
+    consumption is independent of the number time steps needed to
+    process a sequence or make predictions.
+    
+    To be able to pull this trick off WARP-START and WARP-LENGTH must be
+    specified when the RNN is instantiated. In general, with
+    *WARP-TIME* `(+ WARP-START (MAX 2 WARP-LENGTH))` bpns are needed.
+    The 2 comes from the fact that with cycle length 1 a bpn would need
+    to takes its input from itself which is problematic because it has
+    NODES for only one set of values.
+
+- [reader] WARP-START RNN (:WARP-START = 1)
+
+    The TIME-STEP from which UNFOLDER will create
+    `BPN`s that essentially repeat every WARP-LENGTH steps.
+
+- [reader] WARP-LENGTH RNN (:WARP-LENGTH = 1)
+
+    An integer such that the BPN UNFOLDER creates at
+    time step `I` (where `(<= WARP-START I)`) is identical to the BPN
+    created at time step `(+ WARP-START (MOD (- I WARP-START)
+    WARP-LENGTH))` except for a shift in its time lagged
+    connections.
+
+- [accessor] STEP-MONITORS RNN (:STEP-MONITORS = NIL)
+
+    During training, unfolded `BPN`s corresponding to
+    previous time steps may be expensive to get at because they are no
+    longer in GPU memory. This consideration also applies to making
+    prediction with the additional caveat that with *WARP-TIME* true,
+    previous states are discarded so it's not possible to gather
+    statistics after FORWARD finished.
+    
+    Add monitor objects to this slot and they will be automatically
+    applied to the RNN after each step when `FORWARD`ing the RNN
+    during training or prediction. To be able to easily switch between
+    sets of monitors, in addition to a list of monitors this can be a
+    symbol or a function, too. If it's a symbol, then its a designator
+    for its SYMBOL-VALUE. If it's a function, then it must have no
+    arguments and it's a designator for its return value.
+
+### Lumps
+
+#### Lump Base Class
+
+- [class] LUMP CLUMP
+
+    A LUMP is a simple, layerlike component of a neural
+    network. There are many kinds of lumps, each of which performs a
+    specific operation or just stores inputs and weights. By convention,
+    the names of lumps start with the prefix `->`. Defined as classes,
+    they also have a function of the same name as the class to create
+    them easily. These maker functions typically have keyword arguments
+    corresponding to initargs of the class, with some (mainly the input
+    lumps) turned into normal positional arguments. So instead of having
+    to do
+    
+        (make-instance '->tanh :x some-input :name 'my-tanh)
+    
+    one can simply write
+    
+        (->tanh some-input :name 'my-tanh)
+    
+    Lumps instantiated in any way within a BUILD-FNN or BUILD-RNN are
+    automatically added to the network being built.
+    
+    A lump has its own NODES and DERIVATIVES matrices allocated for it
+    in which the results of the forward and backward passes are stored.
+    This is in contrast to a [BPN][class] whose NODES and DERIVATIVES
+    are those of its last constituent CLUMP.
+    
+    Since lumps almost always live within a BPN, their
+    [N-STRIPES][(reader bpn)] and [MAX-N-STRIPES][(reader bpn)] are
+    handled automagically behind the scenes.
+
+- [reader] SIZE LUMP (:SIZE)
+
+    The number of values in a single stripe.
+
+- [reader] DEFAULT-VALUE LUMP (:DEFAULT-VALUE = 0)
+
+    Upon creation or resize the lump's nodes get
+    filled with this value.
+
+- [generic-function] DEFAULT-SIZE LUMP
+
+    Return a default for the [SIZE][(reader lump)] of
+    LUMP if one is not supplied at instantiation. The value is often
+    computed based on the sizes of the inputs. This function is for
+    implementing new lump types.
+
+- [reader] NODES LUMP (= NIL)
+
+    The values computed by the lump in the forward
+    pass are stored here. It is an `N-STRIPES * SIZE` matrix that has
+    storage allocated for `MAX-N-STRIPES * SIZE` elements for
+    non-weight lumps. ->WEIGHT lumps have no stripes nor restrictions
+    on their shape.
+
+- [reader] DERIVATIVES LUMP
+
+    The derivatives computed in the backward pass are
+    stored here. This matrix is very much like [NODES][(reader lump)]
+    in shape and size.
+
+#### Inputs
+
+##### Input Lump
+
+- [class] ->INPUT -\>DROPOUT
+
+    A lump that has no input lumps, does not change its
+    values in the forward pass (except when [DROPOUT][(ACCESSOR
+    ->INPUT)] is non-zero), and does not compute derivatives. *Clamp*
+    inputs on NODES of input lumps in SET-INPUT.
+    
+    For convenience, ->INPUT can perform dropout itself although it
+    defaults to no dropout.
+    
+    ```cl-transcript
+    (->input :size 10 :name 'some-input)
+    ==> #<->INPUT SOME-INPUT :SIZE 10 1/1 :NORM 0.00000>
+    
+    ```
+
+
+- [accessor] DROPOUT -\>INPUT (= NIL)
+
+    See [DROPOUT][(ACCESSOR ->DROPOUT)].
+
+##### Embedding Lump
+
+This lump is like an input and a simple activation molded together
+in the name of efficiency.
+
+- [class] ->EMBEDDING LUMP
+
+    Select rows of WEIGHTS, one row for each index in
+    INPUT-ROW-INDICES. This lump is equivalent to adding an ->INPUT lump
+    with a one hot encoding scheme and a ->V\*M lump on top of it, but it
+    is more efficient in execution and in memory usage, because it works
+    with a sparse representation of the input.
+    
+    The SIZE of this lump is the number of columns of WEIGHTS which is
+    determined automatically.
+    
+    ```cl-transcript
+    (->embedding :weights (->weight :name 'embedding-weights
+                                    :dimensions '(3 5))
+                 :name 'embeddings)
+    ==> #<->EMBEDDING EMBEDDINGS :SIZE 5 1/1 :NORM 0.00000>
+    
+    ```
+
+
+- [reader] WEIGHTS -\>EMBEDDING (:WEIGHTS)
+
+    A weight lump whose rows indexed by
+    INPUT-ROW-INDICES are copied to the output of this lump.
+
+- [reader] INPUT-ROW-INDICES -\>EMBEDDING (:INPUT-ROW-INDICES)
+
+    A sequence of batch size length of row indices. To
+    be set in SET-INPUT.
+
+#### Weight Lump
+
+- [class] ->WEIGHT LUMP
+
+    A set of optimizable parameters of some kind. When
+    a BPN is is trained (see @MGL-BP-TRAINING) the NODES of weight lumps
+    will be changed. Weight lumps perform no computation.
+    
+    Weights can be created by specifying the total size or the
+    dimensions:
+    
+    ```cl-transcript
+    (dimensions (->weight :size 10 :name 'w))
+    => (1 10)
+    (dimensions (->weight :dimensions '(5 10) :name 'w))
+    => (5 10)
+    
+    ```
+
+
+- [reader] DIMENSIONS -\>WEIGHT (:DIMENSIONS)
+
+    NODES and DERIVATIVES of this lump will be
+    allocated with these dimensions.
+
+- [macro] WITH-WEIGHTS-COPIED (FROM-BPN) &BODY BODY
+
+    In BODY ->WEIGHT will first look up if a weight lump of the same
+    name exists in FROM-BPN and return that, or else create a weight
+    lump normally. If FROM-BPN is NIL, then no weights are copied.
+
+#### Activations
+
+##### Activation Subnet
+
+So we have some inputs. Usually the next step is to multiply the
+input vector with a weight matrix and add biases. This can be done
+directly with ->+, ->V\*M and ->WEIGHT, but it's more convenient to
+use activation subnets to reduce the clutter.
+
+- [class] ->ACTIVATION BPN
+
+    Activation subnetworks are built by the function
+    ->ACTIVATION and they have a number of lumps hidden inside them.
+    Ultimately, this subnetwork computes a sum like `sum_i x_i * W_i +
+    sum_j y_j .* V_j + biases` where `x_i` are input lumps, `W_i` are
+    dense matrices representing connections, while `V_j` are peephole
+    connection vectors that are mulitplied in an elementwise manner with
+    their corresponding input `y_j`.
+
+- [function] ->ACTIVATION INPUTS &KEY (NAME (GENSYM)) SIZE PEEPHOLES (ADD-BIAS-P T)
+
+    Create a subnetwork of class ->ACTIVATION that computes the over
+    activation from dense connection from lumps in INPUTS, and
+    elementwise connection from lumps in PEEPHOLES. Create new ->WEIGHT
+    lumps as necessary. INPUTS and PEEPHOLES can be a single lump or a
+    list of lumps. Finally, if ADD-BIAS-P, then add an elementwise bias
+    too. SIZE must be specified explicitly, because it is not possible
+    to determine it unless there are peephole connections.
+    
+    ```cl-transcript
+    (->activation (->input :size 10 :name 'input) :name 'h1 :size 4)
+    ==> #<->ACTIVATION (H1 :ACTIVATION) :STRIPES 1/1 :CLUMPS 4>
+    
+    ```
+    
+    This is the basic workhorse of neural networks which takes care of
+    the linear transformation whose results and then fed to some
+    non-linearity (->SIGMOID, ->TANH, etc).
+    
+    The name of the subnetwork clump is `(,NAME :ACTIVATION)`. The bias
+    weight lump (if any) is named `(:BIAS ,NAME)`. Dense connection
+    weight lumps are named are named after the input and NAME: `(,(NAME
+    INPUT) ,NAME)`, while peepholes weight lumps are named `(,(NAME
+    INPUT) ,NAME :PEEPHOLE)`. This is useful to know if, for example,
+    they are to be initialized differently.
+
+##### Batch-Normalization
+
+- [class] ->BATCH-NORMALIZED LUMP
+
+    This is an implementation of v3 of the [Batch
+    Normalization paper](http://arxiv.org/abs/1502.03167). The output of
+    ->BATCH-NORMALIZED is its input normalized so that for all elements
+    the mean across stripes is zero and the variance is 1. That is, the
+    mean of the batch is subtracted from the inputs and they are
+    rescaled by their sample stddev. Actually, after the normalization
+    step the values are rescaled and shifted (but this time with learnt
+    parameters) in order to keep the representational power of the model
+    the same. The primary purpose of this lump is to speed up learning,
+    but it also acts as a regularizer. See the paper for the details.
+    
+    To normalize the output of `LUMP` without no additional
+    regularizer effect:
+    
+    ```commonlisp
+    (->batch-normalized lump :batch-size :use-population)
+    ```
+    
+    The above uses an exponential moving average to estimate the mean
+    and variance of batches and these estimations are used at both
+    training and test time. In contrast to this, the published version
+    uses the sample mean and variance of the current batch at training
+    time which injects noise into the process. The noise is higher for
+    lower batch sizes and has a regularizing effect. This is the default
+    behavior (equivalent to `:BATCH-SIZE NIL`):
+    
+    ```commonlisp
+    (->batch-normalized lump)
+    ```
+    
+    For performance reasons one may wish to process a higher number of
+    instances in a batch (in the sense of N-STRIPES) and get the
+    regularization effect associated with a lower batch size. This is
+    possible by setting :BATCH-SIZE to a divisor of the the number of
+    stripes. Say, the number of stripes is 128, but we want as much
+    regularization as we would get with 32:
+    
+    ```commonlisp
+    (->batch-normalized lump :batch-size 32)
+    ```
+    
+    The primary input of ->BATCH-NORMALIZED is often an ->ACTIVATION and
+    its output is fed into an activation function (see
+    @MGL-BP-ACTIVATION-FUNCTIONS).
+
+- [reader] BATCH-NORMALIZATION -\>BATCH-NORMALIZED (:NORMALIZATION)
+
+    The ->BATCH-NORMALIZATION of this lump. May be
+    shared between multiple ->BATCH-NORMALIZED lumps.
+    
+    Batch normalization is special in that it has state apart from the
+    computed results (NODES) and its derivatives (DERIVATIVES). This
+    state is the estimated mean and variance of its inputs and they
+    are encapsulated by ->BATCH-NORMALIZATION.
+    
+    If NORMALIZATION is not given at instantiation, then a new
+    ->BATCH-NORMALIZATION object will be created automatically,
+    passing :BATCH-SIZE, :VARIANCE-ADJUSTMENT, and :POPULATION-DECAY
+    arguments on to ->BATCH-NORMALIZATION. See [BATCH-SIZE][(reader
+    ->batch-normalization)], [VARIANCE-ADJUSTMENT][(reader
+    ->batch-normalization)] and [POPULATION-DECAY][(reader
+    ->batch-normalization)]. New scale and shift weight lumps will be
+    created with names:
+    
+        `(,name :scale)
+        `(,name :shift)
+    
+    where `NAME` is the NAME of this lump.
+    
+    This default behavior covers the use-case where the statistics
+    kept by ->BATCH-NORMALIZATION are to be shared only between time
+    steps of an RNN.
+
+- [class] ->BATCH-NORMALIZATION -\>WEIGHT
+
+    The primary purpose of this class is to hold the
+    estimated mean and variance of the inputs to be normalized and allow
+    them to be shared between multiple ->BATCH-NORMALIZED lumps that
+    carry out the computation. These estimations are saved and loaded by
+    SAVE-STATE and LOAD-STATE.
+    
+    ```commonlisp
+    (->batch-normalization (->weight :name '(h1 :scale) :size 10)
+                           (->weight :name '(h1 :shift) :size 10)
+                           :name '(h1 :batch-normalization))
+    ```
+
+
+- [reader] SCALE -\>BATCH-NORMALIZATION (:SCALE)
+
+    A weight lump of the same size as SHIFT. This is
+    $\gamma$ in the paper.
+
+- [reader] SHIFT -\>BATCH-NORMALIZATION (:SHIFT)
+
+    A weight lump of the same size as SCALE. This is
+    $\beta$ in the paper.
+
+- [reader] BATCH-SIZE -\>BATCH-NORMALIZATION (:BATCH-SIZE = NIL)
+
+    Normally all stripes participate in the batch.
+    Lowering the number of stripes may increase the regularization
+    effect, but it also makes the computation less efficient. By
+    setting BATCH-SIZE to a divisor of N-STRIPES one can decouple the
+    concern of efficiency from that of regularization. The default
+    value, NIL, is equivalent to N-STRIPES. BATCH-SIZE only affects
+    training.
+    
+    With the special value :USE-POPULATION, instead of the mean and
+    the variance of the current batch, use the population statistics
+    for normalization. This effectively cancels the regularization
+    effect, leaving only the faster learning.
+
+- [reader] VARIANCE-ADJUSTMENT -\>BATCH-NORMALIZATION (:VARIANCE-ADJUSTMENT = 1.0e-4)
+
+    A small positive real number that's added to the
+    sample variance. This is $\epsilon$ in the paper.
+
+- [reader] POPULATION-DECAY -\>BATCH-NORMALIZATION (:POPULATION-DECAY = 0.99)
+
+    While training, an exponential moving average of
+    batch means and standard deviances (termed *population
+    statistics*) is updated. When making predictions, normalization is
+    performed using these statistics. These population statistics are
+    persisted by SAVE-STATE.
+
+- [function] ->BATCH-NORMALIZED-ACTIVATION INPUTS &KEY (NAME (GENSYM)) SIZE PEEPHOLES BATCH-SIZE VARIANCE-ADJUSTMENT POPULATION-DECAY
+
+    A utility functions that creates and wraps an ->ACTIVATION in
+    ->BATCH-NORMALIZED and with its BATCH-NORMALIZATION the two weight
+    lumps for the scale and shift
+    parameters. `(->BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
+    10)` is equivalent to:
+    
+    ```commonlisp
+    (->batch-normalized (->activation inputs :name 'h1 :size 10 :add-bias-p nil)
+                        :name '(h1 :batch-normalized-activation))
+    ```
+    
+    Note how biases are turned off since normalization will cancel them
+    anyway (but a shift is added which amounts to the same effect).
+
+#### Activation Functions
+
+Now we are moving on to the most important non-linearities to which
+activations are fed.
+
+##### Sigmoid Lump
+
+- [class] ->SIGMOID -\>DROPOUT LUMP
+
+    Applies the `1/(1 + e^{-x})` function elementwise
+    to its inputs. This is one of the classic non-linearities for neural
+    networks.
+    
+    For convenience, ->SIGMOID can perform dropout itself although it
+    defaults to no dropout.
+    
+    ```cl-transcript
+    (->sigmoid (->activation (->input :size 10) :size 5) :name 'this)
+    ==> #<->SIGMOID THIS :SIZE 5 1/1 :NORM 0.00000>
+    
+    ```
+    
+    The SIZE of this lump is the size of its input which is determined
+    automatically.
+
+- [accessor] DROPOUT -\>SIGMOID (= NIL)
+
+    See [DROPOUT][(ACCESSOR ->DROPOUT)].
+
+##### Tanh Lump
+
+- [class] ->TANH LUMP
+
+    Applies the TANH function to its input in an
+    elementwise manner. The SIZE of this lump is the size of its input
+    which is determined automatically.
+
+##### Scaled Tanh Lump
+
+- [class] ->SCALED-TANH LUMP
+
+    Pretty much like TANH but its input and output is
+    scaled in such a way that the variance of its output is close to 1
+    if the variance of its input is close to 1 which is a nice property
+    to combat vanishing gradients. The actual function is `1.7159 *
+    tanh(2/3 * x)`. The SIZE of this lump is the size of its input which
+    is determined automatically.
+
+##### Relu Lump
+
+We are somewhere around year 2007 by now.
+
+- [class] ->RELU LUMP
+
+    `max(0,x)` activation function. Be careful, relu
+    units can get stuck in the off state: if they move to far to
+    negative territory it can be very difficult to get out of it. The
+    SIZE of this lump is the size of its input which is determined
+    automatically.
+
+##### Max Lump
+
+We are in about year 2011.
+
+- [class] ->MAX LUMP
+
+    This is basically maxout without dropout (see
+    http://arxiv.org/abs/1302.4389). It groups its inputs by
+    [GROUP-SIZE][(READER ->MAX)], and outputs the maximum of each group.
+    The SIZE of the output is automatically calculated, it is the size
+    of the input divided by [GROUP-SIZE][(READER ->MAX)].
+    
+    ```cl-transcript
+    (->max (->input :size 120) :group-size 3 :name 'my-max)
+    ==> #<->MAX MY-MAX :SIZE 40 1/1 :NORM 0.00000 :GROUP-SIZE 3>
+    
+    ```
+    
+    The advantage of ->MAX over ->RELU is that flow gradient is never
+    stopped so there is no problem of units getting stuck in off
+    state.
+
+- [reader] GROUP-SIZE -\>MAX (:GROUP-SIZE)
+
+    The number of inputs in each group.
+
+##### Min Lump
+
+- [class] ->MIN LUMP
+
+    Same as ->MAX, but it computes the MIN of groups.
+    Rarely useful.
+
+- [reader] GROUP-SIZE -\>MIN (:GROUP-SIZE)
+
+    The number of inputs in each group.
+
+##### Max-Channel Lump
+
+- [class] ->MAX-CHANNEL LUMP
+
+    Called LWTA (Local Winner Take All) or
+    Channel-Out (see http://arxiv.org/abs/1312.1909) in the literature
+    it is basically ->MAX, but instead of producing one output per
+    group, it just produces zeros for all unit but the one with the
+    maximum value in the group. This allows the next layer to get some
+    information about the path along which information flowed. The SIZE
+    of this lump is the size of its input which is determined
+    automatically.
+
+- [reader] GROUP-SIZE -\>MAX-CHANNEL (:GROUP-SIZE)
+
+    The number of inputs in each group.
+
+#### Losses
+
+Ultimately, we need to tell the network what to learn which means
+that the loss function to be minimized needs to be constructed as
+part of the network.
+
+##### Loss Lump
+
+- [class] ->LOSS -\>SUM
+
+    Calculate the loss for the instances in the batch.
+    The main purpose of this lump is to provide a training signal.
+    
+    An error lump is usually a leaf in the graph of lumps (i.e. there
+    are no other lumps whose input is this one). The special thing about
+    error lumps is that 1 (but see IMPORTANCE) is added automatically to
+    their derivatives. Error lumps have exactly one node (per stripe)
+    whose value is computed as the sum of nodes in their input lump.
+
+- [accessor] IMPORTANCE -\>LOSS (:IMPORTANCE = NIL)
+
+    This is to support weighted instances. That is
+    when not all training instances are equally important. If non-NIL,
+    a 1d MAT with the importances of stripes of the batch. When
+    IMPORTANCE is given (typically in SET-INPUT), then instead of
+    adding 1 to the derivatives of all stripes, IMPORTANCE is added
+    elemtwise.
+
+##### Squared Difference Lump
+
+In regression, the squared error loss is most common. The squared
+error loss can be constructed by combining ->SQUARED-DIFFERENCE with
+a ->LOSS.
+
+- [class] ->SQUARED-DIFFERENCE LUMP
+
+    This lump takes two input lumps and calculates
+    their squared difference `(x - y)^2` in an elementwise manner. The
+    SIZE of this lump is automatically determined from the size of its
+    inputs. This lump is often fed into ->LOSS that sums the squared
+    differences and makes it part of the function to be minimized.
+    
+    ```cl-transcript
+    (->loss (->squared-difference (->activation (->input :size 100)
+                                                :size 10)
+                                  (->input :name 'target :size 10))
+            :name 'squared-error)
+    ==> #<->LOSS SQUARED-ERROR :SIZE 1 1/1 :NORM 0.00000>
+    
+    ```
+    
+    Currently this lump is not CUDAized, but it will copy data from the
+    GPU if it needs to.
+
+##### Softmax Cross-Entropy Loss Lump
+
+- [class] ->SOFTMAX-XE-LOSS LUMP
+
+    A specialized lump that computes the softmax of its
+    input in the forward pass and backpropagates a cross-entropy loss.
+    The advantage of doing these together is numerical stability. The
+    total cross-entropy is the sum of cross-entropies per group of
+    [GROUP-SIZE][(reader ->softmax-xe-loss)] elements:
+    
+    $$XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i)$$
+    
+    where `g` is the number of classes ([GROUP-SIZE][(reader
+    ->softmax-xe-loss)]), `t_i` are the targets (i.e. the true
+    probabilities of the class, often all zero but one), `s_i` is the
+    output of softmax calculated from input `X`:
+    
+    $$s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
+      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}$$
+    
+    In other words, in the forward phase this lump takes input `X`,
+    computes its elementwise EXP, normalizes each group of
+    [GROUP-SIZE][(reader ->softmax-xe-loss)] elements to sum to 1 to get
+    the softmax which is the result that goes into NODES. In the
+    backward phase, there are two sources of gradients: the lumps that
+    use the output of this lump as their input (currently not
+    implemented and would result in an error) and an implicit
+    cross-entropy loss.
+    
+    One can get the cross-entropy calculated in the most recent forward
+    pass by calling COST on this lump.
+    
+    This is the most common loss function for classification. In fact,
+    it is nearly ubiquitous. See the @MGL-FNN-TUTORIAL and the
+    @MGL-RNN-TUTORIAL for how this loss and SET-INPUT work together.
+
+- [reader] GROUP-SIZE -\>SOFTMAX-XE-LOSS (:GROUP-SIZE)
+
+    The number of elements in a softmax group. This is
+    the number of classes for classification. Often GROUP-SIZE is
+    equal to SIZE (it is the default), but in general the only
+    constraint is that SIZE is a multiple of GROUP-SIZE.
+
+- [accessor] TARGET -\>SOFTMAX-XE-LOSS (:TARGET = NIL)
+
+    Set in SET-INPUT, this is either a MAT of the same
+    size as the input lump `X` or if the target is very sparse, this
+    can also be a sequence of batch size length that contains the
+    index value pairs of non-zero entries:
+    
+        (;; first instance in batch has two non-zero targets
+         (;; class 10 has 30% expected probability
+          (10 . 0.3)
+          ;; class 2 has 70% expected probability
+          (2 .  0.7))
+         ;; second instance in batch puts 100% on class 7
+         7
+         ;; more instances in the batch follow
+         ...)
+    
+    Actually, in the rare case where [GROUP-SIZE][(reader
+    ->softmax-xe-loss)] is not SIZE (i.e. there are several softmax
+    normalization groups for every example), the length of the above
+    target sequence is BATCH-SIZE \* N-GROUPS. Indices are always
+    relative to the start of the group.
+    
+    If [GROUP-SIZE][(reader ->softmax-xe-loss)] is large (for example,
+    in neural language models with a huge number of words), using
+    sparse targets can make things go much faster, because calculation
+    of the derivative is no longer quadratic.
+    
+    Giving different weights to training instances is implicitly
+    supported. While target values in a group should sum to 1,
+    multiplying all target values with a weight `W` is equivalent to
+    training that `W` times on the same example.
+
+- [function] ENSURE-SOFTMAX-TARGET-MATRIX SOFTMAX-XE-LOSS N
+
+    Set TARGET of SOFTMAX-XE-LOSS to a MAT capable of holding the dense
+    target values for N stripes.
+
+#### Stochasticity
+
+##### Dropout Lump
+
+- [class] ->DROPOUT LUMP
+
+    The output of this lump is identical to its input,
+    except it randomly zeroes out some of them during training which act
+    as a very strong regularizer. See Geoffrey Hinton's 'Improving
+    neural networks by preventing co-adaptation of feature
+    detectors'.
+    
+    The SIZE of this lump is the size of its input which is determined
+    automatically.
+
+- [accessor] DROPOUT -\>DROPOUT (:DROPOUT = 0.5)
+
+    If non-NIL, then in the forward pass zero out each
+    node in this chunk with DROPOUT probability.
+
+##### Gaussian Random Lump
+
+- [class] ->GAUSSIAN-RANDOM LUMP
+
+    This lump has no input, it produces normally
+    distributed independent random numbers with MEAN and VARIANCE (or
+    VARIANCE-FOR-PREDICTION). This is useful building block for noise
+    based regularization methods.
+    
+    ```cl-transcript
+    (->gaussian-random :size 10 :name 'normal :mean 1 :variance 2)
+    ==> #<->GAUSSIAN-RANDOM NORMAL :SIZE 10 1/1 :NORM 0.00000>
+    
+    ```
+
+
+- [accessor] MEAN -\>GAUSSIAN-RANDOM (:MEAN = 0)
+
+    The mean of the normal distribution.
+
+- [accessor] VARIANCE -\>GAUSSIAN-RANDOM (:VARIANCE = 1)
+
+    The variance of the normal distribution.
+
+- [accessor] VARIANCE-FOR-PREDICTION -\>GAUSSIAN-RANDOM (:VARIANCE-FOR-PREDICTION = 0)
+
+    If not NIL, then this value overrides VARIANCE
+    when not in training (i.e. when making predictions).
+
+##### Binary Sampling Lump
+
+- [class] ->SAMPLE-BINARY LUMP
+
+    Treating values of its input as probabilities,
+    sample independent binomials. Turn true into 1 and false into 0. The
+    SIZE of this lump is determined automatically from the size of its
+    input.
+    
+    ```cl-transcript
+    (->sample-binary (->input :size 10) :name 'binarized-input)
+    ==> #<->SAMPLE-BINARY BINARIZED-INPUT :SIZE 10 1/1 :NORM 0.00000>
+    
+    ```
+
+
+#### Arithmetic
+
+##### Sum Lump
+
+- [class] ->SUM LUMP
+
+    Computes the sum of all nodes of its input per
+    stripe. This SIZE of this lump is always 1.
+
+##### Vector-Matrix Multiplication Lump
+
+- [class] ->V*M LUMP
+
+    Perform `X * WEIGHTS` where `X` (the input) is of
+    size `M` and WEIGHTS is a ->WEIGHT whose single stripe is taken to
+    be of dimensions `M x N` stored in row major order. `N` is the size
+    of this lump. If TRANSPOSE-WEIGHTS-P then WEIGHTS is `N x M` and `X
+    * WEIGHTS'` is computed.
+
+- [reader] WEIGHTS -\>V\*M (:WEIGHTS)
+
+    A ->WEIGHT lump.
+
+- [reader] TRANSPOSE-WEIGHTS-P -\>V\*M (:TRANSPOSE-WEIGHTS-P = NIL)
+
+    Determines whether the input is multiplied by
+    WEIGHTS or its transpose.
+
+##### Elementwise Addition Lump
+
+- [class] ->+ LUMP
+
+    Performs elementwise addition on its input lumps.
+    The SIZE of this lump is automatically determined from the size of
+    its inputs if there is at least one. If one of the inputs is a
+    ->WEIGHT lump, then it is added to every stripe.
+    
+    ```cl-transcript
+    (->+ (list (->input :size 10) (->weight :size 10 :name 'bias))
+         :name 'plus)
+    ==> #<->+ PLUS :SIZE 10 1/1 :NORM 0.00000>
+    
+    ```
+
+
+##### Elementwise Multiplication Lump
+
+- [class] ->* LUMP
+
+    Performs elementwise multiplication on its two
+    input lumps. The SIZE of this lump is automatically determined from
+    the size of its inputs. Either input can be a ->WEIGHT lump.
+    
+    ```cl-transcript
+    (->* (->input :size 10) (->weight :size 10 :name 'scale)
+         :name 'mult)
+    ==> #<->* MULT :SIZE 10 1/1 :NORM 0.00000>
+    
+    ```
+
+
+##### Abs Lump
+
+- [class] ->ABS LUMP
+
+##### Exp Lump
+
+- [class] ->EXP LUMP
+
+##### Normalized Lump
+
+- [class] ->NORMALIZED LUMP
+
+#### Operations for RNNs
+
+##### LSTM Subnet
+
+- [class] ->LSTM BPN
+
+    Long-Short Term Memory subnetworks are built by the
+    function ->LSTM and they have many lumps hidden inside them. These
+    lumps are packaged into a subnetwork to reduce clutter.
+
+- [function] ->LSTM INPUTS &KEY NAME CELL-INIT OUTPUT-INIT SIZE (ACTIVATION-FN '-\>ACTIVATION) (GATE-FN '-\>SIGMOID) (INPUT-FN '-\>TANH) (OUTPUT-FN '-\>TANH) (PEEPHOLES T)
+
+    Create an LSTM layer consisting of input, forget, output gates with
+    which input, cell state and output are scaled. Lots of lumps are
+    created, the final one representing to output of the LSTM has NAME.
+    The rest of the lumps are named automatically based on NAME. This
+    function returns only the output lump (`m`), but all created lumps
+    are added automatically to the BPN being built.
+    
+    There are many papers and tutorials on LSTMs. This version is well
+    described in "Long Short-Term Memory Recurrent Neural Network
+    Architectures for Large Scale Acoustic Modeling" (2014, Hasim Sak,
+    Andrew Senior, Francoise Beaufays). Using the notation from that
+    paper:
+    
+    $$i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
+    c\_{t-1} + b\_i)$$
+    
+    $$f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
+    c\_{t-1} + b\_f)$$
+    
+    $$c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
+    W\_{cm} m\_{t-1} + b\_c)$$
+    
+    $$o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    c\_t + b\_o)$$
+    
+    $$m\_t = o\_t \odot h(c\_t)$$
+    
+    ... where `i`, `f`, and `o` are the input, forget and output gates.
+    `c` is the cell state and `m` is the actual output.
+    
+    Weight matrices for connections from `c` (`W_ic`, `W_fc` and `W_oc`)
+    are diagonal and represented by just the vector of diagonal values.
+    These connections are only added if PEEPHOLES is true.
+    
+    A notable difference from the paper is that in addition to being a
+    single lump, `x_t` (INPUTS) can also be a list of lumps. Whenever
+    some activation is to be calculated based on `x_t`, it is going to
+    be the sum of individual activations. For example, `W_ix * x_t` is
+    really `sum_j W_ijx * inputs_j`.
+    
+    If CELL-INIT is non-NIL, then it must be a CLUMP of SIZE form which
+    stands for the initial state of the value cell (`c_{-1}`). CELL-INIT
+    being NIL is equivalent to the state of all zeros.
+    
+    ACTIVATION-FN defaults to ->ACTIVATION, but it can be for example
+    ->BATCH-NORMALIZED-ACTIVATION. In general, functions like the
+    aforementioned two with signature like (INPUTS &KEY NAME SIZE
+    PEEPHOLES) can be passed as ACTIVATION-FN.
+
+##### Sequence Barrier Lump
+
+- [class] ->SEQ-BARRIER LUMP
+
+    In an RNN, processing of stripes (instances in the
+    batch) may require different number of time step so the final state
+    for stripe 0 is in stripe 0 of some lump L at time step 7, while for
+    stripe 1 it is in stripe 1 of sump lump L at time step 42.
+    
+    This lump copies the per-stripe states from different lumps into a
+    single lump so that further processing can take place (typically
+    when the RNN is embedded in another network).
+    
+    The SIZE of this lump is automatically set to the size of the lump
+    returned by `(FUNCALL SEQ-ELT-FN 0)`.
+
+- [reader] SEQ-ELT-FN -\>SEQ-BARRIER (:SEQ-ELT-FN)
+
+    A function of an [INDEX][displaced] argument that
+    returns the lump with that index in some sequence.
+
+- [accessor] SEQ-INDICES -\>SEQ-BARRIER
+
+    A sequence of length batch size of indices. The
+    element at index `I` is the index to be passed to SEQ-ELT-FN to
+    find the lump whose stripe `I` is copied to stripe `I` of this
+    this lump.
+
+### Utilities
+
+- [function] RENORMALIZE-ACTIVATIONS -\>V\*M-LUMPS L2-UPPER-BOUND
+
+    If the l2 norm of the incoming weight vector of the a unit is
+    larger than L2-UPPER-BOUND then renormalize it to L2-UPPER-BOUND.
+    The list of ->V\*M-LUMPS is assumed to be eventually fed to the same
+    lump.
+    
+    To use it, group the activation clumps into the same GD-OPTIMIZER
+    and hang this function on AFTER-UPDATE-HOOK, that latter of which is
+    done for you ARRANGE-FOR-RENORMALIZING-ACTIVATIONS.
+    
+    See "Improving neural networks by preventing co-adaptation of
+    feature detectors (Hinton, 2012)",
+    <http://arxiv.org/pdf/1207.0580.pdf>.
+
+- [function] ARRANGE-FOR-RENORMALIZING-ACTIVATIONS BPN OPTIMIZER L2-UPPER-BOUND
+
+    By pushing a lambda to AFTER-UPDATE-HOOK of OPTIMIZER arrange for
+    all weights beings trained by OPTIMIZER to be renormalized (as in
+    RENORMALIZE-ACTIVATIONS with L2-UPPER-BOUND).
+    
+    It is assumed that if the weights either belong to an activation
+    lump or are simply added to the activations (i.e. they are biases).
+
+## Boltzmann Machines
+
+
+## Gaussian Processes
+
+
+## Natural Language Processing
+
+###### \[in package MGL-NLP\]
+This in nothing more then a couple of utilities for now which may
+grow into a more serious toolset for NLP eventually.
+
+- [function] MAKE-N-GRAM-MAPPEE FUNCTION N
+
+    Make a function of a single argument that's suitable as the
+    function argument to a mapper function. It calls FUNCTION with every
+    N element.
+    
+    ```cl-transcript
+    (map nil (make-n-gram-mappee #'print 3) '(a b c d e))
+    ..
+    .. (A B C) 
+    .. (B C D) 
+    .. (C D E) 
+    
+    ```
+
+
+- [function] BLEU CANDIDATES REFERENCES &KEY CANDIDATE-KEY REFERENCE-KEY (N 4)
+
+    Compute the [BLEU score](http://en.wikipedia.org/wiki/BLEU) for
+    bilingual CORPUS. BLEU measures how good a translation is compared
+    to human reference translations.
+    
+    CANDIDATES (keyed by CANDIDATE-KEY) and REFERENCES (keyed by
+    REFERENCE-KEY) are sequences of sentences. A sentence is a sequence
+    of words. Words are compared with EQUAL, and may be any kind of
+    object (not necessarily strings).
+    
+    Currently there is no support for multiple reference translations. N
+    determines the largest n-grams to consider.
+    
+    The first return value is the BLEU score (between 0 and 1, not as a
+    percentage). The second value is the sum of the lengths of
+    CANDIDATES divided by the sum of the lengths of REFERENCES (or NIL,
+    if the denominator is 0). The third is a list of n-gram
+    precisions (also between 0 and 1 or NIL), one for each element in
+    [1..`N`][].
+    
+    This is basically a reimplementation of
+    [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).
+    
+    ```cl-transcript
+    (bleu '((1 2 3 4) (a b))
+          '((1 2 3 4) (1 2)))
+    => 0.8408964
+    => 1
+    => (;; 1-gram precision: 4/6
+        2/3
+        ;; 2-gram precision: 3/4
+        3/4
+        ;; 3-gram precision: 2/2
+        1
+        ;; 4-gram precision: 1/1
+        1)
+    
+    ```
+
+
+### Bag of Words
+
+- [class] BAG-OF-WORDS-ENCODER
+
+    ENCODE all features of a document with a sparse
+    vector. Get the features of document from MAPPER, encode each
+    feature with FEATURE-ENCODER. FEATURE-ENCODER may return NIL if the
+    feature is not used. The result is a vector of encoded-feature/value
+    conses. encoded-features are unique (under ENCODED-FEATURE-TEST)
+    within the vector but are in no particular order.
+    
+    Depending on KIND, value is calculated in various ways:
+    
+    - For :FREQUENCY it is the number of times the corresponding feature
+    was found in DOCUMENT.
+    
+    - For :BINARY it is always 1.
+    
+    - For :NORMALIZED-FREQUENCY and :NORMALIZED-BINARY are like the
+      unnormalized counterparts except that as the final step values in
+      the assembled sparse vector are normalized to sum to 1.
+    
+    - Finally, :COMPACTED-BINARY is like :BINARY but the return values
+      is not a vector of conses, but a vector of element-type
+      ENCODED-FEATURE-TYPE.
+    
+    ```cl-transcript
+    (let* ((feature-indexer
+             (make-indexer
+              (alexandria:alist-hash-table '(("I" . 3) ("me" . 2) ("mine" . 1)))
+              2))
+           (bag-of-words-encoder
+             (make-instance 'bag-of-words-encoder
+                            :feature-encoder feature-indexer
+                            :feature-mapper (lambda (fn document)
+                                              (map nil fn document))
+                            :kind :frequency)))
+      (encode bag-of-words-encoder '("All" "through" "day" "I" "me" "mine"
+                                     "I" "me" "mine" "I" "me" "mine")))
+    => #((0 . 3.0d0) (1 . 3.0d0))
+    
+    ```
+
+
+- [reader] FEATURE-ENCODER BAG-OF-WORDS-ENCODER (:FEATURE-ENCODER)
+
+- [reader] FEATURE-MAPPER BAG-OF-WORDS-ENCODER (:FEATURE-MAPPER)
+
+- [reader] ENCODED-FEATURE-TEST BAG-OF-WORDS-ENCODER (:ENCODED-FEATURE-TEST = #'EQL)
+
+- [reader] ENCODED-FEATURE-TYPE BAG-OF-WORDS-ENCODER (:ENCODED-FEATURE-TYPE = T)
+
+- [reader] BAG-OF-WORDS-KIND BAG-OF-WORDS-ENCODER (:KIND = :BINARY)
 
 * * *
 ###### \[generated by [MGL-PAX](https://github.com/melisgl/mgl-pax)\]

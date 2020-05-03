@@ -36,7 +36,8 @@
                              (:file "unroll")
                              (:file "gaussian-process")
                              (:file "nlp")
-                             (:file "mgl"))))
+                             (:file "mgl")
+                             (:file "doc"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
                             #:mgl-gnuplot #:mgl-mat #:mgl-pax
                             #:named-readtables #:pythonic-string-reader))
