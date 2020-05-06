@@ -86,9 +86,11 @@
 - Description: MGL is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.
 - Licence: MIT, see COPYING.
-- Author: Gábor Melis
+- Author: Gábor Melis <mega@retes.hu>
 - Mailto: [mega@retes.hu](mailto:mega@retes.hu)
-- Homepage: [http://quotenil.com](http://quotenil.com)
+- Homepage: [http://melisgl.github.io/mgl](http://melisgl.github.io/mgl)
+- Bug tracker: [https://github.com/melisgl/mgl/issues](https://github.com/melisgl/mgl/issues)
+- Source control: [GIT](https://github.com/melisgl/mgl.git)
 
 <a id='x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29'></a>
 
