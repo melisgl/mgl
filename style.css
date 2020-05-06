@@ -9,7 +9,6 @@ h1, h2, h3, h4, h5, h6 {
   font-family: serif;
   font-weight: bold;
   text-shadow: 0.05em 0.05em 0.02em #DDDDDD;
-  margin-top: 0;
 }
 
 h1 a {
@@ -30,6 +29,10 @@ h4 a {
 
 h5 a {
   border-bottom: none;
+}
+
+h1 {
+  font-size: 250%
 }
 
 h2 {
@@ -144,6 +147,7 @@ a:hover {
 .navigation {
   display: block;
   visibility: hidden;
+  margin-bottom: -1.5em;
 }
 
 .outer-navigation:hover .navigation {
@@ -254,7 +258,6 @@ a.symbol:hover { color : #229955; background-color : transparent; text-decoratio
 }
 
 #toc a {
-  color: #777;
   border-bottom: none;
 }
 
@@ -295,8 +298,21 @@ a.symbol:hover { color : #229955; background-color : transparent; text-decoratio
   color: #fff;
 }
 
-#toc-footer
-{
-  font-size: 70%;
+.menu-block {
+  padding-left: 10px;
+  margin-bottom: 1em;
+}
+
+.menu-block-title {
+  font-size: 90%;
+}
+
+.menu-block a {
+  color: #fff;
+  border-bottom: none;
+}
+
+#toc-footer a {
+  font-size: 80%;
   color: #777777;
 }
