@@ -599,8 +599,8 @@ an internal inconsistency in the model.
 
 - [generic-function] SET-INPUT INSTANCES MODEL
 
-    Set INSTANCES as inputs in MODEL. SAMPLES is always
-    a SEQUENCE of instances even for models not capable of batch
+    Set INSTANCES as inputs in MODEL. INSTANCES is
+    always a SEQUENCE of instances even for models not capable of batch
     operation. It sets N-STRIPES to (LENGTH INSTANCES) in a :BEFORE
     method.
 
@@ -1693,19 +1693,27 @@ too.
     Assuming that ACCUMULATOR has the sum of gradients for a mini-batch,
     the weight update looks like this:
     
-    $$\Delta\_w^{t+1} = momentum \Delta\_w^t
+    $$
+    \Delta\_w^{t+1} = momentum \* \Delta\_w^t
       + \frac{accumulator}{batchsize}
-      + l\_2 w + l\_1 sign(w)$$
+      + l\_2 w + l\_1 sign(w)
+    $$
     
-    $$w^{t+1} = w^{t} - learningrate \Delta\_w$$
+    $$
+    w^{t+1} = w^{t} - learningrate \* \Delta\_w,
+    $$
     
     which is the same as the more traditional formulation:
     
-    $$\Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
-      + learningrate \left(\frac{\frac{df}{dw}}{batchsize}
-                           + l\_2 w + l\_1 sign(w)\right)$$
+    $$
+    \Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
+      + learningrate \* \left(\frac{\frac{df}{dw}}{batchsize}
+                           + l\_2 w + l\_1 sign(w)\right)
+    $$
     
-    $$w^{t+1} = w^{t} - \Delta\_w$$
+    $$
+    w^{t+1} = w^{t} - \Delta\_w,
+    $$
     
     but the former works better when batch size, momentum or learning
     rate change during the course of optimization. The above is with
@@ -3675,15 +3683,19 @@ a ->LOSS.
     total cross-entropy is the sum of cross-entropies per group of
     [GROUP-SIZE][(reader ->softmax-xe-loss)] elements:
     
-    $$XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i)$$
+    $$
+    XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i),
+    $$
     
     where `g` is the number of classes ([GROUP-SIZE][(reader
     ->softmax-xe-loss)]), `t_i` are the targets (i.e. the true
     probabilities of the class, often all zero but one), `s_i` is the
     output of softmax calculated from input `X`:
     
-    $$s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
-      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}$$
+    $$
+    s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
+      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}
+    $$
     
     In other words, in the forward phase this lump takes input `X`,
     computes its elementwise EXP, normalizes each group of
@@ -3909,22 +3921,32 @@ a ->LOSS.
     Andrew Senior, Francoise Beaufays). Using the notation from that
     paper:
     
-    $$i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
-    c\_{t-1} + b\_i)$$
+    $$
+    i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
+    c\_{t-1} + b\_i)
+    $$
     
-    $$f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
-    c\_{t-1} + b\_f)$$
+    $$
+    f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
+    c\_{t-1} + b\_f)
+    $$
     
-    $$c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
-    W\_{cm} m\_{t-1} + b\_c)$$
+    $$
+    c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
+    W\_{cm} m\_{t-1} + b\_c)
+    $$
     
-    $$o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
-    c\_t + b\_o)$$
+    $$
+    o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    c\_t + b\_o)
+    $$
     
-    $$m\_t = o\_t \odot h(c\_t)$$
+    $$
+    m\_t = o\_t \odot h(c\_t),
+    $$
     
-    ... where `i`, `f`, and `o` are the input, forget and output gates.
-    `c` is the cell state and `m` is the actual output.
+    where `i`, `f`, and `o` are the input, forget and output gates. `c`
+    is the cell state and `m` is the actual output.
     
     Weight matrices for connections from `c` (`W_ic`, `W_fc` and `W_oc`)
     are diagonal and represented by just the vector of diagonal values.

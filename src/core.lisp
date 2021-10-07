@@ -166,8 +166,8 @@
   array or matrix of OBJECT."))
 
 (defgeneric set-input (instances model)
-  (:documentation "Set INSTANCES as inputs in MODEL. SAMPLES is always
-  a SEQUENCE of instances even for models not capable of batch
+  (:documentation "Set INSTANCES as inputs in MODEL. INSTANCES is
+  always a SEQUENCE of instances even for models not capable of batch
   operation. It sets N-STRIPES to (LENGTH INSTANCES) in a :BEFORE
   method."))
 

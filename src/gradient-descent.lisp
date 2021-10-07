@@ -248,19 +248,27 @@
   Assuming that ACCUMULATOR has the sum of gradients for a mini-batch,
   the weight update looks like this:
 
-  $$\Delta_w^{t+1} = momentum \Delta_w^t
+  $$
+  \Delta_w^{t+1} = momentum * \Delta_w^t
     + \frac{accumulator}{batchsize}
-    + l_2 w + l_1 sign(w)$$
+    + l_2 w + l_1 sign(w)
+  $$
 
-  $$w^{t+1} = w^{t} - learningrate \Delta_w$$
+  $$
+  w^{t+1} = w^{t} - learningrate * \Delta_w,
+  $$
 
   which is the same as the more traditional formulation:
 
-  $$\Delta_w^{t+1} = momentum * \Delta_w^{t}
-    + learningrate \left(\frac{\frac{df}{dw}}{batchsize}
-                         + l_2 w + l_1 sign(w)\right)$$
+  $$
+  \Delta_w^{t+1} = momentum * \Delta_w^{t}
+    + learningrate * \left(\frac{\frac{df}{dw}}{batchsize}
+                         + l_2 w + l_1 sign(w)\right)
+  $$
 
-  $$w^{t+1} = w^{t} - \Delta_w$$
+  $$
+  w^{t+1} = w^{t} - \Delta_w,
+  $$
 
   but the former works better when batch size, momentum or learning
   rate change during the course of optimization. The above is with

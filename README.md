@@ -279,7 +279,7 @@ providing two functions: [`SAMPLE`][6fc3] and [`FINISHEDP`][d503].
 - [variable] **\*INFINITELY-EMPTY-DATASET\*** *#<FUNCTION-SAMPLER "infinitely empty" >*
 
     This is the default dataset for [`MGL-OPT:MINIMIZE`][bca8]. It's an infinite
-    stream of NILs.
+    stream of `NIL`s.
 
 <a id='x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29'></a>
 
@@ -343,7 +343,7 @@ tend to be used together with resampling.
 ### 4.1 Partitions
 
 The following functions partition a dataset (currently only
-SEQUENCEs are supported) into a number of partitions. For each
+`SEQUENCE`s are supported) into a number of partitions. For each
 element in the original dataset there is exactly one partition that
 contains it.
 
@@ -794,8 +794,8 @@ an internal inconsistency in the model.
 
 - [generic-function] **SET-INPUT** *INSTANCES MODEL*
 
-    Set `INSTANCES` as inputs in `MODEL`. SAMPLES is always
-    a `SEQUENCE` of instances even for models not capable of batch
+    Set `INSTANCES` as inputs in `MODEL`. `INSTANCES` is
+    always a `SEQUENCE` of instances even for models not capable of batch
     operation. It sets [`N-STRIPES`][dca7] to (`LENGTH` `INSTANCES`) in a `:BEFORE`
     method.
 
@@ -1749,7 +1749,7 @@ gradients) but more can be added with the [Extension API][2730].
 
     Minimize the value of the real valued function represented by
     `GRADIENT-SOURCE` by updating some of its parameters in `WEIGHTS` (a `MAT`
-    or a sequence of MATs). Return `WEIGHTS`. `DATASET` (see
+    or a sequence of `MAT`s). Return `WEIGHTS`. `DATASET` (see
     [Datasets][72e9]) is a set of unoptimized parameters of the same
     function. For example, `WEIGHTS` may be the weights of a neural
     network while `DATASET` is the training set consisting of inputs
@@ -2106,19 +2106,27 @@ too.
     Assuming that `ACCUMULATOR` has the sum of gradients for a mini-batch,
     the weight update looks like this:
     
-    $$\Delta\_w^{t+1} = momentum \Delta\_w^t
+    $$
+    \Delta\_w^{t+1} = momentum \* \Delta\_w^t
       + \frac{accumulator}{batchsize}
-      + l\_2 w + l\_1 sign(w)$$
+      + l\_2 w + l\_1 sign(w)
+    $$
     
-    $$w^{t+1} = w^{t} - learningrate \Delta\_w$$
+    $$
+    w^{t+1} = w^{t} - learningrate \* \Delta\_w,
+    $$
     
     which is the same as the more traditional formulation:
     
-    $$\Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
-      + learningrate \left(\frac{\frac{df}{dw}}{batchsize}
-                           + l\_2 w + l\_1 sign(w)\right)$$
+    $$
+    \Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
+      + learningrate \* \left(\frac{\frac{df}{dw}}{batchsize}
+                           + l\_2 w + l\_1 sign(w)\right)
+    $$
     
-    $$w^{t+1} = w^{t} - \Delta\_w$$
+    $$
+    w^{t+1} = w^{t} - \Delta\_w,
+    $$
     
     but the former works better when batch size, momentum or learning
     rate change during the course of optimization. The above is with
@@ -2400,7 +2408,7 @@ respect to some of its parameters.
     When using `MAX-N-EVALUATIONS` remember that there is an extra
     evaluation of `FN` before the first line search.
     
-    `SPARE-VECTORS` is a list of preallocated MATs of the same size as `W`.
+    `SPARE-VECTORS` is a list of preallocated `MAT`s of the same size as `W`.
     Passing 6 of them covers the current need of the algorithm and it
     will not cons up vectors of size `W` at all.
     
@@ -3050,7 +3058,7 @@ Without the bells an whistles, the basic shape of training is this:
 #### 11.3.3 Feed-Forward Nets
 
 [`FNN`][622d] and [`RNN`][b9d7] have a lot in common (see their common superclass, [`BPN`][0e98]).
-There is very limited functionality that's specific to FNNs so let's
+There is very limited functionality that's specific to [`FNN`][622d]s so let's
 get them out of they way before we study a full example.
 
 <a id='x-28MGL-BP-3AFNN-20CLASS-29'></a>
@@ -3064,8 +3072,8 @@ get them out of they way before we study a full example.
 
 - [macro] **BUILD-FNN** *(&KEY FNN (CLASS ''FNN) INITARGS MAX-N-STRIPES NAME) &BODY CLUMPS*
 
-    Syntactic sugar to assemble FNNs from CLUMPs. Like `LET*`, it is a
-    sequence of bindings (of symbols to CLUMPs). The names of the clumps
+    Syntactic sugar to assemble `FNN`s from `CLUMPs`. Like `LET*`, it is a
+    sequence of bindings (of symbols to `CLUMPs`). The names of the clumps
     created default to the symbol of the binding. In case a clump is not
     bound to a symbol (because it was created in a nested expression),
     the local function [`CLUMP`][0e4a] can be used to find the clump with the
@@ -3580,7 +3588,7 @@ the concepts involved. Make sure you are comfortable with
     the network. Just how many lumps this means depends on the length of
     the sequences.
     
-    When an `RNN` is created, `MAX-LAG + 1` BPNs are instantiated so
+    When an `RNN` is created, `MAX-LAG + 1` [`BPN`][0e98]s are instantiated so
     that all weights are present and one can start training it.
 
 <a id='x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29'></a>
@@ -3590,7 +3598,7 @@ the concepts involved. Make sure you are comfortable with
     The `UNFOLDER` of an [`RNN`][b9d7] is function of no arguments
     that builds and returns a [`BPN`][0e98]. The unfolder is allowed to create
     networks with arbitrary topology even different ones for different
-    [`TIME-STEP`][9b9d]s with the help of [`LAG`][1374], or nested RNNs. Weights of
+    [`TIME-STEP`][9b9d]s with the help of [`LAG`][1374], or nested [`RNN`][b9d7]s. Weights of
     the same name are shared between the folds. That is, if a [`->WEIGHT`][2abf]
     lump were to be created and a weight lump of the same name already
     exists, then the existing lump will be added to the [`BPN`][0e98] created by
@@ -3674,7 +3682,7 @@ the concepts involved. Make sure you are comfortable with
 
 - [method] **SET-INPUT** *INSTANCES (RNN RNN)*
 
-    RNNs operate on batches of instances just like FNNs. But the
+    `RNN`s operate on batches of instances just like [`FNN`][622d]s. But the
     instances here are like datasets: sequences or samplers and they are
     turned into sequences of batches of instances with
     [`MAP-DATASETS`][a519] `:IMPUTE` `NIL`. The batch of instances at index 2 is
@@ -4431,14 +4439,18 @@ a [`->LOSS`][ba60].
     total cross-entropy is the sum of cross-entropies per group of
     [`GROUP-SIZE`][5683] elements:
     
-    $$XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i)$$
+    $$
+    XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i),
+    $$
     
     where `g` is the number of classes ([`GROUP-SIZE`][5683]), `t_i` are the targets (i.e. the true
     probabilities of the class, often all zero but one), `s_i` is the
     output of softmax calculated from input `X`:
     
-    $$s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
-      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}$$
+    $$
+    s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
+      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}
+    $$
     
     In other words, in the forward phase this lump takes input `X`,
     computes its elementwise `EXP`, normalizes each group of
@@ -4733,22 +4745,32 @@ a [`->LOSS`][ba60].
     Andrew Senior, Francoise Beaufays). Using the notation from that
     paper:
     
-    $$i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
-    c\_{t-1} + b\_i)$$
+    $$
+    i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
+    c\_{t-1} + b\_i)
+    $$
     
-    $$f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
-    c\_{t-1} + b\_f)$$
+    $$
+    f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
+    c\_{t-1} + b\_f)
+    $$
     
-    $$c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
-    W\_{cm} m\_{t-1} + b\_c)$$
+    $$
+    c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
+    W\_{cm} m\_{t-1} + b\_c)
+    $$
     
-    $$o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
-    c\_t + b\_o)$$
+    $$
+    o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    c\_t + b\_o)
+    $$
     
-    $$m\_t = o\_t \odot h(c\_t)$$
+    $$
+    m\_t = o\_t \odot h(c\_t),
+    $$
     
-    ... where `i`, `f`, and `o` are the input, forget and output gates.
-    `c` is the cell state and `m` is the actual output.
+    where `i`, `f`, and `o` are the input, forget and output gates. `c`
+    is the cell state and `m` is the actual output.
     
     Weight matrices for connections from `c` (`W_ic`, `W_fc` and `W_oc`)
     are diagonal and represented by just the vector of diagonal values.
