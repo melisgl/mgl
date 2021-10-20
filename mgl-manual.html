@@ -14,7 +14,7 @@
        }
      });
    </script>
-   <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
+   <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
    </script>
    </head>
 <body>
@@ -34,7 +34,7 @@
 <h2>Table of Contents</h2>
 
 <ul>
-<li><a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">1 mgl ASDF System Details</a></li>
+<li><a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">1 MGL ASDF System Details</a></li>
 <li><a href="#x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29" title="Introduction">2 Introduction</a>
 
 <ul>
@@ -168,11 +168,11 @@
 
 <p><span class="outer-navigation"><span class="navigation"> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="MGL Manual">&#8592;</a> <a href="#x-28MGL-3A-40MGL-MANUAL-20MGL-PAX-3ASECTION-29" title="MGL Manual">&#8593;</a> <a href="#x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29" title="Introduction">&#8594;</a> <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)">&#8634;</a> <a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/mgl.asd#L1">&#955;</a></span></span></p>
 
-<h2><a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29">1 mgl ASDF System Details</a></h2>
+<h2><a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29">1 MGL ASDF System Details</a></h2>
 
 <ul>
 <li>Version: 0.1.0</li>
-<li>Description: MGL is a machine learning library for backpropagation
+<li>Description: <a href="#x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29" title="(\&quot;mgl\&quot; ASDF/SYSTEM:SYSTEM)"><code>MGL</code></a> is a machine learning library for backpropagation
   neural networks, boltzmann machines, gaussian processes and more.</li>
 <li>Licence: MIT, see COPYING.</li>
 <li>Author: Gábor Melis <a href="m&#x61;&#105;l&#x74;&#111;:&#x6D;&#101;g&#x61;&#64;r&#x65;&#116;e&#x73;&#46;h&#x75;">m&#x61;&#105;l&#x74;&#111;:&#x6D;&#101;g&#x61;&#64;r&#x65;&#116;e&#x73;&#46;h&#x75;</a></li>
@@ -346,10 +346,10 @@ providing two functions: <a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-2
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/dataset.lisp#L81">[generic-function]</a></span> <span class="reference-object"><a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" >SAMPLE</a></span></span> <span class="locative-args">SAMPLER</span></span></p>
 
 <p>If <code>SAMPLER</code> has not run out of data (see <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>)
-<a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> returns an object that represents a sample from the world to
+<code>SAMPLE</code> returns an object that represents a sample from the world to
 be experienced or, in other words, simply something the can be used
 as input for training or prediction. It is not allowed to call
-<a href="#x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29" title="(MGL-DATASET:SAMPLE GENERIC-FUNCTION)"><code>SAMPLE</code></a> if <code>SAMPLER</code> is <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>.</p></li>
+<code>SAMPLE</code> if <code>SAMPLER</code> is <a href="#x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29" title="(MGL-DATASET:FINISHEDP GENERIC-FUNCTION)"><code>FINISHEDP</code></a>.</p></li>
 </ul>
 
 <p><a id='x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29'></a></p>
@@ -391,10 +391,10 @@ reshuffled whenever the sampler reaches the end of it. Shuffling is
 performed by calling the <code>REORDER</code> function.</p></li>
 </ul>
 
-<p><a id='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/dataset.lisp#L177">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20-28VARIABLE-29-29" >*INFINITELY-EMPTY-DATASET*</a></span></span> <span class="locative-args">#&lt;FUNCTION-SAMPLER &quot;infinitely empty&quot; &gt;</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/dataset.lisp#L177">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29" >*INFINITELY-EMPTY-DATASET*</a></span></span> <span class="locative-args">#&lt;FUNCTION-SAMPLER &quot;infinitely empty&quot; &gt;</span></span></p>
 
 <p>This is the default dataset for <a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" title="(MGL-OPT:MINIMIZE FUNCTION)"><code>MGL-OPT:MINIMIZE</code></a>. It's an infinite
 stream of <code>NIL</code>s.</p></li>
@@ -836,9 +836,9 @@ the serialization format. Return <code>OBJECT</code>.</p></li>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L53">[generic-function]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29" >READ-STATE*</a></span></span> <span class="locative-args">OBJECT STREAM CONTEXT</span></span></p>
 
 <p>This is the extension point for <a href="#x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29" title="(MGL-CORE:READ-STATE FUNCTION)"><code>READ-STATE</code></a>. It is
-guaranteed that primary <a href="#x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29" title="(MGL-CORE:READ-STATE* GENERIC-FUNCTION)"><code>READ-STATE*</code></a> methods will be called only once
+guaranteed that primary <code>READ-STATE*</code> methods will be called only once
 for each <code>OBJECT</code> (under EQ). <code>CONTEXT</code> is an opaque object and must be
-passed on to any recursive <a href="#x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNCTION-29" title="(MGL-CORE:READ-STATE* GENERIC-FUNCTION)"><code>READ-STATE*</code></a> calls.</p></li>
+passed on to any recursive <code>READ-STATE*</code> calls.</p></li>
 </ul>
 
 <p><a id='x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29'></a></p>
@@ -847,9 +847,9 @@ passed on to any recursive <a href="#x-28MGL-CORE-3AREAD-STATE-2A-20GENERIC-FUNC
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L63">[generic-function]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29" >WRITE-STATE*</a></span></span> <span class="locative-args">OBJECT STREAM CONTEXT</span></span></p>
 
 <p>This is the extension point for <a href="#x-28MGL-CORE-3AWRITE-STATE-20FUNCTION-29" title="(MGL-CORE:WRITE-STATE FUNCTION)"><code>WRITE-STATE</code></a>. It is
-guaranteed that primary <a href="#x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29" title="(MGL-CORE:WRITE-STATE* GENERIC-FUNCTION)"><code>WRITE-STATE*</code></a> methods will be called only
+guaranteed that primary <code>WRITE-STATE*</code> methods will be called only
 once for each <code>OBJECT</code> (under EQ). <code>CONTEXT</code> is an opaque object and must
-be passed on to any recursive <a href="#x-28MGL-CORE-3AWRITE-STATE-2A-20GENERIC-FUNCTION-29" title="(MGL-CORE:WRITE-STATE* GENERIC-FUNCTION)"><code>WRITE-STATE*</code></a> calls.</p></li>
+be passed on to any recursive <code>WRITE-STATE*</code> calls.</p></li>
 </ul>
 
 <p><a id='x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29'></a></p>
@@ -916,10 +916,10 @@ that are in use in <code>OBJECT</code>. This is called when <code>N-STRIPES</cod
 <code>SETF</code>'ed.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CORE-3AWITH-STRIPES-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L129">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AWITH-STRIPES-20-28MGL-PAX-3AMACRO-29-29" >WITH-STRIPES</a></span></span> <span class="locative-args">SPECS &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L129">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AWITH-STRIPES-20MGL-PAX-3AMACRO-29" >WITH-STRIPES</a></span></span> <span class="locative-args">SPECS &amp;BODY BODY</span></span></p>
 
 <p>Bind start and optionally end indices belonging to stripes in
 striped objects.</p>
@@ -939,7 +939,7 @@ the Nth input in an input lump of a bpn:</p>
 </code></pre>
 
 <p>Note how the input lump is striped, but the matrix into which we are
-indexing (<a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a>) is not known to <a href="#x-28MGL-CORE-3AWITH-STRIPES-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-CORE:WITH-STRIPES (MGL-PAX:MACRO))"><code>WITH-STRIPES</code></a>. In fact, for lumps
+indexing (<a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a>) is not known to <code>WITH-STRIPES</code>. In fact, for lumps
 the same stripe indices work with <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> and <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>MGL-BP:DERIVATIVES</code></a>.</p></li>
 </ul>
 
@@ -982,10 +982,10 @@ The number of instances in a batch is <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20G
 if there are no more instances left.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L185">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29" >DO-BATCHES-FOR-MODEL</a></span></span> <span class="locative-args">(BATCH (DATASET MODEL)) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L185">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29" >DO-BATCHES-FOR-MODEL</a></span></span> <span class="locative-args">(BATCH (DATASET MODEL)) &amp;BODY BODY</span></span></p>
 
 <p>Convenience macro over <a href="#x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29" title="(MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION)"><code>MAP-BATCHES-FOR-MODEL</code></a>.</p></li>
 </ul>
@@ -1020,17 +1020,17 @@ same though. In <a href="#x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20M
 <a href="#x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"><code>MAKE-EXECUTOR-WITH-PARAMETERS</code></a> is this factory.</p>
 
 <p>Parallelization of execution is another possibility
-<a href="#x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"><code>MAP-OVER-EXECUTORS</code></a> allows, but there is no prebuilt solution for it,
+<code>MAP-OVER-EXECUTORS</code> allows, but there is no prebuilt solution for it,
 yet.</p>
 
 <p>The default implementation simply calls <code>FN</code> with <code>INSTANCES</code> and
 <code>PROTOTYPE-EXECUTOR</code>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CORE-3ADO-EXECUTORS-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L223">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3ADO-EXECUTORS-20-28MGL-PAX-3AMACRO-29-29" >DO-EXECUTORS</a></span></span> <span class="locative-args">(INSTANCES OBJECT) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/core.lisp#L223">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29" >DO-EXECUTORS</a></span></span> <span class="locative-args">(INSTANCES OBJECT) &amp;BODY BODY</span></span></p>
 
 <p>Convenience macro on top of <a href="#x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAP-OVER-EXECUTORS GENERIC-FUNCTION)"><code>MAP-OVER-EXECUTORS</code></a>.</p></li>
 </ul>
@@ -1048,7 +1048,7 @@ yet.</p>
 
 <p>Mix this into a model, implement
 <a href="#x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION)"><code>INSTANCE-TO-EXECUTOR-PARAMETERS</code></a> and <a href="#x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION)"><code>MAKE-EXECUTOR-WITH-PARAMETERS</code></a>
-and <a href="#x-28MGL-CORE-3ADO-EXECUTORS-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-CORE:DO-EXECUTORS (MGL-PAX:MACRO))"><code>DO-EXECUTORS</code></a> will be to able build executors suitable for
+and <a href="#x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO)"><code>DO-EXECUTORS</code></a> will be to able build executors suitable for
 different instances. The canonical example is using a BPN to compute
 the means and convariances of a gaussian process. Since each
 instance is made of a variable number of observations, the size of
@@ -1182,7 +1182,7 @@ more.</p></li>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/monitor.lisp#L96">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29" >MONITOR-MODEL-RESULTS</a></span></span> <span class="locative-args">FN DATASET MODEL MONITORS</span></span></p>
 
 <p>Call <code>FN</code> with batches of instances from <code>DATASET</code> until it runs
-out (as in <a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-CORE:DO-BATCHES-FOR-MODEL (MGL-PAX:MACRO))"><code>DO-BATCHES-FOR-MODEL</code></a>). <code>FN</code> is supposed to apply <code>MODEL</code> to
+out (as in <a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:DO-BATCHES-FOR-MODEL MGL-PAX:MACRO)"><code>DO-BATCHES-FOR-MODEL</code></a>). <code>FN</code> is supposed to apply <code>MODEL</code> to
 the batch and return some kind of result (for neural networks, the
 result is the model state itself). Apply <code>MONITORS</code> to each batch and
 the result returned by <code>FN</code> for that batch. Finally, return the list
@@ -1374,13 +1374,13 @@ attributes without clobbering the those in the <code>:INITFORM</code>, (<code>:T
 they are printed near together.</p>
 
 <p>Values may be padded according to an enclosing
-<a href="#x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING (MGL-PAX:MACRO))"><code>WITH-PADDED-ATTRIBUTE-PRINTING</code></a>.</p></li>
+<a href="#x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:WITH-PADDED-ATTRIBUTE-PRINTING MGL-PAX:MACRO)"><code>WITH-PADDED-ATTRIBUTE-PRINTING</code></a>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/counter.lisp#L83">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20-28MGL-PAX-3AMACRO-29-29" >WITH-PADDED-ATTRIBUTE-PRINTING</a></span></span> <span class="locative-args">(ATTRIBUTEDS) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/counter.lisp#L83">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AWITH-PADDED-ATTRIBUTE-PRINTING-20MGL-PAX-3AMACRO-29" >WITH-PADDED-ATTRIBUTE-PRINTING</a></span></span> <span class="locative-args">(ATTRIBUTEDS) &amp;BODY BODY</span></span></p>
 
 <p>Note the width of values for each attribute key which is the number
 of characters in the value's <code>PRINC-TO-STRING</code>'ed representation. In
@@ -2078,7 +2078,7 @@ gradients) but more can be added with the <a href="#x-28MGL-OPT-3A-40MGL-OPT-EXT
 <p><a id='x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L25">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" >MINIMIZE</a></span></span> <span class="locative-args">OPTIMIZER GRADIENT-SOURCE &amp;KEY (WEIGHTS (<a href="#x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29" title="(MGL-OPT:LIST-SEGMENTS FUNCTION)"><code>LIST-SEGMENTS</code></a> <code>GRADIENT-SOURCE</code>)) (DATASET <a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20-28VARIABLE-29-29" title="(MGL-DATASET:*INFINITELY-EMPTY-DATASET* (VARIABLE))"><code>*INFINITELY-EMPTY-DATASET*</code></a>)</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L25">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3AMINIMIZE-20FUNCTION-29" >MINIMIZE</a></span></span> <span class="locative-args">OPTIMIZER GRADIENT-SOURCE &amp;KEY (WEIGHTS (<a href="#x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29" title="(MGL-OPT:LIST-SEGMENTS FUNCTION)"><code>LIST-SEGMENTS</code></a> <code>GRADIENT-SOURCE</code>)) (DATASET <a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29" title="(MGL-DATASET:*INFINITELY-EMPTY-DATASET* VARIABLE)"><code>*INFINITELY-EMPTY-DATASET*</code></a>)</span></span></p>
 
 <p>Minimize the value of the real valued function represented by
 <code>GRADIENT-SOURCE</code> by updating some of its parameters in <code>WEIGHTS</code> (a <code>MAT</code>
@@ -2087,7 +2087,7 @@ or a sequence of <code>MAT</code>s). Return <code>WEIGHTS</code>. <code>DATASET<
 function. For example, <code>WEIGHTS</code> may be the weights of a neural
 network while <code>DATASET</code> is the training set consisting of inputs
 suitable for <a href="#x-28MGL-CORE-3ASET-INPUT-20GENERIC-FUNCTION-29" title="(MGL-CORE:SET-INPUT GENERIC-FUNCTION)"><code>SET-INPUT</code></a>. The default
-<code>DATASET</code>, (<a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20-28VARIABLE-29-29" title="(MGL-DATASET:*INFINITELY-EMPTY-DATASET* (VARIABLE))"><code>*INFINITELY-EMPTY-DATASET*</code></a>) is suitable for when all
+<code>DATASET</code>, (<a href="#x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29" title="(MGL-DATASET:*INFINITELY-EMPTY-DATASET* VARIABLE)"><code>*INFINITELY-EMPTY-DATASET*</code></a>) is suitable for when all
 parameters are optimized, so there is nothing left to come from the
 environment.</p>
 
@@ -2365,7 +2365,7 @@ too.</p>
 
 <p>Another abstract base class for gradient based
 optimizers tath updates all weights simultaneously after chewing
-through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>2</code></a>) inputs. See subclasses <a href="#x-28MGL-GD-3ASGD-OPTIMIZER-20CLASS-29" title="(MGL-GD:SGD-OPTIMIZER CLASS)"><code>SGD-OPTIMIZER</code></a>,
+through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>2</code></a>) inputs. See subclasses <a href="#x-28MGL-GD-3ASGD-OPTIMIZER-20CLASS-29" title="(MGL-GD:SGD-OPTIMIZER CLASS)"><code>SGD-OPTIMIZER</code></a>,
 <a href="#x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29" title="(MGL-GD:ADAM-OPTIMIZER CLASS)"><code>ADAM-OPTIMIZER</code></a> and <a href="#x-28MGL-GD-3ANORMALIZED-BATCH-GD-OPTIMIZER-20CLASS-29" title="(MGL-GD:NORMALIZED-BATCH-GD-OPTIMIZER CLASS)"><code>NORMALIZED-BATCH-GD-OPTIMIZER</code></a>.</p>
 
 <p><a href="#x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29" title="(MGL-GD:PER-WEIGHT-BATCH-GD-OPTIMIZER CLASS)"><code>PER-WEIGHT-BATCH-GD-OPTIMIZER</code></a> may be a better choice when some
@@ -2487,7 +2487,7 @@ on.</p></li>
 <ul>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/gradient-descent.lisp#L242">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-GD-3ASGD-OPTIMIZER-20CLASS-29" >SGD-OPTIMIZER</a></span></span> <span class="locative-args"><a href="#x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29" title="(MGL-GD:BATCH-GD-OPTIMIZER CLASS)">BATCH-GD-OPTIMIZER</a></span></span></p>
 
-<p>With <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>2</code></a>) 1 this is Stochastic Gradient
+<p>With <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>2</code></a>) 1 this is Stochastic Gradient
 Descent. With higher batch sizes, one gets mini-batch and Batch
 Gradient Descent.</p>
 
@@ -2798,7 +2798,7 @@ respect to some of its parameters.</p>
 <p><a id='x-28MGL-CG-3ACG-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L133">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3ACG-20FUNCTION-29" >CG</a></span></span> <span class="locative-args">FN W &amp;KEY (MAX-N-LINE-SEARCHES <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-MAX-N-LINE-SEARCHES* (VARIABLE))"><code>*DEFAULT-MAX-N-LINE-SEARCHES*</code></a>) (MAX-N-EVALUATIONS-PER-LINE-SEARCH <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH* (VARIABLE))"><code>*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH*</code></a>) (MAX-N-EVALUATIONS <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-MAX-N-EVALUATIONS* (VARIABLE))"><code>*DEFAULT-MAX-N-EVALUATIONS*</code></a>) (SIG <a href="#x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-SIG* (VARIABLE))"><code>*DEFAULT-SIG*</code></a>) (RHO <a href="#x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-RHO* (VARIABLE))"><code>*DEFAULT-RHO*</code></a>) (INT <a href="#x-28MGL-CG-3A-2ADEFAULT-INT-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-INT* (VARIABLE))"><code>*DEFAULT-INT*</code></a>) (EXT <a href="#x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-EXT* (VARIABLE))"><code>*DEFAULT-EXT*</code></a>) (RATIO <a href="#x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20-28VARIABLE-29-29" title="(MGL-CG:*DEFAULT-RATIO* (VARIABLE))"><code>*DEFAULT-RATIO*</code></a>) SPARE-VECTORS</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L133">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3ACG-20FUNCTION-29" >CG</a></span></span> <span class="locative-args">FN W &amp;KEY (MAX-N-LINE-SEARCHES <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-MAX-N-LINE-SEARCHES* VARIABLE)"><code>*DEFAULT-MAX-N-LINE-SEARCHES*</code></a>) (MAX-N-EVALUATIONS-PER-LINE-SEARCH <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH* VARIABLE)"><code>*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH*</code></a>) (MAX-N-EVALUATIONS <a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-MAX-N-EVALUATIONS* VARIABLE)"><code>*DEFAULT-MAX-N-EVALUATIONS*</code></a>) (SIG <a href="#x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-SIG* VARIABLE)"><code>*DEFAULT-SIG*</code></a>) (RHO <a href="#x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-RHO* VARIABLE)"><code>*DEFAULT-RHO*</code></a>) (INT <a href="#x-28MGL-CG-3A-2ADEFAULT-INT-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-INT* VARIABLE)"><code>*DEFAULT-INT*</code></a>) (EXT <a href="#x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-EXT* VARIABLE)"><code>*DEFAULT-EXT*</code></a>) (RATIO <a href="#x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20VARIABLE-29" title="(MGL-CG:*DEFAULT-RATIO* VARIABLE)"><code>*DEFAULT-RATIO*</code></a>) SPARE-VECTORS</span></span></p>
 
 <p><a href="#x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29" title="(MGL-CG:CG-OPTIMIZER CLASS)"><code>CG-OPTIMIZER</code></a> passes each batch of data to this function with its
 <a href="#x-28MGL-CG-3ACG-ARGS-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-CG:CG-ARGS (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>CG-ARGS</code></a> passed on.</p>
@@ -2812,18 +2812,18 @@ initial step sizes. Additionally a bunch of checks are made to make
 sure that exploration is taking place and that extrapolation will
 not be unboundedly large.</p>
 
-<p><code>FN</code> is a function of two parameters: <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>) and <code>DERIVATIVES</code>. <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>)
+<p><code>FN</code> is a function of two parameters: <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>) and <code>DERIVATIVES</code>. <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>)
 is a <code>MAT</code> of the same size as <code>W</code> that is where the search start from.
 <code>DERIVATIVES</code> is also a <code>MAT</code> of that size and it is where <code>FN</code> shall
 place the partial derivatives. <code>FN</code> returns the value of the function
 that is being minimized.</p>
 
-<p><a href="#x-28MGL-CG-3ACG-20FUNCTION-29" title="(MGL-CG:CG FUNCTION)"><code>CG</code></a> performs a number of line searches and invokes <code>FN</code> at each step. A
+<p><code>CG</code> performs a number of line searches and invokes <code>FN</code> at each step. A
 line search invokes <code>FN</code> at most <code>MAX-N-EVALUATIONS-PER-LINE-SEARCH</code>
 number of times and can succeed in improving the minimum by the
 sufficient margin or it can fail. Note, the even a failed line
 search may improve further and hence change the weights it's just
-that the improvement was deemed too small. <a href="#x-28MGL-CG-3ACG-20FUNCTION-29" title="(MGL-CG:CG FUNCTION)"><code>CG</code></a> stops when either:</p>
+that the improvement was deemed too small. <code>CG</code> stops when either:</p>
 
 <ul>
 <li><p>two line searches fail in a row</p></li>
@@ -2831,7 +2831,7 @@ that the improvement was deemed too small. <a href="#x-28MGL-CG-3ACG-20FUNCTION-
 <li><p><code>MAX-N-EVALUATIONS</code> is reached</p></li>
 </ul>
 
-<p><a href="#x-28MGL-CG-3ACG-20FUNCTION-29" title="(MGL-CG:CG FUNCTION)"><code>CG</code></a> returns a <code>MAT</code> that contains the best weights, the minimum, the
+<p><code>CG</code> returns a <code>MAT</code> that contains the best weights, the minimum, the
 number of line searches performed, the number of succesful line
 searches and the number of evaluations.</p>
 
@@ -2858,26 +2858,26 @@ on the nature of the function to be optimized) may speed up the
 minimization; it is probably not worth playing much with <code>RHO</code>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-INT-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-INT-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L82">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-INT-2A-20-28VARIABLE-29-29" >*DEFAULT-INT*</a></span></span> <span class="locative-args">0.1</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L82">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-INT-2A-20VARIABLE-29" >*DEFAULT-INT*</a></span></span> <span class="locative-args">0.1</span></span></p>
 
 <p>Don't reevaluate within <code>INT</code> of the limit of the current bracket.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L84">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20-28VARIABLE-29-29" >*DEFAULT-EXT*</a></span></span> <span class="locative-args">3</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L84">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-EXT-2A-20VARIABLE-29" >*DEFAULT-EXT*</a></span></span> <span class="locative-args">3</span></span></p>
 
 <p>Extrapolate maximum <code>EXT</code> times the current step-size.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L86">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20-28VARIABLE-29-29" >*DEFAULT-SIG*</a></span></span> <span class="locative-args">0.1</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L86">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-SIG-2A-20VARIABLE-29" >*DEFAULT-SIG*</a></span></span> <span class="locative-args">0.1</span></span></p>
 
 <p><code>SIG</code> and <code>RHO</code> are the constants controlling the Wolfe-Powell
 conditions. <code>SIG</code> is the maximum allowed absolute ratio between
@@ -2886,40 +2886,40 @@ setting <code>SIG</code> to low (positive) values forces higher precision in the
 line-searches.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L92">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20-28VARIABLE-29-29" >*DEFAULT-RHO*</a></span></span> <span class="locative-args">0.05</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L92">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-RHO-2A-20VARIABLE-29" >*DEFAULT-RHO*</a></span></span> <span class="locative-args">0.05</span></span></p>
 
 <p><code>RHO</code> is the minimum allowed fraction of the expected (from the slope
 at the initial point in the linesearch). Constants must satisfy 0 &lt;
 <code>RHO</code> &lt; <code>SIG</code> &lt; 1.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L96">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20-28VARIABLE-29-29" >*DEFAULT-RATIO*</a></span></span> <span class="locative-args">10</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L96">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-RATIO-2A-20VARIABLE-29" >*DEFAULT-RATIO*</a></span></span> <span class="locative-args">10</span></span></p>
 
 <p>Maximum allowed slope ratio.</p></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L98">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20-28VARIABLE-29-29" >*DEFAULT-MAX-N-LINE-SEARCHES*</a></span></span> <span class="locative-args">NIL</span></span></li>
+<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L98">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-LINE-SEARCHES-2A-20VARIABLE-29" >*DEFAULT-MAX-N-LINE-SEARCHES*</a></span></span> <span class="locative-args">NIL</span></span></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L99">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20-28VARIABLE-29-29" >*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH*</a></span></span> <span class="locative-args">20</span></span></li>
+<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L99">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH-2A-20VARIABLE-29" >*DEFAULT-MAX-N-EVALUATIONS-PER-LINE-SEARCH*</a></span></span> <span class="locative-args">20</span></span></li>
 </ul>
 
-<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L100">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20-28VARIABLE-29-29" >*DEFAULT-MAX-N-EVALUATIONS*</a></span></span> <span class="locative-args">NIL</span></span></li>
+<li><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L100">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3A-2ADEFAULT-MAX-N-EVALUATIONS-2A-20VARIABLE-29" >*DEFAULT-MAX-N-EVALUATIONS*</a></span></span> <span class="locative-args">NIL</span></span></li>
 </ul>
 
 <p><a id='x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29'></a></p>
@@ -2928,7 +2928,7 @@ at the initial point in the linesearch). Constants must satisfy 0 &lt;
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/conjugate-gradient.lisp#L366">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29" >CG-OPTIMIZER</a></span></span> <span class="locative-args"><a href="#x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29" title="(MGL-OPT:ITERATIVE-OPTIMIZER CLASS)">ITERATIVE-OPTIMIZER</a></span></span></p>
 
 <p>Updates all weights simultaneously after chewing
-through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>2</code></a>) inputs.</p></li>
+through <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>2</code></a>) inputs.</p></li>
 </ul>
 
 <p><a id='x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29'></a></p>
@@ -3084,10 +3084,10 @@ accumulator).</p></li>
 <a href="#x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29" title="(MGL-OPT:SEGMENTS GENERIC-FUNCTION)"><code>SEGMENTS</code></a>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-OPT-3ADO-SEGMENT-SET-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L334">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3ADO-SEGMENT-SET-20-28MGL-PAX-3AMACRO-29-29" >DO-SEGMENT-SET</a></span></span> <span class="locative-args">(SEGMENT &amp;OPTIONAL START) SEGMENT-SET &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L334">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3ADO-SEGMENT-SET-20MGL-PAX-3AMACRO-29" >DO-SEGMENT-SET</a></span></span> <span class="locative-args">(SEGMENT &amp;OPTIONAL START) SEGMENT-SET &amp;BODY BODY</span></span></p>
 
 <p>Iterate over <a href="#x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29" title="(MGL-OPT:SEGMENTS GENERIC-FUNCTION)"><code>SEGMENTS</code></a> in <code>SEGMENT-SET</code>. If <code>START</code> is specified, the it
 is bound to the start index of <code>SEGMENT</code> within <code>SEGMENT-SET</code>. The start
@@ -3211,14 +3211,14 @@ of setup.</p></li>
 
 <p>Add <code>MULTIPLIER</code> times the sum of first-order
 gradients to accumulators of <code>SINK</code> (normally accessed with
-<a href="#x-28MGL-OPT-3ADO-GRADIENT-SINK-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-OPT:DO-GRADIENT-SINK (MGL-PAX:MACRO))"><code>DO-GRADIENT-SINK</code></a>) and if <code>VALUEP</code>, return the sum of values of the
+<a href="#x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29" title="(MGL-OPT:DO-GRADIENT-SINK MGL-PAX:MACRO)"><code>DO-GRADIENT-SINK</code></a>) and if <code>VALUEP</code>, return the sum of values of the
 function being optimized for a <code>BATCH</code> of instances. <code>GRADIENT-SOURCE</code>
 is the object representing the function being optimized, <code>SINK</code> is
 gradient sink.</p>
 
 <p>Note the number of instances in <code>BATCH</code> may be larger than what
 <code>GRADIENT-SOURCE</code> process in one go (in the sense of say,
-<a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>), so <a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-CORE:DO-BATCHES-FOR-MODEL (MGL-PAX:MACRO))"><code>DO-BATCHES-FOR-MODEL</code></a> or something like (<code>GROUP</code>
+<a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>), so <a href="#x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29" title="(MGL-CORE:DO-BATCHES-FOR-MODEL MGL-PAX:MACRO)"><code>DO-BATCHES-FOR-MODEL</code></a> or something like (<code>GROUP</code>
 <code>BATCH</code> <a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20GENERIC-FUNCTION-29" title="(MGL-CORE:MAX-N-STRIPES GENERIC-FUNCTION)"><code>MAX-N-STRIPES</code></a>) can be handy.</p></li>
 </ul>
 
@@ -3242,10 +3242,10 @@ are defined entirely by <a href="#x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNC
 each segment and their corresponding accumulator <code>MAT</code> in <code>SINK</code>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-OPT-3ADO-GRADIENT-SINK-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L456">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3ADO-GRADIENT-SINK-20-28MGL-PAX-3AMACRO-29-29" >DO-GRADIENT-SINK</a></span></span> <span class="locative-args">((SEGMENT ACCUMULATOR) SINK) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/optimize.lisp#L456">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-OPT-3ADO-GRADIENT-SINK-20MGL-PAX-3AMACRO-29" >DO-GRADIENT-SINK</a></span></span> <span class="locative-args">((SEGMENT ACCUMULATOR) SINK) &amp;BODY BODY</span></span></p>
 
 <p>A convenience macro on top of <a href="#x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29" title="(MGL-OPT:MAP-GRADIENT-SINK GENERIC-FUNCTION)"><code>MAP-GRADIENT-SINK</code></a>.</p></li>
 </ul>
@@ -3376,7 +3376,7 @@ their stuff in batch mode: passing a number of instances through the
 network in batches. Thus clumps must be able to store values of and
 gradients for each of these instances. However, some clumps produce
 the same result for each instance in a batch. These clumps are the
-weights, the parameters of the network. <a href="#x-28MGL-BP-3ASTRIPEDP-20GENERIC-FUNCTION-29" title="(MGL-BP:STRIPEDP GENERIC-FUNCTION)"><code>STRIPEDP</code></a> returns true iff
+weights, the parameters of the network. <code>STRIPEDP</code> returns true iff
 <code>CLUMP</code> does not represent weights (i.e. it's not a <a href="#x-28MGL-BP-3A--3EWEIGHT-20CLASS-29" title="(MGL-BP:-&gt;WEIGHT CLASS)"><code>-&gt;WEIGHT</code></a>).</p>
 
 <p>For striped clumps, their <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> and <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> are <code>MAT</code> objects with
@@ -3440,7 +3440,7 @@ where <code>X</code> is its only argument clump.</p>
 <pre><code>f(x) = 1/(1+exp(-x))
 </code></pre>
 
-<p>When <a href="#x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:BACKWARD GENERIC-FUNCTION)"><code>BACKWARD</code></a> is called on the sigmoid lump, its <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> is a
+<p>When <code>BACKWARD</code> is called on the sigmoid lump, its <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> is a
 2x1 <code>MAT</code> object that contains the partial derivatives of the loss
 function:</p>
 
@@ -3448,7 +3448,7 @@ function:</p>
 dL(x2)/df
 </code></pre>
 
-<p>Now the <a href="#x-28MGL-BP-3ABACKWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:BACKWARD GENERIC-FUNCTION)"><code>BACKWARD</code></a> method of the sigmoid needs to add <code>dL(x1)/dx1</code> and
+<p>Now the <code>BACKWARD</code> method of the sigmoid needs to add <code>dL(x1)/dx1</code> and
 <code>dL(x2)/dx2</code> to <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of <code>X</code>. Now, <code>dL(x1)/dx1 = dL(x1)/df *
 df(x1)/dx1</code> and the first term is what we have in <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> of the
 sigmoid so it only needs to calculate the second term.</p></li>
@@ -3491,7 +3491,7 @@ value.</p></li>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L184">[reader]</a></span> <span class="reference-object"><a href="#x-28MGL-CORE-3AMAX-N-STRIPES-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" >MAX-N-STRIPES</a></span></span> <span class="locative-args">BPN</span> <span class="locative-args">(:MAX-N-STRIPES = <code>NIL</code>)</span></span></p>
 
 <p>The maximum number of instances the network can
-operate on in parallel. Within <a href="#x-28MGL-BP-3ABUILD-FNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-FNN (MGL-PAX:MACRO))"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"><code>BUILD-RNN</code></a>, it defaults
+operate on in parallel. Within <a href="#x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-FNN MGL-PAX:MACRO)"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>, it defaults
 to <code>MAX-N-STRIPES</code> of that parent network, else it defaults to 1.
 When set <code>MAX-N-STRIPES</code> of all <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> get set to the same value.</p></li>
 </ul>
@@ -3504,7 +3504,7 @@ When set <code>MAX-N-STRIPES</code> of all <a href="#x-28MGL-BP-3ACLUMPS-20-28MG
 <p>A topological sorted adjustable array with a fill
 pointer that holds the clumps that make up the network. Clumps are
 added to it by <a href="#x-28MGL-BP-3AADD-CLUMP-20FUNCTION-29" title="(MGL-BP:ADD-CLUMP FUNCTION)"><code>ADD-CLUMP</code></a> or, more often, automatically when within
-a <a href="#x-28MGL-BP-3ABUILD-FNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-FNN (MGL-PAX:MACRO))"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"><code>BUILD-RNN</code></a>. Rarely needed, <a href="#x-28MGL-BP-3AFIND-CLUMP-20FUNCTION-29" title="(MGL-BP:FIND-CLUMP FUNCTION)"><code>FIND-CLUMP</code></a> takes care of
+a <a href="#x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-FNN MGL-PAX:MACRO)"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>. Rarely needed, <a href="#x-28MGL-BP-3AFIND-CLUMP-20FUNCTION-29" title="(MGL-BP:FIND-CLUMP FUNCTION)"><code>FIND-CLUMP</code></a> takes care of
 most uses.</p></li>
 </ul>
 
@@ -3638,10 +3638,10 @@ get them out of they way before we study a full example.</p>
 recurrent one, see <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>).</p></li>
 </ul>
 
-<p><a id='x-28MGL-BP-3ABUILD-FNN-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L361">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ABUILD-FNN-20-28MGL-PAX-3AMACRO-29-29" >BUILD-FNN</a></span></span> <span class="locative-args">(&amp;KEY FNN (CLASS ''<a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a>) INITARGS MAX-N-STRIPES NAME) &amp;BODY CLUMPS</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L361">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29" >BUILD-FNN</a></span></span> <span class="locative-args">(&amp;KEY FNN (CLASS ''<a href="#x-28MGL-BP-3AFNN-20CLASS-29" title="(MGL-BP:FNN CLASS)"><code>FNN</code></a>) INITARGS MAX-N-STRIPES NAME) &amp;BODY CLUMPS</span></span></p>
 
 <p>Syntactic sugar to assemble <code>FNN</code>s from <code>CLUMPs</code>. Like <code>LET*</code>, it is a
 sequence of bindings (of symbols to <code>CLUMPs</code>). The names of the clumps
@@ -4150,7 +4150,7 @@ the concepts involved. Make sure you are comfortable with
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L441">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ARNN-20CLASS-29" >RNN</a></span></span> <span class="locative-args"><a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)">BPN</a></span></span></p>
 
 <p>A recurrent neural net (as opposed to a
-feed-forward one. It is typically built with <a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"><code>BUILD-RNN</code></a> that's no
+feed-forward one. It is typically built with <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a> that's no
 more than a shallow convenience macro.</p>
 
 <p>An <code>RNN</code> takes instances as inputs that are sequences of variable
@@ -4200,7 +4200,7 @@ when creating the <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLAS
 <p><a id='x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L480">[accessor]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" >CUDA-WINDOW-START-TIME</a></span></span> <span class="locative-args">RNN</span> <span class="locative-args">(:CUDA-WINDOW-START-TIME = <a href="#x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*CUDA-WINDOW-START-TIME* (VARIABLE))"><code>*CUDA-WINDOW-START-TIME*</code></a>)</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L480">[accessor]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" >CUDA-WINDOW-START-TIME</a></span></span> <span class="locative-args">RNN</span> <span class="locative-args">(:CUDA-WINDOW-START-TIME = <a href="#x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20VARIABLE-29" title="(MGL-BP:*CUDA-WINDOW-START-TIME* VARIABLE)"><code>*CUDA-WINDOW-START-TIME*</code></a>)</span></span></p>
 
 <p>Due to unfolding, the memory footprint of an <a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>
 is almost linear in the number of time steps (i.e. the max
@@ -4225,18 +4225,18 @@ toghether with page-locking makes it a potent weapon to bring a
 machine to a halt. You were warned.</p></li>
 </ul>
 
-<p><a id='x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L433">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20-28VARIABLE-29-29" >*CUDA-WINDOW-START-TIME*</a></span></span> <span class="locative-args">NIL</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L433">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A-2ACUDA-WINDOW-START-TIME-2A-20VARIABLE-29" >*CUDA-WINDOW-START-TIME*</a></span></span> <span class="locative-args">NIL</span></span></p>
 
 <p>The default for <a href="#x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29" title="(MGL-BP:CUDA-WINDOW-START-TIME (MGL-PAX:ACCESSOR MGL-BP:RNN))"><code>CUDA-WINDOW-START-TIME</code></a>.</p></li>
 </ul>
 
-<p><a id='x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L768">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" >BUILD-RNN</a></span></span> <span class="locative-args">(&amp;KEY RNN (CLASS ''<a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L768">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" >BUILD-RNN</a></span></span> <span class="locative-args">(&amp;KEY RNN (CLASS ''<a href="#x-28MGL-BP-3ARNN-20CLASS-29" title="(MGL-BP:RNN CLASS)"><code>RNN</code></a>) NAME INITARGS MAX-N-STRIPES (MAX-LAG 1)) &amp;BODY BODY</span></span></p>
 
 <p>Create an <code>RNN</code> with <code>MAX-N-STRIPES</code> and <code>MAX-LAG</code> whose <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> is <code>BODY</code>
 wrapped in a lambda. Bind symbol given as the <code>RNN</code> argument to the
@@ -4252,7 +4252,7 @@ wrapped in a lambda. Bind symbol given as the <code>RNN</code> argument to the
 <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> (called <em>unfolding</em>), look up the <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> with <code>NAME</code> in the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>
 that's <code>LAG</code> number of time steps before the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> being added. If this
 function is called from <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> of an <code>RNN</code> (which is what happens
-behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"><code>BUILD-RNN</code></a>), then it returns an
+behind the scene in the body of <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a>), then it returns an
 opaque object representing a lagged connection to a clump, else it
 returns the <a href="#x-28MGL-BP-3ACLUMP-20CLASS-29" title="(MGL-BP:CLUMP CLASS)"><code>CLUMP</code></a> itself.</p>
 
@@ -4303,10 +4303,10 @@ limit is no longer GPU memory.</p>
 around indefinitely: they can be discarded when future time steps
 will never reference them again.</p>
 
-<p><a id='x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29'></a></p>
+<p><a id='x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L614">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" >*WARP-TIME*</a></span></span> <span class="locative-args">NIL</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/backprop.lisp#L614">[variable]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" >*WARP-TIME*</a></span></span> <span class="locative-args">NIL</span></span></p>
 
 <p>Controls whether warping is enabled (see <a href="#x-28MGL-BP-3A-40MGL-RNN-TIME-WARP-20MGL-PAX-3ASECTION-29" title="Time Warp">Time Warp</a>). Don't
 enable it for training, as it would make backprop impossible.</p></li>
@@ -4320,7 +4320,7 @@ enable it for training, as it would make backprop impossible.</p></li>
 <p>Return the index of the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> in <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> of <code>RNN</code> whose task it is to
 execute computation at <code>(- (TIME-STEP RNN) LAG)</code>. This is normally
 the same as <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> (disregarding <code>LAG</code>). That is, <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> can be
-indexed by <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to get the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>. However, when <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*WARP-TIME* (VARIABLE))"><code>*WARP-TIME*</code></a> is
+indexed by <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to get the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>. However, when <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is
 true, execution proceeds in a cycle as the structure of the network
 allows.</p>
 
@@ -4328,7 +4328,7 @@ allows.</p>
 time step so its <a href="#x-28MGL-BP-3AMAX-LAG-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:MAX-LAG (MGL-PAX:READER MGL-BP:RNN))"><code>MAX-LAG</code></a> is 1. Its <a href="#x-28MGL-BP-3AUNFOLDER-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:UNFOLDER (MGL-PAX:READER MGL-BP:RNN))"><code>UNFOLDER</code></a> returns <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>s of
 identical structure bar a shift in their time lagged connections
 except for the very first, so <a href="#x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-START</code></a> and <a href="#x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-LENGTH</code></a> are both 1.
-If <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*WARP-TIME* (VARIABLE))"><code>*WARP-TIME*</code></a> is <code>NIL</code>, then the mapping from <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> in
+If <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is <code>NIL</code>, then the mapping from <a href="#x-28MGL-BP-3ATIME-STEP-20FUNCTION-29" title="(MGL-BP:TIME-STEP FUNCTION)"><code>TIME-STEP</code></a> to the <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a> in
 <a href="#x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29" title="(MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN))"><code>CLUMPS</code></a> is straightforward:</p>
 
 <pre><code>time:   |  0 |  1 |  2 |  3 |  4 |  5
@@ -4338,7 +4338,7 @@ warped: |  0 |  1 |  2 |  3 |  4 |  5
 bpn:    | b0 | b1 | b2 | b3 | b4 | b5
 </code></pre>
 
-<p>When <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*WARP-TIME* (VARIABLE))"><code>*WARP-TIME*</code></a> is true, we reuse the <code>B1</code> - <code>B2</code> bpns in a loop:</p>
+<p>When <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> is true, we reuse the <code>B1</code> - <code>B2</code> bpns in a loop:</p>
 
 <pre><code>time:   |  0 |  1 |  2 |  3 |  4 |  5
 --------+----+----+----+----+----+----
@@ -4354,7 +4354,7 @@ process a sequence or make predictions.</p>
 
 <p>To be able to pull this trick off <a href="#x-28MGL-BP-3AWARP-START-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-START (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-START</code></a> and <a href="#x-28MGL-BP-3AWARP-LENGTH-20-28MGL-PAX-3AREADER-20MGL-BP-3ARNN-29-29" title="(MGL-BP:WARP-LENGTH (MGL-PAX:READER MGL-BP:RNN))"><code>WARP-LENGTH</code></a> must be
 specified when the <code>RNN</code> is instantiated. In general, with
-<a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*WARP-TIME* (VARIABLE))"><code>*WARP-TIME*</code></a> <code>(+ WARP-START (MAX 2 WARP-LENGTH))</code> bpns are needed.
+<a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> <code>(+ WARP-START (MAX 2 WARP-LENGTH))</code> bpns are needed.
 The 2 comes from the fact that with cycle length 1 a bpn would need
 to takes its input from itself which is problematic because it has
 <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> for only one set of values.</p></li>
@@ -4389,7 +4389,7 @@ connections.</p></li>
 <p>During training, unfolded <a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)"><code>BPN</code></a>s corresponding to
 previous time steps may be expensive to get at because they are no
 longer in GPU memory. This consideration also applies to making
-prediction with the additional caveat that with <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20-28VARIABLE-29-29" title="(MGL-BP:*WARP-TIME* (VARIABLE))"><code>*WARP-TIME*</code></a> true,
+prediction with the additional caveat that with <a href="#x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29" title="(MGL-BP:*WARP-TIME* VARIABLE)"><code>*WARP-TIME*</code></a> true,
 previous states are discarded so it's not possible to gather
 statistics after <a href="#x-28MGL-BP-3AFORWARD-20GENERIC-FUNCTION-29" title="(MGL-BP:FORWARD GENERIC-FUNCTION)"><code>FORWARD</code></a> finished.</p>
 
@@ -4437,7 +4437,7 @@ to do</p>
 <pre><code>(-&gt;tanh some-input :name 'my-tanh)
 </code></pre>
 
-<p>Lumps instantiated in any way within a <a href="#x-28MGL-BP-3ABUILD-FNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-FNN (MGL-PAX:MACRO))"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20-28MGL-PAX-3AMACRO-29-29" title="(MGL-BP:BUILD-RNN (MGL-PAX:MACRO))"><code>BUILD-RNN</code></a> are
+<p>Lumps instantiated in any way within a <a href="#x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-FNN MGL-PAX:MACRO)"><code>BUILD-FNN</code></a> or <a href="#x-28MGL-BP-3ABUILD-RNN-20MGL-PAX-3AMACRO-29" title="(MGL-BP:BUILD-RNN MGL-PAX:MACRO)"><code>BUILD-RNN</code></a> are
 automatically added to the network being built.</p>
 
 <p>A lump has its own <a href="#x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29" title="(MGL-COMMON:NODES GENERIC-FUNCTION)"><code>NODES</code></a> and <a href="#x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29" title="(MGL-BP:DERIVATIVES GENERIC-FUNCTION)"><code>DERIVATIVES</code></a> matrices allocated for it
@@ -4551,13 +4551,13 @@ in the name of efficiency.</p>
 <ul>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L999">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3EEMBEDDING-20CLASS-29" >-&gt;EMBEDDING</a></span></span> <span class="locative-args"><a href="#x-28MGL-BP-3ALUMP-20CLASS-29" title="(MGL-BP:LUMP CLASS)">LUMP</a></span></span></p>
 
-<p>Select rows of <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>), one row for each index in
+<p>Select rows of <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>), one row for each index in
 <a href="#x-28MGL-BP-3AINPUT-ROW-INDICES-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-BP:INPUT-ROW-INDICES (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>INPUT-ROW-INDICES</code></a>. This lump is equivalent to adding an <a href="#x-28MGL-BP-3A--3EINPUT-20CLASS-29" title="(MGL-BP:-&gt;INPUT CLASS)"><code>-&gt;INPUT</code></a> lump
 with a one hot encoding scheme and a <a href="#x-28MGL-BP-3A--3EV-2AM-20CLASS-29" title="(MGL-BP:-&gt;V*M CLASS)"><code>-&gt;V*M</code></a> lump on top of it, but it
 is more efficient in execution and in memory usage, because it works
 with a sparse representation of the input.</p>
 
-<p>The <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"><code>1</code></a>) of this lump is the number of columns of <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>) which is
+<p>The <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"><code>1</code></a>) of this lump is the number of columns of <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>) which is
 determined automatically.</p>
 
 <pre><code>(-&gt;embedding :weights (-&gt;weight :name 'embedding-weights
@@ -4619,10 +4619,10 @@ dimensions:</p>
 allocated with these dimensions.</p></li>
 </ul>
 
-<p><a id='x-28MGL-BP-3AWITH-WEIGHTS-COPIED-20-28MGL-PAX-3AMACRO-29-29'></a></p>
+<p><a id='x-28MGL-BP-3AWITH-WEIGHTS-COPIED-20MGL-PAX-3AMACRO-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L274">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3AWITH-WEIGHTS-COPIED-20-28MGL-PAX-3AMACRO-29-29" >WITH-WEIGHTS-COPIED</a></span></span> <span class="locative-args">(FROM-BPN) &amp;BODY BODY</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L274">[macro]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3AWITH-WEIGHTS-COPIED-20MGL-PAX-3AMACRO-29" >WITH-WEIGHTS-COPIED</a></span></span> <span class="locative-args">(FROM-BPN) &amp;BODY BODY</span></span></p>
 
 <p>In <code>BODY</code> <a href="#x-28MGL-BP-3A--3EWEIGHT-20CLASS-29" title="(MGL-BP:-&gt;WEIGHT CLASS)"><code>-&gt;WEIGHT</code></a> will first look up if a weight lump of the same
 name exists in <code>FROM-BPN</code> and return that, or else create a weight
@@ -4652,7 +4652,7 @@ use activation subnets to reduce the clutter.</p>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L496">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" >-&gt;ACTIVATION</a></span></span> <span class="locative-args"><a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)">BPN</a></span></span></p>
 
 <p>Activation subnetworks are built by the function
-<code>-&gt;ACTIVATION</code> and they have a number of lumps hidden inside them.
+<a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>-&gt;ACTIVATION</code></a> and they have a number of lumps hidden inside them.
 Ultimately, this subnetwork computes a sum like <code>sum_i x_i * W_i +
 sum_j y_j .* V_j + biases</code> where <code>x_i</code> are input lumps, <code>W_i</code> are
 dense matrices representing connections, while <code>V_j</code> are peephole
@@ -4735,7 +4735,7 @@ regularization as we would get with 32:</p>
 
 <pre><code><span class="code"><span class="paren1">(<span class="code">-&gt;batch-normalized lump <span class="keyword">:batch-size</span> 32</span>)</span></span></code></pre>
 
-<p>The primary input of <code>-&gt;BATCH-NORMALIZED</code> is often an <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>1</code></a>) and
+<p>The primary input of <code>-&gt;BATCH-NORMALIZED</code> is often an <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>1</code></a>) and
 its output is fed into an activation function (see
 <a href="#x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29" title="Activation Functions">Activation Functions</a>).</p></li>
 </ul>
@@ -4849,7 +4849,7 @@ persisted by <a href="#x-28MGL-CORE-3ASAVE-STATE-20FUNCTION-29" title="(MGL-CORE
 <ul>
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L968">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29" >-&gt;BATCH-NORMALIZED-ACTIVATION</a></span></span> <span class="locative-args">INPUTS &amp;KEY (NAME (<code>GENSYM</code>)) SIZE PEEPHOLES BATCH-SIZE VARIANCE-ADJUSTMENT POPULATION-DECAY</span></span></p>
 
-<p>A utility functions that creates and wraps an <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>1</code></a>) in
+<p>A utility functions that creates and wraps an <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>1</code></a>) in
 <a href="#x-28MGL-BP-3A--3EBATCH-NORMALIZED-20CLASS-29" title="(MGL-BP:-&gt;BATCH-NORMALIZED CLASS)"><code>-&gt;BATCH-NORMALIZED</code></a> and with its <a href="#x-28MGL-BP-3ABATCH-NORMALIZATION-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29" title="(MGL-BP:BATCH-NORMALIZATION (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZED))"><code>BATCH-NORMALIZATION</code></a> the two weight
 lumps for the scale and shift
 parameters. <code>(-&gt;BATCH-NORMALIZED-ACTIVATION INPUTS :NAME 'H1 :SIZE
@@ -5205,7 +5205,7 @@ index value pairs of non-zero entries:</p>
 
 <p>Actually, in the rare case where <a href="#x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29" title="(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:-&gt;SOFTMAX-XE-LOSS))"><code>GROUP-SIZE</code></a> is not <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29" title="(MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET))"><code>1</code></a>) (i.e. there are several softmax
 normalization groups for every example), the length of the above
-target sequence is <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>2</code></a>) * N-GROUPS. Indices are always
+target sequence is <code>BATCH-SIZE</code>(<a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER))"><code>0</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER))"><code>1</code></a> <a href="#x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29" title="(MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:-&gt;BATCH-NORMALIZATION))"><code>2</code></a>) * N-GROUPS. Indices are always
 relative to the start of the group.</p>
 
 <p>If <a href="#x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29" title="(MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:-&gt;SOFTMAX-XE-LOSS))"><code>GROUP-SIZE</code></a> is large (for example,
@@ -5364,9 +5364,9 @@ stripe. This <code>SIZE</code>(<a href="#x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3ARE
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L2462">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3EV-2AM-20CLASS-29" >-&gt;V*M</a></span></span> <span class="locative-args"><a href="#x-28MGL-BP-3ALUMP-20CLASS-29" title="(MGL-BP:LUMP CLASS)">LUMP</a></span></span></p>
 
 <p>Perform <code>X * WEIGHTS</code> where <code>X</code> (the input) is of
-size <code>M</code> and <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>) is a <a href="#x-28MGL-BP-3A--3EWEIGHT-20CLASS-29" title="(MGL-BP:-&gt;WEIGHT CLASS)"><code>-&gt;WEIGHT</code></a> whose single stripe is taken to
+size <code>M</code> and <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>) is a <a href="#x-28MGL-BP-3A--3EWEIGHT-20CLASS-29" title="(MGL-BP:-&gt;WEIGHT CLASS)"><code>-&gt;WEIGHT</code></a> whose single stripe is taken to
 be of dimensions <code>M x N</code> stored in row major order. <code>N</code> is the size
-of this lump. If <a href="#x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-BP:TRANSPOSE-WEIGHTS-P (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>TRANSPOSE-WEIGHTS-P</code></a> then <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>) is <code>N x M</code> and <code>X
+of this lump. If <a href="#x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-BP:TRANSPOSE-WEIGHTS-P (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>TRANSPOSE-WEIGHTS-P</code></a> then <code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>) is <code>N x M</code> and <code>X
 * WEIGHTS'</code> is computed.</p></li>
 </ul>
 
@@ -5384,7 +5384,7 @@ of this lump. If <a href="#x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADE
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L2467">[reader]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3ATRANSPOSE-WEIGHTS-P-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" >TRANSPOSE-WEIGHTS-P</a></span></span> <span class="locative-args">-&gt;V*M</span> <span class="locative-args">(:TRANSPOSE-WEIGHTS-P = <code>NIL</code>)</span></span></p>
 
 <p>Determines whether the input is multiplied by
-<code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>1</code></a>) or its transpose.</p></li>
+<code>WEIGHTS</code>(<a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;EMBEDDING))"><code>0</code></a> <a href="#x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29" title="(MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:-&gt;V*M))"><code>1</code></a>) or its transpose.</p></li>
 </ul>
 
 <p><a id='x-28MGL-BP-3A-40MGL-BP--2B-LUMP-20MGL-PAX-3ASECTION-29'></a></p>
@@ -5484,14 +5484,14 @@ the size of its inputs. Either input can be a <a href="#x-28MGL-BP-3A--3EWEIGHT-
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L2982">[class]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3ELSTM-20CLASS-29" >-&gt;LSTM</a></span></span> <span class="locative-args"><a href="#x-28MGL-BP-3ABPN-20CLASS-29" title="(MGL-BP:BPN CLASS)">BPN</a></span></span></p>
 
 <p>Long-Short Term Memory subnetworks are built by the
-function <code>-&gt;LSTM</code> and they have many lumps hidden inside them. These
+function <a href="#x-28MGL-BP-3A--3ELSTM-20FUNCTION-29" title="(MGL-BP:-&gt;LSTM FUNCTION)"><code>-&gt;LSTM</code></a> and they have many lumps hidden inside them. These
 lumps are packaged into a subnetwork to reduce clutter.</p></li>
 </ul>
 
 <p><a id='x-28MGL-BP-3A--3ELSTM-20FUNCTION-29'></a></p>
 
 <ul>
-<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L2988">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3ELSTM-20FUNCTION-29" >-&gt;LSTM</a></span></span> <span class="locative-args">INPUTS &amp;KEY NAME CELL-INIT OUTPUT-INIT SIZE (ACTIVATION-FN '<code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>1</code></a>)) (GATE-FN '<a href="#x-28MGL-BP-3A--3ESIGMOID-20CLASS-29" title="(MGL-BP:-&gt;SIGMOID CLASS)"><code>-&gt;SIGMOID</code></a>) (INPUT-FN '<a href="#x-28MGL-BP-3A--3ETANH-20CLASS-29" title="(MGL-BP:-&gt;TANH CLASS)"><code>-&gt;TANH</code></a>) (OUTPUT-FN '<a href="#x-28MGL-BP-3A--3ETANH-20CLASS-29" title="(MGL-BP:-&gt;TANH CLASS)"><code>-&gt;TANH</code></a>) (PEEPHOLES <code>T</code>)</span></span></p>
+<li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/lumps.lisp#L2988">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-BP-3A--3ELSTM-20FUNCTION-29" >-&gt;LSTM</a></span></span> <span class="locative-args">INPUTS &amp;KEY NAME CELL-INIT OUTPUT-INIT SIZE (ACTIVATION-FN '<code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>1</code></a>)) (GATE-FN '<a href="#x-28MGL-BP-3A--3ESIGMOID-20CLASS-29" title="(MGL-BP:-&gt;SIGMOID CLASS)"><code>-&gt;SIGMOID</code></a>) (INPUT-FN '<a href="#x-28MGL-BP-3A--3ETANH-20CLASS-29" title="(MGL-BP:-&gt;TANH CLASS)"><code>-&gt;TANH</code></a>) (OUTPUT-FN '<a href="#x-28MGL-BP-3A--3ETANH-20CLASS-29" title="(MGL-BP:-&gt;TANH CLASS)"><code>-&gt;TANH</code></a>) (PEEPHOLES <code>T</code>)</span></span></p>
 
 <p>Create an LSTM layer consisting of input, forget, output gates with
 which input, cell state and output are scaled. Lots of lumps are
@@ -5547,7 +5547,7 @@ really <code>sum_j W_ijx * inputs_j</code>.</p>
 stands for the initial state of the value cell (<code>c_{-1}</code>). <code>CELL-INIT</code>
 being <code>NIL</code> is equivalent to the state of all zeros.</p>
 
-<p><code>ACTIVATION-FN</code> defaults to <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>1</code></a>), but it can be for example
+<p><code>ACTIVATION-FN</code> defaults to <code>-&gt;ACTIVATION</code>(<a href="#x-28MGL-BP-3A--3EACTIVATION-20CLASS-29" title="(MGL-BP:-&gt;ACTIVATION CLASS)"><code>0</code></a> <a href="#x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;ACTIVATION FUNCTION)"><code>1</code></a>), but it can be for example
 <a href="#x-28MGL-BP-3A--3EBATCH-NORMALIZED-ACTIVATION-20FUNCTION-29" title="(MGL-BP:-&gt;BATCH-NORMALIZED-ACTIVATION FUNCTION)"><code>-&gt;BATCH-NORMALIZED-ACTIVATION</code></a>. In general, functions like the
 aforementioned two with signature like (<code>INPUTS</code> <code>&amp;KEY</code> <code>NAME</code> <code>SIZE</code>
 <code>PEEPHOLES</code>) can be passed as <code>ACTIVATION-FN</code>.</p></li>
@@ -5681,7 +5681,7 @@ function argument to a mapper function. It calls <code>FUNCTION</code> with ever
 <li><p><span class=reference-bullet><span class=reference><span class="locative-type"><a href="https://github.com/melisgl/mgl/blob/e697791a9bcad3b6e7b3845246a2aa55238cfef7/src/nlp.lisp#L32">[function]</a></span> <span class="reference-object"><a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" >BLEU</a></span></span> <span class="locative-args">CANDIDATES REFERENCES &amp;KEY CANDIDATE-KEY REFERENCE-KEY (N 4)</span></span></p>
 
 <p>Compute the <a href="http://en.wikipedia.org/wiki/BLEU" >BLEU score</a> for
-bilingual CORPUS. <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> measures how good a translation is compared
+bilingual CORPUS. <code>BLEU</code> measures how good a translation is compared
 to human reference translations.</p>
 
 <p><code>CANDIDATES</code> (keyed by <code>CANDIDATE-KEY</code>) and <code>REFERENCES</code> (keyed by
@@ -5692,7 +5692,7 @@ object (not necessarily strings).</p>
 <p>Currently there is no support for multiple reference translations. <code>N</code>
 determines the largest n-grams to consider.</p>
 
-<p>The first return value is the <a href="#x-28MGL-NLP-3ABLEU-20FUNCTION-29" title="(MGL-NLP:BLEU FUNCTION)"><code>BLEU</code></a> score (between 0 and 1, not as a
+<p>The first return value is the <code>BLEU</code> score (between 0 and 1, not as a
 percentage). The second value is the sum of the lengths of
 <code>CANDIDATES</code> divided by the sum of the lengths of <code>REFERENCES</code> (or <code>NIL</code>,
 if the denominator is 0). The third is a list of n-gram
