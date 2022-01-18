@@ -165,7 +165,7 @@ providing two functions: SAMPLE and FINISHEDP.
     reshuffled whenever the sampler reaches the end of it. Shuffling is
     performed by calling the REORDER function.
 
-- [variable] *INFINITELY-EMPTY-DATASET* #<FUNCTION-SAMPLER "infinitely empty" >
+- [variable] *INFINITELY-EMPTY-DATASET* #\<FUNCTION-SAMPLER "infinitely empty" \>
 
     This is the default dataset for MGL-OPT:MINIMIZE. It's an infinite
     stream of NILs.
@@ -1604,7 +1604,7 @@ then discuss @MGL-GD-SGD-OPTIMIZER, @MGL-GD-ADAM-OPTIMIZER and
 are `ITERATIVE-OPTIMIZER`s, so see @MGL-OPT-ITERATIVE-OPTIMIZER
 too.
 
-- [class] BATCH-GD-OPTIMIZER GD-OPTIMIZER
+- [class] BATCH-GD-OPTIMIZER
 
     Another abstract base class for gradient based
     optimizers tath updates all weights simultaneously after chewing
@@ -1793,7 +1793,7 @@ too.
 
 #### Segmented GD Optimizer
 
-- [class] SEGMENTED-GD-OPTIMIZER BASE-GD-OPTIMIZER
+- [class] SEGMENTED-GD-OPTIMIZER
 
     An optimizer that delegates training of segments to
     other optimizers. Useful to delegate training of different segments
@@ -1817,7 +1817,7 @@ SEGMENTED-GD-OPTIMIZER inherits from `ITERATIVE-OPTIMIZER`, so see
 
 #### Per-weight Optimization
 
-- [class] PER-WEIGHT-BATCH-GD-OPTIMIZER GD-OPTIMIZER
+- [class] PER-WEIGHT-BATCH-GD-OPTIMIZER
 
     This is much like @MGL-GD-BATCH-GD-OPTIMIZER but it
     is more clever about when to update weights. Basically every weight
@@ -3003,7 +3003,7 @@ the concepts involved. Make sure you are comfortable with
     arbitrary time steps. The maximum connection lag must be specified
     when creating the RNN.
 
-- [accessor] CUDA-WINDOW-START-TIME RNN (:CUDA-WINDOW-START-TIME = *CUDA-WINDOW-START-TIME*)
+- [accessor] CUDA-WINDOW-START-TIME RNN (:CUDA-WINDOW-START-TIME = \*CUDA-WINDOW-START-TIME\*)
 
     Due to unfolding, the memory footprint of an RNN
     is almost linear in the number of time steps (i.e. the max
@@ -3167,7 +3167,7 @@ will never reference them again.
     A LUMP is a simple, layerlike component of a neural
     network. There are many kinds of lumps, each of which performs a
     specific operation or just stores inputs and weights. By convention,
-    the names of lumps start with the prefix `->`. Defined as classes,
+    the names of lumps start with the prefix `-`. Defined as classes,
     they also have a function of the same name as the class to create
     them easily. These maker functions typically have keyword arguments
     corresponding to initargs of the class, with some (mainly the input
