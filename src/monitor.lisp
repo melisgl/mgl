@@ -19,10 +19,10 @@
 
   For example, consider training a backpropagation neural network. We
   want to look at the state of of network just after the backward
-  pass. MGL-BP:BP-LEARNER has a [MONITORS][(accessor bp-learner)]
-  event hook corresponding to the moment after backpropagating the
-  gradients. Suppose we are interested in how the training cost
-  evolves:
+  pass. MGL-BP:BP-LEARNER has a [MONITORS][(accessor
+  mgl-bp:bp-learner)] event hook corresponding to the moment after
+  backpropagating the gradients. Suppose we are interested in how the
+  training cost evolves:
 
       (push (make-instance 'monitor
                            :measurer (lambda (instances bpn)
