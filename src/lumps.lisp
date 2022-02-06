@@ -595,7 +595,7 @@
         `(,name :scale)
         `(,name :shift)
 
-    where [NAME][dislocated] is the NAME of this lump.
+    where `\\NAME` is the NAME of this lump.
 
     This default behavior covers the use-case where the statistics
     kept by ->BATCH-NORMALIZATION are to be shared only between time

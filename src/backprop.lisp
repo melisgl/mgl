@@ -920,7 +920,7 @@
   ```"
   (bp-learner class)
   (bpn (reader bp-learner))
-  (monitors (reader bp-learner)))
+  (monitors (accessor bp-learner)))
 
 (defclass bp-learner ()
   ((bpn
