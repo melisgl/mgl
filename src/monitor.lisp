@@ -62,6 +62,7 @@
   (counter generic-function)
   (monitor-model-results function)
   (monitors generic-function)
+  (monitors (accessor mgl-bp:bp-learner))
   (@mgl-monitor section)
   (@mgl-measurer section)
   (@mgl-counter section))
