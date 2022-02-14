@@ -23,7 +23,7 @@
     :initarg :weight-indices
     :reader weight-indices
     :documentation "The list of indices of parameters to be optimized,
-    the values of which will come from the [WEIGHTS][displaced]
+    the values of which will come from the [WEIGHTS][dislocated]
     argument of MINIMIZE."))
   (:documentation "DIFFUN dresses a lisp function (in its FN slot) as
   a gradient source (see @MGL-OPT-GRADIENT-SOURCE) which allows it to

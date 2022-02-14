@@ -3113,8 +3113,8 @@
 (defclass-now ->seq-barrier (lump)
   ((seq-elt-fn
     :initarg :seq-elt-fn :reader seq-elt-fn
-    :documentation "A function of an [INDEX][displaced] argument that
-    returns the lump with that index in some sequence.")
+    :documentation "A function of an INDEX argument that returns the
+    lump with that index in some sequence.")
    (seq-indices
     :accessor seq-indices
     :documentation "A sequence of length batch size of indices. The

@@ -1,7 +1,7 @@
 # MGL Manual
 
 ###### \[in package MGL\]
-## MGL ASDF System Details
+## MGL ASDF System
 
 - Version: 0.1.0
 - Description: MGL is a machine learning library for backpropagation
@@ -1052,7 +1052,7 @@ types via the following generic functions.
 
 The functions here compare some known good solution (also known as
 *ground truth* or *target*) to a prediction or approximation and
-return some measure of their [dis]similarity. They are model
+return some measure of their \[dis\]similarity. They are model
 independent, hence one has to extract the ground truths and
 predictions first. Rarely used directly, they are mostly hidden
 behind @MGL-CLASSIFICATION-MONITOR.
@@ -1297,7 +1297,7 @@ model that takes a single word as input and predicts the next word.
 However, both input and output is to be encoded as float vectors of
 length 1000. What we do is find the top 1000 words by some
 measure (see @MGL-FEATURE-SELECTION) and associate these words with
-the integers in [0..999] (this is `ENCODE`ing). By using for
+the integers in \[0..999\] (this is `ENCODE`ing). By using for
 example [one-hot](http://en.wikipedia.org/wiki/One-hot) encoding, we
 translate a word into a float vector when passing in the input. When
 the model outputs the probability distribution of the next word, we
@@ -1617,7 +1617,7 @@ too.
 
 - [accessor] MOMENTUM GD-OPTIMIZER (:MOMENTUM = 0)
 
-    A value in the [0, 1) interval. MOMENTUM times the
+    A value in the \[0, 1) interval. MOMENTUM times the
     previous weight change is added to the gradient. 0 means no
     momentum.
 
@@ -2212,7 +2212,7 @@ are defined entirely by MAP-GRADIENT-SINK.
 - [reader] WEIGHT-INDICES DIFFUN (:WEIGHT-INDICES = NIL)
 
     The list of indices of parameters to be optimized,
-    the values of which will come from the [WEIGHTS][displaced]
+    the values of which will come from the WEIGHTS
     argument of MINIMIZE.
 
 ## Backpropagation Neural Networks
@@ -3959,8 +3959,8 @@ a ->LOSS.
 
 - [reader] SEQ-ELT-FN -\>SEQ-BARRIER (:SEQ-ELT-FN)
 
-    A function of an [INDEX][displaced] argument that
-    returns the lump with that index in some sequence.
+    A function of an INDEX argument that returns the
+    lump with that index in some sequence.
 
 - [accessor] SEQ-INDICES -\>SEQ-BARRIER
 
@@ -4041,7 +4041,7 @@ grow into a more serious toolset for NLP eventually.
     CANDIDATES divided by the sum of the lengths of REFERENCES (or NIL,
     if the denominator is 0). The third is a list of n-gram
     precisions (also between 0 and 1 or NIL), one for each element in
-    [1..`N`].
+    \[1..`N`\].
     
     This is basically a reimplementation of
     [multi-bleu.perl](https://github.com/moses-smt/mosesdecoder/blob/master/scripts/generic/multi-bleu.perl).

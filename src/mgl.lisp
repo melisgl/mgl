@@ -1,6 +1,6 @@
 (in-package :mgl)
 
-(defsection @mgl-manual (:title "MGL Manual")
+(defsection @mgl-manual (:title "\\MGL Manual")
   (mgl asdf:system)
   (@mgl-introduction section)
   (@mgl-dataset section)
