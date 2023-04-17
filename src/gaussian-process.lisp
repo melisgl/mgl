@@ -355,11 +355,11 @@
   (gp-data-matrix inputs
                   (m+ means
                       (array-to-mat
-                       (clnu:e* level
-                                (clnu:esqrt
-                                 (as-column-vector
-                                  (clnu:diagonal-vector
-                                   (mat-to-array covariances)))))))))
+                       (nu:e* level
+                              (nu:esqrt
+                               (as-column-vector
+                                (nu:diagonal-vector
+                                 (mat-to-array covariances)))))))))
 
 
 (defclass-now ->ref (lump)
