@@ -70,8 +70,8 @@
   "First let's see everything common to all batch based optimizers,
   then discuss @MGL-GD-SGD-OPTIMIZER, @MGL-GD-ADAM-OPTIMIZER and
   @MGL-GD-NORMALIZED-BATCH-GD-OPTIMIZER. All batch based optimizers
-  are `ITERATIVE-OPTIMIZER`s, so see @MGL-OPT-ITERATIVE-OPTIMIZER
-  too."
+  are `ITERATIVE-OPTIMIZER`s, so see
+  MGL-OPT::@MGL-OPT-ITERATIVE-OPTIMIZER too."
   (batch-gd-optimizer class)
   (batch-size (accessor gd-optimizer))
   (learning-rate (accessor gd-optimizer))
@@ -841,7 +841,7 @@
   (segmenter (reader segmented-gd-optimizer))
   (segments (reader segmented-gd-optimizer))
   "SEGMENTED-GD-OPTIMIZER inherits from `ITERATIVE-OPTIMIZER`, so see
-  @MGL-OPT-ITERATIVE-OPTIMIZER too.")
+  MGL-OPT::@MGL-OPT-ITERATIVE-OPTIMIZER too.")
 
 (defclass segmented-gd-optimizer (base-gd-optimizer)
   ((segmenter

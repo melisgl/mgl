@@ -57,13 +57,14 @@ really being used.
 ### Code Organization
 
 MGL consists of several packages dedicated to different tasks.
-For example, package `MGL-RESAMPLE` is about @MGL-RESAMPLE and
-`MGL-GD` is about @MGL-GD and so on. On one hand, having many
-packages makes it easier to cleanly separate API and implementation
-and also to explore into a specific task. At other times, they can
-be a hassle, so the MGL package itself reexports every external
-symbol found in all the other packages that make up MGL and
-MGL-MAT (see MGL-MAT:@MAT-MANUAL) on which it heavily relies.
+For example, package `MGL-RESAMPLE` is about
+MGL-RESAMPLE::@MGL-RESAMPLE and `MGL-GD` is about MGL-GD::@MGL-GD
+and so on. On one hand, having many packages makes it easier to
+cleanly separate API and implementation and also to explore into a
+specific task. At other times, they can be a hassle, so the MGL
+package itself reexports every external symbol found in all the
+other packages that make up MGL and MGL-MAT (see
+MGL-MAT::@MAT-MANUAL) on which it heavily relies.
 
 One exception to this rule is the bundled, but independent
 MGL-GNUPLOT library.
@@ -199,8 +200,6 @@ providing two functions: SAMPLE and FINISHEDP.
     for printing the sampler object.
 
 - [reader] N-SAMPLES FUNCTION-SAMPLER (:N-SAMPLES = 0)
-
-
 
 ## Resampling
 
@@ -528,7 +527,7 @@ operation. Setting N-STRIPES is a comparatively cheap operation,
 often implemented as matrix reshaping.
 
 Note that for models made of different parts (for example,
-[MGL-BP:BPN][CLASS] consists of [MGL-BP:LUMP][]s) , setting these
+MGL-BP:BPN consists of MGL-BP:LUMPs) , setting these
 values affects the constituent parts, but one should never change
 the number stripes of the parts directly because that would lead to
 an internal inconsistency in the model.
@@ -612,7 +611,7 @@ an internal inconsistency in the model.
     and the executor for which the instances are.
     
     Some objects conflate function and call: the forward pass of a
-    [MGL-BP:BPN][class] computes output from inputs so it is like a
+    MGL-BP:BPN computes output from inputs so it is like a
     function but it also doubles as a function call in the sense that
     the bpn (function) object changes state during the computation of
     the output. Hence not even the forward pass of a bpn is thread safe.
@@ -683,8 +682,7 @@ respectively.
 
 For example, consider training a backpropagation neural network. We
 want to look at the state of of network just after the backward
-pass. MGL-BP:BP-LEARNER has a [MONITORS][(accessor
-mgl-bp:bp-learner)] event hook corresponding to the moment after
+pass. MGL-BP:BP-LEARNER has a MONITORS event hook corresponding to the moment after
 backpropagating the gradients. Suppose we are interested in how the
 training cost evolves:
 
@@ -762,7 +760,7 @@ create a reasonable set of default monitors (see
 - [generic-function] MONITORS OBJECT
 
     Return monitors associated with OBJECT. See various
-    methods such as [MONITORS][(accessor mgl-bp:bp-learner)] for more
+    methods such as MONITORS for more
     documentation.
 
 ### Monitors
@@ -786,7 +784,7 @@ create a reasonable set of default monitors (see
 
     This must be a monitor itself which only means
     that APPLY-MONITOR is defined on it (but see @MGL-MONITORING). The
-    returned values are aggregated by [COUNTER][(READER MONITOR)]. See
+    returned values are aggregated by COUNTER. See
     @MGL-MEASURER for a library of measurers.
 
 - [reader] COUNTER MONITOR (:COUNTER)
@@ -1009,7 +1007,7 @@ types.
 - [function] MAKE-CLASSIFICATION-ACCURACY-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES (LABEL-INDEX-FN #'LABEL-INDEX)
 
     Return a list of MONITOR objects associated with
-    [CLASSIFICATION-ACCURACY-COUNTER][]s. LABEL-INDEX-FN is a function
+    CLASSIFICATION-ACCURACY-COUNTERs. LABEL-INDEX-FN is a function
     like LABEL-INDEX. See that function for more.
     
     Implemented in terms of MAKE-CLASSIFICATION-ACCURACY-MONITORS\*.
@@ -1017,7 +1015,7 @@ types.
 - [function] MAKE-CROSS-ENTROPY-MONITORS MODEL &KEY OPERATION-MODE ATTRIBUTES (LABEL-INDEX-DISTRIBUTION-FN #'LABEL-INDEX-DISTRIBUTION)
 
     Return a list of MONITOR objects associated with
-    [CROSS-ENTROPY-COUNTER][]s. LABEL-INDEX-DISTRIBUTION-FN is a
+    CROSS-ENTROPY-COUNTERs. LABEL-INDEX-DISTRIBUTION-FN is a
     function like LABEL-INDEX-DISTRIBUTION. See that function for more.
     
     Implemented in terms of MAKE-CROSS-ENTROPY-MONITORS\*.
@@ -1358,7 +1356,7 @@ is `DECODE`ing)
     Return an ENCODER/DECODER (or another CLASS) that converts between
     objects and indices.
 
-Also see MGL-NLP:@MGL-NLP-BAG-OF-WORDS.
+Also see MGL-NLP::@MGL-NLP-BAG-OF-WORDS.
 
 ## Gradient Based Optimization
 
@@ -1374,7 +1372,7 @@ for non-convex functions, most algorithms will tend to converge to a
 local optimum.
 
 Currently, there are two optimization algorithms:
-MGL-GD:@MGL-GD (with several variants) and MGL-CG:@MGL-CG both of
+MGL-GD::@MGL-GD (with several variants) and MGL-CG::@MGL-CG both of
 which are first order methods (they do not need second order
 gradients) but more can be added with the @MGL-OPT-EXTENSION-API.
 
@@ -1383,8 +1381,8 @@ gradients) but more can be added with the @MGL-OPT-EXTENSION-API.
     Minimize the value of the real valued function represented by
     GRADIENT-SOURCE by updating some of its parameters in WEIGHTS (a MAT
     or a sequence of MATs). Return WEIGHTS. DATASET (see
-    MGL:@MGL-DATASET) is a set of unoptimized parameters of the same
-    function. For example, WEIGHTS may be the weights of a neural
+    MGL-DATASET::@MGL-DATASET) is a set of unoptimized parameters of the
+    same function. For example, WEIGHTS may be the weights of a neural
     network while DATASET is the training set consisting of inputs
     suitable for SET-INPUT. The default
     DATASET, (*INFINITELY-EMPTY-DATASET*) is suitable for when all
@@ -1395,15 +1393,15 @@ gradients) but more can be added with the @MGL-OPT-EXTENSION-API.
     when some other condition met (see TERMINATION, for example). If
     DATASET is a SEQUENCE, then it is reused over and over again.
     
-    Examples for various optimizers are provided in MGL-GD:@MGL-GD and
-    MGL-CG:@MGL-CG.
+    Examples for various optimizers are provided in MGL-GD::@MGL-GD and
+    MGL-CG::@MGL-CG.
 
 ### Iterative Optimizer
 
 - [class] ITERATIVE-OPTIMIZER
 
-    An abstract base class of MGL-GD:@MGL-GD and
-    MGL-CG:@MGL-CG based optimizers that iterate over instances until a
+    An abstract base class of MGL-GD::@MGL-GD and
+    MGL-CG::@MGL-CG based optimizers that iterate over instances until a
     termination condition is met.
 
 - [reader] N-INSTANCES ITERATIVE-OPTIMIZER (:N-INSTANCES = 0)
@@ -1467,7 +1465,7 @@ Now let's discuss a few handy utilities.
 
 - [generic-function] RESET-OPTIMIZATION-MONITORS OPTIMIZER GRADIENT-SOURCE
 
-    Report the state of [MONITORS][generic-function] of
+    Report the state of MONITORS of
     OPTIMIZER and GRADIENT-SOURCE and reset their counters. See
     MONITOR-OPTIMIZATION-PERIODICALLY for an example of how this is
     used.
@@ -1587,8 +1585,8 @@ mini-batch basis:
 First let's see everything common to all batch based optimizers,
 then discuss @MGL-GD-SGD-OPTIMIZER, @MGL-GD-ADAM-OPTIMIZER and
 @MGL-GD-NORMALIZED-BATCH-GD-OPTIMIZER. All batch based optimizers
-are `ITERATIVE-OPTIMIZER`s, so see @MGL-OPT-ITERATIVE-OPTIMIZER
-too.
+are `ITERATIVE-OPTIMIZER`s, so see
+MGL-OPT::@MGL-OPT-ITERATIVE-OPTIMIZER too.
 
 - [class] BATCH-GD-OPTIMIZER
 
@@ -1634,7 +1632,7 @@ too.
     An L2 penalty. It discourages large weights, much
     like a zero mean gaussian prior. WEIGHT-DECAY \* WEIGHT is added to
     the gradient to penalize large weights. It's as if the function
-    whose minimum is sought had WEIGHT-DECAY\*sum\_i{0.5 \* WEIGHT\_i^2}
+    whose minimum is sought had WEIGHT-DECAY\*sum\_i\{0.5 \* WEIGHT\_i^2\}
     added to it.
 
 - [accessor] WEIGHT-PENALTY GD-OPTIMIZER (:WEIGHT-PENALTY = 0)
@@ -1642,7 +1640,7 @@ too.
     An L1 penalty. It encourages sparsity.
     SIGN(WEIGHT) \* WEIGHT-PENALTY is added to the gradient pushing the
     weight towards negative infinity. It's as if the function whose
-    minima is sought had WEIGHT-PENALTY\*sum\_i{abs(WEIGHT\_i)} added to
+    minima is sought had WEIGHT-PENALTY\*sum\_i\{abs(WEIGHT\_i)\} added to
     it. Putting it on feature biases consitutes a sparsity constraint
     on the features.
 
@@ -1680,25 +1678,25 @@ too.
     the weight update looks like this:
     
     $$
-    \Delta\_w^{t+1} = momentum \* \Delta\_w^t
-      + \frac{accumulator}{batchsize}
+    \Delta\_w^\{t+1\} = momentum \* \Delta\_w^t
+      + \frac\{accumulator\}\{batchsize\}
       + l\_2 w + l\_1 sign(w)
     $$
     
     $$
-    w^{t+1} = w^{t} - learningrate \* \Delta\_w,
+    w^\{t+1\} = w^\{t\} - learningrate \* \Delta\_w,
     $$
     
     which is the same as the more traditional formulation:
     
     $$
-    \Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
-      + learningrate \* \left(\frac{\frac{df}{dw}}{batchsize}
+    \Delta\_w^\{t+1\} = momentum \* \Delta\_w^\{t\}
+      + learningrate \* \left(\frac\{\frac\{df\}\{dw\}\}\{batchsize\}
                            + l\_2 w + l\_1 sign(w)\right)
     $$
     
     $$
-    w^{t+1} = w^{t} - \Delta\_w,
+    w^\{t+1\} = w^\{t\} - \Delta\_w,
     $$
     
     but the former works better when batch size, momentum or learning
@@ -1729,8 +1727,7 @@ too.
 
 - [accessor] LEARNING-RATE ADAM-OPTIMIZER (= 2.0e-4)
 
-    Same thing as [LEARNING-RATE][(ACCESSOR
-    GD-OPTIMIZER)] but with the default suggested by the Adam paper.
+    Same thing as LEARNING-RATE but with the default suggested by the Adam paper.
 
 - [accessor] MEAN-DECAY ADAM-OPTIMIZER (:MEAN-DECAY = 0.9)
 
@@ -1799,7 +1796,7 @@ too.
 - [reader] SEGMENTS SEGMENTED-GD-OPTIMIZER
 
 SEGMENTED-GD-OPTIMIZER inherits from `ITERATIVE-OPTIMIZER`, so see
-@MGL-OPT-ITERATIVE-OPTIMIZER too.
+MGL-OPT::@MGL-OPT-ITERATIVE-OPTIMIZER too.
 
 #### Per-weight Optimization
 
@@ -2066,9 +2063,9 @@ optimizers.
 
 - [function] SET-N-INSTANCES OPTIMIZER GRADIENT-SOURCE N-INSTANCES
 
-    Set [N-INSTANCES][(reader iterative-optimizer)] of OPTIMIZER and
+    Set N-INSTANCES of OPTIMIZER and
     fire ON-N-INSTANCES-CHANGED. ITERATIVE-OPTIMIZER subclasses must
-    call this to increment [N-INSTANCES][(reader iterative-optimizer)].
+    call this to increment N-INSTANCES.
 
 - [class] SEGMENT-SET
 
@@ -2129,8 +2126,8 @@ new gradient sources except where noted.
 
     Return the weight matrix of SEGMENT. A segment
     doesn't need to be a MAT object itself. For example, it may be a
-    MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
-    [MGL-BP:BPN][CLASS] whose NODES slot holds the weights.
+    MGL-BM:CHUNK of a MGL-BM:BM or a MGL-BP:LUMP of a
+    MGL-BP:BPN whose NODES slot holds the weights.
 
 - [method] SEGMENT-WEIGHTS (MAT MAT)
 
@@ -2140,8 +2137,8 @@ new gradient sources except where noted.
 
     Return the derivatives matrix of SEGMENT. A segment
     doesn't need to be a MAT object itself. For example, it may be a
-    MGL-BM:CHUNK of a [MGL-BM:BM][CLASS] or a MGL-BP:LUMP of a
-    [MGL-BP:BPN][CLASS] whose DERIVATIVES slot holds the gradient.
+    MGL-BM:CHUNK of a MGL-BM:BM or a MGL-BP:LUMP of a
+    MGL-BP:BPN whose DERIVATIVES slot holds the gradient.
 
 - [function] LIST-SEGMENTS GRADIENT-SOURCE
 
@@ -2194,9 +2191,9 @@ are defined entirely by MAP-GRADIENT-SINK.
 - [class] DIFFUN
 
     DIFFUN dresses a lisp function (in its FN slot) as
-    a gradient source (see @MGL-OPT-GRADIENT-SOURCE) which allows it to
-    be used in MINIMIZE. See the examples in MGL-GD:@MGL-GD and
-    MGL-CG:@MGL-CG.
+    a gradient source (see MGL-OPT::@MGL-OPT-GRADIENT-SOURCE), which
+    allows it to be used in MINIMIZE. See the examples in
+    MGL-GD::@MGL-GD and MGL-CG::@MGL-CG.
 
 - [reader] FN DIFFUN (:FN)
 
@@ -2227,7 +2224,7 @@ graph](http://en.wikipedia.org/wiki/Automatic_differentiation). The
 network is trained to MINIMIZE some kind of *loss function* whose
 value the network computes.
 
-In this implementation, a [BPN][class] is assembled from several
+In this implementation, a BPN is assembled from several
 `LUMP`s (roughly corresponding to layers). Both feed-forward and
 recurrent neural nets are supported (FNN and RNN, respectively).
 `BPN`s can contain not only `LUMP`s but other `BPN`s, too. As we
@@ -2236,7 +2233,7 @@ composite and simple parts is called CLUMP.
 
 - [class] CLUMP
 
-    A CLUMP is a LUMP or a [BPN][class]. It represents
+    A CLUMP is a LUMP or a BPN. It represents
     a differentiable function. Arguments of clumps are given during
     instantiation. Some arguments are clumps themselves so they get
     permenantly wired together like this:
@@ -2385,9 +2382,8 @@ a LUMP.
 `BPN`s are trained to minimize the loss function they compute.
 Before a BPN is passed to MINIMIZE (as its `GRADIENT-SOURCE`
 argument), it must be wrapped in a BP-LEARNER object. BP-LEARNER has
-[MONITORS][(accessor bp-learner)] slot which is used for example by
-[RESET-OPTIMIZATION-MONITORS][(method () (iterative-optimizer
-t))].
+MONITORS slot which is used for example by
+RESET-OPTIMIZATION-MONITORS.
 
 Without the bells an whistles, the basic shape of training is this:
 
@@ -2479,7 +2475,7 @@ get them out of they way before we study a full example.
 
 Hopefully this example from `example/digit-fnn.lisp` illustrates
 the concepts involved. If it's too dense despite the comments, then
-read up on @MGL-DATASET, @MGL-OPT and come back.
+read up on MGL-DATASET::@MGL-DATASET, MGL-OPT::@MGL-OPT and come back.
 
 ```commonlisp
 (cl:defpackage :mgl-example-digit-fnn
@@ -2971,7 +2967,7 @@ the concepts involved. Make sure you are comfortable with
     The UNFOLDER of an RNN is function of no arguments
     that builds and returns a BPN. The unfolder is allowed to create
     networks with arbitrary topology even different ones for different
-    [TIME-STEP][]s with the help of LAG, or nested RNNs. Weights of
+    TIME-STEPs with the help of LAG, or nested RNNs. Weights of
     the same name are shared between the folds. That is, if a ->WEIGHT
     lump were to be created and a weight lump of the same name already
     exists, then the existing lump will be added to the BPN created by
@@ -3170,11 +3166,11 @@ will never reference them again.
     
     A lump has its own NODES and DERIVATIVES matrices allocated for it
     in which the results of the forward and backward passes are stored.
-    This is in contrast to a [BPN][class] whose NODES and DERIVATIVES
+    This is in contrast to a BPN whose NODES and DERIVATIVES
     are those of its last constituent CLUMP.
     
     Since lumps almost always live within a BPN, their
-    [N-STRIPES][(reader bpn)] and [MAX-N-STRIPES][(reader bpn)] are
+    N-STRIPES and MAX-N-STRIPES are
     handled automagically behind the scenes.
 
 - [reader] SIZE LUMP (:SIZE)
@@ -3188,7 +3184,7 @@ will never reference them again.
 
 - [generic-function] DEFAULT-SIZE LUMP
 
-    Return a default for the [SIZE][(reader lump)] of
+    Return a default for the SIZE of
     LUMP if one is not supplied at instantiation. The value is often
     computed based on the sizes of the inputs. This function is for
     implementing new lump types.
@@ -3204,7 +3200,7 @@ will never reference them again.
 - [reader] DERIVATIVES LUMP
 
     The derivatives computed in the backward pass are
-    stored here. This matrix is very much like [NODES][(reader lump)]
+    stored here. This matrix is very much like NODES
     in shape and size.
 
 #### Inputs
@@ -3214,8 +3210,7 @@ will never reference them again.
 - [class] ->INPUT -\>DROPOUT
 
     A lump that has no input lumps, does not change its
-    values in the forward pass (except when [DROPOUT][(ACCESSOR
-    ->INPUT)] is non-zero), and does not compute derivatives. *Clamp*
+    values in the forward pass (except when DROPOUT is non-zero), and does not compute derivatives. *Clamp*
     inputs on NODES of input lumps in SET-INPUT.
     
     For convenience, ->INPUT can perform dropout itself although it
@@ -3229,7 +3224,7 @@ will never reference them again.
 
 - [accessor] DROPOUT -\>INPUT (= NIL)
 
-    See [DROPOUT][(ACCESSOR ->DROPOUT)].
+    See DROPOUT.
 
 ##### Embedding Lump
 
@@ -3402,10 +3397,7 @@ use activation subnets to reduce the clutter.
     If NORMALIZATION is not given at instantiation, then a new
     ->BATCH-NORMALIZATION object will be created automatically,
     passing :BATCH-SIZE, :VARIANCE-ADJUSTMENT, and :POPULATION-DECAY
-    arguments on to ->BATCH-NORMALIZATION. See [BATCH-SIZE][(reader
-    ->batch-normalization)], [VARIANCE-ADJUSTMENT][(reader
-    ->batch-normalization)] and [POPULATION-DECAY][(reader
-    ->batch-normalization)]. New scale and shift weight lumps will be
+    arguments on to ->BATCH-NORMALIZATION. See BATCH-SIZE, VARIANCE-ADJUSTMENT and POPULATION-DECAY. New scale and shift weight lumps will be
     created with names:
     
         `(,name :scale)
@@ -3512,7 +3504,7 @@ activations are fed.
 
 - [accessor] DROPOUT -\>SIGMOID (= NIL)
 
-    See [DROPOUT][(ACCESSOR ->DROPOUT)].
+    See DROPOUT.
 
 ##### Tanh Lump
 
@@ -3553,9 +3545,9 @@ We are in about year 2011.
 
     This is basically maxout without dropout (see
     http://arxiv.org/abs/1302.4389). It groups its inputs by
-    [GROUP-SIZE][(READER ->MAX)], and outputs the maximum of each group.
+    GROUP-SIZE, and outputs the maximum of each group.
     The SIZE of the output is automatically calculated, it is the size
-    of the input divided by [GROUP-SIZE][(READER ->MAX)].
+    of the input divided by GROUP-SIZE.
     
     ```common-lisp
     (->max (->input :size 120) :group-size 3 :name 'my-max)
@@ -3659,25 +3651,24 @@ a ->LOSS.
     input in the forward pass and backpropagates a cross-entropy loss.
     The advantage of doing these together is numerical stability. The
     total cross-entropy is the sum of cross-entropies per group of
-    [GROUP-SIZE][(reader ->softmax-xe-loss)] elements:
+    GROUP-SIZE elements:
     
     $$
-    XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i),
+    XE(x) = - \sum\_\{i=1,g\} t\_i \ln(s\_i),
     $$
     
-    where `g` is the number of classes ([GROUP-SIZE][(reader
-    ->softmax-xe-loss)]), `t_i` are the targets (i.e. the true
+    where `g` is the number of classes (GROUP-SIZE), `t_i` are the targets (i.e. the true
     probabilities of the class, often all zero but one), `s_i` is the
     output of softmax calculated from input `X`:
     
     $$
-    s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
-      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}
+    s\_i = \{softmax\}(x\_1, x\_2, ..., x\_g) =
+      \frac\{e^x\_i\}\{\sum\_\{j=1,g\} e^x\_j\}
     $$
     
     In other words, in the forward phase this lump takes input `X`,
     computes its elementwise EXP, normalizes each group of
-    [GROUP-SIZE][(reader ->softmax-xe-loss)] elements to sum to 1 to get
+    GROUP-SIZE elements to sum to 1 to get
     the softmax which is the result that goes into NODES. In the
     backward phase, there are two sources of gradients: the lumps that
     use the output of this lump as their input (currently not
@@ -3715,13 +3706,12 @@ a ->LOSS.
          ;; more instances in the batch follow
          ...)
     
-    Actually, in the rare case where [GROUP-SIZE][(reader
-    ->softmax-xe-loss)] is not SIZE (i.e. there are several softmax
+    Actually, in the rare case where GROUP-SIZE is not SIZE (i.e. there are several softmax
     normalization groups for every example), the length of the above
     target sequence is BATCH-SIZE \* N-GROUPS. Indices are always
     relative to the start of the group.
     
-    If [GROUP-SIZE][(reader ->softmax-xe-loss)] is large (for example,
+    If GROUP-SIZE is large (for example,
     in neural language models with a huge number of words), using
     sparse targets can make things go much faster, because calculation
     of the derivative is no longer quadratic.
@@ -3896,22 +3886,22 @@ a ->LOSS.
     paper:
     
     $$
-    i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
-    c\_{t-1} + b\_i)
+    i\_t = s(W\_\{ix\} x\_t + W\_\{im\} m\_\{t-1\} + W\_\{ic\} \odot
+    c\_\{t-1\} + b\_i)
     $$
     
     $$
-    f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
-    c\_{t-1} + b\_f)
+    f\_t = s(W\_\{fx\} x\_t + W\_\{fm\} m\_\{t-1\} + W\_\{fc\} \odot
+    c\_\{t-1\} + b\_f)
     $$
     
     $$
-    c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
-    W\_{cm} m\_{t-1} + b\_c)
+    c\_t = f\_t \odot c\_\{t-1\} + i\_t \odot g(W\_\{cx\} x\_t +
+    W\_\{cm\} m\_\{t-1\} + b\_c)
     $$
     
     $$
-    o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    o\_t = s(W\_\{ox\} x\_t + W\_\{om\} m\_\{t-1\} + W\_\{oc\} \odot
     c\_t + b\_o)
     $$
     

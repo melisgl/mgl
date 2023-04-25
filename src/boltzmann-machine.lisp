@@ -1844,7 +1844,7 @@
 ;;;;
 ;;;; This is not really specific to PCD but nothing else uses it. If
 ;;;; that changes, it could be moved to
-;;;; MGL-OPT:@MGL-OPT-GRADIENT-SINK.
+;;;; MGL-OPT::@MGL-OPT-GRADIENT-SINK.
 
 (defgeneric call-with-sink-accumulator (fn segment source sink)
   (:method (fn segment source sink)

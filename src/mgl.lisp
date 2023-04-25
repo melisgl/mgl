@@ -3,18 +3,18 @@
 (defsection @mgl-manual (:title "\\MGL Manual")
   (mgl asdf:system)
   (@mgl-introduction section)
-  (@mgl-dataset section)
-  (@mgl-resample section)
-  (@mgl-core section)
-  (@mgl-monitoring section)
-  (@mgl-classification section)
-  (@mgl-features section)
-  (@mgl-opt section)
-  (@mgl-diffun section)
-  (@mgl-bp section)
+  (mgl-dataset::@mgl-dataset section)
+  (mgl-resample::@mgl-resample section)
+  (mgl-core::@mgl-core section)
+  (mgl-core::@mgl-monitoring section)
+  (mgl-core::@mgl-classification section)
+  (mgl-core::@mgl-features section)
+  (mgl-opt::@mgl-opt section)
+  (mgl-diffun::@mgl-diffun section)
+  (mgl-bp::@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section)
-  (@mgl-nlp section))
+  (mgl-nlp::@mgl-nlp section))
 
 (defsection @mgl-introduction (:title "Introduction")
   (@mgl-overview section)
@@ -61,13 +61,14 @@
 
 (defsection @mgl-code-organization (:title "Code Organization")
   "\\MGL consists of several packages dedicated to different tasks.
-  For example, package `MGL-RESAMPLE` is about @MGL-RESAMPLE and
-  `MGL-GD` is about @MGL-GD and so on. On one hand, having many
-  packages makes it easier to cleanly separate API and implementation
-  and also to explore into a specific task. At other times, they can
-  be a hassle, so the MGL package itself reexports every external
-  symbol found in all the other packages that make up \\MGL and
-  \\MGL-MAT (see MGL-MAT:@MAT-MANUAL) on which it heavily relies.
+  For example, package `MGL-RESAMPLE` is about
+  MGL-RESAMPLE::@MGL-RESAMPLE and `MGL-GD` is about MGL-GD::@MGL-GD
+  and so on. On one hand, having many packages makes it easier to
+  cleanly separate API and implementation and also to explore into a
+  specific task. At other times, they can be a hassle, so the MGL
+  package itself reexports every external symbol found in all the
+  other packages that make up \\MGL and \\MGL-MAT (see
+  MGL-MAT::@MAT-MANUAL) on which it heavily relies.
 
   One exception to this rule is the bundled, but independent
   MGL-GNUPLOT library.

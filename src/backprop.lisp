@@ -344,7 +344,7 @@
 (defsection @mgl-fnn-tutorial (:title "FNN Tutorial")
   "Hopefully this example from `example/digit-fnn.lisp` illustrates
   the concepts involved. If it's too dense despite the comments, then
-  read up on @MGL-DATASET, @MGL-OPT and come back."
+  read up on MGL-DATASET::@MGL-DATASET, MGL-OPT::@MGL-OPT and come back."
   (digit-fnn.lisp
    (include #.(asdf:system-relative-pathname :mgl "example/digit-fnn.lisp")
             :header-nl "```commonlisp" :footer-nl "```")))

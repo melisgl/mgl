@@ -100,7 +100,7 @@ MGL is a Common Lisp machine learning library by [Gábor
 Melis](http://quotenil.com) with some parts originally contributed
 by Ravenpack International. It mainly concentrates on various forms
 of neural networks (boltzmann machines, feed-forward and recurrent
-backprop nets). Most of MGL is built on top of `MGL-MAT` so it has
+backprop nets). Most of MGL is built on top of MGL-MAT so it has
 BLAS and CUDA support.
 
 In general, the focus is on power and performance not on ease of
@@ -121,8 +121,8 @@ for the latest version.
 
 MGL used to rely on [LLA](https://github.com/tpapp/lla) to
 interface to BLAS and LAPACK. That's mostly history by now, but
-configuration of foreign libraries is still done via `LLA`. See the
-README in `LLA` on how to set things up. Note that these days OpenBLAS
+configuration of foreign libraries is still done via LLA. See the
+README in LLA on how to set things up. Note that these days OpenBLAS
 is easier to set up and just as fast as ATLAS.
 
 [CL-CUDA](https://github.com/takagi/cl-cuda) and
@@ -139,16 +139,17 @@ really being used.
 ### 2.4 Code Organization
 
 MGL consists of several packages dedicated to different tasks.
-For example, package `MGL-RESAMPLE` is about [Resampling][a39b] and
-`MGL-GD` is about [Gradient Descent][10e7] and so on. On one hand, having many
-packages makes it easier to cleanly separate API and implementation
-and also to explore into a specific task. At other times, they can
-be a hassle, so the [`MGL`][dbc7] package itself reexports every external
-symbol found in all the other packages that make up MGL and
-MGL-MAT (see `MGL-MAT:@MAT-MANUAL`) on which it heavily relies.
+For example, package `MGL-RESAMPLE` is about
+[Resampling][a39b] and `MGL-GD` is about [Gradient Descent][10e7]
+and so on. On one hand, having many packages makes it easier to
+cleanly separate API and implementation and also to explore into a
+specific task. At other times, they can be a hassle, so the [`MGL`][dbc7]
+package itself reexports every external symbol found in all the
+other packages that make up MGL and MGL-MAT (see
+`MGL-MAT::@MAT-MANUAL`) on which it heavily relies.
 
 One exception to this rule is the bundled, but independent
-`MGL-GNUPLOT` library.
+MGL-GNUPLOT library.
 
 The built in tests can be run with:
 
@@ -298,8 +299,6 @@ providing two functions: [`SAMPLE`][f956] and [`FINISHEDP`][401f].
 
 <a id="x-28MGL-DATASET-3AN-SAMPLES-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29"></a>
 - [reader] **N-SAMPLES** *FUNCTION-SAMPLER (:N-SAMPLES = 0)*
-
-
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29"></a>
 ## 4 Resampling
@@ -1596,8 +1595,8 @@ gradients) but more can be added with the [Extension API][6a6f].
     Minimize the value of the real valued function represented by
     `GRADIENT-SOURCE` by updating some of its parameters in `WEIGHTS` (a `MAT`
     or a sequence of `MAT`s). Return `WEIGHTS`. `DATASET` (see
-    [Datasets][109e]) is a set of unoptimized parameters of the same
-    function. For example, `WEIGHTS` may be the weights of a neural
+    [Datasets][109e]) is a set of unoptimized parameters of the
+    same function. For example, `WEIGHTS` may be the weights of a neural
     network while `DATASET` is the training set consisting of inputs
     suitable for [`SET-INPUT`][0c9e]. The default
     `DATASET`, ([`*INFINITELY-EMPTY-DATASET*`][ad8f]) is suitable for when all
@@ -1818,8 +1817,8 @@ mini-batch basis:
 First let's see everything common to all batch based optimizers,
 then discuss [SGD Optimizer][25fd], [Adam Optimizer][bd13] and
 [Normalized Batch Optimizer][0c91]. All batch based optimizers
-are [`ITERATIVE-OPTIMIZER`][8da0]s, so see [Iterative Optimizer][779d]
-too.
+are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
+[Iterative Optimizer][779d] too.
 
 <a id="x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29"></a>
 - [class] **BATCH-GD-OPTIMIZER**
@@ -1871,7 +1870,7 @@ too.
     An L2 penalty. It discourages large weights, much
     like a zero mean gaussian prior. `WEIGHT-DECAY` \* WEIGHT is added to
     the gradient to penalize large weights. It's as if the function
-    whose minimum is sought had WEIGHT-DECAY\*sum\_i{0.5 \* WEIGHT\_i^2}
+    whose minimum is sought had WEIGHT-DECAY\*sum\_i\{0.5 \* WEIGHT\_i^2\}
     added to it.
 
 <a id="x-28MGL-GD-3AWEIGHT-PENALTY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29"></a>
@@ -1880,7 +1879,7 @@ too.
     An L1 penalty. It encourages sparsity.
     `SIGN`(WEIGHT) \* `WEIGHT-PENALTY` is added to the gradient pushing the
     weight towards negative infinity. It's as if the function whose
-    minima is sought had WEIGHT-PENALTY\*sum\_i{abs(WEIGHT\_i)} added to
+    minima is sought had WEIGHT-PENALTY\*sum\_i\{abs(WEIGHT\_i)\} added to
     it. Putting it on feature biases consitutes a sparsity constraint
     on the features.
 
@@ -1923,25 +1922,25 @@ too.
     the weight update looks like this:
     
     $$
-    \Delta\_w^{t+1} = momentum \* \Delta\_w^t
-      + \frac{accumulator}{batchsize}
+    \Delta\_w^\{t+1\} = momentum \* \Delta\_w^t
+      + \frac\{accumulator\}\{batchsize\}
       + l\_2 w + l\_1 sign(w)
     $$
     
     $$
-    w^{t+1} = w^{t} - learningrate \* \Delta\_w,
+    w^\{t+1\} = w^\{t\} - learningrate \* \Delta\_w,
     $$
     
     which is the same as the more traditional formulation:
     
     $$
-    \Delta\_w^{t+1} = momentum \* \Delta\_w^{t}
-      + learningrate \* \left(\frac{\frac{df}{dw}}{batchsize}
+    \Delta\_w^\{t+1\} = momentum \* \Delta\_w^\{t\}
+      + learningrate \* \left(\frac\{\frac\{df\}\{dw\}\}\{batchsize\}
                            + l\_2 w + l\_1 sign(w)\right)
     $$
     
     $$
-    w^{t+1} = w^{t} - \Delta\_w,
+    w^\{t+1\} = w^\{t\} - \Delta\_w,
     $$
     
     but the former works better when batch size, momentum or learning
@@ -2424,7 +2423,7 @@ new gradient sources except where noted.
 
     Return the weight matrix of `SEGMENT`. A segment
     doesn't need to be a `MAT` object itself. For example, it may be a
-    `MGL-BM:CHUNK` of a [`MGL-BM:BM`][7e58] or a [`MGL-BP:LUMP`][c1ac] of a
+    `MGL-BM:CHUNK` of a `MGL-BM:BM` or a [`MGL-BP:LUMP`][c1ac] of a
     [`MGL-BP:BPN`][5187] whose [`NODES`][cc1c] slot holds the weights.
 
 <a id="x-28MGL-OPT-3ASEGMENT-WEIGHTS-20-28METHOD-20NIL-20-28MGL-MAT-3AMAT-29-29-29"></a>
@@ -2437,7 +2436,7 @@ new gradient sources except where noted.
 
     Return the derivatives matrix of `SEGMENT`. A segment
     doesn't need to be a `MAT` object itself. For example, it may be a
-    `MGL-BM:CHUNK` of a [`MGL-BM:BM`][7e58] or a [`MGL-BP:LUMP`][c1ac] of a
+    `MGL-BM:CHUNK` of a `MGL-BM:BM` or a [`MGL-BP:LUMP`][c1ac] of a
     [`MGL-BP:BPN`][5187] whose DERIVATIVES slot holds the gradient.
 
 <a id="x-28MGL-OPT-3ALIST-SEGMENTS-20FUNCTION-29"></a>
@@ -2500,9 +2499,9 @@ are defined entirely by [`MAP-GRADIENT-SINK`][aabd].
 - [class] **DIFFUN**
 
     `DIFFUN` dresses a lisp function (in its [`FN`][f491] slot) as
-    a gradient source (see [Implementing Gradient Sources][c58b]) which allows it to
-    be used in [`MINIMIZE`][46a4]. See the examples in [Gradient Descent][10e7] and
-    [Conjugate Gradient][83e6].
+    a gradient source (see [Implementing Gradient Sources][c58b]), which
+    allows it to be used in [`MINIMIZE`][46a4]. See the examples in
+    [Gradient Descent][10e7] and [Conjugate Gradient][83e6].
 
 <a id="x-28MGL-COMMON-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29"></a>
 - [reader] **FN** *DIFFUN (:FN)*
@@ -4074,7 +4073,7 @@ a [`->LOSS`][2171].
     [`GROUP-SIZE`][a437] elements:
     
     $$
-    XE(x) = - \sum\_{i=1,g} t\_i \ln(s\_i),
+    XE(x) = - \sum\_\{i=1,g\} t\_i \ln(s\_i),
     $$
     
     where `g` is the number of classes ([`GROUP-SIZE`][a437]), `t_i` are the targets (i.e. the true
@@ -4082,8 +4081,8 @@ a [`->LOSS`][2171].
     output of softmax calculated from input `X`:
     
     $$
-    s\_i = {softmax}(x\_1, x\_2, ..., x\_g) =
-      \frac{e^x\_i}{\sum\_{j=1,g} e^x\_j}
+    s\_i = \{softmax\}(x\_1, x\_2, ..., x\_g) =
+      \frac\{e^x\_i\}\{\sum\_\{j=1,g\} e^x\_j\}
     $$
     
     In other words, in the forward phase this lump takes input `X`,
@@ -4341,22 +4340,22 @@ a [`->LOSS`][2171].
     paper:
     
     $$
-    i\_t = s(W\_{ix} x\_t + W\_{im} m\_{t-1} + W\_{ic} \odot
-    c\_{t-1} + b\_i)
+    i\_t = s(W\_\{ix\} x\_t + W\_\{im\} m\_\{t-1\} + W\_\{ic\} \odot
+    c\_\{t-1\} + b\_i)
     $$
     
     $$
-    f\_t = s(W\_{fx} x\_t + W\_{fm} m\_{t-1} + W\_{fc} \odot
-    c\_{t-1} + b\_f)
+    f\_t = s(W\_\{fx\} x\_t + W\_\{fm\} m\_\{t-1\} + W\_\{fc\} \odot
+    c\_\{t-1\} + b\_f)
     $$
     
     $$
-    c\_t = f\_t \odot c\_{t-1} + i\_t \odot g(W\_{cx} x\_t +
-    W\_{cm} m\_{t-1} + b\_c)
+    c\_t = f\_t \odot c\_\{t-1\} + i\_t \odot g(W\_\{cx\} x\_t +
+    W\_\{cm\} m\_\{t-1\} + b\_c)
     $$
     
     $$
-    o\_t = s(W\_{ox} x\_t + W\_{om} m\_{t-1} + W\_{oc} \odot
+    o\_t = s(W\_\{ox\} x\_t + W\_\{om\} m\_\{t-1\} + W\_\{oc\} \odot
     c\_t + b\_o)
     $$
     
@@ -4713,7 +4712,6 @@ grow into a more serious toolset for NLP eventually.
   [7a28]: #x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29 "Clump API"
   [7bc3]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "Samplers"
   [7c2f]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION"
-  [7e58]: http://www.lispworks.com/documentation/HyperSpec/Body/t_class.htm "CLASS CLASS"
   [7ee3]: #x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29 "Counter classes"
   [80e2]: #x-28MGL-BP-3AVARIANCE-FOR-PREDICTION-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EGAUSSIAN-RANDOM-29-29 "MGL-BP:VARIANCE-FOR-PREDICTION (MGL-PAX:ACCESSOR MGL-BP:->GAUSSIAN-RANDOM)"
   [8148]: #x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29 "MGL-CORE:READ-STATE FUNCTION"

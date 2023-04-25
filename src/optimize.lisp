@@ -12,14 +12,14 @@
   local optimum.
 
   Currently, there are two optimization algorithms:
-  MGL-GD:@MGL-GD (with several variants) and MGL-CG:@MGL-CG both of
+  MGL-GD::@MGL-GD (with several variants) and MGL-CG::@MGL-CG both of
   which are first order methods (they do not need second order
   gradients) but more can be added with the @MGL-OPT-EXTENSION-API."
   (minimize function)
   (@mgl-opt-iterative-optimizer section)
   (@mgl-opt-cost section)
-  (mgl-gd:@mgl-gd section)
-  (mgl-cg:@mgl-cg section)
+  (mgl-gd::@mgl-gd section)
+  (mgl-cg::@mgl-cg section)
   (@mgl-opt-extension-api section))
 
 (defun minimize (optimizer gradient-source
@@ -28,8 +28,8 @@
   "Minimize the value of the real valued function represented by
   GRADIENT-SOURCE by updating some of its parameters in WEIGHTS (a MAT
   or a sequence of MATs). Return WEIGHTS. DATASET (see
-  MGL:@MGL-DATASET) is a set of unoptimized parameters of the same
-  function. For example, WEIGHTS may be the weights of a neural
+  MGL-DATASET::@MGL-DATASET) is a set of unoptimized parameters of the
+  same function. For example, WEIGHTS may be the weights of a neural
   network while DATASET is the training set consisting of inputs
   suitable for SET-INPUT. The default
   DATASET, (*INFINITELY-EMPTY-DATASET*) is suitable for when all
@@ -40,8 +40,8 @@
   when some other condition met (see TERMINATION, for example). If
   DATASET is a SEQUENCE, then it is reused over and over again.
 
-  Examples for various optimizers are provided in MGL-GD:@MGL-GD and
-  MGL-CG:@MGL-CG."
+  Examples for various optimizers are provided in MGL-GD::@MGL-GD and
+  MGL-CG::@MGL-CG."
   (let ((weights (ensure-seq weights)))
     (initialize-optimizer* optimizer gradient-source weights dataset)
     (initialize-gradient-source* optimizer gradient-source weights dataset)
@@ -109,8 +109,8 @@
     :documentation "An event hook with parameters `(OPTIMIZER
     GRADIENT-SOURCE N-INSTANCES)`. Called when optimization of a batch
     of instances is done and N-INSTANCES is incremented."))
-  (:documentation "An abstract base class of MGL-GD:@MGL-GD and
-  MGL-CG:@MGL-CG based optimizers that iterate over instances until a
+  (:documentation "An abstract base class of MGL-GD::@MGL-GD and
+  MGL-CG::@MGL-CG based optimizers that iterate over instances until a
   termination condition is met."))
 
 (defmethod minimize* :around ((optimizer iterative-optimizer) gradient-source

@@ -184,7 +184,7 @@
   (decode generic-function)
   (encoder/decoder class)
   (make-indexer function)
-  "Also see MGL-NLP:@MGL-NLP-BAG-OF-WORDS.")
+  "Also see MGL-NLP::@MGL-NLP-BAG-OF-WORDS.")
 
 (defgeneric encode (encoder decoded)
   (:documentation "Encode DECODED with ENCODER. This interface is

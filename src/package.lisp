@@ -103,55 +103,53 @@
   (:documentation "Simple utilities, types."))
 
 (mgl-pax:define-package #:mgl-log
-  (:documentation "See MGL-LOG:@MGL-LOG.")
+  (:documentation "See MGL-LOG::@MGL-LOG.")
   (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util))
 
 (mgl-pax:define-package #:mgl-dataset
-  (:documentation "See MGL-DATASET:@MGL-DATASET.")
+  (:documentation "See MGL-DATASET::@MGL-DATASET.")
   (:use #:common-lisp #:mgl-pax #:mgl-common #:mgl-util))
 
 (mgl-pax:define-package #:mgl-resample
-  (:documentation "See MGL-RESAMPLE:@MGL-RESAMPLE.")
+  (:documentation "See MGL-RESAMPLE::@MGL-RESAMPLE.")
   (:use #:common-lisp #:mgl-pax))
 
 (mgl-pax:define-package #:mgl-core
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-log
         #:mgl-dataset)
-  (:documentation "See MGL-CORE:@MGL-MODEL, MGL-CORE:@MGL-MONITOR,
-  MGL-CORE:@MGL-CLASSIFICATION."))
+  (:documentation "See MGL-CORE::@MGL-MODEL, MGL-CORE::@MGL-MONITOR,
+  MGL-CORE::@MGL-CLASSIFICATION."))
 
 (mgl-pax:define-package #:mgl-opt
-  (:documentation "See MGL-OPT:@MGL-OPT.")
+  (:documentation "See MGL-OPT::@MGL-OPT.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-log
         #:mgl-dataset #:mgl-core))
 
 (mgl-pax:define-package #:mgl-gd
-  (:documentation "See MGL-GD:@MGL-GD.")
+  (:documentation "See MGL-GD::@MGL-GD.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util
         #:mgl-dataset #:mgl-core
         #:mgl-opt
-        #:named-readtables #:pythonic-string-reader)
-  (:export #:@mgl-gd))
+        #:named-readtables #:pythonic-string-reader))
 
 (mgl-pax:define-package #:mgl-cg
-  (:documentation "See MGL-CG:@MGL-CG.")
+  (:documentation "See MGL-CG::@MGL-CG.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-log
         #:mgl-dataset #:mgl-core
-        #:mgl-opt)
-  (:export #:@mgl-cg))
+        #:mgl-opt))
 
 (mgl-pax:define-package #:mgl-diffun
-  (:documentation "See MGL-DIFFUN:@MGL-DIFFUN.")
+  (:documentation "See MGL-DIFFUN::@MGL-DIFFUN.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-core
         #:mgl-opt))
 
 (mgl-pax:define-package #:mgl-bp
-  (:documentation "See MGL-BP:@MGL-BP.")
+  (:documentation "See MGL-BP::@MGL-BP.")
   (:use #:common-lisp #:cl-cuda #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util
         #:mgl-dataset #:mgl-core
@@ -330,11 +328,11 @@
   backpropagation."))
 
 (mgl-pax:define-package #:mgl-nlp
-  (:documentation "See MGL-NLP:@MGL-NLP.")
+  (:documentation "See MGL-NLP::@MGL-NLP.")
   (:use #:common-lisp #:mgl-pax #:mgl-util #:mgl-core))
 
 (mgl-pax:define-package #:mgl
-  (:documentation "See MGL:@MGL-MANUAL. This package reexports
+  (:documentation "See MGL::@MGL-MANUAL. This package reexports
   everything from other packages defined here plus MGL-MAT.")
   (:use #:common-lisp #:mgl-pax #:mgl-mat
         #:mgl-common #:mgl-util #:mgl-log

@@ -26,9 +26,9 @@
     the values of which will come from the [WEIGHTS][dislocated]
     argument of MINIMIZE."))
   (:documentation "DIFFUN dresses a lisp function (in its FN slot) as
-  a gradient source (see @MGL-OPT-GRADIENT-SOURCE) which allows it to
-  be used in MINIMIZE. See the examples in MGL-GD:@MGL-GD and
-  MGL-CG:@MGL-CG."))
+  a gradient source (see MGL-OPT::@MGL-OPT-GRADIENT-SOURCE), which
+  allows it to be used in MINIMIZE. See the examples in
+  MGL-GD::@MGL-GD and MGL-CG::@MGL-CG."))
 
 ;;; Build an argument list for FN, the lisp function, of the DIFF-FN
 ;;; DIFFUN from WEIGHTS and ARGS based on
