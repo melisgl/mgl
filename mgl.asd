@@ -1,6 +1,6 @@
 ;;;; -*- mode: Lisp -*-
 
-;;; See MGL:@MGL-MANUAL for the user guide.
+;;; See MGL::@MGL-MANUAL for the user guide.
 (asdf:defsystem #:mgl
   :licence "MIT, see COPYING."
   :version "0.1.0"
@@ -41,9 +41,8 @@
                              (:file "mgl")
                              (:file "doc"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
-                            #:mgl-gnuplot #:mgl-mat #:mgl-pax #:num-utils
-                            #:named-readtables #:pythonic-string-reader
-                            #:swank)
+               #:mgl-gnuplot #:mgl-mat #:mgl-pax #:num-utils #:named-readtables
+               #:pythonic-string-reader #:swank)
   :in-order-to ((asdf:test-op (asdf:test-op "mgl/test"))))
 
 (asdf:defsystem #:mgl/test
