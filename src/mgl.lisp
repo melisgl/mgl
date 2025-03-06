@@ -28,8 +28,8 @@
   Melis](http://quotenil.com) with some parts originally contributed
   by Ravenpack International. It mainly concentrates on various forms
   of neural networks (boltzmann machines, feed-forward and recurrent
-  backprop nets). Most of \\MGL is built on top of MGL-MAT so it has
-  BLAS and CUDA support.
+  backprop nets). Most of \\MGL is built on top of
+  [MGL-MAT][mgl-mat::@mat-manual] so it has BLAS and CUDA support.
 
   In general, the focus is on power and performance not on ease of
   use. Perhaps one day there will be a cookie cutter interface with

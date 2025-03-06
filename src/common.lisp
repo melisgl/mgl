@@ -15,8 +15,8 @@
 (setf (fdefinition 'name=) #'equal)
 (defgeneric size (object))
 (defgeneric nodes (object)
-  (:documentation "Returns a MAT object representing the state or
-  result of OBJECT. The first dimension of the returned matrix is
+  (:documentation "Returns a MGL-MAT:MAT object representing the state
+  or result of OBJECT. The first dimension of the returned matrix is
   equal to the number of stripes."))
 (defgeneric default-value (object))
 (defgeneric group-size (object))

@@ -42,7 +42,7 @@
                              (:file "doc"))))
   :depends-on (#:alexandria #:closer-mop #:array-operations #:lla #:cl-reexport
                #:mgl-gnuplot #:mgl-mat #:mgl-pax #:num-utils #:named-readtables
-               #:pythonic-string-reader #:swank)
+               #:pythonic-string-reader)
   :in-order-to ((asdf:test-op (asdf:test-op "mgl/test"))))
 
 (asdf:defsystem #:mgl/test
