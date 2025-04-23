@@ -30,8 +30,8 @@
         (funcall function (reverse previous-values))))))
 
 (defun bleu (candidates references &key candidate-key reference-key (n 4))
-  "Compute the [BLEU score](http://en.wikipedia.org/wiki/BLEU) for
-  bilingual CORPUS. BLEU measures how good a translation is compared
+  "Compute the [\\BLEU score](http://en.wikipedia.org/wiki/BLEU) for
+  bilingual CORPUS. \\BLEU measures how good a translation is compared
   to human reference translations.
 
   CANDIDATES (keyed by CANDIDATE-KEY) and REFERENCES (keyed by
