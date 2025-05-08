@@ -6,6 +6,7 @@
   model selection, and also as a simple form of ensembling. Data
   partitioning and sampling functions are also provided because they
   tend to be used together with resampling."
+  (@mgl-resample-shuffling section)
   (@mgl-resample-partitions section)
   (@mgl-resample-cross-validation section)
   (@mgl-resample-bagging section)

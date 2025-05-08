@@ -3,6 +3,7 @@
 (defsection @mgl-manual (:title "\\MGL Manual")
   (mgl asdf:system)
   (@mgl-introduction section)
+  (mgl-common::@mgl-common section)
   (mgl-dataset::@mgl-dataset section)
   (mgl-resample::@mgl-resample section)
   (mgl-core::@mgl-core section)

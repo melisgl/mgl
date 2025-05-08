@@ -1,6 +1,6 @@
 (in-package :mgl-common)
 
-(defsection @mgl-common ()
+(defsection @mgl-common (:title "Common Stuff")
   (name generic-function)
   (name= function)
   (size generic-function)

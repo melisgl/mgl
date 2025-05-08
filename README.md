@@ -10,72 +10,74 @@
     - [1.3 Dependencies][e7ea]
     - [1.4 Code Organization][443c]
     - [1.5 Glossary][4a8e]
-- [2 Datasets][109e]
-    - [2.1 Samplers][7bc3]
-        - [2.1.1 Function Sampler][be8d]
-- [3 Resampling][a39b]
-    - [3.1 Partitions][f790]
-    - [3.2 Cross-validation][f17b]
-    - [3.3 Bagging][b647]
-    - [3.4 CV Bagging][3f9f]
-    - [3.5 Miscellaneous Operations][59c2]
-- [4 Core][f257]
-    - [4.1 Persistence][29a1]
-    - [4.2 Batch Processing][ff82]
-    - [4.3 Executors][4476]
-        - [4.3.1 Parameterized Executor Cache][ada2]
-- [5 Monitoring][e668]
-    - [5.1 Monitors][c701]
-    - [5.2 Measurers][cd3b]
-    - [5.3 Counters][be95]
-        - [5.3.1 Attributes][6da5]
-        - [5.3.2 Counter classes][7ee3]
-- [6 Classification][60e3]
-    - [6.1 Classification Monitors][c573]
-    - [6.2 Classification Measurers][0ba7]
-    - [6.3 Classification Counters][6598]
-        - [6.3.1 Confusion Matrices][07c7]
-- [7 Features][c8db]
-    - [7.1 Feature Selection][1b5e]
-    - [7.2 Feature Encoding][24aa]
-- [8 Gradient Based Optimization][c74a]
-    - [8.1 Iterative Optimizer][779d]
-    - [8.2 Cost Function][e746]
-    - [8.3 Gradient Descent][10e7]
-        - [8.3.1 Batch Based Optimizers][2c39]
-        - [8.3.2 Segmented GD Optimizer][989a]
-        - [8.3.3 Per-weight Optimization][a884]
-        - [8.3.4 Utilities][c40e]
-    - [8.4 Conjugate Gradient][83e6]
-    - [8.5 Extension API][6a6f]
-        - [8.5.1 Implementing Optimizers][5748]
-        - [8.5.2 Implementing Gradient Sources][c58b]
-        - [8.5.3 Implementing Gradient Sinks][a210]
-- [9 Differentiable Functions][2981]
-- [10 Backpropagation Neural Networks][8788]
-    - [10.1 Backprop Overview][56b2]
-    - [10.2 Clump API][7a28]
-    - [10.3 `BPN`s][d1e0]
-        - [10.3.1 Training][0d82]
-        - [10.3.2 Monitoring][4f0e]
-        - [10.3.3 Feed-Forward Nets][1355]
-        - [10.3.4 Recurrent Neural Nets][871e]
-    - [10.4 Lumps][9641]
-        - [10.4.1 Lump Base Class][3045]
-        - [10.4.2 Inputs][207b]
-        - [10.4.3 Weight Lump][6872]
-        - [10.4.4 Activations][9105]
-        - [10.4.5 Activation Functions][5d86]
-        - [10.4.6 Losses][93a7]
-        - [10.4.7 Stochasticity][aa2e]
-        - [10.4.8 Arithmetic][2fe9]
-        - [10.4.9 Operations for `RNN`s][51f7]
-    - [10.5 Utilities][91f3]
-- [11 Boltzmann Machines][332e]
-- [12 Gaussian Processes][60b3]
-- [13 Natural Language Processing][0d6a]
-    - [13.1 Bag of Words][0784]
-- [14 Logging][3f42]
+- [2 Common Stuff][e198]
+- [3 Datasets][109e]
+    - [3.1 Samplers][7bc3]
+        - [3.1.1 Function Sampler][be8d]
+- [4 Resampling][a39b]
+    - [4.1 Shuffling][8611]
+    - [4.2 Partitions][f790]
+    - [4.3 Cross-validation][f17b]
+    - [4.4 Bagging][b647]
+    - [4.5 CV Bagging][3f9f]
+    - [4.6 Miscellaneous Operations][59c2]
+- [5 Core][f257]
+    - [5.1 Persistence][29a1]
+    - [5.2 Batch Processing][ff82]
+    - [5.3 Executors][4476]
+        - [5.3.1 Parameterized Executor Cache][ada2]
+- [6 Monitoring][e668]
+    - [6.1 Monitors][c701]
+    - [6.2 Measurers][cd3b]
+    - [6.3 Counters][be95]
+        - [6.3.1 Attributes][6da5]
+        - [6.3.2 Counter classes][7ee3]
+- [7 Classification][60e3]
+    - [7.1 Classification Monitors][c573]
+    - [7.2 Classification Measurers][0ba7]
+    - [7.3 Classification Counters][6598]
+        - [7.3.1 Confusion Matrices][07c7]
+- [8 Features][c8db]
+    - [8.1 Feature Selection][1b5e]
+    - [8.2 Feature Encoding][24aa]
+- [9 Gradient Based Optimization][c74a]
+    - [9.1 Iterative Optimizer][779d]
+    - [9.2 Cost Function][e746]
+    - [9.3 Gradient Descent][10e7]
+        - [9.3.1 Batch Based Optimizers][2c39]
+        - [9.3.2 Segmented GD Optimizer][989a]
+        - [9.3.3 Per-weight Optimization][a884]
+        - [9.3.4 Utilities][c40e]
+    - [9.4 Conjugate Gradient][83e6]
+    - [9.5 Extension API][6a6f]
+        - [9.5.1 Implementing Optimizers][5748]
+        - [9.5.2 Implementing Gradient Sources][c58b]
+        - [9.5.3 Implementing Gradient Sinks][a210]
+- [10 Differentiable Functions][2981]
+- [11 Backpropagation Neural Networks][8788]
+    - [11.1 Backprop Overview][56b2]
+    - [11.2 Clump API][7a28]
+    - [11.3 `BPN`s][d1e0]
+        - [11.3.1 Training][0d82]
+        - [11.3.2 Monitoring][4f0e]
+        - [11.3.3 Feed-Forward Nets][1355]
+        - [11.3.4 Recurrent Neural Nets][871e]
+    - [11.4 Lumps][9641]
+        - [11.4.1 Lump Base Class][3045]
+        - [11.4.2 Inputs][207b]
+        - [11.4.3 Weight Lump][6872]
+        - [11.4.4 Activations][9105]
+        - [11.4.5 Activation Functions][5d86]
+        - [11.4.6 Losses][93a7]
+        - [11.4.7 Stochasticity][aa2e]
+        - [11.4.8 Arithmetic][2fe9]
+        - [11.4.9 Operations for `RNN`s][51f7]
+    - [11.5 Utilities][91f3]
+- [12 Boltzmann Machines][332e]
+- [13 Gaussian Processes][60b3]
+- [14 Natural Language Processing][0d6a]
+    - [14.1 Bag of Words][0784]
+- [15 Logging][3f42]
 
 ###### \[in package MGL\]
 <a id="x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29"></a>
@@ -177,9 +179,58 @@ when making **predictions**. Sometimes the word predictions is too
 specific, and the results obtained from applying a model to some
 instances are simply called **results**.
 
+<a id="x-28MGL-COMMON-3A-40MGL-COMMON-20MGL-PAX-3ASECTION-29"></a>
+
+## 2 Common Stuff
+
+###### \[in package MGL-COMMON\]
+<a id="x-28MGL-COMMON-3ANAME-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **NAME** *OBJECT*
+
+<a id="x-28MGL-COMMON-3ANAME-3D-20FUNCTION-29"></a>
+
+- [function] **NAME=** *X Y*
+
+    Return `T` if X and Y are `EQL`([`0`][db03] [`1`][5fd4]) or if they are structured components whose
+    elements are [`EQUAL`][3fb5]. Strings and bit-vectors are `EQUAL` if they are the same
+    length and have identical components. Other arrays must be [`EQ`][5a82] to be `EQUAL`.
+
+<a id="x-28MGL-COMMON-3ASIZE-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **SIZE** *OBJECT*
+
+<a id="x-28MGL-COMMON-3ANODES-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **NODES** *OBJECT*
+
+    Returns a `MGL-MAT:MAT` object representing the state
+    or result of `OBJECT`. The first dimension of the returned matrix is
+    equal to the number of stripes.
+
+<a id="x-28MGL-COMMON-3ADEFAULT-VALUE-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **DEFAULT-VALUE** *OBJECT*
+
+<a id="x-28MGL-COMMON-3AGROUP-SIZE-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **GROUP-SIZE** *OBJECT*
+
+<a id="x-28MGL-COMMON-3ABATCH-SIZE-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **BATCH-SIZE** *OBJECT*
+
+<a id="x-28MGL-COMMON-3AWEIGHTS-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **WEIGHTS** *OBJECT*
+
+<a id="x-28MGL-COMMON-3ASCALE-20GENERIC-FUNCTION-29"></a>
+
+- [generic-function] **SCALE** *OBJECT*
+
 <a id="x-28MGL-DATASET-3A-40MGL-DATASET-20MGL-PAX-3ASECTION-29"></a>
 
-## 2 Datasets
+## 3 Datasets
 
 ###### \[in package MGL-DATASET\]
 An instance can often be any kind of object of the user's choice.
@@ -226,7 +277,7 @@ label, etc. A dataset is a [`SEQUENCE`][ae23] of such instances or a
 
 <a id="x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29"></a>
 
-### 2.1 Samplers
+### 3.1 Samplers
 
 Some algorithms do not need random access to the entire dataset and
 can work with a stream observations. Samplers are simple generators
@@ -282,7 +333,7 @@ providing two functions: [`SAMPLE`][f956] and [`FINISHEDP`][401f].
 
 <a id="x-28MGL-DATASET-3A-40MGL-SAMPLER-FUNCTION-SAMPLER-20MGL-PAX-3ASECTION-29"></a>
 
-#### 2.1.1 Function Sampler
+#### 3.1.1 Function Sampler
 
 <a id="x-28MGL-DATASET-3AFUNCTION-SAMPLER-20CLASS-29"></a>
 
@@ -326,7 +377,7 @@ providing two functions: [`SAMPLE`][f956] and [`FINISHEDP`][401f].
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-20MGL-PAX-3ASECTION-29"></a>
 
-## 3 Resampling
+## 4 Resampling
 
 ###### \[in package MGL-RESAMPLE\]
 The focus of this package is on resampling methods such as
@@ -335,9 +386,25 @@ model selection, and also as a simple form of ensembling. Data
 partitioning and sampling functions are also provided because they
 tend to be used together with resampling.
 
+<a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-SHUFFLING-20MGL-PAX-3ASECTION-29"></a>
+
+### 4.1 Shuffling
+
+<a id="x-28MGL-RESAMPLE-3ASHUFFLE-20FUNCTION-29"></a>
+
+- [function] **SHUFFLE** *SEQ*
+
+    Copy of `SEQ` and shuffle it using Fisher-Yates algorithm.
+
+<a id="x-28MGL-RESAMPLE-3ASHUFFLE-21-20FUNCTION-29"></a>
+
+- [function] **SHUFFLE!** *SEQ*
+
+    Shuffle `SEQ` using Fisher-Yates algorithm.
+
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29"></a>
 
-### 3.1 Partitions
+### 4.2 Partitions
 
 The following functions partition a dataset (currently only
 [`SEQUENCE`][ae23]s are supported) into a number of partitions. For each
@@ -412,7 +479,7 @@ contains it.
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29"></a>
 
-### 3.2 Cross-validation
+### 4.3 Cross-validation
 
 <a id="x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29"></a>
 
@@ -488,7 +555,7 @@ contains it.
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29"></a>
 
-### 3.3 Bagging
+### 4.4 Bagging
 
 <a id="x-28MGL-RESAMPLE-3ABAG-20FUNCTION-29"></a>
 
@@ -549,7 +616,7 @@ contains it.
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29"></a>
 
-### 3.4 CV Bagging
+### 4.5 CV Bagging
 
 <a id="x-28MGL-RESAMPLE-3ABAG-CV-20FUNCTION-29"></a>
 
@@ -583,7 +650,7 @@ contains it.
 
 <a id="x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29"></a>
 
-### 3.5 Miscellaneous Operations
+### 4.6 Miscellaneous Operations
 
 <a id="x-28MGL-RESAMPLE-3ASPREAD-STRATA-20FUNCTION-29"></a>
 
@@ -633,12 +700,12 @@ contains it.
 
 <a id="x-28MGL-CORE-3A-40MGL-CORE-20MGL-PAX-3ASECTION-29"></a>
 
-## 4 Core
+## 5 Core
 
 ###### \[in package MGL-CORE\]
 <a id="x-28MGL-CORE-3A-40MGL-PERSISTENCE-20MGL-PAX-3ASECTION-29"></a>
 
-### 4.1 Persistence
+### 5.1 Persistence
 
 <a id="x-28MGL-CORE-3ALOAD-STATE-20FUNCTION-29"></a>
 
@@ -689,7 +756,7 @@ contains it.
 
 <a id="x-28MGL-CORE-3A-40MGL-MODEL-STRIPE-20MGL-PAX-3ASECTION-29"></a>
 
-### 4.2 Batch Processing
+### 5.2 Batch Processing
 
 Processing instances one by one during training or prediction can
 be slow. The models that support batch processing for greater
@@ -803,7 +870,7 @@ an internal inconsistency in the model.
 
 <a id="x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29"></a>
 
-### 4.3 Executors
+### 5.3 Executors
 
 <a id="x-28MGL-CORE-3AMAP-OVER-EXECUTORS-20GENERIC-FUNCTION-29"></a>
 
@@ -842,7 +909,7 @@ an internal inconsistency in the model.
 
 <a id="x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29"></a>
 
-#### 4.3.1 Parameterized Executor Cache
+#### 5.3.1 Parameterized Executor Cache
 
 <a id="x-28MGL-CORE-3APARAMETERIZED-EXECUTOR-CACHE-MIXIN-20CLASS-29"></a>
 
@@ -876,7 +943,7 @@ an internal inconsistency in the model.
 
 <a id="x-28MGL-CORE-3A-40MGL-MONITORING-20MGL-PAX-3ASECTION-29"></a>
 
-## 5 Monitoring
+## 6 Monitoring
 
 ###### \[in package MGL-CORE\]
 When training or applying a model, one often wants to track various
@@ -990,7 +1057,7 @@ create a reasonable set of default monitors (see
 
 <a id="x-28MGL-CORE-3A-40MGL-MONITOR-20MGL-PAX-3ASECTION-29"></a>
 
-### 5.1 Monitors
+### 6.1 Monitors
 
 <a id="x-28MGL-CORE-3AMONITOR-20CLASS-29"></a>
 
@@ -1028,7 +1095,7 @@ create a reasonable set of default monitors (see
 
 <a id="x-28MGL-CORE-3A-40MGL-MEASURER-20MGL-PAX-3ASECTION-29"></a>
 
-### 5.2 Measurers
+### 6.2 Measurers
 
 [`MEASURER`][eb05] is a part of [`MONITOR`][7068] objects, an embedded monitor that
 computes a specific quantity (e.g. classification accuracy) from the
@@ -1051,7 +1118,7 @@ For a list of measurer functions see [Classification Measurers][0ba7].
 
 <a id="x-28MGL-CORE-3A-40MGL-COUNTER-20MGL-PAX-3ASECTION-29"></a>
 
-### 5.3 Counters
+### 6.3 Counters
 
 <a id="x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29"></a>
 
@@ -1088,7 +1155,7 @@ For a list of measurer functions see [Classification Measurers][0ba7].
 
 <a id="x-28MGL-CORE-3A-40MGL-ATTRIBUTES-20MGL-PAX-3ASECTION-29"></a>
 
-#### 5.3.1 Attributes
+#### 6.3.1 Attributes
 
 <a id="x-28MGL-CORE-3AATTRIBUTED-20CLASS-29"></a>
 
@@ -1160,7 +1227,7 @@ For a list of measurer functions see [Classification Measurers][0ba7].
 
 <a id="x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29"></a>
 
-#### 5.3.2 Counter classes
+#### 6.3.2 Counter classes
 
 In addition to the really basic ones here, also see
 [Classification Counters][6598].
@@ -1228,7 +1295,7 @@ In addition to the really basic ones here, also see
 
 <a id="x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29"></a>
 
-## 6 Classification
+## 7 Classification
 
 ###### \[in package MGL-CORE\]
 To be able to measure classification related quantities, we need to
@@ -1276,7 +1343,7 @@ will automatically work. See FIXDOC: for bpn and boltzmann.
 
 <a id="x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MONITOR-20MGL-PAX-3ASECTION-29"></a>
 
-### 6.1 Classification Monitors
+### 7.1 Classification Monitors
 
 The following functions return a list monitors. The monitors are
 for events of signature (`INSTANCES` `MODEL`) such as those produced by
@@ -1338,7 +1405,7 @@ types via the following generic functions.
 
 <a id="x-28MGL-CORE-3A-40MGL-CLASSIFICATION-MEASURER-20MGL-PAX-3ASECTION-29"></a>
 
-### 6.2 Classification Measurers
+### 7.2 Classification Measurers
 
 The functions here compare some known good solution (also known as
 *ground truth* or *target*) to a prediction or approximation and
@@ -1459,7 +1526,7 @@ behind [Classification Monitors][c573].
 
 <a id="x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29"></a>
 
-### 6.3 Classification Counters
+### 7.3 Classification Counters
 
 <a id="x-28MGL-CORE-3ACLASSIFICATION-ACCURACY-COUNTER-20CLASS-29"></a>
 
@@ -1477,7 +1544,7 @@ behind [Classification Monitors][c573].
 
 <a id="x-28MGL-CORE-3A-40MGL-CONFUSION-MATRIX-20MGL-PAX-3ASECTION-29"></a>
 
-#### 6.3.1 Confusion Matrices
+#### 7.3.1 Confusion Matrices
 
 <a id="x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29"></a>
 
@@ -1563,12 +1630,12 @@ behind [Classification Monitors][c573].
 
 <a id="x-28MGL-CORE-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29"></a>
 
-## 7 Features
+## 8 Features
 
 ###### \[in package MGL-CORE\]
 <a id="x-28MGL-CORE-3A-40MGL-FEATURE-SELECTION-20MGL-PAX-3ASECTION-29"></a>
 
-### 7.1 Feature Selection
+### 8.1 Feature Selection
 
 The following *scoring functions* all return an [`EQUAL`][3fb5] hash table
 that maps features to scores.
@@ -1629,7 +1696,7 @@ that maps features to scores.
 
 <a id="x-28MGL-CORE-3A-40MGL-FEATURE-ENCODING-20MGL-PAX-3ASECTION-29"></a>
 
-### 7.2 Feature Encoding
+### 8.2 Feature Encoding
 
 Features can rarely be fed directly to algorithms as is, they need
 to be transformed in some way. Suppose we have a simple language
@@ -1710,7 +1777,7 @@ Also see [Bag of Words][0784].
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-20MGL-PAX-3ASECTION-29"></a>
 
-## 8 Gradient Based Optimization
+## 9 Gradient Based Optimization
 
 ###### \[in package MGL-OPT\]
 We have a real valued, differentiable function F and the task is to
@@ -1752,7 +1819,7 @@ gradients) but more can be added with the [Extension API][6a6f].
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29"></a>
 
-### 8.1 Iterative Optimizer
+### 9.1 Iterative Optimizer
 
 <a id="x-28MGL-OPT-3AITERATIVE-OPTIMIZER-20CLASS-29"></a>
 
@@ -1860,7 +1927,7 @@ Now let's discuss a few handy utilities.
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29"></a>
 
-### 8.2 Cost Function
+### 9.2 Cost Function
 
 The function being minimized is often called the *cost* or the
 *loss* function.
@@ -1891,7 +1958,7 @@ The function being minimized is often called the *cost* or the
 
 <a id="x-28MGL-GD-3A-40MGL-GD-20MGL-PAX-3ASECTION-29"></a>
 
-### 8.3 Gradient Descent
+### 9.3 Gradient Descent
 
 ###### \[in package MGL-GD\]
 Gradient descent is a first-order optimization algorithm. Relying
@@ -1968,7 +2035,7 @@ mini-batch basis:
 
 <a id="x-28MGL-GD-3A-40MGL-GD-BATCH-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.3.1 Batch Based Optimizers
+#### 9.3.1 Batch Based Optimizers
 
 First let's see everything common to all batch based optimizers,
 then discuss [SGD Optimizer][25fd], [Adam Optimizer][bd13] and
@@ -1982,7 +2049,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
     Another abstract base class for gradient based
     optimizers tath updates all weights simultaneously after chewing
-    through `BATCH-SIZE`([`0`][8916] [`1`][ba18] [`2`][c918]) inputs. See subclasses [`SGD-OPTIMIZER`][2a2f],
+    through [`BATCH-SIZE`][fa6d] inputs. See subclasses [`SGD-OPTIMIZER`][2a2f],
     [`ADAM-OPTIMIZER`][e0e6] and [`NORMALIZED-BATCH-GD-OPTIMIZER`][f6ae].
     
     [`PER-WEIGHT-BATCH-GD-OPTIMIZER`][5a43] may be a better choice when some
@@ -2082,7 +2149,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
 - [class] **SGD-OPTIMIZER** *[BATCH-GD-OPTIMIZER][d94e]*
 
-    With `BATCH-SIZE`([`0`][8916] [`1`][ba18] [`2`][c918]) 1 this is Stochastic Gradient
+    With [`BATCH-SIZE`][fa6d] 1 this is Stochastic Gradient
     Descent. With higher batch sizes, one gets mini-batch and Batch
     Gradient Descent.
     
@@ -2208,7 +2275,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
 <a id="x-28MGL-GD-3A-40MGL-GD-SEGMENTED-GD-OPTIMIZER-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.3.2 Segmented GD Optimizer
+#### 9.3.2 Segmented GD Optimizer
 
 <a id="x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29"></a>
 
@@ -2240,7 +2307,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
 <a id="x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.3.3 Per-weight Optimization
+#### 9.3.3 Per-weight Optimization
 
 <a id="x-28MGL-GD-3APER-WEIGHT-BATCH-GD-OPTIMIZER-20CLASS-29"></a>
 
@@ -2266,7 +2333,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
 <a id="x-28MGL-GD-3A-40MGL-GD-UTILITIES-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.3.4 Utilities
+#### 9.3.4 Utilities
 
 <a id="x-28MGL-GD-3ACLIP-L2-NORM-20FUNCTION-29"></a>
 
@@ -2289,7 +2356,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
 <a id="x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29"></a>
 
-### 8.4 Conjugate Gradient
+### 9.4 Conjugate Gradient
 
 ###### \[in package MGL-CG\]
 Conjugate gradient is a first-order optimization algorithm. It's
@@ -2365,7 +2432,7 @@ respect to some of its parameters.
     sure that exploration is taking place and that extrapolation will
     not be unboundedly large.
     
-    `FN` is a function of two parameters: `WEIGHTS`([`0`][3c96] [`1`][a896]) and `DERIVATIVES`. `WEIGHTS`
+    `FN` is a function of two parameters: [`WEIGHTS`][ab3c] and `DERIVATIVES`. `WEIGHTS`
     is a `MAT` of the same size as `W` that is where the search start from.
     `DERIVATIVES` is also a `MAT` of that size and it is where `FN` shall
     place the partial derivatives. `FN` returns the value of the function
@@ -2463,7 +2530,7 @@ respect to some of its parameters.
 - [class] **CG-OPTIMIZER** *[ITERATIVE-OPTIMIZER][8da0]*
 
     Updates all weights simultaneously after chewing
-    through `BATCH-SIZE`([`0`][8916] [`1`][ba18] [`2`][c918]) inputs.
+    through [`BATCH-SIZE`][fa6d] inputs.
 
 <a id="x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29"></a>
 
@@ -2511,11 +2578,11 @@ respect to some of its parameters.
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29"></a>
 
-### 8.5 Extension API
+### 9.5 Extension API
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.5.1 Implementing Optimizers
+#### 9.5.1 Implementing Optimizers
 
 The following generic functions must be specialized for new
 optimizer types.
@@ -2611,7 +2678,7 @@ optimizers.
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SOURCE-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.5.2 Implementing Gradient Sources
+#### 9.5.2 Implementing Gradient Sources
 
 Weights can be stored in a multitude of ways. Optimizers need to
 update weights, so it is assumed that weights are stored in any
@@ -2701,7 +2768,7 @@ new gradient sources except where noted.
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-GRADIENT-SINK-20MGL-PAX-3ASECTION-29"></a>
 
-#### 8.5.3 Implementing Gradient Sinks
+#### 9.5.3 Implementing Gradient Sinks
 
 Optimizers call [`ACCUMULATE-GRADIENTS*`][4bf1] on gradient sources. One
 parameter of `ACCUMULATE-GRADIENTS*` is the `SINK`. A gradient sink
@@ -2723,7 +2790,7 @@ are defined entirely by [`MAP-GRADIENT-SINK`][aabd].
 
 <a id="x-28MGL-DIFFUN-3A-40MGL-DIFFUN-20MGL-PAX-3ASECTION-29"></a>
 
-## 9 Differentiable Functions
+## 10 Differentiable Functions
 
 ###### \[in package MGL-DIFFUN\]
 <a id="x-28MGL-DIFFUN-3ADIFFUN-20CLASS-29"></a>
@@ -2760,12 +2827,12 @@ are defined entirely by [`MAP-GRADIENT-SINK`][aabd].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29"></a>
 
-## 10 Backpropagation Neural Networks
+## 11 Backpropagation Neural Networks
 
 ###### \[in package MGL-BP\]
 <a id="x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29"></a>
 
-### 10.1 Backprop Overview
+### 11.1 Backprop Overview
 
 Backpropagation Neural Networks are just functions with lots of
 parameters called *weights* and a layered structure when presented
@@ -2813,7 +2880,7 @@ things work by reading the [`FNN` Tutorial][6b38].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29"></a>
 
-### 10.2 Clump API
+### 11.2 Clump API
 
 These are mostly for extension purposes. About the only thing
 needed from here for normal operation is [`NODES`][cc1c] when clamping inputs
@@ -2895,14 +2962,14 @@ dimensional but this restriction may go away in the future.
     df(x1)/dx1` and the first term is what we have in `DERIVATIVES` of the
     sigmoid so it only needs to calculate the second term.
 
-In addition to the above, clumps also have to support `SIZE`([`0`][85d3] [`1`][b99d]),
+In addition to the above, clumps also have to support [`SIZE`][019f],
 [`N-STRIPES`][8dd7], [`MAX-N-STRIPES`][16c4] (and the [`SETF`][a138] methods of the latter two)
 which can be accomplished just by inheriting from [`BPN`][5187], [`FNN`][9de4], [`RNN`][b0f3], or
 a [`LUMP`][c1ac].
 
 <a id="x-28MGL-BP-3A-40MGL-BPN-20MGL-PAX-3ASECTION-29"></a>
 
-### 10.3 `BPN`s
+### 11.3 `BPN`s
 
 <a id="x-28MGL-BP-3ABPN-20CLASS-29"></a>
 
@@ -2957,7 +3024,7 @@ a [`LUMP`][c1ac].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-TRAINING-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.3.1 Training
+#### 11.3.1 Training
 
 [`BPN`][5187]s are trained to minimize the loss function they compute.
 Before a `BPN` is passed to [`MINIMIZE`][46a4] (as its `GRADIENT-SOURCE`
@@ -2992,7 +3059,7 @@ Without the bells an whistles, the basic shape of training is this:
 
 <a id="x-28MGL-BP-3A-40MGL-BP-MONITORING-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.3.2 Monitoring
+#### 11.3.2 Monitoring
 
 <a id="x-28MGL-BP-3AMONITOR-BPN-RESULTS-20FUNCTION-29"></a>
 
@@ -3038,7 +3105,7 @@ Without the bells an whistles, the basic shape of training is this:
 
 <a id="x-28MGL-BP-3A-40MGL-FNN-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.3.3 Feed-Forward Nets
+#### 11.3.3 Feed-Forward Nets
 
 [`FNN`][9de4] and [`RNN`][b0f3] have a lot in common (see their common superclass, [`BPN`][5187]).
 There is very limited functionality that's specific to `FNN`s so let's
@@ -3285,7 +3352,7 @@ read up on [Datasets][109e], [Gradient Based Optimization][c74a] and come back.
 
 <a id="x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.3.4 Recurrent Neural Nets
+#### 11.3.4 Recurrent Neural Nets
 
 <a id="x-28MGL-BP-3A-40MGL-RNN-TUTORIAL-20MGL-PAX-3ASECTION-29"></a>
 
@@ -3777,11 +3844,11 @@ will never reference them again.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-LUMPS-20MGL-PAX-3ASECTION-29"></a>
 
-### 10.4 Lumps
+### 11.4 Lumps
 
 <a id="x-28MGL-BP-3A-40MGL-BP-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.1 Lump Base Class
+#### 11.4.1 Lump Base Class
 
 <a id="x-28MGL-BP-3ALUMP-20CLASS-29"></a>
 
@@ -3857,7 +3924,7 @@ will never reference them again.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-INPUTS-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.2 Inputs
+#### 11.4.2 Inputs
 
 <a id="x-28MGL-BP-3A-40MGL-BP-INPUT-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
@@ -3897,13 +3964,13 @@ in the name of efficiency.
 
 - [class] **->EMBEDDING** *[LUMP][c1ac]*
 
-    Select rows of `WEIGHTS`([`0`][3c96] [`1`][a896]), one row for each index in
+    Select rows of [`WEIGHTS`][ab3c], one row for each index in
     [`INPUT-ROW-INDICES`][1a52]. This lump is equivalent to adding an [`->INPUT`][f54e] lump
     with a one hot encoding scheme and a [`->V*M`][dbc4] lump on top of it, but it
     is more efficient in execution and in memory usage, because it works
     with a sparse representation of the input.
     
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the number of columns of `WEIGHTS` which is
+    The [`SIZE`][019f] of this lump is the number of columns of `WEIGHTS` which is
     determined automatically.
     
     ```common-lisp
@@ -3930,7 +3997,7 @@ in the name of efficiency.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-WEIGHT-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.3 Weight Lump
+#### 11.4.3 Weight Lump
 
 <a id="x-28MGL-BP-3A--3EWEIGHT-20CLASS-29"></a>
 
@@ -3968,7 +4035,7 @@ in the name of efficiency.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-ACTIVATIONS-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.4 Activations
+#### 11.4.4 Activations
 
 <a id="x-28MGL-BP-3A-40MGL-BP-ACTIVATION-SUBNET-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4093,7 +4160,7 @@ use activation subnets to reduce the clutter.
         `(,name :scale)
         `(,name :shift)
     
-    where `NAME` is the `NAME`([`0`][0414] [`1`][f3bc]) of this lump.
+    where `NAME` is the [`NAME`][5842] of this lump.
     
     This default behavior covers the use-case where the statistics
     kept by `->BATCH-NORMALIZATION` are to be shared only between time
@@ -4127,7 +4194,7 @@ use activation subnets to reduce the clutter.
 
 - [reader] **SHIFT** *[->BATCH-NORMALIZATION][c469] (:SHIFT)*
 
-    A weight lump of the same size as [`SCALE`][c9d1]. This is
+    A weight lump of the same size as [`SCALE`][8970]. This is
     $\beta$ in the paper.
 
 <a id="x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29"></a>
@@ -4184,7 +4251,7 @@ use activation subnets to reduce the clutter.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.5 Activation Functions
+#### 11.4.5 Activation Functions
 
 Now we are moving on to the most important non-linearities to which
 activations are fed.
@@ -4209,7 +4276,7 @@ activations are fed.
     ==> #<->SIGMOID THIS :SIZE 5 1/1 :NORM 0.00000>
     ```
     
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input which is determined
+    The [`SIZE`][019f] of this lump is the size of its input which is determined
     automatically.
 
 <a id="x-28MGL-BP-3ADROPOUT-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3ESIGMOID-29-29"></a>
@@ -4227,7 +4294,7 @@ activations are fed.
 - [class] **->TANH** *[LUMP][c1ac]*
 
     Applies the [`TANH`][993b] function to its input in an
-    elementwise manner. The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input
+    elementwise manner. The [`SIZE`][019f] of this lump is the size of its input
     which is determined automatically.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-SCALED-TANH-LUMP-20MGL-PAX-3ASECTION-29"></a>
@@ -4242,7 +4309,7 @@ activations are fed.
     scaled in such a way that the variance of its output is close to 1
     if the variance of its input is close to 1 which is a nice property
     to combat vanishing gradients. The actual function is `1.7159 *
-    tanh(2/3 * x)`. The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input which
+    tanh(2/3 * x)`. The [`SIZE`][019f] of this lump is the size of its input which
     is determined automatically.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-RELU-LUMP-20MGL-PAX-3ASECTION-29"></a>
@@ -4258,7 +4325,7 @@ We are somewhere around year 2007 by now.
     `max(0,x)` activation function. Be careful, relu
     units can get stuck in the off state: if they move to far to
     negative territory it can be very difficult to get out of it. The
-    `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input which is determined
+    [`SIZE`][019f] of this lump is the size of its input which is determined
     automatically.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-MAX-LUMP-20MGL-PAX-3ASECTION-29"></a>
@@ -4274,7 +4341,7 @@ We are in about year 2011.
     This is basically maxout without dropout (see
     http://arxiv.org/abs/1302.4389). It groups its inputs by
     [`GROUP-SIZE`][59dd], and outputs the maximum of each group.
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of the output is automatically calculated, it is the size
+    The [`SIZE`][019f] of the output is automatically calculated, it is the size
     of the input divided by [`GROUP-SIZE`][59dd].
     
     ```common-lisp
@@ -4322,7 +4389,7 @@ We are in about year 2011.
     it is basically [`->MAX`][f652], but instead of producing one output per
     group, it just produces zeros for all unit but the one with the
     maximum value in the group. This allows the next layer to get some
-    information about the path along which information flowed. The `SIZE`([`0`][85d3] [`1`][b99d])
+    information about the path along which information flowed. The [`SIZE`][019f]
     of this lump is the size of its input which is determined
     automatically.
 
@@ -4334,7 +4401,7 @@ We are in about year 2011.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-LOSSES-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.6 Losses
+#### 11.4.6 Losses
 
 Ultimately, we need to tell the network what to learn which means
 that the loss function to be minimized needs to be constructed as
@@ -4382,7 +4449,7 @@ a [`->LOSS`][2171].
 
     This lump takes two input lumps and calculates
     their squared difference `(x - y)^2` in an elementwise manner. The
-    `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is automatically determined from the size of its
+    [`SIZE`][019f] of this lump is automatically determined from the size of its
     inputs. This lump is often fed into [`->LOSS`][2171] that sums the squared
     differences and makes it part of the function to be minimized.
     
@@ -4446,7 +4513,7 @@ a [`->LOSS`][2171].
 
     The number of elements in a softmax group. This is
     the number of classes for classification. Often `GROUP-SIZE` is
-    equal to `SIZE`([`0`][85d3] [`1`][b99d]) (it is the default), but in general the only
+    equal to [`SIZE`][019f] (it is the default), but in general the only
     constraint is that `SIZE` is a multiple of `GROUP-SIZE`.
 
 <a id="x-28MGL-COMMON-3ATARGET-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3ESOFTMAX-XE-LOSS-29-29"></a>
@@ -4468,9 +4535,9 @@ a [`->LOSS`][2171].
          ;; more instances in the batch follow
          ...)
     
-    Actually, in the rare case where [`GROUP-SIZE`][a437] is not `SIZE`([`0`][85d3] [`1`][b99d]) (i.e. there are several softmax
+    Actually, in the rare case where [`GROUP-SIZE`][a437] is not [`SIZE`][019f] (i.e. there are several softmax
     normalization groups for every example), the length of the above
-    target sequence is `BATCH-SIZE`([`0`][8916] [`1`][ba18] [`2`][c918]) \* N-GROUPS. Indices are always
+    target sequence is [`BATCH-SIZE`][fa6d] \* N-GROUPS. Indices are always
     relative to the start of the group.
     
     If [`GROUP-SIZE`][a437] is large (for example,
@@ -4492,7 +4559,7 @@ a [`->LOSS`][2171].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-STOCHASTICITY-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.7 Stochasticity
+#### 11.4.7 Stochasticity
 
 <a id="x-28MGL-BP-3A-40MGL-BP-DROPOUT-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4508,7 +4575,7 @@ a [`->LOSS`][2171].
     neural networks by preventing co-adaptation of feature
     detectors'.
     
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input which is determined
+    The [`SIZE`][019f] of this lump is the size of its input which is determined
     automatically.
 
 <a id="x-28MGL-BP-3ADROPOUT-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EDROPOUT-29-29"></a>
@@ -4566,7 +4633,7 @@ a [`->LOSS`][2171].
 
     Treating values of its input as probabilities,
     sample independent binomials. Turn true into 1 and false into 0. The
-    `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is determined automatically from the size of its
+    [`SIZE`][019f] of this lump is determined automatically from the size of its
     input.
     
     ```common-lisp
@@ -4577,7 +4644,7 @@ a [`->LOSS`][2171].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-ARITHMETIC-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.8 Arithmetic
+#### 11.4.8 Arithmetic
 
 <a id="x-28MGL-BP-3A-40MGL-BP-SUM-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4588,7 +4655,7 @@ a [`->LOSS`][2171].
 - [class] **->SUM** *[LUMP][c1ac]*
 
     Computes the sum of all nodes of its input per
-    stripe. This `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is always 1.
+    stripe. This [`SIZE`][019f] of this lump is always 1.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-V-2AM-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4599,7 +4666,7 @@ a [`->LOSS`][2171].
 - [class] **->V\*M** *[LUMP][c1ac]*
 
     Perform `X * WEIGHTS` where `X` (the input) is of
-    size `M` and `WEIGHTS`([`0`][3c96] [`1`][a896]) is a [`->WEIGHT`][b76f] whose single stripe is taken to
+    size `M` and [`WEIGHTS`][ab3c] is a [`->WEIGHT`][b76f] whose single stripe is taken to
     be of dimensions `M x N` stored in row major order. `N` is the size
     of this lump. If [`TRANSPOSE-WEIGHTS-P`][533e] then `WEIGHTS` is `N x M` and `X
     * WEIGHTS'` is computed.
@@ -4615,7 +4682,7 @@ a [`->LOSS`][2171].
 - [reader] **TRANSPOSE-WEIGHTS-P** *[->V\*M][dbc4] (:TRANSPOSE-WEIGHTS-P = NIL)*
 
     Determines whether the input is multiplied by
-    `WEIGHTS`([`0`][3c96] [`1`][a896]) or its transpose.
+    [`WEIGHTS`][ab3c] or its transpose.
 
 <a id="x-28MGL-BP-3A-40MGL-BP--2B-LUMP-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4626,7 +4693,7 @@ a [`->LOSS`][2171].
 - [class] **->+** *[LUMP][c1ac]*
 
     Performs elementwise addition on its input lumps.
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is automatically determined from the size of
+    The [`SIZE`][019f] of this lump is automatically determined from the size of
     its inputs if there is at least one. If one of the inputs is a
     [`->WEIGHT`][b76f] lump, then it is added to every stripe.
     
@@ -4646,7 +4713,7 @@ a [`->LOSS`][2171].
 - [class] **->\*** *[LUMP][c1ac]*
 
     Performs elementwise multiplication on its two
-    input lumps. The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is automatically determined from
+    input lumps. The [`SIZE`][019f] of this lump is automatically determined from
     the size of its inputs. Either input can be a [`->WEIGHT`][b76f] lump.
     
     ```common-lisp
@@ -4689,12 +4756,12 @@ a [`->LOSS`][2171].
 - [class] **->SIN** *[LUMP][c1ac]*
 
     Applies the [`SIN`][ece2] function to its input in an
-    elementwise manner. The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input
+    elementwise manner. The [`SIZE`][019f] of this lump is the size of its input
     which is determined automatically.
 
 <a id="x-28MGL-BP-3A-40MGL-BP-RNN-OPERATIONS-20MGL-PAX-3ASECTION-29"></a>
 
-#### 10.4.9 Operations for `RNN`s
+#### 11.4.9 Operations for `RNN`s
 
 <a id="x-28MGL-BP-3A-40MGL-BP-LSTM-SUBNET-20MGL-PAX-3ASECTION-29"></a>
 
@@ -4788,7 +4855,7 @@ a [`->LOSS`][2171].
     single lump so that further processing can take place (typically
     when the `RNN` is embedded in another network).
     
-    The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is automatically set to the size of the lump
+    The [`SIZE`][019f] of this lump is automatically set to the size of the lump
     returned by `(FUNCALL SEQ-ELT-FN 0)`.
 
 <a id="x-28MGL-BP-3ASEQ-ELT-FN-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3ESEQ-BARRIER-29-29"></a>
@@ -4809,7 +4876,7 @@ a [`->LOSS`][2171].
 
 <a id="x-28MGL-BP-3A-40MGL-BP-UTILITIES-20MGL-PAX-3ASECTION-29"></a>
 
-### 10.5 Utilities
+### 11.5 Utilities
 
 <a id="x-28MGL-BP-3ARENORMALIZE-ACTIVATIONS-20FUNCTION-29"></a>
 
@@ -4841,17 +4908,17 @@ a [`->LOSS`][2171].
 
 <a id="x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29"></a>
 
-## 11 Boltzmann Machines
+## 12 Boltzmann Machines
 
 
 <a id="x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29"></a>
 
-## 12 Gaussian Processes
+## 13 Gaussian Processes
 
 
 <a id="x-28MGL-NLP-3A-40MGL-NLP-20MGL-PAX-3ASECTION-29"></a>
 
-## 13 Natural Language Processing
+## 14 Natural Language Processing
 
 ###### \[in package MGL-NLP\]
 This in nothing more then a couple of utilities for now which may
@@ -4918,7 +4985,7 @@ grow into a more serious toolset for NLP eventually.
 
 <a id="x-28MGL-NLP-3A-40MGL-NLP-BAG-OF-WORDS-20MGL-PAX-3ASECTION-29"></a>
 
-### 13.1 Bag of Words
+### 14.1 Bag of Words
 
 <a id="x-28MGL-NLP-3ABAG-OF-WORDS-ENCODER-20CLASS-29"></a>
 
@@ -4985,7 +5052,7 @@ grow into a more serious toolset for NLP eventually.
 
 <a id="x-28MGL-LOG-3A-40MGL-LOG-20MGL-PAX-3ASECTION-29"></a>
 
-## 14 Logging
+## 15 Logging
 
 ###### \[in package MGL-LOG\]
 <a id="x-28MGL-LOG-3ALOG-MSG-20FUNCTION-29"></a>
@@ -5013,9 +5080,9 @@ grow into a more serious toolset for NLP eventually.
   [00a0]: #x-28MGL-BP-3ABP-LEARNER-20CLASS-29 "MGL-BP:BP-LEARNER CLASS"
   [00ee]: #x-28MGL-3A-40MGL-LINKS-20MGL-PAX-3ASECTION-29 "Links"
   [011d]: #x-28MGL-GD-3AMEAN-DECAY-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3AADAM-OPTIMIZER-29-29 "MGL-GD:MEAN-DECAY (MGL-PAX:ACCESSOR MGL-GD:ADAM-OPTIMIZER)"
+  [019f]: #x-28MGL-COMMON-3ASIZE-20GENERIC-FUNCTION-29 "MGL-COMMON:SIZE GENERIC-FUNCTION"
   [038e]: #x-28MGL-BP-3AIMPORTANCE-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3ELOSS-29-29 "MGL-BP:IMPORTANCE (MGL-PAX:ACCESSOR MGL-BP:->LOSS)"
   [03c7]: http://www.lispworks.com/documentation/HyperSpec/Body/f_funcal.htm "FUNCALL (MGL-PAX:CLHS FUNCTION)"
-  [0414]: #x-28MGL-COMMON-3ANAME-20-28METHOD-20NIL-20-28MGL-CORE-3AATTRIBUTED-29-29-29 "MGL-COMMON:NAME (METHOD NIL (MGL-CORE:ATTRIBUTED))"
   [0784]: #x-28MGL-NLP-3A-40MGL-NLP-BAG-OF-WORDS-20MGL-PAX-3ASECTION-29 "Bag of Words"
   [07c7]: #x-28MGL-CORE-3A-40MGL-CONFUSION-MATRIX-20MGL-PAX-3ASECTION-29 "Confusion Matrices"
   [07fb]: #x-28MGL-CORE-3AN-STRIPES-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "MGL-CORE:N-STRIPES (MGL-PAX:READER MGL-BP:BPN)"
@@ -5070,7 +5137,6 @@ grow into a more serious toolset for NLP eventually.
   [331b]: #x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29 "MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION"
   [332e]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "Boltzmann Machines"
   [3815]: #x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29 "MGL-OPT:MAKE-COST-MONITORS* GENERIC-FUNCTION"
-  [3c96]: #x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:->EMBEDDING)"
   [3ce0]: #x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29 "MGL-GD:SEGMENTED-GD-OPTIMIZER CLASS"
   [3f2e]: http://www.lispworks.com/documentation/HyperSpec/Body/f_pr_obj.htm "PRINT-OBJECT (MGL-PAX:CLHS GENERIC-FUNCTION)"
   [3f42]: #x-28MGL-LOG-3A-40MGL-LOG-20MGL-PAX-3ASECTION-29 "Logging"
@@ -5107,6 +5173,7 @@ grow into a more serious toolset for NLP eventually.
   [56b2]: #x-28MGL-BP-3A-40MGL-BP-OVERVIEW-20MGL-PAX-3ASECTION-29 "Backprop Overview"
   [5748]: #x-28MGL-OPT-3A-40MGL-OPT-OPTIMIZER-20MGL-PAX-3ASECTION-29 "Implementing Optimizers"
   [5752]: #x-28MGL-CORE-3ACOUNTER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "MGL-CORE:COUNTER (MGL-PAX:READER MGL-CORE:MONITOR)"
+  [5842]: #x-28MGL-COMMON-3ANAME-20GENERIC-FUNCTION-29 "MGL-COMMON:NAME GENERIC-FUNCTION"
   [5979]: #x-28MGL-CORE-3ABASIC-COUNTER-20CLASS-29 "MGL-CORE:BASIC-COUNTER CLASS"
   [59c2]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-MISC-20MGL-PAX-3ASECTION-29 "Miscellaneous Operations"
   [59dd]: #x-28MGL-COMMON-3AGROUP-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EMAX-29-29 "MGL-COMMON:GROUP-SIZE (MGL-PAX:READER MGL-BP:->MAX)"
@@ -5116,6 +5183,7 @@ grow into a more serious toolset for NLP eventually.
   [5cd8]: http://www.lispworks.com/documentation/HyperSpec/Body/f_numera.htm "DENOMINATOR (MGL-PAX:CLHS FUNCTION)"
   [5d86]: #x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29 "Activation Functions"
   [5ded]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION"
+  [5fd4]: http://www.lispworks.com/documentation/HyperSpec/Body/t_eql.htm "EQL (MGL-PAX:CLHS TYPE)"
   [5fdc]: #x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29 "MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION"
   [6004]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-20FUNCTION-29 "MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS FUNCTION"
   [6021]: #x-28MGL-BP-3A--3EMAX-CHANNEL-20CLASS-29 "MGL-BP:->MAX-CHANNEL CLASS"
@@ -5161,11 +5229,12 @@ grow into a more serious toolset for NLP eventually.
   [83f9]: #x-28MGL-BP-3A--3ESIGMOID-20CLASS-29 "MGL-BP:->SIGMOID CLASS"
   [85d3]: #x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3ALUMP-29-29 "MGL-COMMON:SIZE (MGL-PAX:READER MGL-BP:LUMP)"
   [85d34]: #x-28MGL-BP-3A--3ESOFTMAX-XE-LOSS-20CLASS-29 "MGL-BP:->SOFTMAX-XE-LOSS CLASS"
+  [8611]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-SHUFFLING-20MGL-PAX-3ASECTION-29 "Shuffling"
   [86fd]: #x-28MGL-RESAMPLE-3ASAMPLE-FROM-20FUNCTION-29 "MGL-RESAMPLE:SAMPLE-FROM FUNCTION"
   [871e]: #x-28MGL-BP-3A-40MGL-RNN-20MGL-PAX-3ASECTION-29 "Recurrent Neural Nets"
   [876d]: http://www.lispworks.com/documentation/HyperSpec/Body/f_ensu_1.htm "ENSURE-DIRECTORIES-EXIST (MGL-PAX:CLHS FUNCTION)"
   [8788]: #x-28MGL-BP-3A-40MGL-BP-20MGL-PAX-3ASECTION-29 "Backpropagation Neural Networks"
-  [8916]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-CG-3ACG-OPTIMIZER-29-29 "MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-CG:CG-OPTIMIZER)"
+  [8970]: #x-28MGL-COMMON-3ASCALE-20GENERIC-FUNCTION-29 "MGL-COMMON:SCALE GENERIC-FUNCTION"
   [8ae0]: http://www.lispworks.com/documentation/HyperSpec/Body/f_identi.htm "IDENTITY (MGL-PAX:CLHS FUNCTION)"
   [8af5]: http://www.lispworks.com/documentation/HyperSpec/Body/f_numera.htm "NUMERATOR (MGL-PAX:CLHS FUNCTION)"
   [8b55]: #x-28MGL-BP-3AARRANGE-FOR-RENORMALIZING-ACTIVATIONS-20FUNCTION-29 "MGL-BP:ARRANGE-FOR-RENORMALIZING-ACTIVATIONS FUNCTION"
@@ -5206,10 +5275,10 @@ grow into a more serious toolset for NLP eventually.
   [a541]: http://www.lispworks.com/documentation/HyperSpec/Body/f_wr_to_.htm "PRINC-TO-STRING (MGL-PAX:CLHS FUNCTION)"
   [a81b]: #x-28MGL-BP-3ADERIVATIVES-20GENERIC-FUNCTION-29 "MGL-BP:DERIVATIVES GENERIC-FUNCTION"
   [a884]: #x-28MGL-GD-3A-40MGL-GD-PER-WEIGHT-OPTIMIZATION-20MGL-PAX-3ASECTION-29 "Per-weight Optimization"
-  [a896]: #x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EV-2AM-29-29 "MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:->V*M)"
   [aa2e]: #x-28MGL-BP-3A-40MGL-BP-STOCHASTICITY-20MGL-PAX-3ASECTION-29 "Stochasticity"
   [aa86]: #x-28MGL-GD-3AVARIANCE-ADJUSTMENT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "MGL-GD:VARIANCE-ADJUSTMENT (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION)"
   [aabd]: #x-28MGL-OPT-3AMAP-GRADIENT-SINK-20GENERIC-FUNCTION-29 "MGL-OPT:MAP-GRADIENT-SINK GENERIC-FUNCTION"
+  [ab3c]: #x-28MGL-COMMON-3AWEIGHTS-20GENERIC-FUNCTION-29 "MGL-COMMON:WEIGHTS GENERIC-FUNCTION"
   [ad8f]: #x-28MGL-DATASET-3A-2AINFINITELY-EMPTY-DATASET-2A-20VARIABLE-29 "MGL-DATASET:*INFINITELY-EMPTY-DATASET* VARIABLE"
   [ada2]: #x-28MGL-CORE-3A-40MGL-PARAMETERIZED-EXECUTOR-CACHE-20MGL-PAX-3ASECTION-29 "Parameterized Executor Cache"
   [ae23]: http://www.lispworks.com/documentation/HyperSpec/Body/t_seq.htm "SEQUENCE (MGL-PAX:CLHS CLASS)"
@@ -5224,8 +5293,6 @@ grow into a more serious toolset for NLP eventually.
   [b602]: #x-28MGL-BP-3A--3EACTIVATION-20FUNCTION-29 "MGL-BP:->ACTIVATION FUNCTION"
   [b647]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-BAGGING-20MGL-PAX-3ASECTION-29 "Bagging"
   [b76f]: #x-28MGL-BP-3A--3EWEIGHT-20CLASS-29 "MGL-BP:->WEIGHT CLASS"
-  [b99d]: #x-28MGL-COMMON-3ASIZE-20-28MGL-PAX-3AREADER-20MGL-OPT-3ASEGMENT-SET-29-29 "MGL-COMMON:SIZE (MGL-PAX:READER MGL-OPT:SEGMENT-SET)"
-  [ba18]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AACCESSOR-20MGL-GD-3A-3AGD-OPTIMIZER-29-29 "MGL-COMMON:BATCH-SIZE (MGL-PAX:ACCESSOR MGL-GD::GD-OPTIMIZER)"
   [ba91]: #x-28MGL-RESAMPLE-3ASTRATIFY-20FUNCTION-29 "MGL-RESAMPLE:STRATIFY FUNCTION"
   [bbdf]: #x-28MGL-CORE-3AAPPLY-MONITOR-20GENERIC-FUNCTION-29 "MGL-CORE:APPLY-MONITOR GENERIC-FUNCTION"
   [bc8c]: http://www.lispworks.com/documentation/HyperSpec/Body/f_exp_e.htm "EXP (MGL-PAX:CLHS FUNCTION)"
@@ -5245,7 +5312,6 @@ grow into a more serious toolset for NLP eventually.
   [c7fa]: #x-28MGL-BP-3ARENORMALIZE-ACTIVATIONS-20FUNCTION-29 "MGL-BP:RENORMALIZE-ACTIVATIONS FUNCTION"
   [c8db]: #x-28MGL-CORE-3A-40MGL-FEATURES-20MGL-PAX-3ASECTION-29 "Features"
   [c918]: #x-28MGL-COMMON-3ABATCH-SIZE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "MGL-COMMON:BATCH-SIZE (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION)"
-  [c9d1]: #x-28MGL-COMMON-3ASCALE-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "MGL-COMMON:SCALE (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION)"
   [ca09]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20GENERIC-FUNCTION-29 "MGL-OPT:RESET-OPTIMIZATION-MONITORS GENERIC-FUNCTION"
   [caec]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTION-20GENERIC-FUNCTION-29 "MGL-CORE:LABEL-INDEX-DISTRIBUTION GENERIC-FUNCTION"
   [cbb4]: #x-28MGL-NLP-3ABAG-OF-WORDS-ENCODER-20CLASS-29 "MGL-NLP:BAG-OF-WORDS-ENCODER CLASS"
@@ -5264,9 +5330,11 @@ grow into a more serious toolset for NLP eventually.
   [d811]: http://www.lispworks.com/documentation/HyperSpec/Body/f_apply.htm "APPLY (MGL-PAX:CLHS FUNCTION)"
   [d94e]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "MGL-GD:BATCH-GD-OPTIMIZER CLASS"
   [d96a]: #x-28MGL-BP-3AMEAN-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EGAUSSIAN-RANDOM-29-29 "MGL-BP:MEAN (MGL-PAX:ACCESSOR MGL-BP:->GAUSSIAN-RANDOM)"
+  [db03]: http://www.lispworks.com/documentation/HyperSpec/Body/f_eql.htm "EQL (MGL-PAX:CLHS FUNCTION)"
   [dbc4]: #x-28MGL-BP-3A--3EV-2AM-20CLASS-29 "MGL-BP:->V*M CLASS"
   [dd95]: #x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29 "MGL-OPT:INITIALIZE-GRADIENT-SOURCE* GENERIC-FUNCTION"
   [e0e6]: #x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29 "MGL-GD:ADAM-OPTIMIZER CLASS"
+  [e198]: #x-28MGL-COMMON-3A-40MGL-COMMON-20MGL-PAX-3ASECTION-29 "Common Stuff"
   [e46f]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-2A-20GENERIC-FUNCTION-29 "MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS* GENERIC-FUNCTION"
   [e4dd]: http://www.lispworks.com/documentation/HyperSpec/Body/s_multip.htm "MULTIPLE-VALUE-CALL (MGL-PAX:CLHS MGL-PAX:MACRO)"
   [e4f9]: #x-28MGL-OPT-3ARESET-OPTIMIZATION-MONITORS-20-28METHOD-20NIL-20-28MGL-OPT-3AITERATIVE-OPTIMIZER-20T-29-29-29 "MGL-OPT:RESET-OPTIMIZATION-MONITORS (METHOD NIL (MGL-OPT:ITERATIVE-OPTIMIZER T))"
@@ -5290,7 +5358,6 @@ grow into a more serious toolset for NLP eventually.
   [f17b]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "Cross-validation"
   [f1c1]: #x-28MGL-BP-3A--3EEMBEDDING-20CLASS-29 "MGL-BP:->EMBEDDING CLASS"
   [f257]: #x-28MGL-CORE-3A-40MGL-CORE-20MGL-PAX-3ASECTION-29 "Core"
-  [f3bc]: #x-28MGL-COMMON-3ANAME-20-28MGL-PAX-3AREADER-20MGL-DATASET-3AFUNCTION-SAMPLER-29-29 "MGL-COMMON:NAME (MGL-PAX:READER MGL-DATASET:FUNCTION-SAMPLER)"
   [f491]: #x-28MGL-COMMON-3AFN-20-28MGL-PAX-3AREADER-20MGL-DIFFUN-3ADIFFUN-29-29 "MGL-COMMON:FN (MGL-PAX:READER MGL-DIFFUN:DIFFUN)"
   [f54e]: #x-28MGL-BP-3A--3EINPUT-20CLASS-29 "MGL-BP:->INPUT CLASS"
   [f573]: #x-28MGL-BP-3ACUDA-WINDOW-START-TIME-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ARNN-29-29 "MGL-BP:CUDA-WINDOW-START-TIME (MGL-PAX:ACCESSOR MGL-BP:RNN)"
@@ -5302,6 +5369,7 @@ grow into a more serious toolset for NLP eventually.
   [f85e]: #x-28MGL-LOG-3ALOG-MSG-20FUNCTION-29 "MGL-LOG:LOG-MSG FUNCTION"
   [f956]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "MGL-DATASET:SAMPLE GENERIC-FUNCTION"
   [f98e]: #x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29 "MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO"
+  [fa6d]: #x-28MGL-COMMON-3ABATCH-SIZE-20GENERIC-FUNCTION-29 "MGL-COMMON:BATCH-SIZE GENERIC-FUNCTION"
   [faaa]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29 "MGL-CORE:DO-BATCHES-FOR-MODEL MGL-PAX:MACRO"
   [feaa]: #x-28MGL-BP-3A--3EGAUSSIAN-RANDOM-20CLASS-29 "MGL-BP:->GAUSSIAN-RANDOM CLASS"
   [fedd]: #x-28MGL-CORE-3AENCODE-20GENERIC-FUNCTION-29 "MGL-CORE:ENCODE GENERIC-FUNCTION"
