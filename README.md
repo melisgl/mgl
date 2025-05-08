@@ -75,21 +75,22 @@
 - [12 Gaussian Processes][60b3]
 - [13 Natural Language Processing][0d6a]
     - [13.1 Bag of Words][0784]
+- [14 Logging][3f42]
 
 ###### \[in package MGL\]
 <a id="x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29"></a>
 
 - [system] **"mgl"**
-    - Version: 0.1.0
-    - Description: `MGL` is a machine learning library for backpropagation
+    - _Version:_ 0.1.0
+    - _Description:_ `MGL` is a machine learning library for backpropagation
         neural networks, boltzmann machines, gaussian processes and more.
-    - Licence: MIT, see COPYING.
-    - Author: Gábor Melis <mega@retes.hu>
-    - Mailto: [mega@retes.hu](mailto:mega@retes.hu)
-    - Homepage: [http://melisgl.github.io/mgl](http://melisgl.github.io/mgl)
-    - Bug tracker: [https://github.com/melisgl/mgl/issues](https://github.com/melisgl/mgl/issues)
-    - Source control: [GIT](https://github.com/melisgl/mgl.git)
-    - Depends on: alexandria, array-operations, cl-reexport, closer-mop, lla, mgl-gnuplot, mgl-mat, mgl-pax, named-readtables, num-utils, pythonic-string-reader, swank
+    - _Licence:_ MIT, see COPYING.
+    - _Author:_ Gábor Melis <mega@retes.hu>
+    - _Mailto:_ [mega@retes.hu](mailto:mega@retes.hu)
+    - _Homepage:_ [http://melisgl.github.io/mgl](http://melisgl.github.io/mgl)
+    - _Bug tracker:_ [https://github.com/melisgl/mgl/issues](https://github.com/melisgl/mgl/issues)
+    - _Source control:_ [GIT](https://github.com/melisgl/mgl.git)
+    - *Depends on:* alexandria, array-operations, cl-reexport, closer-mop, lla, mgl-gnuplot, mgl-mat, mgl-pax, named-readtables, num-utils, pythonic-string-reader, swank
 
 <a id="x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29"></a>
 
@@ -1154,7 +1155,7 @@ For a list of measurer functions see [Classification Measurers][0ba7].
 
 - [function] **LOG-PADDED** *ATTRIBUTEDS*
 
-    Log (see `LOG-MSG`) `ATTRIBUTEDS` non-escaped (as in [`PRINC`][676d] or ~A) with
+    Log (see [`LOG-MSG`][f85e]) `ATTRIBUTEDS` non-escaped (as in [`PRINC`][676d] or ~A) with
     the output being as table-like as possible.
 
 <a id="x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29"></a>
@@ -1209,13 +1210,14 @@ In addition to the really basic ones here, also see
     A counter that simply concatenates
     sequences.
     
-    \`\`\`cl-transcript
+    ```common-lisp
     (let ((counter (make-instance 'concat-counter)))
       (add-to-counter counter '(1 2 3) #(4 5))
       (add-to-counter counter '(6 7))
       (counter-values counter))
     => (1 2 3 4 5 6 7)
-    \`\`\`\`
+    ```
+
 
 <a id="x-28MGL-CORE-3ACONCATENATION-TYPE-20-28MGL-PAX-3AREADER-20MGL-CORE-3ACONCAT-COUNTER-29-29"></a>
 
@@ -1854,7 +1856,7 @@ Now let's discuss a few handy utilities.
     A utility that's often called at the start of
     optimization (from [`ON-OPTIMIZATION-STARTED`][ebd4]). The default
     implementation logs the description of `GRADIENT-SOURCE` (as in
-    [`DESCRIBE`][6651]) and `OPTIMIZER` and calls `LOG-MAT-ROOM`.
+    [`DESCRIBE`][6651]) and `OPTIMIZER` and calls [`LOG-MAT-ROOM`][ea7d].
 
 <a id="x-28MGL-OPT-3A-40MGL-OPT-COST-20MGL-PAX-3ASECTION-29"></a>
 
@@ -2393,7 +2395,7 @@ respect to some of its parameters.
     Passing 6 of them covers the current need of the algorithm and it
     will not cons up vectors of size `W` at all.
     
-    NOTE: If the function terminates within a few iterations, it could
+    `NOTE`: If the function terminates within a few iterations, it could
     be an indication that the function values and derivatives are not
     consistent (ie, there may be a bug in the implementation of `FN`
     function).
@@ -4678,6 +4680,18 @@ a [`->LOSS`][2171].
 
 - [class] **->NORMALIZED** *[LUMP][c1ac]*
 
+<a id="x-28MGL-BP-3A-40MGL-BP-SINE-LUMP-20MGL-PAX-3ASECTION-29"></a>
+
+##### Sine Lump
+
+<a id="x-28MGL-BP-3A--3ESIN-20CLASS-29"></a>
+
+- [class] **->SIN** *[LUMP][c1ac]*
+
+    Applies the [`SIN`][ece2] function to its input in an
+    elementwise manner. The `SIZE`([`0`][85d3] [`1`][b99d]) of this lump is the size of its input
+    which is determined automatically.
+
 <a id="x-28MGL-BP-3A-40MGL-BP-RNN-OPERATIONS-20MGL-PAX-3ASECTION-29"></a>
 
 #### 10.4.9 Operations for `RNN`s
@@ -4969,6 +4983,31 @@ grow into a more serious toolset for NLP eventually.
 
 - [reader] **BAG-OF-WORDS-KIND** *[BAG-OF-WORDS-ENCODER][cbb4] (:KIND = :BINARY)*
 
+<a id="x-28MGL-LOG-3A-40MGL-LOG-20MGL-PAX-3ASECTION-29"></a>
+
+## 14 Logging
+
+###### \[in package MGL-LOG\]
+<a id="x-28MGL-LOG-3ALOG-MSG-20FUNCTION-29"></a>
+
+- [function] **LOG-MSG** *FORMAT &REST ARGS*
+
+<a id="x-28MGL-LOG-3AWITH-LOGGING-ENTRY-20MGL-PAX-3AMACRO-29"></a>
+
+- [macro] **WITH-LOGGING-ENTRY** *(STREAM) &BODY BODY*
+
+<a id="x-28MGL-LOG-3A-2ALOG-FILE-2A-20VARIABLE-29"></a>
+
+- [variable] **\*LOG-FILE\*** *NIL*
+
+<a id="x-28MGL-LOG-3A-2ALOG-TIME-2A-20VARIABLE-29"></a>
+
+- [variable] **\*LOG-TIME\*** *T*
+
+<a id="x-28MGL-LOG-3ALOG-MAT-ROOM-20FUNCTION-29"></a>
+
+- [function] **LOG-MAT-ROOM** *&KEY (VERBOSE T)*
+
   [0072]: #x-28MGL-OPT-3AON-OPTIMIZATION-FINISHED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "MGL-OPT:ON-OPTIMIZATION-FINISHED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER)"
   [0078]: #x-28MGL-CORE-3AINSTANCE-TO-EXECUTOR-PARAMETERS-20GENERIC-FUNCTION-29 "MGL-CORE:INSTANCE-TO-EXECUTOR-PARAMETERS GENERIC-FUNCTION"
   [00a0]: #x-28MGL-BP-3ABP-LEARNER-20CLASS-29 "MGL-BP:BP-LEARNER CLASS"
@@ -5034,6 +5073,7 @@ grow into a more serious toolset for NLP eventually.
   [3c96]: #x-28MGL-COMMON-3AWEIGHTS-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EEMBEDDING-29-29 "MGL-COMMON:WEIGHTS (MGL-PAX:READER MGL-BP:->EMBEDDING)"
   [3ce0]: #x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29 "MGL-GD:SEGMENTED-GD-OPTIMIZER CLASS"
   [3f2e]: http://www.lispworks.com/documentation/HyperSpec/Body/f_pr_obj.htm "PRINT-OBJECT (MGL-PAX:CLHS GENERIC-FUNCTION)"
+  [3f42]: #x-28MGL-LOG-3A-40MGL-LOG-20MGL-PAX-3ASECTION-29 "Logging"
   [3f9f]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CV-BAGGING-20MGL-PAX-3ASECTION-29 "CV Bagging"
   [3fb5]: http://www.lispworks.com/documentation/HyperSpec/Body/f_equal.htm "EQUAL (MGL-PAX:CLHS FUNCTION)"
   [401f]: #x-28MGL-DATASET-3AFINISHEDP-20GENERIC-FUNCTION-29 "MGL-DATASET:FINISHEDP GENERIC-FUNCTION"
@@ -5236,10 +5276,12 @@ grow into a more serious toolset for NLP eventually.
   [e7ea]: #x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29 "Dependencies"
   [e7f6]: #x-28MGL-BP-3ADROPOUT-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EINPUT-29-29 "MGL-BP:DROPOUT (MGL-PAX:ACCESSOR MGL-BP:->INPUT)"
   [e8d2]: #x-28MGL-BP-3A--3ESQUARED-DIFFERENCE-20CLASS-29 "MGL-BP:->SQUARED-DIFFERENCE CLASS"
+  [ea7d]: #x-28MGL-LOG-3ALOG-MAT-ROOM-20FUNCTION-29 "MGL-LOG:LOG-MAT-ROOM FUNCTION"
   [eaf1]: #x-28MGL-BP-3ABATCH-NORMALIZATION-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZED-29-29 "MGL-BP:BATCH-NORMALIZATION (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZED)"
   [eb05]: #x-28MGL-CORE-3AMEASURER-20-28MGL-PAX-3AREADER-20MGL-CORE-3AMONITOR-29-29 "MGL-CORE:MEASURER (MGL-PAX:READER MGL-CORE:MONITOR)"
   [ebd4]: #x-28MGL-OPT-3AON-OPTIMIZATION-STARTED-20-28MGL-PAX-3AACCESSOR-20MGL-OPT-3AITERATIVE-OPTIMIZER-29-29 "MGL-OPT:ON-OPTIMIZATION-STARTED (MGL-PAX:ACCESSOR MGL-OPT:ITERATIVE-OPTIMIZER)"
   [ec8b]: http://www.lispworks.com/documentation/HyperSpec/Body/f_zerop.htm "ZEROP (MGL-PAX:CLHS FUNCTION)"
+  [ece2]: http://www.lispworks.com/documentation/HyperSpec/Body/f_sin_c.htm "SIN (MGL-PAX:CLHS FUNCTION)"
   [ed4f]: #x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29 "MGL-BP:*WARP-TIME* VARIABLE"
   [edcf]: #x-28MGL-BP-3A--3ESUM-20CLASS-29 "MGL-BP:->SUM CLASS"
   [ee86]: http://www.lispworks.com/documentation/HyperSpec/Body/t_mod.htm "MOD (MGL-PAX:CLHS TYPE)"
@@ -5257,6 +5299,7 @@ grow into a more serious toolset for NLP eventually.
   [f790]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-PARTITIONS-20MGL-PAX-3ASECTION-29 "Partitions"
   [f7aa]: #x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29 "Introduction"
   [f7c1]: #x-28MGL-BP-3ACLUMPS-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "MGL-BP:CLUMPS (MGL-PAX:READER MGL-BP:BPN)"
+  [f85e]: #x-28MGL-LOG-3ALOG-MSG-20FUNCTION-29 "MGL-LOG:LOG-MSG FUNCTION"
   [f956]: #x-28MGL-DATASET-3ASAMPLE-20GENERIC-FUNCTION-29 "MGL-DATASET:SAMPLE GENERIC-FUNCTION"
   [f98e]: #x-28MGL-CORE-3ADO-EXECUTORS-20MGL-PAX-3AMACRO-29 "MGL-CORE:DO-EXECUTORS MGL-PAX:MACRO"
   [faaa]: #x-28MGL-CORE-3ADO-BATCHES-FOR-MODEL-20MGL-PAX-3AMACRO-29 "MGL-CORE:DO-BATCHES-FOR-MODEL MGL-PAX:MACRO"

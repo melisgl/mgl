@@ -14,7 +14,8 @@
   (mgl-bp::@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section)
-  (mgl-nlp::@mgl-nlp section))
+  (mgl-nlp::@mgl-nlp section)
+  (mgl-log::@mgl-log section))
 
 (defsection @mgl-introduction (:title "Introduction")
   (@mgl-overview section)
