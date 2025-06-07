@@ -25,8 +25,9 @@
 ;;;;  "Maxout Networks"
 ;;;;  http://arxiv.org/abs/1302.4389
 ;;;;
-;;;; Download the four files from http://yann.lecun.com/exdb/mnist and
-;;;; gunzip them. Set *MNIST-DATA-DIR* to point to their directory and
+;;;; Download the four files from the (archived) MNIST database website
+;;;; https://web.archive.org/web/20220331130319/https://yann.lecun.com/exdb/mnist/
+;;;; and gunzip them. Set *MNIST-DATA-DIR* to point to their directory and
 ;;;; call TRAIN-MNIST/1 or TRAIN-MNIST/2 for DBN-to-BPN and
 ;;;; DBN-to-DBM-to-BPN approaches, respectively.
 ;;;;
