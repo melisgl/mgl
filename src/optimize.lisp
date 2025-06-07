@@ -69,7 +69,7 @@
   "Now let's discuss a few handy utilities."
   (monitor-optimization-periodically function)
   (reset-optimization-monitors generic-function)
-  (reset-optimization-monitors (method () (iterative-optimizer t)))
+  (reset-optimization-monitors (method (iterative-optimizer t)))
   (report-optimization-parameters generic-function))
 
 (defclass iterative-optimizer ()
@@ -370,11 +370,11 @@
   (map-segments generic-function)
   (map-segment-runs generic-function)
   (segment-weights generic-function)
-  (segment-weights (method () (mat)))
+  (segment-weights (method (mat)))
   (segment-derivatives generic-function)
   (list-segments function)
   (initialize-gradient-source* generic-function)
-  (initialize-gradient-source* (method () (t t t t)))
+  (initialize-gradient-source* (method (t t t t)))
   (accumulate-gradients* generic-function))
 
 (defgeneric map-segments (fn gradient-source)

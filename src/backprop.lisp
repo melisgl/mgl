@@ -419,7 +419,7 @@
   (build-rnn macro)
   (lag function)
   (time-step function)
-  (set-input (method () (t rnn)))
+  (set-input (method (t rnn)))
   (@mgl-rnn-time-warp section))
 
 (defsection @mgl-rnn-tutorial (:title "RNN Tutorial")
@@ -909,8 +909,7 @@
   Before a BPN is passed to MINIMIZE (as its `GRADIENT-SOURCE`
   argument), it must be wrapped in a BP-LEARNER object. BP-LEARNER has
   [MONITORS][(accessor bp-learner)] slot which is used for example by
-  [RESET-OPTIMIZATION-MONITORS][(method () (iterative-optimizer
-  t))].
+  [RESET-OPTIMIZATION-MONITORS][(method (iterative-optimizer t))].
 
   Without the bells an whistles, the basic shape of training is this:
 
@@ -997,9 +996,9 @@
 (defsection @mgl-bp-monitoring (:title "Monitoring")
   (monitor-bpn-results function)
   #+nil
-  (make-classification-accuracy-monitors* (method () (bpn t t t)))
+  (make-classification-accuracy-monitors* (method (bpn t t t)))
   #+nil
-  (make-cross-entropy-monitors* (method () (bpn t t t)))
+  (make-cross-entropy-monitors* (method (bpn t t t)))
   (make-step-monitor-monitors function)
   (make-step-monitor-monitor-counter generic-function))
 

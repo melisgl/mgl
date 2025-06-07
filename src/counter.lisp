@@ -33,7 +33,7 @@
 (defsection @mgl-attributes (:title "Attributes")
   (attributed class)
   (attributes (accessor attributed))
-  (name (method () (attributed)))
+  (name (method (attributed)))
   (with-padded-attribute-printing macro)
   (log-padded function))
 
