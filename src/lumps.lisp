@@ -2451,7 +2451,8 @@
   (@mgl-bp-*-lump section)
   (@mgl-bp-abs-lump section)
   (@mgl-bp-exp-lump section)
-  (@mgl-bp-normalized-lump section))
+  (@mgl-bp-normalized-lump section)
+  (@mgl-bp-sine-lump section))
 
 
 (defsection @mgl-bp-v*m-lump (:title "Vector-Matrix Multiplication Lump")

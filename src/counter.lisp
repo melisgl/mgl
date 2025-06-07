@@ -260,7 +260,7 @@
     (add-to-counter counter '(6 7))
     (counter-values counter))
   => (1 2 3 4 5 6 7)
-  ````"))
+  ```"))
 
 (defmethod add-to-counter ((counter concat-counter) &rest args)
   (dolist (seq args)

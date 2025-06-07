@@ -3,6 +3,7 @@
 (defsection @mgl-manual (:title "\\MGL Manual")
   (mgl asdf:system)
   (@mgl-introduction section)
+  (mgl-common::@mgl-common section)
   (mgl-dataset::@mgl-dataset section)
   (mgl-resample::@mgl-resample section)
   (mgl-core::@mgl-core section)
@@ -14,7 +15,8 @@
   (mgl-bp::@mgl-bp section)
   (@mgl-bm section)
   (@mgl-gp section)
-  (mgl-nlp::@mgl-nlp section))
+  (mgl-nlp::@mgl-nlp section)
+  (mgl-log::@mgl-log section))
 
 (defsection @mgl-introduction (:title "Introduction")
   (@mgl-overview section)
@@ -28,8 +30,8 @@
   Melis](http://quotenil.com) with some parts originally contributed
   by Ravenpack International. It mainly concentrates on various forms
   of neural networks (boltzmann machines, feed-forward and recurrent
-  backprop nets). Most of \\MGL is built on top of MGL-MAT so it has
-  BLAS and CUDA support.
+  backprop nets). Most of \\MGL is built on top of
+  [MGL-MAT][mgl-mat::@mat-manual] so it has BLAS and CUDA support.
 
   In general, the focus is on power and performance not on ease of
   use. Perhaps one day there will be a cookie cutter interface with
