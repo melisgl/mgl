@@ -427,7 +427,7 @@
     :accessor mean-decay
     :documentation "A number between 0 and 1 that determines how fast
     the estimated mean of derivatives is updated. 0 basically gives
-    you RMSPROP (if VARIANCE-DECAY is not too large) or AdaGrad (if
+    you \\RMSPROP (if VARIANCE-DECAY is not too large) or AdaGrad (if
     VARIANCE-DECAY is close to 1 and the learning rate is annealed.
     This is $\\beta_1$ in the paper.")
    (mean-decay-decay

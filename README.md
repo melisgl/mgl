@@ -83,16 +83,17 @@
 <a id="x-28-22mgl-22-20ASDF-2FSYSTEM-3ASYSTEM-29"></a>
 
 - [system] **"mgl"**
+
     - _Version:_ 0.1.0
     - _Description:_ `MGL` is a machine learning library for backpropagation
         neural networks, boltzmann machines, gaussian processes and more.
     - _Licence:_ MIT, see COPYING.
     - _Author:_ Gábor Melis <mega@retes.hu>
     - _Mailto:_ [mega@retes.hu](mailto:mega@retes.hu)
-    - _Homepage:_ [http://melisgl.github.io/mgl](http://melisgl.github.io/mgl)
-    - _Bug tracker:_ [https://github.com/melisgl/mgl/issues](https://github.com/melisgl/mgl/issues)
+    - _Homepage:_ <http://melisgl.github.io/mgl>
+    - _Bug tracker:_ <https://github.com/melisgl/mgl/issues>
     - _Source control:_ [GIT](https://github.com/melisgl/mgl.git)
-    - *Depends on:* alexandria, array-operations, cl-reexport, closer-mop, lla, mgl-gnuplot, mgl-mat, mgl-pax, named-readtables, num-utils, pythonic-string-reader, swank
+    - *Depends on:* alexandria, array-operations, cl-reexport, closer-mop, lla, mgl-gnuplot, mgl-mat, mgl-pax, named-readtables, num-utils, pythonic-string-reader, swank(?)
 
 <a id="x-28MGL-3A-40MGL-INTRODUCTION-20MGL-PAX-3ASECTION-29"></a>
 
@@ -2204,7 +2205,7 @@ are [`ITERATIVE-OPTIMIZER`][8da0]s, so see
 
     A number between 0 and 1 that determines how fast
     the estimated mean of derivatives is updated. 0 basically gives
-    you `RMSPROP` (if [`VARIANCE-DECAY`][0900] is not too large) or AdaGrad (if
+    you RMSPROP (if [`VARIANCE-DECAY`][0900] is not too large) or AdaGrad (if
     `VARIANCE-DECAY` is close to 1 and the learning rate is annealed.
     This is $\beta_1$ in the paper.
 
@@ -5118,7 +5119,7 @@ grow into a more serious toolset for NLP eventually.
   [410c]: #x-28MGL-COMMON-3ACOST-20GENERIC-FUNCTION-29 "MGL-COMMON:COST GENERIC-FUNCTION"
   [418a]: #x-28MGL-OPT-3ASEGMENT-SET-20CLASS-29 "MGL-OPT:SEGMENT-SET CLASS"
   [430d]: #x-28MGL-CORE-3ACLASSIFICATION-ACCURACY-COUNTER-20CLASS-29 "MGL-CORE:CLASSIFICATION-ACCURACY-COUNTER CLASS"
-  [4336]: http://www.lispworks.com/documentation/HyperSpec/Body/03_da.htm '"3.4.1" (MGL-PAX:CLHS MGL-PAX:SECTION)'
+  [4336]: http://www.lispworks.com/documentation/HyperSpec/Body/03_da.htm "\"3.4.1\" (MGL-PAX:CLHS MGL-PAX:SECTION)"
   [441b]: #x-28MGL-BP-3A--3EDROPOUT-20CLASS-29 "MGL-BP:->DROPOUT CLASS"
   [443c]: #x-28MGL-3A-40MGL-CODE-ORGANIZATION-20MGL-PAX-3ASECTION-29 "Code Organization"
   [4476]: #x-28MGL-CORE-3A-40MGL-EXECUTORS-20MGL-PAX-3ASECTION-29 "Executors"
