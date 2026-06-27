@@ -39,10 +39,9 @@
   power and utility.")
 
 (defsection @mgl-links (:title "Links")
-  "Here is the [official repository](https://github.com/melisgl/mgl)
-  and the [HTML
-  documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
-  for the latest version.")
+  "The official repository is <https://github.com/melisgl/mgl>, and
+  this document in available in various formats on
+  <https://fixnum.com> for the latest version.")
 
 (defsection @mgl-dependencies (:title "Dependencies")
   "\\MGL used to rely on [LLA](https://github.com/tpapp/lla) to

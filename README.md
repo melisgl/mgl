@@ -119,10 +119,9 @@ power and utility.
 
 ### 1.2 Links
 
-Here is the [official repository](https://github.com/melisgl/mgl)
-and the [HTML
-documentation](http://melisgl.github.io/mgl-pax-world/mgl-manual.html)
-for the latest version.
+The official repository is <https://github.com/melisgl/mgl>, and
+this document in available in various formats on
+<https://fixnum.com> for the latest version.
 
 <a id="x-28MGL-3A-40MGL-DEPENDENCIES-20MGL-PAX-3ASECTION-29"></a>
 
@@ -193,7 +192,7 @@ instances are simply called **results**.
 
 - [function] **NAME=** *X Y*
 
-    Return `T` if X and Y are `EQL`([`0`][db03] [`1`][5fd4]) or if they are structured components whose
+    Return `T` if X and Y are [`EQL`][38a2] or if they are structured components whose
     elements are [`EQUAL`][3fb5]. Strings and bit-vectors are `EQUAL` if they are the same
     length and have identical components. Other arrays must be [`EQ`][5a82] to be `EQUAL`.
 
@@ -250,7 +249,7 @@ label, etc. A dataset is a [`SEQUENCE`][ae23] of such instances or a
 
 <a id="x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29"></a>
 
-- [function] **MAP-DATASETS** *FN DATASETS &KEY (IMPUTE NIL IMPUTEP)*
+- [function] **MAP-DATASETS** *FN DATASETS &KEY IMPUTE*
 
     Call `FN` with a list of instances, one from each dataset in
     `DATASETS`. Return nothing. If `IMPUTE` is specified then iterate until
@@ -682,7 +681,7 @@ contains it.
     Make a single sequence out of the sequences in `SEQS` so that in the
     returned sequence indices of elements belonging to the same source
     sequence are spread evenly across the whole range. The result is a
-    list is `RESULT-TYPE` is `LIST`([`0`][79d8] [`1`][6d9f]), it's a vector if `RESULT-TYPE` is `VECTOR`([`0`][6098] [`1`][6d31]).
+    list is `RESULT-TYPE` is [`LIST`][9271], it's a vector if `RESULT-TYPE` is [`VECTOR`][64b3].
     If `RESULT-TYPE` is `NIL`, then it's determined by the type of the first
     sequence in `SEQS`.
     
@@ -986,7 +985,7 @@ accessor:
 
 Note that the monitor we push can be anything as long as
 [`APPLY-MONITOR`][bbdf] is implemented on it with the appropriate signature.
-Also note that the [`ZEROP`][ec8b] + `MOD`([`0`][80fa] [`1`][ee86]) logic is fragile, so you will likely
+Also note that the [`ZEROP`][ec8b] + [`MOD`][e363] logic is fragile, so you will likely
 want to use [`MGL-OPT:MONITOR-OPTIMIZATION-PERIODICALLY`][4528] instead of
 doing the above.
 
@@ -5109,6 +5108,7 @@ grow into a more serious toolset for NLP eventually.
   [331b]: #x-28MGL-CORE-3AMAKE-EXECUTOR-WITH-PARAMETERS-20GENERIC-FUNCTION-29 "MGL-CORE:MAKE-EXECUTOR-WITH-PARAMETERS GENERIC-FUNCTION"
   [332e]: #x-28MGL-3A-40MGL-BM-20MGL-PAX-3ASECTION-29 "Boltzmann Machines"
   [3815]: #x-28MGL-OPT-3AMAKE-COST-MONITORS-2A-20GENERIC-FUNCTION-29 "MGL-OPT:MAKE-COST-MONITORS* GENERIC-FUNCTION"
+  [38a2]: http://www.lispworks.com/documentation/HyperSpec/Body/a_eql.htm "EQL (MGL-PAX:CLHS NIL)"
   [3ce0]: #x-28MGL-GD-3ASEGMENTED-GD-OPTIMIZER-20CLASS-29 "MGL-GD:SEGMENTED-GD-OPTIMIZER CLASS"
   [3f2e]: http://www.lispworks.com/documentation/HyperSpec/Body/f_pr_obj.htm "PRINT-OBJECT (MGL-PAX:CLHS GENERIC-FUNCTION)"
   [3f42]: #x-28MGL-LOG-3A-40MGL-LOG-20MGL-PAX-3ASECTION-29 "Logging"
@@ -5155,18 +5155,17 @@ grow into a more serious toolset for NLP eventually.
   [5cd8]: http://www.lispworks.com/documentation/HyperSpec/Body/f_numera.htm "DENOMINATOR (MGL-PAX:CLHS FUNCTION)"
   [5d86]: #x-28MGL-BP-3A-40MGL-BP-ACTIVATION-FUNCTIONS-20MGL-PAX-3ASECTION-29 "Activation Functions"
   [5ded]: #x-28MGL-RESAMPLE-3ASPLIT-FOLD-2FMOD-20FUNCTION-29 "MGL-RESAMPLE:SPLIT-FOLD/MOD FUNCTION"
-  [5fd4]: http://www.lispworks.com/documentation/HyperSpec/Body/t_eql.htm "EQL (MGL-PAX:CLHS TYPE)"
   [5fdc]: #x-28MGL-CORE-3AMAP-BATCHES-FOR-MODEL-20FUNCTION-29 "MGL-CORE:MAP-BATCHES-FOR-MODEL FUNCTION"
   [6004]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-20FUNCTION-29 "MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS FUNCTION"
   [6021]: #x-28MGL-BP-3A--3EMAX-CHANNEL-20CLASS-29 "MGL-BP:->MAX-CHANNEL CLASS"
   [606c]: #x-28MGL-BP-3ABUILD-FNN-20MGL-PAX-3AMACRO-29 "MGL-BP:BUILD-FNN MGL-PAX:MACRO"
-  [6098]: http://www.lispworks.com/documentation/HyperSpec/Body/t_vector.htm "VECTOR (MGL-PAX:CLHS CLASS)"
   [60b3]: #x-28MGL-3A-40MGL-GP-20MGL-PAX-3ASECTION-29 "Gaussian Processes"
   [60d2]: #x-28MGL-CORE-3ACONFUSION-MATRIX-20CLASS-29 "MGL-CORE:CONFUSION-MATRIX CLASS"
   [60e3]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-20MGL-PAX-3ASECTION-29 "Classification"
   [6202]: #x-28MGL-CORE-3AMONITORS-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3ABP-LEARNER-29-29 "MGL-CORE:MONITORS (MGL-PAX:ACCESSOR MGL-BP:BP-LEARNER)"
   [627a]: #x-28MGL-RESAMPLE-3AFRACTURE-STRATIFIED-20FUNCTION-29 "MGL-RESAMPLE:FRACTURE-STRATIFIED FUNCTION"
   [62de]: #x-28MGL-CORE-3AADD-TO-COUNTER-20GENERIC-FUNCTION-29 "MGL-CORE:ADD-TO-COUNTER GENERIC-FUNCTION"
+  [64b3]: http://www.lispworks.com/documentation/HyperSpec/Body/a_vector.htm "VECTOR (MGL-PAX:CLHS NIL)"
   [6547]: http://www.lispworks.com/documentation/HyperSpec/Body/f_open.htm "OPEN (MGL-PAX:CLHS FUNCTION)"
   [6598]: #x-28MGL-CORE-3A-40MGL-CLASSIFICATION-COUNTER-20MGL-PAX-3ASECTION-29 "Classification Counters"
   [6651]: http://www.lispworks.com/documentation/HyperSpec/Body/f_descri.htm "DESCRIBE (MGL-PAX:CLHS FUNCTION)"
@@ -5175,8 +5174,6 @@ grow into a more serious toolset for NLP eventually.
   [6a6f]: #x-28MGL-OPT-3A-40MGL-OPT-EXTENSION-API-20MGL-PAX-3ASECTION-29 "Extension API"
   [6b38]: #x-28MGL-BP-3A-40MGL-FNN-TUTORIAL-20MGL-PAX-3ASECTION-29 "`FNN` Tutorial"
   [6bd7]: #x-28MGL-CORE-3ALOAD-STATE-20FUNCTION-29 "MGL-CORE:LOAD-STATE FUNCTION"
-  [6d31]: http://www.lispworks.com/documentation/HyperSpec/Body/f_vector.htm "VECTOR (MGL-PAX:CLHS FUNCTION)"
-  [6d9f]: http://www.lispworks.com/documentation/HyperSpec/Body/f_list_.htm "LIST (MGL-PAX:CLHS FUNCTION)"
   [6da5]: #x-28MGL-CORE-3A-40MGL-ATTRIBUTES-20MGL-PAX-3ASECTION-29 "Attributes"
   [6e96]: #x-28MGL-BP-3ATIME-STEP-20FUNCTION-29 "MGL-BP:TIME-STEP FUNCTION"
   [6f82]: #x-28MGL-RESAMPLE-3AFRACTURE-20FUNCTION-29 "MGL-RESAMPLE:FRACTURE FUNCTION"
@@ -5188,13 +5185,11 @@ grow into a more serious toolset for NLP eventually.
   [765c]: #x-28MGL-DATASET-3AMAP-DATASETS-20FUNCTION-29 "MGL-DATASET:MAP-DATASETS FUNCTION"
   [779d]: #x-28MGL-OPT-3A-40MGL-OPT-ITERATIVE-OPTIMIZER-20MGL-PAX-3ASECTION-29 "Iterative Optimizer"
   [7960]: #x-28MGL-BP-3ASHIFT-20-28MGL-PAX-3AREADER-20MGL-BP-3A--3EBATCH-NORMALIZATION-29-29 "MGL-BP:SHIFT (MGL-PAX:READER MGL-BP:->BATCH-NORMALIZATION)"
-  [79d8]: http://www.lispworks.com/documentation/HyperSpec/Body/t_list.htm "LIST (MGL-PAX:CLHS CLASS)"
   [7a28]: #x-28MGL-BP-3A-40MGL-BP-EXTENSION-API-20MGL-PAX-3ASECTION-29 "Clump API"
   [7bc3]: #x-28MGL-DATASET-3A-40MGL-SAMPLER-20MGL-PAX-3ASECTION-29 "Samplers"
   [7c2f]: #x-28MGL-OPT-3AINITIALIZE-OPTIMIZER-2A-20GENERIC-FUNCTION-29 "MGL-OPT:INITIALIZE-OPTIMIZER* GENERIC-FUNCTION"
   [7ee3]: #x-28MGL-CORE-3A-40MGL-COUNTER-CLASSES-20MGL-PAX-3ASECTION-29 "Counter classes"
   [80e2]: #x-28MGL-BP-3AVARIANCE-FOR-PREDICTION-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EGAUSSIAN-RANDOM-29-29 "MGL-BP:VARIANCE-FOR-PREDICTION (MGL-PAX:ACCESSOR MGL-BP:->GAUSSIAN-RANDOM)"
-  [80fa]: http://www.lispworks.com/documentation/HyperSpec/Body/f_mod_r.htm "MOD (MGL-PAX:CLHS FUNCTION)"
   [8148]: #x-28MGL-CORE-3AREAD-STATE-20FUNCTION-29 "MGL-CORE:READ-STATE FUNCTION"
   [82d8]: #x-28MGL-BP-3AADD-CLUMP-20FUNCTION-29 "MGL-BP:ADD-CLUMP FUNCTION"
   [83e6]: #x-28MGL-CG-3A-40MGL-CG-20MGL-PAX-3ASECTION-29 "Conjugate Gradient"
@@ -5221,6 +5216,7 @@ grow into a more serious toolset for NLP eventually.
   [9192]: #x-28MGL-3A-40MGL-OVERVIEW-20MGL-PAX-3ASECTION-29 "Overview"
   [91a3]: #x-28MGL-CORE-3AMAX-N-STRIPES-20-28MGL-PAX-3AREADER-20MGL-BP-3ABPN-29-29 "MGL-CORE:MAX-N-STRIPES (MGL-PAX:READER MGL-BP:BPN)"
   [91f3]: #x-28MGL-BP-3A-40MGL-BP-UTILITIES-20MGL-PAX-3ASECTION-29 "Utilities"
+  [9271]: http://www.lispworks.com/documentation/HyperSpec/Body/a_list.htm "LIST (MGL-PAX:CLHS NIL)"
   [9385]: #x-28MGL-CORE-3ALABEL-INDEX-DISTRIBUTIONS-20GENERIC-FUNCTION-29 "MGL-CORE:LABEL-INDEX-DISTRIBUTIONS GENERIC-FUNCTION"
   [93a7]: #x-28MGL-BP-3A-40MGL-BP-LOSSES-20MGL-PAX-3ASECTION-29 "Losses"
   [9524]: #x-28MGL-RESAMPLE-3ACROSS-VALIDATE-20FUNCTION-29 "MGL-RESAMPLE:CROSS-VALIDATE FUNCTION"
@@ -5303,11 +5299,11 @@ grow into a more serious toolset for NLP eventually.
   [d811]: http://www.lispworks.com/documentation/HyperSpec/Body/f_apply.htm "APPLY (MGL-PAX:CLHS FUNCTION)"
   [d94e]: #x-28MGL-GD-3ABATCH-GD-OPTIMIZER-20CLASS-29 "MGL-GD:BATCH-GD-OPTIMIZER CLASS"
   [d96a]: #x-28MGL-BP-3AMEAN-20-28MGL-PAX-3AACCESSOR-20MGL-BP-3A--3EGAUSSIAN-RANDOM-29-29 "MGL-BP:MEAN (MGL-PAX:ACCESSOR MGL-BP:->GAUSSIAN-RANDOM)"
-  [db03]: http://www.lispworks.com/documentation/HyperSpec/Body/f_eql.htm "EQL (MGL-PAX:CLHS FUNCTION)"
   [dbc4]: #x-28MGL-BP-3A--3EV-2AM-20CLASS-29 "MGL-BP:->V*M CLASS"
   [dd95]: #x-28MGL-OPT-3AINITIALIZE-GRADIENT-SOURCE-2A-20GENERIC-FUNCTION-29 "MGL-OPT:INITIALIZE-GRADIENT-SOURCE* GENERIC-FUNCTION"
   [e0e6]: #x-28MGL-GD-3AADAM-OPTIMIZER-20CLASS-29 "MGL-GD:ADAM-OPTIMIZER CLASS"
   [e198]: #x-28MGL-COMMON-3A-40MGL-COMMON-20MGL-PAX-3ASECTION-29 "Common Stuff"
+  [e363]: http://www.lispworks.com/documentation/HyperSpec/Body/a_mod.htm "MOD (MGL-PAX:CLHS NIL)"
   [e46f]: #x-28MGL-CORE-3AMAKE-CROSS-ENTROPY-MONITORS-2A-20GENERIC-FUNCTION-29 "MGL-CORE:MAKE-CROSS-ENTROPY-MONITORS* GENERIC-FUNCTION"
   [e4dd]: http://www.lispworks.com/documentation/HyperSpec/Body/s_multip.htm "MULTIPLE-VALUE-CALL (MGL-PAX:CLHS MGL-PAX:MACRO)"
   [e50c]: #x-28MGL-CORE-3AMONITOR-MODEL-RESULTS-20FUNCTION-29 "MGL-CORE:MONITOR-MODEL-RESULTS FUNCTION"
@@ -5324,7 +5320,6 @@ grow into a more serious toolset for NLP eventually.
   [ece2]: http://www.lispworks.com/documentation/HyperSpec/Body/f_sin_c.htm "SIN (MGL-PAX:CLHS FUNCTION)"
   [ed4f]: #x-28MGL-BP-3A-2AWARP-TIME-2A-20VARIABLE-29 "MGL-BP:*WARP-TIME* VARIABLE"
   [edcf]: #x-28MGL-BP-3A--3ESUM-20CLASS-29 "MGL-BP:->SUM CLASS"
-  [ee86]: http://www.lispworks.com/documentation/HyperSpec/Body/t_mod.htm "MOD (MGL-PAX:CLHS TYPE)"
   [ee97]: #x-28MGL-CG-3ACG-OPTIMIZER-20CLASS-29 "MGL-CG:CG-OPTIMIZER CLASS"
   [f00d]: #x-28MGL-OPT-3ASEGMENTS-20GENERIC-FUNCTION-29 "MGL-OPT:SEGMENTS GENERIC-FUNCTION"
   [f17b]: #x-28MGL-RESAMPLE-3A-40MGL-RESAMPLE-CROSS-VALIDATION-20MGL-PAX-3ASECTION-29 "Cross-validation"
